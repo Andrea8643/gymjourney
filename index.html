@@ -7,9 +7,20 @@
 <meta name="apple-mobile-web-app-title" content="GymJourney">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* Indirizzo della web app di Apps Script (finisce con /exec). Incollalo qui dopo la nuova distribuzione. */
-window.GJ_API_URL = 'https://script.google.com/macros/s/AKfycbwUvgAG_XVHvjLhtToLsvcy-zfVWuQUv1wPw-5Ib03WQORe0xkyXnHjlxrU8DfgpBx0lg/exec';
+/* Configurazione del progetto Firebase (Impostazioni progetto → Le tue app). Questi valori sono pubblici per natura:
+   a proteggere i dati sono l'accesso con password e le regole di Firestore. */
+window.GJ_FIREBASE = {
+  apiKey: 'AIzaSyCBKM666qESfZA_nPCGYBqE1ddroFJGY9Y',
+  authDomain: 'gymjourney-2df4b.firebaseapp.com',
+  projectId: 'gymjourney-2df4b',
+  storageBucket: 'gymjourney-2df4b.firebasestorage.app',
+  messagingSenderId: '1081851663787',
+  appId: '1:1081851663787:web:9a4f74541f338ffc58eeee'
+};
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1591,6 +1602,13 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 #td-chips .kvl .r:nth-child(2){--detail-t:#9bd3ef}#td-chips .kvl .r:nth-child(3){--detail-t:#9bdcbe}#td-chips .kvl .r:nth-child(4){--detail-t:#ffc88e}
 #td-chips .kvl .v{color:var(--detail-t)}
 @media(max-width:520px){#h-chips{grid-template-columns:1fr}#h-chips .insight-uncertainty{grid-column:auto;grid-template-columns:1fr}#h-chips .insight-uncertainty .insight-label,#h-chips .insight-uncertainty strong,#h-chips .insight-uncertainty small{grid-column:auto;grid-row:auto}#h-stats .hs{padding:9px 6px}#fc-rows .fc-line{display:grid;gap:7px}#fc-rows .fc-line b{text-align:left}}
+.add-data{margin-top:12px}
+.dayhead .add-data{margin:0 0 0 auto}
+.df-bg{position:fixed;inset:0;z-index:300;display:grid;place-items:center;overflow:auto;padding:16px;background:rgba(5,8,18,.72);backdrop-filter:blur(6px)}
+.df-bg[hidden]{display:none}
+.df-card{width:min(100%,520px);background:var(--bg-2)}
+.df-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.df-card input,.df-card textarea{width:100%;box-sizing:border-box}
 </style></head><body>
 <div id="intro" class="intro" role="dialog" aria-label="Benvenuto">
   <button type="button" class="in-skip">Salta</button>
@@ -1634,7 +1652,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     </svg>
   </div>
   <div class="in-text"><div class="intro-brand">GymJourney</div>
-    <div class="in-kick" id="in-kick">Benvenuto, Andrea</div>
+    <div class="in-kick" id="in-kick">Benvenuto</div>
     <div class="in-title" id="in-title">nel tuo percorso di <em>cut</em></div>
     <div class="in-day" id="in-day"></div>
     <div class="in-bar"><i id="in-bar"></i></div>
@@ -1643,85 +1661,100 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
   <button type="button" class="in-go" id="in-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span>Ecco i tuoi dati di oggi</span></button>
 </div>
 <script>
-/* Collegamento con Google Apps Script: sostituisce le funzioni di claude.ai (Drive, salvataggi, download) */
+/* Account e database: Firebase (piano gratuito Spark). Ogni persona entra con email e password
+   e legge o scrive solo users/{suo id}/...; le regole di Firestore impediscono di vedere i dati degli altri.
+   Per spendere poche letture tengo una copia dei dati in questo browser e chiedo al server solo ciò che è cambiato. */
 (function () {
-  /* sul telefono (GitHub Pages) parlo con Apps Script via internet; dentro Apps Script uso google.script.run */
-  var API = window.GJ_API_URL && !/INCOLLA/.test(window.GJ_API_URL) ? window.GJ_API_URL : '';
-  var GAS = typeof google !== 'undefined' && google.script;
-  if (window.claude || (!GAS && !API)) return;
-  function run(fn) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    if (!GAS) {
-      return fetch(API, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
-        .then(function (r) { if (!r.ok) throw new Error('Il server ha risposto ' + r.status); return r.json(); })
-        .then(function (o) { if (o && o.ok) return o.result; throw new Error(o && o.error || 'errore'); });
-    }
-    return new Promise(function (res, rej) {
-      var r = google.script.run.withSuccessHandler(res).withFailureHandler(function (e) { rej(e instanceof Error ? e : new Error(String(e && e.message || e))); });
-      r[fn].apply(r, args);
-    });
-  }
+  var CFG = window.GJ_FIREBASE;
+  if (window.claude || !window.firebase || !CFG || /INCOLLA/.test(String(CFG.apiKey || ''))) return;
+  firebase.initializeApp(CFG);
+  var auth = firebase.auth(), fs = firebase.firestore();
+  auth.languageCode = 'it';
+  try { fs.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) {}
+
+  var COLS = ['settings', 'days', 'workouts', 'recipes'];
+  var BOX = 'width:min(100%,360px);display:grid;gap:12px;background:#151b33;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#EEF0F8;font-family:Onest,system-ui,sans-serif';
+  var INP = 'font:inherit;font-size:1rem;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;width:100%;box-sizing:border-box';
+  var BTN = 'font:inherit;font-weight:600;padding:12px;border:0;border-radius:999px;background:#8EA8FF;color:#0D1120;cursor:pointer';
+  var LNK = 'font:inherit;font-size:.92rem;padding:4px;border:0;background:none;color:#B9C7FF;cursor:pointer;text-decoration:underline';
+  var LBL = 'display:grid;gap:6px;font-size:.88rem;color:#A6ADC4';
+
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
-  function askPin(msg, opt) {
-    opt = opt || {};
+  function copy(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  function whenDom(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function overlay(id, html) {
+    var o = document.createElement('div'); o.id = id;
+    o.setAttribute('style', 'position:fixed;inset:0;z-index:999;display:grid;place-items:center;overflow:auto;background:rgba(9,12,24,.94);backdrop-filter:blur(8px);padding:16px');
+    o.innerHTML = html; document.body.appendChild(o); return o;
+  }
+
+  /* ---------- accesso ---------- */
+  function authMsg(e) {
+    var c = e && e.code || '';
+    if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'Email o password sbagliate.';
+    if (/email-already-in-use/.test(c)) return 'Esiste già un account con questa email: tocca «Ho già un account» ed entra.';
+    if (/weak-password/.test(c)) return 'La password deve avere almeno 6 caratteri.';
+    if (/invalid-email|missing-email/.test(c)) return 'Controlla l\'email: non sembra scritta bene.';
+    if (/network-request-failed/.test(c)) return 'Nessuna connessione a internet. Riprova.';
+    if (/too-many-requests/.test(c)) return 'Troppi tentativi. Aspetta qualche minuto e riprova.';
+    if (/operation-not-allowed/.test(c)) return 'L\'accesso con email non è attivo nel progetto Firebase.';
+    return 'Accesso non riuscito' + (c ? ' (' + c + ')' : '') + '.';
+  }
+  function loginBox() {
     return new Promise(function (res) {
-      var o = document.createElement('div'); o.id = 'ml-chat-pin';
-      o.setAttribute('style', 'position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:rgba(9,12,24,.92);backdrop-filter:blur(8px);padding:16px');
-      o.innerHTML = '<form style="width:min(100%,340px);display:grid;gap:12px;background:#151b33;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:22px;color:#EEF0F8;font-family:Onest,system-ui,sans-serif">'
-        + '<b style="font-size:1.2rem">' + (opt.title || 'GymJourney') + '</b><span style="color:#A6ADC4;font-size:.92rem">' + (msg || 'Scrivi il PIN per aprire il sito.') + '</span>'
-        + '<input type="password" autocomplete="current-password" style="font:inherit;font-size:1.1rem;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit">'
-        + '<button type="submit" style="font:inherit;font-weight:600;padding:12px;border:0;border-radius:999px;background:#8EA8FF;color:#0D1120;cursor:pointer">' + (opt.ok || 'Entra') + '</button>'
-        + (opt.cancel ? '<button type="button" data-x style="font:inherit;padding:10px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:none;color:#A6ADC4;cursor:pointer">Annulla</button>' : '') + '</form>';
-      document.body.appendChild(o);
-      var inp = o.querySelector('input'); setTimeout(function () { inp.focus(); }, 50);
-      o.querySelector('form').addEventListener('submit', function (e) { e.preventDefault(); var v = inp.value; o.remove(); res(v); });
-      var x = o.querySelector('[data-x]'); if (x) x.addEventListener('click', function () { o.remove(); res(null); });
+      var mode = 'in';
+      var o = overlay('gj-login', '<form style="' + BOX + '" novalidate>'
+        + '<b style="font-size:1.35rem">GymJourney</b><span data-sub style="color:#A6ADC4;font-size:.95rem"></span>'
+        + '<label style="' + LBL + '">Email<input name="email" type="email" autocomplete="email" inputmode="email" style="' + INP + '"></label>'
+        + '<label style="' + LBL + '">Password<input name="pw" type="password" autocomplete="current-password" style="' + INP + '"></label>'
+        + '<span data-err role="alert" style="color:#FF7A85;font-size:.9rem;min-height:1em"></span>'
+        + '<button type="submit" data-go style="' + BTN + '"></button>'
+        + '<button type="button" data-sw style="' + LNK + '"></button>'
+        + '<button type="button" data-rs style="' + LNK + '">Ho dimenticato la password</button></form>');
+      var f = o.querySelector('form'), err = o.querySelector('[data-err]'), go = o.querySelector('[data-go]');
+      function paint() {
+        o.querySelector('[data-sub]').textContent = mode === 'in' ? 'Entra per vedere il tuo percorso.' : 'Crea il tuo account: i tuoi dati restano solo tuoi.';
+        go.textContent = mode === 'in' ? 'Entra' : 'Crea account';
+        o.querySelector('[data-sw]').textContent = mode === 'in' ? 'Non hai un account? Creane uno' : 'Ho già un account';
+        f.pw.setAttribute('autocomplete', mode === 'in' ? 'current-password' : 'new-password');
+        err.textContent = '';
+      }
+      paint(); setTimeout(function () { f.email.focus(); }, 50);
+      o.querySelector('[data-sw]').addEventListener('click', function () { mode = mode === 'in' ? 'up' : 'in'; paint(); });
+      o.querySelector('[data-rs]').addEventListener('click', function () {
+        var em = f.email.value.trim();
+        if (!em) { err.style.color = '#FF7A85'; err.textContent = 'Scrivi prima la tua email qui sopra.'; return; }
+        auth.sendPasswordResetEmail(em).then(function () { err.style.color = '#5FD49E'; err.textContent = 'Ti ho mandato un\'email per scegliere una nuova password. Controlla anche lo spam.'; })
+          .catch(function (e) { err.style.color = '#FF7A85'; err.textContent = authMsg(e); });
+      });
+      f.addEventListener('submit', function (e) {
+        e.preventDefault(); err.style.color = '#FF7A85'; err.textContent = ''; go.disabled = true;
+        var em = f.email.value.trim(), pw = f.pw.value;
+        var p = mode === 'in' ? auth.signInWithEmailAndPassword(em, pw) : auth.createUserWithEmailAndPassword(em, pw);
+        p.then(function (cr) { o.remove(); res(cr.user); }).catch(function (e2) { err.textContent = authMsg(e2); go.disabled = false; });
+      });
     });
   }
-  var pinP = null;
-  function getPin() {
-    if (pinP) return pinP;
-    pinP = (async function () {
-      var need = await run('ml_needPin');
-      if (!need) return '';
-      var p = lsGet('ml-chat-pin'), wrong = false;
-      for (;;) {
-        if (p) {
-          try { await run('ml_ping', p); lsSet('ml-chat-pin', p); return p; }
-          catch (e) { if (!/PIN_ERRATO/.test(e.message)) throw e; wrong = true; lsSet('ml-chat-pin', null); }
-        }
-        p = await askPin(wrong ? 'PIN sbagliato, riprova.' : '');
-      }
-    })();
-    return pinP;
-  }
-  /* codice del proprietario: chiesto la prima volta che si salva, poi ricordato su questo dispositivo */
-  var ownP = null;
-  function getOwner(pin) {
-    if (ownP) return ownP;
-    ownP = (async function () {
-      var c = null, wrong = false;
-      for (;;) {
-        if (c) {
-          try { await run('ml_owner', pin, c);  return c; }
-          catch (e) { if (!/NON_PROPRIETARIO/.test(e.message)) throw e; wrong = true; lsSet('ml-chat-owner', null); }
-        }
-        c = await askPin(wrong ? 'Codice sbagliato. Solo il proprietario può modificare i dati.' : 'Solo il proprietario può modificare ricette e profilo. Scrivi il codice proprietario per salvare.', { title: 'Modifica', ok: 'Salva', cancel: true });
-        if (c == null) { var x = new Error('NON_PROPRIETARIO'); throw x; }
-      }
-    })();
-    ownP.catch(function () { ownP = null; });
-    return ownP;
-  }
-  function wrapErr(e) { var x = new Error(e && e.message || 'errore'); x.code = /NON_PROPRIETARIO/.test(x.message) ? 'not_owner' : /PIN_ERRATO/.test(x.message) ? 'not_granted' : 'tool_error'; return x; }
-  /* se il salvataggio non è permesso, rimetto il dato com'era sul server */
-  async function revert(p) { try { var srv = await run('ml_load', await getPin()); if (srv[p] != null) store.set(p, JSON.parse(srv[p])); else store.delete(p); emit(p); } catch (e) {} }
+  var first = true;
+  var userP = new Promise(function (res) {
+    auth.onAuthStateChanged(function (u) {
+      if (!first) { if (!u) location.reload(); return; }
+      first = false;
+      if (u) res(u); else whenDom(function () { loginBox().then(res); });
+    });
+  });
 
-  /* archivio: profilo e ricette sul server (Apps Script), giorni e sedute copiati in questo browser per aprire subito */
-  var store = new Map(), docL = {}, colL = {}, pend = {}, ready = null;
-  var SERVER = /^(settings|recipes)\//, CACHE = 'ml-cache-chat-v1';
-  function copy(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  /* ---------- archivio: copia locale + solo le novità dal server ---------- */
+  var uid = null, store = new Map(), docL = {}, colL = {}, pend = {}, ready = null, since = 0, lastPull = 0, saveT = 0;
+  function cacheKey() { return 'gj-cache-' + uid; }
+  function ref(p) { return fs.doc('users/' + uid + '/' + p); }
+  function stamp() { return firebase.firestore.FieldValue.serverTimestamp(); }
+  function saveCache() {
+    clearTimeout(saveT);
+    saveT = setTimeout(function () { var o = {}; store.forEach(function (v, p) { o[p] = v; }); lsSet(cacheKey(), JSON.stringify({ t: since, docs: o })); }, 300);
+  }
   function snapDoc(p) { var v = store.get(p); return { exists: v !== undefined, id: p.split('/')[1], data: function () { return copy(v); } }; }
   function snapCol(c) {
     var docs = []; store.forEach(function (v, p) { var s = p.split('/'); if (s[0] === c && s.length === 2) docs.push({ id: s[1], data: function () { return copy(v); } }); });
@@ -1733,30 +1766,45 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     if (pend[c]) return;
     pend[c] = setTimeout(function () { pend[c] = 0; (colL[c] || []).forEach(function (l) { try { l(snapCol(c)); } catch (e) { console.error(e); } }); }, 40);
   }
-  var saveT = 0;
-  function saveCache() {
-    clearTimeout(saveT);
-    saveT = setTimeout(function () { var o = {}; store.forEach(function (v, p) { if (/^(days|workouts)\//.test(p)) o[p] = v; }); lsSet(CACHE, JSON.stringify(o)); }, 300);
+  async function pull() {
+    /* 5 minuti di margine: un salvataggio arrivato al server quasi insieme all'ultima lettura non va perso */
+    var from = firebase.firestore.Timestamp.fromMillis(Math.max(0, since - 5 * 60 * 1000)), max = since, changed = [];
+    var snaps = await Promise.all(COLS.map(function (c) { return fs.collection('users/' + uid + '/' + c).where('_u', '>', from).get({ source: 'server' }); }));
+    snaps.forEach(function (q, i) {
+      q.forEach(function (d) {
+        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0;
+        if (t > max) max = t;
+        if (x._del) { if (store.has(p)) { store.delete(p); changed.push(p); } return; }
+        var v; try { v = JSON.parse(x.j); } catch (e) { return; }
+        if (JSON.stringify(store.get(p)) !== JSON.stringify(v)) { store.set(p, v); changed.push(p); }
+      });
+    });
+    since = max; lastPull = Date.now(); saveCache();
+    return changed;
   }
   function load() {
     if (ready) return ready;
     ready = (async function () {
-      try { var c = JSON.parse(lsGet(CACHE) || '{}'); Object.keys(c).forEach(function (p) { store.set(p, c[p]); }); } catch (e) {}
-      var pin = await getPin(), srv = await run('ml_load', pin);
-      Object.keys(srv || {}).forEach(function (p) { try { store.set(p, JSON.parse(srv[p])); } catch (e) {} });
+      var u = await userP; uid = u.uid; window.GJ_user = u;
+      try { var c = JSON.parse(lsGet(cacheKey()) || 'null'); if (c) { since = c.t || 0; Object.keys(c.docs || {}).forEach(function (p) { store.set(p, c.docs[p]); }); } } catch (e) {}
+      try { await pull(); } catch (e) { console.warn(e); if (!store.size) throw e; }
+      whenDom(function () { account(u); if (!store.has('settings/main')) welcome(); });
     })();
     return ready;
   }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && uid && Date.now() - lastPull > 60 * 1000) pull().then(function (ch) { ch.forEach(emit); }).catch(function () {});
+  });
   var db = {
     doc: function (p) {
       return {
         set: async function (data) {
-          store.set(p, copy(data)); emit(p);
-          if (SERVER.test(p)) { try { var pin = await getPin(); await run('ml_set', pin, p, JSON.stringify(data), await getOwner(pin)); } catch (e) { if (/NON_PROPRIETARIO/.test(e.message)) { ownP = null; lsSet('ml-chat-owner', null); } await revert(p); throw wrapErr(e); } } else saveCache();
+          store.set(p, copy(data)); emit(p); saveCache();
+          await ref(p).set({ j: JSON.stringify(data), _u: stamp() });
         },
         delete: async function () {
-          store.delete(p); emit(p);
-          if (SERVER.test(p)) { try { var pin = await getPin(); await run('ml_del', pin, p, await getOwner(pin)); } catch (e) { if (/NON_PROPRIETARIO/.test(e.message)) { ownP = null; lsSet('ml-chat-owner', null); } await revert(p); throw wrapErr(e); } } else saveCache();
+          store.delete(p); emit(p); saveCache();
+          await ref(p).set({ _del: true, _u: stamp() });
         },
         get: async function () { await load(); return snapDoc(p); },
         onSnapshot: function (cb) { (docL[p] = docL[p] || []).push(cb); load().then(function () { cb(snapDoc(p)); }); return function () {}; }
@@ -1767,13 +1815,6 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         get: async function () { await load(); return snapCol(c); },
         onSnapshot: function (cb) { (colL[c] = colL[c] || []).push(cb); load().then(function () { cb(snapCol(c)); }); return function () {}; }
       };
-    }
-  };
-  var mcp = {
-    callTool: async function (server, tool, args) {
-      var pin = await getPin();
-      try { var t = await run('ml_doc', pin, args && args.fileId); return { payload: { fileContent: t } }; }
-      catch (e) { throw wrapErr(e); }
     }
   };
   var downloads = {
@@ -1787,9 +1828,98 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
   window.claude = {
     use: async function (name) {
       if (name === 'db') { await load(); return db; }
-      if (name === 'mcp') { await getPin(); return mcp; }
       if (name === 'downloads') return downloads;
       return null;
+    }
+  };
+
+  /* ---------- account: pulsante in alto e riquadro in Dati e profilo ---------- */
+  function signOut() {
+    if (!confirm('Sei entrato come ' + (window.GJ_user && window.GJ_user.email) + '.\nVuoi uscire?')) return;
+    auth.signOut();
+  }
+  function account(u) {
+    var pill = document.getElementById('acct-pill'), em = document.getElementById('acct-email'), out = document.getElementById('acct-out');
+    if (pill) { pill.hidden = false; pill.textContent = String(u.email || 'Account').split('@')[0]; pill.title = u.email + ' · tocca per uscire'; pill.onclick = signOut; }
+    if (em) em.textContent = u.email;
+    if (out) out.onclick = signOut;
+  }
+
+  /* ---------- primo accesso: profilo di partenza ---------- */
+  function welcome() {
+    if (document.getElementById('gj-welcome')) return;
+    var t = new Date(), iso = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    var end = new Date(t.getTime() + 84 * 864e5);
+    var o = overlay('gj-welcome', '<form style="' + BOX + ';width:min(100%,420px)">'
+      + '<b style="font-size:1.3rem">Benvenuto in GymJourney</b><span style="color:#A6ADC4;font-size:.95rem">Due dati per partire. Li potrai cambiare quando vuoi in Altro → Dati e profilo.</span>'
+      + '<label style="' + LBL + '">Come ti chiami?<input name="name" required autocomplete="given-name" style="' + INP + '"></label>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      + '<label style="' + LBL + '">Sesso<select name="sex" style="' + INP + '"><option value="M">Uomo</option><option value="F">Donna</option></select></label>'
+      + '<label style="' + LBL + '">Età<input name="age" type="number" min="14" max="99" required inputmode="numeric" style="' + INP + '"></label>'
+      + '<label style="' + LBL + '">Altezza (cm)<input name="h" type="number" min="120" max="230" required inputmode="numeric" style="' + INP + '"></label>'
+      + '<label style="' + LBL + '">Peso oggi (kg)<input name="w0" type="number" step="0.1" min="30" max="300" required inputmode="decimal" style="' + INP + '"></label>'
+      + '<label style="' + LBL + '">Obiettivo<select name="phase" style="' + INP + '"><option value="cut">Dimagrire (cut)</option><option value="mantenimento">Mantenere</option><option value="surplus">Mettere massa</option></select></label>'
+      + '<label style="' + LBL + '">Peso obiettivo (kg)<input name="w1" type="number" step="0.1" min="30" max="300" required inputmode="decimal" style="' + INP + '"></label>'
+      + '</div>'
+      + '<label style="' + LBL + '">Entro il<input name="end" type="date" required value="' + iso(end) + '" style="' + INP + '"></label>'
+      + '<button type="submit" style="' + BTN + '">Inizia</button>'
+      + '<button type="button" data-old style="' + LNK + '">Avevo già i dati nel vecchio sito con i Google Documenti</button></form>');
+    var f = o.querySelector('form');
+    o.querySelector('[data-old]').addEventListener('click', function () {
+      o.remove();
+      try { window.GJ.show('dati'); } catch (e) {}
+      setTimeout(function () { var x = document.getElementById('old-pin'); if (x) { x.scrollIntoView({ block: 'center' }); x.focus(); } }, 300);
+    });
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var n = function (k) { return parseFloat(String(f[k].value).replace(',', '.')); };
+      var w = n('w0'), h = n('h'), a = n('age'), sex = f.sex.value, phase = f.phase.value;
+      var tdee = Math.round((10 * w + 6.25 * h - 5 * a + (sex === 'F' ? -161 : 5)) * 1.45 / 10) * 10;
+      var kcal = Math.round((phase === 'cut' ? tdee - 450 : phase === 'surplus' ? tdee + 250 : tdee) / 10) * 10;
+      var prot = Math.round(w * 2), fat = Math.round(w * 0.8), carbs = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+      var s = Object.assign({}, window.GJ.DEF, {
+        name: f.name.value.trim(), sex: sex, age: a, heightCm: h, startWeight: w, goalWeight: n('w1'), phase: phase,
+        startDate: iso(t), endDate: f.end.value, tdee: tdee, tdeeAuto: true, kcalMin: kcal, kcalMax: kcal,
+        protein: prot, carbs: carbs, fat: fat, jobHours: 0, jobStart: '', creatineStart: '', events: []
+      });
+      db.doc('settings/main').set(s).catch(function () {});
+      o.remove();
+    });
+  }
+
+  /* ---------- importazione una tantum dal vecchio sito (Apps Script + Google Documenti) ---------- */
+  window.GJ_importOld = async function () {
+    var url = (document.getElementById('old-url').value || '').trim(), pin = (document.getElementById('old-pin').value || '').trim();
+    var msg = document.getElementById('sync-detail'), btn = document.getElementById('sync-btn');
+    function say(t) { msg.textContent = t; }
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { say('Incolla l\'indirizzo del vecchio sito: quello che finisce con /exec.'); return; }
+    function run(fn) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      return fetch(url, { method: 'POST', body: JSON.stringify({ fn: fn, args: args }) })
+        .then(function (r) { if (!r.ok) throw new Error('il server ha risposto ' + r.status); return r.json(); })
+        .then(function (o) { if (o && o.ok) return o.result; throw new Error(o && o.error || 'errore'); });
+    }
+    btn.disabled = true;
+    try {
+      say('Controllo il PIN…');
+      try { await run('ml_ping', pin); } catch (e) { say(/PIN_ERRATO/.test(e.message) ? 'PIN sbagliato.' : 'Il vecchio sito non risponde (' + e.message + ').'); return; }
+      say('Copio profilo e ricette…');
+      var srv = await run('ml_load', pin), keys = Object.keys(srv || {}).filter(function (p) { return /^(settings|recipes)\/[\w-]+$/.test(p); });
+      for (var i = 0; i < keys.length; i++) {
+        var v; try { v = JSON.parse(srv[keys[i]]); } catch (e) { continue; }
+        if (keys[i] === 'settings/main') { var cur = store.get('settings/main') || {}; v = Object.assign({}, window.GJ.DEF, v, { name: cur.name || v.name || '' }); }
+        await db.doc(keys[i]).set(v);
+      }
+      var w = document.getElementById('gj-welcome'); if (w) w.remove();
+      say('Copio il diario…');
+      /* solo il diario: gli allenamenti arrivano esclusivamente dal file di Hevy */
+      window.GJ.setMcp({ callTool: async function (server, tool, args) { return { payload: { fileContent: await run('ml_doc', pin, args && args.fileId) } }; } });
+      var a = await window.GJ.syncMaster();
+      say('Importazione finita: ' + a.n + ' giorni del diario' + (keys.length ? ', profilo e ' + (keys.length - (srv['settings/main'] ? 1 : 0)) + ' ricette' : '') + ' copiati nel tuo account. Da ora i dati del giorno li inserisci qui, e gli allenamenti li carichi dal file di Hevy.');
+    } catch (e) {
+      say('Importazione non riuscita: ' + (e && e.message || e) + '. Puoi riprovare: i dati già copiati non si duplicano.');
+    } finally {
+      window.GJ.setMcp(null); btn.disabled = false;
     }
   };
 })();
@@ -1800,11 +1930,11 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 <div class="wrap">
   <header class="top">
     <div>
-      <span class="eyebrow">Il tuo spazio personale</span><div class="mobile-brand">GymJourney</div><h1 id="h-greet">Ciao, Andrea</h1><h1 id="h-page" hidden></h1>
+      <span class="eyebrow">Il tuo spazio personale</span><div class="mobile-brand">GymJourney</div><h1 id="h-greet">Ciao</h1><h1 id="h-page" hidden></h1>
       <div class="sub" id="h-sub"></div>
       <div class="fresh" id="h-fresh"></div>
     </div>
-    <div class="top-actions"><button type="button" id="sync-pill" class="sync" title="Rileggi i file da Google Drive">Drive in attesa</button></div>
+    <div class="top-actions"><button type="button" id="sync-pill" hidden></button><button type="button" id="acct-pill" class="sync" hidden>Account</button></div>
   </header>
 
   <div class="nav">
@@ -1826,6 +1956,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     <section id="tab-oggi" class="view">
       <div class="panel rings-card rings-top" data-cat="giorno">
           <div class="panel-head" style="margin:0"><div class="ph-t"><h2>La tua giornata</h2><button type="button" class="rq" data-rule="anelli" aria-label="Come si calcola" title="Come si calcola">?</button></div><button class="linkbtn small" id="go-diary">Apri il giorno</button></div>
+          <button type="button" class="btn fit add-data" data-adddata="today">+ Inserisci i dati di oggi</button>
           <div class="daynav"><button type="button" class="btn ghost icon" id="rg-prev" aria-label="Giorno precedente">‹</button><div class="dn-t" id="r-day"></div><button type="button" class="btn ghost icon" id="rg-next" aria-label="Giorno successivo">›</button></div>
           <div id="r-note"></div>
           <div class="rings-wrap">
@@ -1904,13 +2035,13 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="grid2">
         <div class="stack">
           <div class="panel stack">
-            <div class="dayhead"><h2 id="d-title">Giorno</h2><span class="src" id="d-src" hidden>Dal diario</span></div>
+            <div class="dayhead"><h2 id="d-title">Giorno</h2><span class="src" id="d-src" hidden>Dal diario</span><button type="button" class="btn ghost fit small add-data" data-adddata="sel">Modifica i dati</button></div>
             <div class="daystats" id="d-stats"></div><div id="d-energy-guide"></div>
             <div class="daynote" id="d-note" hidden></div>
             <div class="bars" id="d-bars"></div>
           </div>
           <div class="panel stack" data-cat="allen">
-            <div class="panel-head" style="margin:0"><h2>Allenamento del giorno</h2><span class="hint">Da Dati Palestra</span></div>
+            <div class="panel-head" style="margin:0"><h2>Allenamento del giorno</h2><span class="hint">Le tue sedute</span></div>
             <div id="d-work"></div>
           </div>
         </div>
@@ -2072,6 +2203,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div id="w-list"></div>
         <div style="margin-top:14px"><button class="btn ghost" id="w-more" hidden>Mostra altre</button></div>
       </div>
+      <div class="panel stack" data-cat="allen"><div class="panel-head" style="margin:0"><h2>Nuove sedute</h2><button type="button" class="btn fit" id="go-hevy">Importa da Hevy</button></div><p class="muted" style="margin:0">Le sedute arrivano solo dal file che esporti da Hevy: serie, ripetizioni e carichi non si scrivono a mano.</p></div>
       <details class="form-box" hidden>
         <summary>Registra una seduta a mano</summary>
         <form id="w-form" class="stack">
@@ -2173,11 +2305,18 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="segbar" role="tablist" aria-label="Altro"><button type="button" data-sub="regole">Regole</button><button type="button" data-sub="dati">Dati e profilo</button></div>
       <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">ALTRO / DATI E PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
       <div class="panel stack">
-        <div class="panel-head" style="margin:0"><h2>I tuoi file su Google Drive</h2><button class="btn fit" type="button" id="sync-btn">Aggiorna ora</button></div>
-        <p class="muted">Ogni volta che apri il sito leggo due documenti e salvo solo ciò che è nuovo o cambiato. Dal diario arrivano peso, calorie, macro, passi, sonno e note; da Dati Palestra tutte le sedute con esercizi e serie. Quello che c'è nei documenti vince sul sito, e una seduta tolta dal file sparisce anche qui.</p>
-        <p class="small muted">L'impaginazione non conta: ogni giorno viene riconosciuto da giorno della settimana e data (<code class="fmt">Lun 05/10</code>, <code class="fmt">Lunedì 5/10</code>, anche in grassetto o con un pallino davanti), ovunque sia scritto, anche con più giorni sulla stessa riga o righe vuote in più. I campi si leggono dal loro nome (<code class="fmt">Peso</code>, <code class="fmt">In</code>, <code class="fmt">P</code>, <code class="fmt">C</code>, <code class="fmt">F</code>, <code class="fmt">Passi</code>, <code class="fmt">Sonno</code>, <code class="fmt">Note</code>), separati da <code class="fmt">|</code>, virgole o solo spazi.</p>
-        <div class="status-box" id="sync-detail" aria-live="polite">In attesa della prima lettura.</div>
-        <p class="small muted">Per il sonno aggiungi alla riga del giorno un campo così: <code class="fmt">| Sonno: 7h30 |</code>. Vanno bene anche <code class="fmt">7:30</code> o <code class="fmt">7,5h</code>. La notte tra il 14 e il 15 va sulla riga del 15: il sonno di una riga è la notte appena passata, quella che finisce la mattina di quel giorno.</p>
+        <div class="panel-head" style="margin:0"><h2>Il tuo account</h2><button class="btn ghost fit" type="button" id="acct-out">Esci</button></div>
+        <p class="muted" style="margin:0">Sei entrato come <b id="acct-email">—</b>. I tuoi dati sono salvati online e li vedi solo tu, da qualsiasi telefono o computer su cui entri.</p>
+      </div>
+      <div class="panel stack">
+        <div class="panel-head" style="margin:0"><h2>Importa dal vecchio sito</h2></div>
+        <p class="muted" style="margin:0">Se usavi GymJourney con i Google Documenti, qui copi nel tuo account il diario (pesate, calorie, macro, passi, sonno), il profilo e le ricette. Gli allenamenti invece si caricano dal file di Hevy, qui sotto. Basta farlo una volta; se lo ripeti non si crea niente di doppio.</p>
+        <div class="row">
+          <label class="f" style="flex:3 1 260px"><span>Indirizzo del vecchio sito (finisce con /exec)</span><input id="old-url" type="url" placeholder="https://script.google.com/macros/s/…/exec" value="https://script.google.com/macros/s/AKfycbwUvgAG_XVHvjLhtToLsvcy-zfVWuQUv1wPw-5Ib03WQORe0xkyXnHjlxrU8DfgpBx0lg/exec"></label>
+          <label class="f" style="flex:1 1 110px"><span>PIN</span><input id="old-pin" type="password" inputmode="numeric" autocomplete="off"></label>
+        </div>
+        <div class="row"><button class="btn fit" type="button" id="sync-btn">Importa</button></div>
+        <div class="status-box" id="sync-detail" aria-live="polite">Nessuna importazione fatta.</div>
       </div>
       <div class="panel stack">
         <div class="panel-head" style="margin:0"><h2>Fase e obiettivi</h2><span class="hint" id="dati-count"></span></div>
@@ -2195,6 +2334,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
             <label class="f">Peso obiettivo (kg)<input id="s-w1" type="number" step="0.1" inputmode="decimal"></label>
             </div></fieldset>
             <fieldset class="settings-group"><legend><span>02</span> Dati personali</legend><div class="settings-fields">
+            <label class="f">Nome<input id="s-name" type="text" autocomplete="given-name"></label>
+            <label class="f">Sesso<select id="s-sex"><option value="M">Uomo</option><option value="F">Donna</option></select></label>
             <label class="f">Altezza (cm)<input id="s-h" type="number" step="1" inputmode="numeric"></label>
             <label class="f">Età<input id="s-age" type="number" step="1" min="14" max="99" inputmode="numeric"></label>
             <label class="f">Lavoro: ore contrattuali a settimana (riferimento; senza turni per data non si aggiungono calorie)<input id="s-jobh" type="number" step="1" min="0" max="80" inputmode="numeric"></label>
@@ -2218,8 +2359,9 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         </form>
       </div>
 
-      <div class="panel stack" hidden>
-        <h2>Importa da Hevy</h2>
+      <div class="panel stack" id="hevy-panel">
+        <h2>Importa gli allenamenti da Hevy</h2>
+        <p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui sotto. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p>
         <div class="row"><label class="f" style="flex:2 1 240px">File CSV<input id="imp-file" type="file" accept=".csv,text/csv,.txt"></label></div>
         <pre class="prev" id="imp-prev" hidden></pre>
         <div class="row"><button class="btn fit" id="imp-go" hidden>Importa</button><span class="muted small" id="imp-msg" style="flex:1 1 200px"></span></div>
@@ -2684,6 +2826,8 @@ var SF = { startDate: '#s-start', endDate: '#s-end', startWeight: '#s-w0', goalW
 function renderSettings() {
   syncInput('#s-phase', S().phase);
   syncInput('#s-tdee-auto', S().tdeeAuto === false ? '0' : '1');
+  syncInput('#s-name', S().name || '');
+  syncInput('#s-sex', S().sex || 'M');
   Object.keys(SF).forEach(function (k) { syncInput(SF[k], S()[k]); });
   $('#dati-count').textContent = state.days.size + ' giorni · ' + state.workouts.size + ' sedute · ' + state.recipes.size + ' ricette';
 }
@@ -2911,7 +3055,7 @@ function barChart(svg, cfg) {
 /* ---------- intestazione ed eroe ---------- */
 function renderHeader() {
   var s = S(), now = new Date(), h = now.getHours(), t = todayStr();
-  $('#h-greet').textContent = (h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera') + ', Andrea';
+  $('#h-greet').textContent = (h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera') + (s.name ? ', ' + s.name : '');
   var tot = Math.max(1, diffDays(s.startDate, s.endDate) + 1), day = diffDays(s.startDate, t) + 1, ph = phaseLabel().toLowerCase();
   var phase = day < 1 ? 'Il ' + ph + ' parte il ' + fmtShort(s.startDate) : day > tot ? 'Hai superato la data obiettivo del ' + fmtShort(s.endDate) : 'Giorno ' + day + ' di ' + tot + ' del ' + ph;
   $('#h-sub').textContent = cap(DOWL[(now.getDay() + 6) % 7]) + ' ' + now.getDate() + ' ' + MESI_L[now.getMonth()] + '. ' + phase + '.';
@@ -3063,7 +3207,7 @@ function renderRings() {
   var has = d.kcal > 0 || d.steps > 0 || d.protein > 0;
   var prev = dayList().filter(function (x) { var v = state.days.get(x); return x < day && (v.kcal > 0 || v.steps > 0); }).pop();
   var w0 = Array.from(state.workouts.values()).filter(function (w) { return w.date === day; }), note = '';
-  if (!has) note = '<div class="rday-empty">' + (isT ? 'Il diario non ha ancora la riga di oggi: i valori compaiono appena la aggiungi.' : 'Il diario non ha dati per questo giorno.') + (isT && prev ? ' <button type="button" class="linkbtn small" data-ringday="' + prev + '">Vedi il ' + fmtShort(prev) + '</button>' : '') + '</div>';
+  if (!has) note = '<div class="rday-empty">' + (isT ? 'Non hai ancora inserito i dati di oggi: tocca «Inserisci i dati di oggi».' : 'Nessun dato per questo giorno.') + (isT && prev ? ' <button type="button" class="linkbtn small" data-ringday="' + prev + '">Vedi il ' + fmtShort(prev) + '</button>' : '') + '</div>';
   else note = '<div class="rday-chips">' + (d.weight > 0 ? '<span class="chip day-chip day-weight">' + tkn('peso', 'Peso ' + fmt(d.weight, 1) + ' kg') + '</span>' : '') + '<span class="chip day-chip ' + (w0.length ? 'day-training' : 'day-rest') + '">' + (w0.length ? tkn('allen', w0.map(function (w) { return GROUP[wGroup(w)].s + ' · ' + esc(w.title); }).join(', ')) : 'Riposo') + '</span>' + (d.sleepH > 0 ? '<span class="chip day-chip day-sleep">' + tkn('sonno', 'Sonno ' + fmtH(d.sleepH)) + '</span>' : '') + '</div>';
   if (!isT) note += '<button type="button" class="linkbtn small rday-back" data-ringday="' + t + '">Torna a oggi</button>';
   $('#r-note').innerHTML = note;
@@ -6058,6 +6202,7 @@ function bind() {
   });
   $('#w-date').value = todayStr(); addExerciseBlock();
   $('#w-addex').addEventListener('click', addExerciseBlock);
+  $('#go-hevy').addEventListener('click', function () { window.GJ.goHevy(); });
   $('#w-exs').addEventListener('click', function (e) { if (e.target.classList.contains('wx-del')) { var blocks = $$('.ex-form', $('#w-exs')); if (blocks.length > 1) e.target.closest('.ex-form').remove(); } });
   $('#w-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -6104,7 +6249,7 @@ function bind() {
   });
   $('#set-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var next = Object.assign({}, S(), { phase: $('#s-phase').value, tdeeAuto: $('#s-tdee-auto').value === '1' });
+    var next = Object.assign({}, S(), { phase: $('#s-phase').value, tdeeAuto: $('#s-tdee-auto').value === '1', name: $('#s-name').value.trim(), sex: $('#s-sex').value });
     Object.keys(SF).forEach(function (k) { var el_ = $(SF[k]); if (el_.type === 'date') { if (el_.value) next[k] = el_.value; } else { var v = num(el_.value.replace(',', '.')); if (v != null) next[k] = v; } });
     state.settings = next; saveDoc('settings/main', next); renderAll();
     $('#s-msg').textContent = 'Obiettivi salvati.';
@@ -6125,8 +6270,8 @@ function bind() {
     rd.readAsText(f);
   });
   $('#imp-go').addEventListener('click', function () { if (state.importPlan) runImport(state.importPlan); });
-  $('#sync-btn').addEventListener('click', function () { syncDoc(); });
-  $('#sync-pill').addEventListener('click', function () { syncDoc(); });
+  $('#sync-btn').addEventListener('click', function () { window.GJ_importOld(); });
+  
   $('#ex-days').addEventListener('click', function () { doExport('days'); });
   $('#ex-work').addEventListener('click', function () { doExport('work'); });
 }
@@ -6152,7 +6297,7 @@ async function init() {
   try { dl = c && c.use ? await c.use('downloads') : null; } catch (e) { dl = null; }
   try { mcp = c && c.use ? await c.use('mcp') : null; } catch (e) { mcp = null; }
   if (!db) setOffline(); else subscribe();
-  if (!mcp) { setSync('warn', 'Drive · non disponibile', 'La lettura di Google Drive non è disponibile in questa vista. Ricarica la pagina.'); setTimeout(introData, 400); }
+  if (!mcp) { setSync('good', 'Pronto', 'Nessuna importazione fatta.'); setTimeout(introData, 400); }
   else maybeSync();
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && mcp && lastSync && Date.now() - lastSync > 5 * 60 * 1000) syncDoc();
@@ -6168,7 +6313,7 @@ function introText() {
   var s = S(), t = todayStr(), back = false;
   try { back = !!localStorage.getItem('ml-chat-visited'); } catch (e) {}
   var h = new Date().getHours();
-  $('#in-kick').textContent = (back ? 'Bentornato' : 'Benvenuto') + ', Andrea';
+  $('#in-kick').textContent = (back ? 'Bentornato' : 'Benvenuto') + (s.name ? ', ' + s.name : '');
   $('#in-title').innerHTML = 'nel tuo percorso di <em>' + phaseWord() + '</em>';
   var tot = diffDays(s.startDate, s.endDate) + 1, n = diffDays(s.startDate, t) + 1;
   $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg entro il ' + fmtDay(s.endDate);
@@ -6751,6 +6896,8 @@ if (['oggi', 'diario', 'allenamenti', 'corpo', 'ricette', 'regole', 'dati'].inde
 renderAll();
 
 
+/* usati dal codice di account, importazione e modulo del giorno */
+window.GJ = { DEF: DEF, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
 init();
 try {
   var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
@@ -6761,6 +6908,84 @@ requestAnimationFrame(moveInd);
 var rzT = 0;
 window.addEventListener('resize', function () { moveInd(); clearTimeout(rzT); rzT = setTimeout(renderAll, 180); });
 try { document.fonts.ready.then(moveInd); } catch (e) {}
+})();
+</script>
+<script>
+/* ---------- inserimento dei dati di un giorno (sostituisce la riga del diario su Google Documenti) ---------- */
+(function () {
+  var G = window.GJ, state = G.state, saveDay = G.saveDay, todayStr = G.todayStr;
+  var FIELDS = [
+    { k: 'weight', l: 'Peso (kg)', m: 'decimal' },
+    { k: 'kcal', l: 'Calorie (kcal)', m: 'numeric' },
+    { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
+    { k: 'carbs', l: 'Carboidrati (g)', m: 'decimal' },
+    { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
+    { k: 'steps', l: 'Passi', m: 'numeric' },
+    { k: 'sleepH', l: 'Sonno (ore, es. 7:30)', m: 'text' }
+  ];
+  var box = document.createElement('div');
+  box.id = 'dayform'; box.className = 'df-bg'; box.hidden = true;
+  box.innerHTML = '<form class="panel stack df-card" novalidate>'
+    + '<div class="panel-head" style="margin:0"><h2>I dati del giorno</h2><button type="button" class="btn ghost icon fit" data-x aria-label="Chiudi">✕</button></div>'
+    + '<label class="f"><span>Giorno</span><input type="date" name="date" required></label>'
+    + '<div class="df-grid">' + FIELDS.map(function (f) { return '<label class="f"><span>' + f.l + '</span><input name="' + f.k + '" inputmode="' + f.m + '" autocomplete="off"></label>'; }).join('') + '</div>'
+    + '<label class="f"><span>Note</span><textarea name="note" rows="2"></textarea></label>'
+    + '<p class="muted small" data-msg style="margin:0">Lascia vuoto ciò che non sai: si può aggiungere dopo. Il sonno è quello della notte appena passata.</p>'
+    + '<div class="row"><button class="btn fit" type="submit">Salva</button><button class="btn ghost fit" type="button" data-x>Annulla</button></div>'
+    + '</form>';
+  document.body.appendChild(box);
+  var f = box.querySelector('form'), msg = box.querySelector('[data-msg]');
+
+  function show(v) { return v == null ? '' : String(v).replace('.', ','); }
+  function fill(date) {
+    var d = state.days.get(date) || {};
+    f.date.value = date;
+    FIELDS.forEach(function (x) {
+      var v = d[x.k];
+      if (x.k === 'sleepH' && v != null) { var h = Math.floor(v), m = Math.round((v - h) * 60); v = m ? h + ':' + String(m).padStart(2, '0') : String(h); }
+      f[x.k].value = show(v);
+    });
+    f.note.value = d.note || '';
+  }
+  function parse(k, s) {
+    s = String(s || '').trim(); if (!s) return null;
+    if (k === 'sleepH') {
+      var m = s.match(/^(\d{1,2})\s*[:h.,]\s*(\d{1,2})\s*$/i);
+      if (m && /[:h]/i.test(s)) return Math.round((+m[1] + +m[2] / 60) * 100) / 100;
+    }
+    var v = parseFloat(s.replace(/\s/g, '').replace(',', '.'));
+    if (isNaN(v) || v < 0) return undefined;
+    return k === 'kcal' || k === 'steps' ? Math.round(v) : v;
+  }
+  window.openDayForm = function (date) {
+    fill(date || todayStr());
+    msg.className = 'muted small';
+    box.hidden = false;
+    setTimeout(function () { var first = f.weight.value ? f.kcal : f.weight; first.focus(); }, 60);
+  };
+  function close() { box.hidden = true; }
+  box.addEventListener('click', function (e) { if (e.target === box || e.target.closest('[data-x]')) close(); });
+  f.date.addEventListener('change', function () { if (f.date.value) fill(f.date.value); });
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var date = f.date.value; if (!date) return;
+    var vals = {}, bad = [];
+    FIELDS.forEach(function (x) { var v = parse(x.k, f[x.k].value); if (v === undefined) bad.push(x.l); else vals[x.k] = v; });
+    if (bad.length) { msg.className = 'small'; msg.style.color = 'var(--bad)'; msg.textContent = 'Controlla: ' + bad.join(', ') + '.'; return; }
+    msg.style.color = '';
+    saveDay(date, function (d) {
+      Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      d.note = f.note.value.trim() || null;
+      d.source = 'app';
+    });
+    close();
+    G.setSel(date);
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-adddata]'); if (!b) return;
+    e.preventDefault();
+    openDayForm(b.dataset.adddata === 'sel' ? state.sel : todayStr());
+  });
 })();
 </script>
 <script>
