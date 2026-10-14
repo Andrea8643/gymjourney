@@ -1995,7 +1995,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 
       <div class="grid2">
         <div class="panel" data-cat="avvisi"><div class="panel-head"><div class="ph-t"><h2>Da tenere d'occhio</h2><button type="button" class="rq" data-rule="av-dati" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="al-count"></span></div><div id="alerts"></div></div>
-        <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">A → B → C → D</span></div><div id="split-oggi"></div></div>
+        <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-oggi"></div></div>
       </div>
       <div class="panel cu-teaser" id="curio-teaser" hidden></div>
       <div class="panel golinks">
@@ -2176,7 +2176,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     <section id="tab-allenamenti" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Allenamenti"><button type="button" data-sub="allenamenti">Sedute</button><button type="button" data-sub="corpo">Corpo</button></div>
       <div class="area-lead" style="--area:#8ab9ff;--area2:#6d7fff"><span class="area-kicker">ALLENAMENTO / SEDUTE</span><strong>Ogni seduta lascia un segno.</strong><p>Lo split racconta cosa hai fatto, cosa viene dopo e come evolve la tua costanza.</p><span class="area-mark" aria-hidden="true">◈</span></div>
-      <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">A → B → C → D</span></div><div id="split-all"></div></div>
+      <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-all"></div></div>
       <div class="panel" data-cat="allen">
         <div class="panel-head"><div class="ph-t"><h2>Costanza</h2><button type="button" class="rq" data-rule="costanza" aria-label="Come si calcola" title="Come si calcola">?</button></div>
           <div class="calctl"><span class="calctl-l">Mostra:</span><div class="seg" role="group" aria-label="Periodo della costanza"><button type="button" data-calmode="30">Ultimi 30 giorni</button><button type="button" data-calmode="mese">Mese in corso</button></div></div>
@@ -2228,7 +2228,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="panel-head">
           <div class="ph-t"><h2>Analisi corporea</h2><button type="button" class="rq" data-rule="muscoli" aria-label="Come si calcola" title="Come si calcola">?</button></div>
           <div class="bctrl">
-            <div class="seg" role="group" aria-label="Periodo"><button type="button" data-brange="4w">4 settimane</button><button type="button" data-brange="cut">Dal 7 set</button><button type="button" data-brange="all">Tutto</button></div>
+            <div class="seg" role="group" aria-label="Periodo"><button type="button" data-brange="4w">4 settimane</button><button type="button" data-brange="cut">Da inizio fase</button><button type="button" data-brange="all">Tutto</button></div>
             <div class="seg" role="group" aria-label="Vista"><button type="button" data-bview="heat">Mappa di calore</button><button type="button" data-bview="plain">Muscoli</button></div>
           </div>
         </div>
@@ -2683,7 +2683,7 @@ function renderSummary() {
     '<p><b>Variazione</b>: quanto è cambiato il peso medio rispetto ' + (isWeek ? 'alla settimana' : 'al mese') + ' prima. Verde se ti avvicini all\'obiettivo, arancione se ti allontani.</p>'
     + '<p><b>Bilancio</b>: calorie mangiate meno il fabbisogno stimato di quella settimana, in media al giorno. Un numero negativo è il deficit, uno positivo il surplus. Esempio: −1.300 vuol dire che in media hai mangiato 1.300 kcal meno di quante ne hai consumate.</p>'
     + '<p><b>Proteine, carboidrati e grassi</b>: grammi mangiati in media al giorno. <b>Sonno</b>: ore medie a notte, quando le registri.</p>'
-    + '<p><b>Allenamenti</b>: sedute in palestra registrate in Dati Palestra. <b>Giorni registrati</b>: giorni con le calorie nel diario, su quelli del periodo.</p>';
+    + '<p><b>Allenamenti</b>: sedute in palestra importate da Hevy. <b>Giorni registrati</b>: giorni con le calorie nel diario, su quelli del periodo.</p>';
 }
 
 function syncInput(id, val) {
@@ -2697,7 +2697,7 @@ function dayStatsHTML(date) {
   var td = tdeeForDate(date);
   var w0 = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }), g0 = w0.length ? wGroup(w0[0]) : null;
   var wTile = st('Allenamento', w0.length ? (w0.length > 1 ? w0.length + ' sedute' : esc(g0)) : 'Riposo', '', g0 ? GROUP[g0].c : '#6F7793');
-  if (!has) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Il diario non contiene ancora calorie, peso e passi per questo giorno. Appena li scrivi nel documento, compaiono qui da soli.</div>';
+  if (!has) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Il diario non contiene ancora calorie, peso e passi per questo giorno. Toccando «Modifica i dati» li aggiungi quando vuoi.</div>';
   return st('Peso', d.weight > 0 ? fmt(d.weight, 1) : '—', 'kg', HEX.accent)
     + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : '—', 'kcal', HEX.kcal)
     + st('Bilancio', d.kcal > 0 ? sgn(d.kcal - td, 0) : '—', 'kcal', d.kcal > 0 && d.kcal - td > 0 ? HEX.warn : HEX.good, d.kcal > 0 ? 'su ' + fmt(td, 0) + ' di fabbisogno<span class="s2">(' + tdeeLabel(date) + ')</span>' : '')
@@ -2707,7 +2707,7 @@ function dayStatsHTML(date) {
 }
 function dayWorkHTML(date) {
   var ws = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }).sort(function (x, y) { return (x.start || '') < (y.start || '') ? -1 : 1; });
-  if (!ws.length) return '<div class="empty">' + (date > todayStr() ? 'Giorno futuro.' : 'Giorno di riposo: nessuna seduta registrata in Dati Palestra.') + '</div>';
+  if (!ws.length) return '<div class="empty">' + (date > todayStr() ? 'Giorno futuro.' : 'Giorno di riposo: nessuna seduta registrata in Hevy.') + '</div>';
   return ws.map(function (w) {
     var G = GROUP[wGroup(w)], vol = 0, nS = 0;
     (w.exercises || []).forEach(function (ex) { setsOf(ex).forEach(function (x) { vol += (x.kg || 0) * (x.reps || 0); nS++; }); });
@@ -3138,7 +3138,7 @@ function renderTomorrow() {
   var html = '<div class="weigh-sub">Cosa ci si aspettava dalla bilancia</div><div class="weigh-top"><div class="weigh-value"><small>Previsione per ' + fmtDay(R) + '</small><b>' + fmt(M.pr, 1) + ' kg</b><span>Valore centrale del modello</span></div><div class="weigh-value"><small>Margine ricostruito</small><b>' + fmt(lo, 1) + '–' + fmt(hi, 1) + '</b><span>kg · ±' + fmt(mg, 1) + ' sulla previsione</span></div></div>';
   html += '<div class="weigh-explain"><b>Da cosa nasce la previsione</b>Combina le pesate recenti con il bilancio energetico stimato del giorno precedente e con ipotesi sull’acqua legata a carboidrati e creatina.' + (names.length ? ' Dati di ieri: ' + esc(names.join(' · ')) + '.' : '') + ' Non conosce sale, liquidi, contenuto intestinale e orario della pesata.</div>';
   html += '<div class="weigh-sub">Confronto reale</div>';
-  if (measured == null) html += '<div class="weigh-compare"><b>Pesata non ancora registrata</b><p>Quando inserisci il peso di stamattina nel diario e aggiorni Drive, qui appariranno differenza, posizione nel margine e spiegazione.</p></div>';
+  if (measured == null) html += '<div class="weigh-compare"><b>Pesata non ancora registrata</b><p>Quando inserisci il peso di stamattina, qui appariranno differenza, posizione nel margine e spiegazione.</p></div>';
   else {
     var diff = measured - M.pr, ad = Math.abs(diff), ratio = mg > 0 ? ad / mg : 0;
     var cls = ad <= .25 ? 'center' : ratio <= 1 ? 'edge' : 'out';
@@ -3573,23 +3573,27 @@ function renderDash() {
 }
 
 /* ---------- allenamenti ---------- */
-function typeColor(t) {
-  t = String(t || '').toLowerCase();
-  if (/petto|spalle/.test(t)) return HEX.kcal;
-  if (/schiena/.test(t)) return HEX.steps;
-  if (/bracci|bicip|bicit|tricip/.test(t)) return HEX.prot;
-  if (/gamb/.test(t)) return HEX.sleep;
-  return HEX.carb;
+/* Tipi di seduta: sono i titoli delle sedute che arrivano da Hevy. Ogni titolo ha il suo colore,
+   assegnato nell'ordine in cui il titolo compare la prima volta, così due tipi diversi non si confondono. */
+var GPAL = ['#FF9466', '#74C0FC', '#F6C85F', '#A897FF', '#5DD6C3', '#F48FB1', '#B5E36B', '#FFB86B', '#8EA8FF', '#E58BE0'];
+var gCache = { n: -1, map: {} };
+function normTitle(t) { t = String(t || '').replace(/\s+/g, ' ').trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Seduta'; }
+function groupInfo(g) {
+  if (gCache.n !== state.workouts.size) {
+    var first = {};
+    state.workouts.forEach(function (w) { var k = normTitle(w.title); if (!first[k] || w.date < first[k]) first[k] = w.date; });
+    gCache = { n: state.workouts.size, map: {} };
+    Object.keys(first).sort(function (a, b) { return first[a] < first[b] ? -1 : first[a] > first[b] ? 1 : a < b ? -1 : 1; })
+      .forEach(function (k, i) { gCache.map[k] = i; });
+  }
+  var i = gCache.map[g], c;
+  if (i == null) { var h = 0; for (var x = 0; x < g.length; x++) h = (h * 31 + g.charCodeAt(x)) % 360; c = 'hsl(' + h + ',70%,70%)'; }
+  else c = i < GPAL.length ? GPAL[i] : 'hsl(' + ((i * 137) % 360) + ',70%,70%)';
+  return { c: c, s: initials(g) };
 }
-var GROUP = {
-  'Petto e spalle': { c: HEX.kcal, s: 'PS' }, 'Schiena': { c: HEX.steps, s: 'S' }, 'Braccia': { c: HEX.prot, s: 'B' },
-  'Gambe': { c: HEX.sleep, s: 'G' }, 'Cardio': { c: HEX.carb, s: 'C' }, 'Altro': { c: '#9AA3BC', s: '•' }
-};
-function wGroup(w) {
-  var ex = w.exercises || [];
-  var timed = ex.length && ex.every(function (e) { return (e.sets || []).length && e.sets.every(function (st) { return st.min || st.sec; }); });
-  return timed ? 'Cardio' : typeGroup(w.title);
-}
+var GROUP = new Proxy({}, { get: function (o, k) { return groupInfo(String(k)); } });
+function typeColor(t) { return groupInfo(normTitle(t)).c; }
+function wGroup(w) { return normTitle(w.title); }
 function renderCalDetail() {
   var box = $('#cal-detail'), d = state.calSel; if (!box || !d) return;
   var v = state.days.get(d) || {};
@@ -3600,14 +3604,7 @@ function renderCalDetail() {
     + '<h3 class="cd-sub">Allenamento</h3>' + dayWorkHTML(d);
   if (state.calPop) { state.calPop = false; box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
 }
-function typeGroup(t) {
-  t = String(t || '').toLowerCase();
-  if (/petto|spalle/.test(t)) return 'Petto e spalle';
-  if (/schiena/.test(t)) return 'Schiena';
-  if (/bracci|bicip|bicit|tricip/.test(t)) return 'Braccia';
-  if (/gamb/.test(t)) return 'Gambe';
-  return 'Altro';
-}
+function typeGroup(t) { return normTitle(t); }
 function initials(t) {
   var w = String(t || '').split(/\s+/).filter(function (x) { return x && !/^(e|di|con|su|a|al)$/i.test(x); });
   if (!w.length) return '·';
@@ -3626,7 +3623,7 @@ function renderWorkouts() {
   var list = Array.from(state.workouts.entries()).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }).sort(function (a, b) { return a.id < b.id ? 1 : -1; });
   $('#w-count').textContent = list.length ? list.length + (list.length === 1 ? ' seduta registrata' : ' sedute registrate') : '';
   if (!list.length) {
-    listEl.innerHTML = '<div class="empty">Ancora nessuna seduta. Arrivano da sole dal tuo file Dati Palestra appena la pagina lo legge.</div>';
+    listEl.innerHTML = '<div class="empty">Ancora nessuna seduta. Arrivano da sole dal tuo file Hevy appena la pagina lo legge.</div>';
   } else {
     listEl.innerHTML = list.slice(0, state.wShown).map(function (w) {
       var vol = 0, c = GROUP[wGroup(w)].c;
@@ -3698,7 +3695,7 @@ function renderWorkouts() {
     ? (to === t ? 'Solo le sedute di ' + mName(state.calMonth) + ', dal 1° a oggi (' + nDays + (nDays === 1 ? ' giorno' : ' giorni') + '). Con le frecce vedi i mesi precedenti.' : 'Le sedute di tutto ' + mName(state.calMonth) + '.')
     : 'Gli ultimi 30 giorni fino a oggi, dal ' + fmtDay(from) + ' al ' + fmtDay(t) + ', anche a cavallo di due mesi.') + ' Tocca un giorno per i dettagli.';
   renderCalDetail();
-  $('#heat-legend').innerHTML = ['Petto e spalle', 'Schiena', 'Braccia', 'Gambe', 'Cardio', 'Altro'].filter(function (g) { return counts[g]; }).map(function (g) {
+  $('#heat-legend').innerHTML = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).map(function (g) {
     return '<span><i style="background:' + GROUP[g].c + ';border-radius:50%"></i>' + g + ' (' + GROUP[g].s + '): <b style="color:var(--ink)">' + counts[g] + '</b></span>';
   }).join('') || '<span>Nessuna seduta ' + (isMonth ? 'a ' + MESI_L[parseD(from).getMonth()] : 'negli ultimi 30 giorni') + '.</span>';
   var durs = inWin.map(function (w) { return w.durMin; }).filter(function (x) { return x > 0; }), avgD = mean(durs);
@@ -4434,7 +4431,7 @@ function renderBody() {
   });
   $('#body-scale').hidden = view !== 'heat';
   $('#body-scale-max').textContent = fmt(max, 1) + ' serie a settimana';
-  $('#body-period').textContent = 'Dal ' + fmtDay(st.from) + ' a oggi: ' + st.n + (st.n === 1 ? ' seduta' : ' sedute') + ' in Dati Palestra.';
+  $('#body-period').textContent = 'Dal ' + fmtDay(st.from) + ' a oggi: ' + st.n + (st.n === 1 ? ' seduta' : ' sedute') + ' in Hevy.';
 
   /* dettaglio muscolo */
   var k = state.bodySel, m = M[k], ti = trendInfo(m.trend);
@@ -4458,7 +4455,7 @@ function renderBody() {
         + '<div class="ds" style="--c:#5DD6C3"><div class="l"><i></i>Ultima volta</div><div class="v" style="font-size:1.15rem">' + (m.last ? fmtShort(m.last) : '—') + '</div><div class="s">' + (m.last ? (diffDays(m.last, todayStr()) === 0 ? 'oggi' : diffDays(m.last, todayStr()) + ' giorni fa') : 'solo come secondario') + '</div></div></div>'
         + '<div><div class="small muted" style="margin:14px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>'
         + (exRows ? '<div><div class="small muted" style="margin:10px 0 2px">Esercizi e progressione (carico migliore, prime sedute contro ultime)</div>' + exRows + '</div>' : '')
-      : '<div class="empty">Non hai allenato questo muscolo nel periodo scelto.' + (function () { var a = bodyStats('all').M[k]; return a.last ? ' L\'ultima volta è stata il ' + fmtDay(a.last) + '.' : ' In Dati Palestra non c\'è nessun esercizio che lo alleni.'; })() + '</div><div><div class="small muted" style="margin:10px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>');
+      : '<div class="empty">Non hai allenato questo muscolo nel periodo scelto.' + (function () { var a = bodyStats('all').M[k]; return a.last ? ' L\'ultima volta è stata il ' + fmtDay(a.last) + '.' : ' Nelle sedute di Hevy non c\'è nessun esercizio che lo alleni.'; })() + '</div><div><div class="small muted" style="margin:10px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>');
   if (state.bodyPop) { state.bodyPop = false; box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
 
   /* equilibrio */
@@ -4479,13 +4476,11 @@ function renderBody() {
 }
 
 /* ===== riassunto con semaforo, avvisi dalle regole del profilo, settimana A-B-C-D ===== */
-var SPLIT = [{ k: 'A', g: 'Petto e spalle' }, { k: 'B', g: 'Schiena' }, { k: 'C', g: 'Braccia' }, { k: 'D', g: 'Petto e spalle' }];
-var KEY_LIFTS = [
-  { n: 'Panca inclinata', re: /panca inclinata/i },
-  { n: 'Chest press', re: /chest press/i },
-  { n: 'Trazioni e lat pulldown', re: /trazion|lat pulldown/i },
-  { n: 'Skullcrusher', re: /skullcrusher/i }
-];
+/* esercizi principali: i 4 fatti più spesso nelle sedute del periodo */
+function keyLifts(wl) {
+  var n = {}; wl.forEach(function (w) { (w.exercises || []).forEach(function (ex) { if (setsOf(ex).length) n[ex.name] = (n[ex.name] || 0) + 1; }); });
+  return Object.keys(n).sort(function (a, b) { return n[b] - n[a]; }).slice(0, 4).map(function (k) { return { n: k, re: { test: function (x) { return x === k; } } }; });
+}
 var LVL_C = { bad: HEX.bad || '#FF7A85', warn: '#F6B25A', good: '#5FD49E', info: '#8EA8FF' };
 function lastWorkoutDate() {
   var l = Array.from(state.workouts.values()).map(function (w) { return w.date; }).sort();
@@ -4493,20 +4488,25 @@ function lastWorkoutDate() {
 }
 function splitWeek(ws) {
   var we = addDays(ws, 6);
-  var list = Array.from(state.workouts.values()).filter(function (w) { return w.date >= ws && w.date <= we && wGroup(w) !== 'Cardio'; })
+  var list = Array.from(state.workouts.values()).filter(function (w) { return w.date >= ws && w.date <= we; })
     .sort(function (a, b) { return (a.date + (a.start || '')) < (b.date + (b.start || '')) ? -1 : 1; });
-  var sl = SPLIT.map(function (x) { return { k: x.k, g: x.g, w: null, rep: 0 }; }), extra = [];
-  list.forEach(function (w) {
-    var g = wGroup(w);
-    if (g === 'Petto e spalle') {
-      if (!sl[0].w) sl[0].w = w;
-      else if (sl[1].w || sl[2].w) { if (!sl[3].w) sl[3].w = w; else extra.push(w); }
-      else { sl[0].w = w; sl[0].rep++; }
-    } else if (g === 'Schiena') { if (!sl[1].w) sl[1].w = w; else extra.push(w); }
-    else if (g === 'Braccia') { if (!sl[2].w) sl[2].w = w; else extra.push(w); }
-    else extra.push(w);
-  });
-  return { slots: sl, extra: extra, ws: ws, we: we, n: sl.filter(function (x) { return x.w; }).length };
+  return { list: list, ws: ws, we: we, n: list.length };
+}
+/* i tuoi tipi di seduta: quelli delle ultime 4 settimane (o di sempre, se sono vuote), nell'ordine in cui li hai iniziati */
+function splitTypes() {
+  var t = todayStr(), from = addDays(t, -27), all = Array.from(state.workouts.values());
+  var rec = all.filter(function (w) { return w.date >= from && w.date <= t; }); if (!rec.length) rec = all;
+  var cnt = {}, last = {};
+  rec.forEach(function (w) { var g = wGroup(w); cnt[g] = (cnt[g] || 0) + 1; });
+  all.forEach(function (w) { var g = wGroup(w); if (!last[g] || w.date > last[g]) last[g] = w.date; });
+  var ix = function (g) { groupInfo(g); var i = gCache.map[g]; return i == null ? 1e9 : i; };
+  return Object.keys(cnt).sort(function (a, b) { return ix(a) - ix(b); }).map(function (g) { return { g: g, n: cnt[g], last: last[g] }; });
+}
+/* sedute a settimana: la media delle ultime 4 settimane complete */
+function weeklyTarget() {
+  var ws = weekStart(todayStr()), tot = 0;
+  for (var k = 1; k <= 4; k++) tot += splitWeek(addDays(ws, -7 * k)).n;
+  return Math.max(1, Math.round(tot / 4)) || 1;
 }
 function computeAlerts() {
   var out=[], t=todayStr(), v=state.days.get(t);
@@ -4526,19 +4526,21 @@ function renderAlerts() {
 function renderSplitBox(id) {
   var box = $('#' + id); if (!box) return;
   var t = todayStr(), sw = splitWeek(weekStart(t)), prev = splitWeek(addDays(weekStart(t), -7)), lw = lastWorkoutDate();
-  var nextIdx = -1; for (var i = 0; i < 4; i++) if (!sw.slots[i].w) { nextIdx = i; break; }
-  var daysLeft = diffDays(t, sw.we) + 1;
-  var html = '<div class="split-intro"><b>La tua sequenza A → B → C → D</b><span>Le lettere sono le quattro sedute previste, non quattro dati uguali. A e D allenano entrambi petto e spalle, in due sedute distinte.</span></div><div class="split">' + sw.slots.map(function (x, i) {
-    var c = ['#ff9f80','#7cbfff','#ffd474','#c7a4ff'][i], cls = x.w ? ' done' : i === nextIdx ? ' next' : ' todo';
-    var pd = x.w ? parseD(x.w.date) : null;
-    return '<div class="sp' + cls + '" style="--c:' + c + '"><div class="sp-top"><span class="sp-index">0' + (i + 1) + ' / 04</span><span class="sp-state">' + (x.w ? 'Completata' : i === nextIdx ? 'Prossima' : 'Da fare') + '</span></div><div class="k">' + x.k + (x.w ? ' <span class="ok">✓</span>' : '') + '</div><div class="g">' + x.g + '</div><div class="d">'
-      + (x.w ? DOW[(pd.getDay() + 6) % 7] + ' ' + pd.getDate() + (x.rep ? ', ripetuta' : '') : i === nextIdx ? 'È la prossima seduta del programma' : 'Non ancora registrata') + '</div></div>';
+  if (!lw) { box.innerHTML = '<div class="splitnote">Nessuna seduta ancora. Esporta gli allenamenti da Hevy e caricali in Altro → Dati e profilo: i tipi di seduta e i loro colori arrivano dai titoli che usi in Hevy.</div>'; return; }
+  var types = splitTypes(), target = weeklyTarget(), daysLeft = diffDays(t, sw.we) + 1;
+  var doneIn = {}; sw.list.forEach(function (w) { var g = wGroup(w); (doneIn[g] = doneIn[g] || []).push(w); });
+  var todo = types.filter(function (x) { return !doneIn[x.g]; }).sort(function (a, b) { return a.last < b.last ? -1 : 1; });
+  var next = todo.length ? todo[0].g : null, N = types.length;
+  var html = '<div class="split-intro"><b>I tuoi tipi di seduta</b><span>Arrivano dai titoli delle sedute in Hevy delle ultime 4 settimane. Ogni tipo ha il suo colore, uguale nel calendario.</span></div><div class="split">' + types.map(function (x, i) {
+    var dw = doneIn[x.g], c = groupInfo(x.g).c, cls = dw ? ' done' : x.g === next ? ' next' : ' todo';
+    var pd = dw ? parseD(dw[0].date) : null;
+    return '<div class="sp' + cls + '" style="--c:' + c + '"><div class="sp-top"><span class="sp-index">' + pad(i + 1) + ' / ' + pad(N) + '</span><span class="sp-state">' + (dw ? 'Fatta' : x.g === next ? 'Prossima' : 'Da fare') + '</span></div><div class="k">' + esc(initials(x.g)) + (dw ? ' <span class="ok">✓</span>' : '') + '</div><div class="g">' + esc(x.g) + '</div><div class="d">'
+      + (dw ? DOW[(pd.getDay() + 6) % 7] + ' ' + pd.getDate() + (dw.length > 1 ? ', ' + dw.length + ' volte' : '') : 'Ultima: ' + fmtShort(x.last)) + '</div></div>';
   }).join('') + '</div>';
   var lines = [];
-  lines.push('<b>' + sw.n + ' su 4</b> questa settimana (' + fmtShort(sw.ws) + '–' + fmtShort(sw.we) + '), ' + (daysLeft === 1 ? 'resta oggi' : 'restano ' + daysLeft + ' giorni') + ' fino a domenica.');
-  var miss = prev.slots.filter(function (x) { return !x.w; }).map(function (x) { return x.k; });
-  lines.push('Settimana scorsa: ' + prev.n + ' su 4' + (miss.length && miss.length < 4 ? ', mancava ' + miss.join(', ') : '') + '.');
-  if (lw) lines.push(lw < sw.ws ? 'Dati Palestra non contiene ancora sedute di questa settimana: l\'ultima registrata è del ' + fmtDay(lw) + '.' : 'Ultima seduta in Dati Palestra: ' + fmtDay(lw) + '.');
+  lines.push('<b>' + sw.n + ' sedute</b> questa settimana (' + fmtShort(sw.ws) + '–' + fmtShort(sw.we) + '); di solito ne fai ' + target + '. ' + (daysLeft === 1 ? 'Resta oggi' : 'Restano ' + daysLeft + ' giorni') + ' fino a domenica.');
+  lines.push('Settimana scorsa: ' + prev.n + (prev.n === 1 ? ' seduta.' : ' sedute.'));
+  if (lw < sw.ws) lines.push('L\'ultima seduta importata è del ' + fmtDay(lw) + ': se nel frattempo ti sei allenato, esporta di nuovo da Hevy e carica il file.');
   box.innerHTML = html + '<div class="splitnote">' + lines.join(' ') + '</div>';
 }
 /* Spiegazioni contestuali: gli stessi valori e periodi dei calcoli visualizzati. */
@@ -4557,7 +4559,7 @@ function energyMethodHTML(date) {
     'Tutti i giorni della stessa settimana usano lo stesso fabbisogno medio nella versione attuale dei calcoli.',
     'Il bilancio nel diario è <b>calorie registrate − fabbisogno stimato</b>: un risultato negativo indica un deficit stimato.',
     'L’attività può essere diversa ogni giorno; il modello la aggrega in una media settimanale. Il valore assegnato al martedì non è una misura del consumo reale di quel martedì.'
-  ],'Le settimane del sito vanno da lunedì a domenica. La settimana lavorativa Amazon, da domenica a sabato, è un calendario diverso.'));
+  ],'Le settimane del sito vanno da lunedì a domenica.'));
   var parts=c&&c.parts;
   blocks.push(explainBlock('', 'energy','Da quali elementi nasce la stima?',c?fmt(c.prior,0)+' kcal/die di base':'In attesa dei dati','Prima costruisco una stima dall’attività e dal profilo; poi, quando possibile, la calibro con lo storico.',[
     '<b>Riposo e attività di base.</b> Mifflin–St Jeor: 10 × peso + 6,25 × altezza − 5 × età + '+(s.sex==='F'?'(−161)':'5')+'. Il codice moltiplica poi per 1,15 per includere un’attività di base ipotizzata.'+(parts?' In questa settimana: circa <b>'+fmt(parts.rest,0)+' kcal/die</b>.':''),
@@ -4723,15 +4725,15 @@ function rulesData() {
 
   /* ---------- fonti ---------- */
   add({ id: 'fonti', g: 'fonti', t: 'I documenti da cui leggo', w: 'Tutto il sito',
-    what: "Il sito non inventa e non fa inserire nessun dato: legge tutto da Google Drive ogni volta che lo apri o premi «Aggiorna ora» nella scheda Dati. Solo le ricette si scrivono nel sito.",
+    what: "Il sito non inventa nessun dato: usa i dati del giorno che inserisci tu e le sedute importate da Hevy.",
     how: fx(L('Diario giornaliero', 'una riga per giorno: ' + P('Peso') + ', ' + KC('In') + ' (calorie mangiate), ' + PR('P') + ', ' + CA('C') + ', ' + GR('F') + ', ' + PA('Passi') + ', ' + SO('Sonno') + ' e Note'),
-      L('Dati Palestra', AL('sedute') + ' con data, titolo, orario di inizio e fine, esercizi e serie'),
+      L('Hevy', AL('sedute') + ' con data, titolo, orario di inizio e fine, esercizi e serie'),
       L('Profilo e obiettivi', PF('peso di partenza') + ', ' + PF('obiettivo') + ', ' + PF('scadenza') + ', ' + PF('altezza') + ', ' + PF('età') + ', obiettivi di calorie, macro e passi')),
     why: "Nel diario ignoro di proposito il campo «Deficit» e i riassunti in cima a ogni settimana, perché sono calcolati su 2.200 kcal fisse. Il deficit lo rifaccio io con il fabbisogno stimato di ogni settimana. Ignoro anche le righe con tutto «N/D». Una riga può iniziare con trattino, asterisco, pallino o niente.",
     ex: function () {
       var dd = dayList().filter(function (d) { return d >= s.startDate; }), nk = dd.filter(function (d) { return state.days.get(d).kcal > 0; }).length;
       return row('Giorni letti dal diario, dal ' + fmtDay(s.startDate), dd.length + ' (' + nk + ' con le calorie)') + row('Ultimo giorno con dati', ld ? fmtDay(ld) : '—')
-        + row('Sedute lette da Dati Palestra', wl.length + (wl.length ? ', l\'ultima il ' + fmtDay(wl[wl.length - 1].date) : ''));
+        + row('Sedute lette da Hevy', wl.length + (wl.length ? ', l\'ultima il ' + fmtDay(wl[wl.length - 1].date) : ''));
     } });
   add({ id: 'colori', g: 'fonti', t: 'Colori del sito e delle formule', w: 'Tutto il sito',
     what: "Ogni tipo di dato ha sempre lo stesso colore: nelle formule, negli anelli, nei riquadri piccoli, nei grafici e nei pallini delle righe. Così capisci subito di che cosa si parla.",
@@ -5083,7 +5085,7 @@ function rulesData() {
     why: "Le notti senza «Sonno» nel diario non contano.",
     ex: function () { var v = d7.map(function (d) { return g(d, 'sleepH'); }).filter(Boolean); return row('Notti registrate', v.length ? v.length + ', media ' + fmtH(mean(v)) : 'nessuna'); } });
   add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Oggi, riquadri',
-    what: "Le sedute in Dati Palestra negli ultimi 7 giorni e nelle ultime 4 settimane, fino a oggi. Le barrette sono le sedute di ciascuna delle ultime 8 settimane.",
+    what: "Le sedute in Hevy negli ultimi 7 giorni e nelle ultime 4 settimane, fino a oggi. Le barrette sono le sedute di ciascuna delle ultime 8 settimane.",
     how: fx(L(O('Sedute'), AL('sedute') + ' con data tra oggi−6 e oggi, oppure tra oggi−27 e oggi'), L('Colore', '<span class="st-good">verde</span> da 4 · <span class="st-acc">blu</span> 3 · <span class="st-warn">giallo</span> meno di 3')),
     why: "Contano tutte le sedute, cardio compreso.",
     ex: function () { var a = wl.filter(function (w) { return w.date >= addDays(t, -6) && w.date <= t; }).length, b = wl.filter(function (w) { return w.date >= addDays(t, -27) && w.date <= t; }).length; return row('Ultimi 7 giorni', a) + row('Ultime 4 settimane', b); } });
@@ -5157,7 +5159,7 @@ function rulesData() {
     how: fx(L('Scatta se', 'ultima < penultima < terzultima seduta, sul ' + AL('massimale stimato') + ' della serie migliore'), L('Corpo libero', AL('ripetizioni') + ' della serie migliore')),
     why: "Una seduta storta capita; due cali consecutivi in deficit indicano che la forza sta scendendo.",
     ex: function () {
-      var h = ''; KEY_LIFTS.forEach(function (Kl) { var per = {}; wl.forEach(function (w) { (w.exercises || []).forEach(function (ex) { if (!Kl.re.test(ex.name)) return; var st = setsOf(ex); if (st.length) (per[ex.name] = per[ex.name] || []).push(Math.max.apply(null, st.map(setScore))); }); });
+      var h = ''; keyLifts(wl).forEach(function (Kl) { var per = {}; wl.forEach(function (w) { (w.exercises || []).forEach(function (ex) { if (!Kl.re.test(ex.name)) return; var st = setsOf(ex); if (st.length) (per[ex.name] = per[ex.name] || []).push(Math.max.apply(null, st.map(setScore))); }); });
         Object.keys(per).forEach(function (n) { var p = per[n].slice(-3); h += row(n, p.map(function (x) { return F(x, 1); }).join(' → ')); }); });
       return h;
     } });
@@ -5175,22 +5177,22 @@ function rulesData() {
   add({ id: 'av-split', g: 'avvisi', t: 'Avviso: settimana di allenamento incompleta', w: 'Da tenere d\'occhio',
     what: "Scatta se le sedute che mancano per arrivare a 4 sono più dei giorni rimasti fino a domenica.",
     how: fx(L('Scatta se', AL('sedute mancanti') + ' per arrivare a 4 > giorni rimasti fino a domenica, oggi compreso')),
-    why: "Lo mostro solo se Dati Palestra ha già sedute di questa settimana, così non scatta solo perché il documento non è aggiornato." });
+    why: "Lo mostro solo se Hevy ha già sedute di questa settimana, così non scatta solo perché il documento non è aggiornato." });
 
   /* ---------- allenamenti ---------- */
   add({ id: 'tipo-seduta', g: 'allenamenti', t: 'Tipo di seduta', w: 'Allenamenti, Costanza, split',
-    what: "Ogni seduta prende un gruppo dal suo titolo in Dati Palestra.",
+    what: "Ogni seduta prende un gruppo dal suo titolo in Hevy.",
     how: fx(L('PS', 'titolo con «petto» o «spalle»'), L('S', 'titolo con «schiena»'), L('B', 'titolo con «braccia», «bicipiti» o «tricipiti»'), L('G', 'titolo con «gambe»'), L('C', 'tutti gli esercizi a tempo (minuti o secondi)'), L('Altro', 'tutto il resto')),
     why: "Il titolo è come chiami tu la seduta, quindi è la fonte più sicura.",
     ex: function () { return wl.slice(-5).reverse().map(function (w) { return row(fmtShort(w.date) + ': ' + esc(w.title), wGroup(w)); }).join(''); } });
-  add({ id: 'split', g: 'allenamenti', t: 'Settimana A-B-C-D', w: 'Oggi e Allenamenti, «Settimana di allenamento»',
-    what: "La tua divisione è A Petto e spalle, B Schiena, C Braccia, D Petto e spalle. Conto quali hai fatto da lunedì a domenica.",
-    how: fx(L('A', 'la prima seduta di petto e spalle'), L('B · C', 'schiena · braccia'), L('D', 'petto e spalle dopo B o C'), L('Ripetuta', 'petto e spalle di nuovo prima di B o C sostituisce A'), L('Cardio', 'non conta')),
+  add({ id: 'split', g: 'allenamenti', t: 'Settimana di allenamento', w: 'Oggi e Allenamenti, «Settimana di allenamento»',
+    what: "I tipi di seduta sono i titoli che dai alle sedute in Hevy: quelli usati nelle ultime 4 settimane. Conto quali hai fatto da lunedì a domenica.",
+    how: fx(L('Tipo', 'il titolo della seduta in Hevy'), L('Colore', 'uno diverso per ogni titolo'), L('Prossima', 'il tipo che non fai da più tempo'), L('Di solito', 'la media delle ultime 4 settimane complete')),
     why: "Così l'ordine delle sedute rispetta come ti alleni davvero.",
     ex: function () { var sw = splitWeek(weekStart(t)); return row('Questa settimana', sw.n + ' su 4: ' + sw.slots.map(function (x) { return x.k + (x.w ? ' ✓ ' + fmtShort(x.w.date) : ' da fare'); }).join(', ')); } });
   add({ id: 'costanza', g: 'allenamenti', t: 'Costanza', w: 'Allenamenti',
     what: "Il calendario delle sedute, negli ultimi 30 giorni o nel mese scelto. Ogni quadrato è un giorno, colorato col tipo di seduta.",
-    how: fx(L(O('Sedute'), AL('sedute') + ' nel periodo'), L(O('Media a settimana'), 'sedute ÷ giorni del periodo × ' + C('7') + ' (per il mese in corso, i giorni passati finora)'), L(O('Durata media'), 'media delle durate, dall\'orario di inizio e fine in Dati Palestra')),
+    how: fx(L(O('Sedute'), AL('sedute') + ' nel periodo'), L(O('Media a settimana'), 'sedute ÷ giorni del periodo × ' + C('7') + ' (per il mese in corso, i giorni passati finora)'), L(O('Durata media'), 'media delle durate, dall\'orario di inizio e fine in Hevy')),
     why: "Per il mese in corso conto solo i giorni già passati, altrimenti la media sarebbe falsamente bassa.",
     ex: function () { var a = addDays(t, -29), n = wl.filter(function (w) { return w.date >= a && w.date <= t; }).length; return row('Ultimi 30 giorni', n + ' sedute ÷ 30 × 7 = ' + F(n / 30 * 7, 1) + ' a settimana'); } });
   add({ id: 'massimale', g: 'allenamenti', t: 'Massimale stimato e progressione', w: 'Allenamenti, Corpo, avvisi',
@@ -5287,9 +5289,9 @@ function rulesData() {
   };
 
   var PL = {
-    fonti: { s: 'Tutti i numeri del sito vengono da tre documenti Google: il diario (peso e cibo), Dati Palestra (allenamenti) e il profilo. Nel sito non si scrive nessun dato a mano.',
-      p: ['Ogni volta che apri il sito, rilegge i documenti da Google Drive.', 'Dal diario prende, giorno per giorno: peso, calorie, proteine, carboidrati, grassi, passi, sonno e note.', 'Da Dati Palestra prende ogni seduta: data, orari, esercizi e serie.', 'Se cambi o cancelli una riga nel documento, cambia anche qui: il documento ha sempre ragione.', 'Il «Deficit» scritto nel diario viene ignorato, perché lì è calcolato su 2.200 kcal fisse. Il sito lo rifà con il tuo consumo vero.'],
-      e: function () { var dd = dayList().filter(function (d) { return d >= s.startDate; }), nk = dd.filter(function (d) { return state.days.get(d).kcal > 0; }).length; return 'Adesso il sito ha letto ' + B(dd.length + ' giorni') + ' dal diario (' + nk + ' con le calorie), l\'ultimo è il ' + (ld ? fmtDay(ld) : '—') + ', e ' + B(wl.length + ' sedute') + ' da Dati Palestra.'; } },
+    fonti: { s: 'Tutti i numeri vengono da tre fonti: i dati del giorno che inserisci nell\'app (peso, cibo, passi, sonno), il file degli allenamenti esportato da Hevy e il tuo profilo.',
+      p: ['I dati sono salvati nel tuo account e li vedi solo tu.', 'Giorno per giorno inserisci: peso, calorie, proteine, carboidrati, grassi, passi, sonno e note.', 'Da Hevy arriva ogni seduta: data, orari, esercizi e serie. Le sedute non si scrivono a mano.', 'Puoi correggere un giorno quando vuoi con «Modifica i dati».'],
+      e: function () { var dd = dayList().filter(function (d) { return d >= s.startDate; }), nk = dd.filter(function (d) { return state.days.get(d).kcal > 0; }).length; return 'Adesso il sito ha letto ' + B(dd.length + ' giorni') + ' dal diario (' + nk + ' con le calorie), l\'ultimo è il ' + (ld ? fmtDay(ld) : '—') + ', e ' + B(wl.length + ' sedute') + ' da Hevy.'; } },
     colori: { s: 'Verde vuol dire che va bene, giallo da tenere d\'occhio, rosso da sistemare, blu è solo un\'informazione. Ogni tipo di dato ha anche un suo colore fisso.',
       p: ['Verde: sei in linea, nessun problema.', 'Giallo: niente di grave, ma da guardare.', 'Rosso: c\'è qualcosa da sistemare.', 'Blu: è solo un\'informazione, non un giudizio.', 'I colori dei dati (peso blu, calorie arancio, proteine gialle, carboidrati azzurri, grassi rosa, passi verde acqua, allenamenti viola) servono a riconoscere un dato a colpo d\'occhio negli anelli, nei grafici e nelle formule.'] },
     mancanti: { s: 'Se un giorno manca un dato, quel giorno non conta come zero: semplicemente non entra nella media di quel dato.',
@@ -5408,8 +5410,8 @@ function rulesData() {
     'av-forza': { s: 'Ti avvisa se su un esercizio importante la tua forza stimata cala per 2 sedute di fila.' },
     'av-macro': { s: 'Ti avvisa se negli ultimi 7 giorni grassi o proteine sono sotto l\'obiettivo, o se cammini meno del previsto.' },
     'av-split': { s: 'Ti avvisa se le sedute che mancano per arrivare a 4 sono più dei giorni che restano fino a domenica.' },
-    'tipo-seduta': { s: 'Ogni seduta prende il suo tipo dal titolo che le dai in Dati Palestra: Petto e spalle, Schiena, Braccia, Gambe o Cardio.' },
-    split: { s: 'La tua settimana ideale ha 4 sedute: A Petto e spalle, B Schiena, C Braccia, D Petto e spalle. Il sito segna quali hai già fatto da lunedì a domenica.' },
+    'tipo-seduta': { s: 'Ogni seduta prende il suo tipo dal titolo che le dai in Hevy, e ogni tipo ha il suo colore.' },
+    split: { s: 'I tuoi tipi di seduta arrivano dai titoli delle sedute in Hevy. Il sito segna quali hai già fatto da lunedì a domenica e quale non fai da più tempo.' },
     costanza: { s: 'Il calendario delle tue sedute: ogni quadrato è un giorno, colorato con il tipo di seduta.',
       p: ['Puoi vedere gli ultimi 30 giorni oppure un mese intero.', 'La media a settimana è: sedute ÷ giorni del periodo × 7 (per il mese in corso conto solo i giorni già passati).'] },
     massimale: { s: 'Per confrontare serie diverse (per esempio 60 kg × 10 e 70 kg × 6), trasformo ogni serie nel peso che potresti alzare una volta sola.',
@@ -5496,11 +5498,11 @@ function rHl(html, terms) {
 var previousRulesData = rulesData;
 rulesData = function () {
   var arr = previousRulesData();
-  var copy = {"fonti":"Il sito rilegge il diario e Dati Palestra da Google Drive. Profilo, ricette e dati aggiunti nel sito possono essere salvati nel progetto Apps Script.","colori":"I colori aiutano a distinguere tipi di dati; non aggiungono precisione ai numeri.","mancanti":"Un campo assente resta assente. Per alcuni calcoli il programma usa un valore sostitutivo dichiarato; una giornata senza calorie non equivale a digiuno.","pesata-errata":"Le pesate molto distanti dalle precedenti vengono escluse dalla tendenza. Una pesata esclusa deve essere controllata nel documento originale.","sgarri":"La soglia di “sgarro” è un confronto con il tuo obiettivo calorico, non una misura di surplus o di grasso guadagnato.","settimane":"Le settimane del percorso vanno da lunedì a domenica. La settimana lavorativa Amazon va da domenica a sabato e non coincide con questa aggregazione.","peso-adesso":"È una tendenza stimata dalle pesate recenti. Le correzioni per acqua e creatina sono ipotesi, non analisi della composizione corporea.","ultima":"L’ultima pesata è il numero riportato nel diario, senza deduzioni sulla sua composizione.","media7":"La media comprende le pesate disponibili negli ultimi sette giorni di calendario; il numero di giorni osservati può essere inferiore a sette.","mancano":"La distanza dall’obiettivo è una sottrazione tra peso stimato e obiettivo impostato; oscilla con la bilancia.","partenza":"Il peso iniziale del profilo e la prima pesata registrata possono essere diversi. Il sito deve mostrarli con etichette distinte.","ritmo":"Il ritmo usa una regressione sulle pesate corrette secondo ipotesi sull’acqua. Descrive una tendenza, non kg di grasso a settimana.","percorso":"Il progresso confronta una tendenza stimata con il peso di partenza e l’obiettivo inseriti nel profilo.","grafico-peso":"Il grafico mostra pesate, medie e tendenze. Linee levigate e valori corretti per acqua sono elaborazioni del modello.","obiettivo-kcal":"L’obiettivo calorico è un’impostazione. Il sito non ha verificato che sia un introito personale adeguato.","fabbisogno":"Stima: Mifflin–St Jeor per il riposo, più digestione e attività. I passi includono il lavoro; non aggiungo un turno giornaliero senza data reale. Dopo dati sufficienti calibro la scala con calorie e andamento del peso. Le stime dipendono da acqua e introiti non misurati.","acqua":"I parametri per glicogeno, carboidrati e creatina sono scenari del modello. Creatina riferita: circa 5 g al giorno dal 7 settembre, senza carico. Non misuriamo quanti kg d’acqua hai trattenuto.","margine":"La fascia sulle ipotesi dell’acqua è una prova di sensibilità, non una probabilità di contenere il fabbisogno reale. I pasti fuori casa stimati da foto aggiungono incertezza.","rivisto":"Quando arrivano nuovi dati lo storico può essere ricalcolato. Il valore riveduto non è una previsione che il sito avesse fatto allora.","bilancio":"Per ogni giorno con introito noto: consumo stimato meno calorie registrate. L’aritmetica è verificabile; il consumo e alcuni introiti non sono misurati.","deficit-sett":"Somma dei bilanci dei giorni con calorie registrate nella settimana. I giorni senza calorie sono esclusi.","deficit-tot":"Somma dei bilanci dal 7 settembre sui soli giorni con calorie. Il risultato può cambiare quando si aggiornano stima e dati.","kcalkg":"7.700 kcal per kg è una conversione matematica semplificata: non misura il grasso perso né descrive con precisione ogni giornata.","arrivo":"La data è condizionale a introiti e attività futuri simili allo scenario. Non è una previsione garantita.","prospetto":"Le traiettorie future sono simulazioni con parametri fissi e semplificazioni. Più lunga la previsione, maggiore l’incertezza.","due-ritmi":"Confronto fra calorie medie recenti e obiettivo impostato; entrambi sono scenari, non consigli personalizzati.","restando":"Restare sull’obiettivo è uno scenario aritmetico. Il consumo futuro e il peso effettivo possono differire.","costo-sgarri":"Calorie sopra l’obiettivo divise per un deficit ipotizzato danno un equivalente teorico di giorni, non un ritardo misurato.","per-scadenza":"L’introito richiesto è ricavato invertendo una simulazione. Non è un’indicazione dietetica verificata.","domani":"La prossima pesata è prevista dai dati recenti. Errore e margine sullo stesso storico non dimostrano la precisione futura né distinguono acqua, grasso e muscolo.","tile-kcal":"Confronta calorie registrate e obiettivo impostato. I pasti fuori casa fotografati restano stime.","tile-passi":"Conta i passi registrati, inclusi quelli del lavoro. Tapis roulant e macchina delle scale non sono inclusi nei passi forniti.","tile-sonno":"Riporta le ore di sonno disponibili, senza stimare effetti precisi sul peso del giorno dopo.","tile-sedute":"Conta le sedute trovate nel documento Dati Palestra nel periodo scelto.","anelli":"Confronto visivo fra valori registrati e obiettivi del profilo; il colore non stabilisce se un giorno sia sano.","grafico-kcal":"Calorie registrate e consumo stimato sono serie diverse: la seconda dipende dal modello e può essere rivista.","riepilogo":"Medie calcolate sui giorni con il campo presente. È importante leggere quanti giorni entrano in ogni media.","resoconto":"Il testo riassume dati e stime: le differenze energetiche non sono kg di grasso misurati.","semaforo":"Il semaforo confronta valori con obiettivi configurati. Non è una valutazione medica.","av-dati":"Segnala campi mancanti, date o duplicati da verificare nel documento originale.","av-stallo":"Uno stallo apparente può dipendere da acqua, rumore della bilancia, introiti o attività. Serve osservare più dati.","av-rapido":"La velocità deriva dalla tendenza stimata; non identifica la composizione del peso perso.","av-sgarri":"Confronto con la soglia calorica scelta, non giudizio su salute o grasso corporeo.","av-forza":"Variazioni degli esercizi registrati possono dipendere da carico, ripetizioni e tecnica.","av-macro":"Confronta macro registrati con target impostati; incongruenze con le calorie possono indicare dati incompleti o arrotondamenti.","av-split":"Segnala differenze nel volume registrato, non certifica equilibrio muscolare o recupero.","tipo-seduta":"Il tipo deriva dal titolo e dagli esercizi riconosciuti. Gli esercizi a tempo sono cardio solo se il nome indica un’attività aerobica.","split":"La classificazione dei gruppi muscolari è approssimativa e non misura lo stimolo fisiologico effettivo.","costanza":"Conteggio delle sedute registrate per periodo. Non misura qualità dell’allenamento.","massimale":"Stima di Epley: carico × (1 + ripetizioni / 30), per 2–10 ripetizioni; a una ripetizione mostra il carico. Non equivale a un test di massimale.","muscoli":"I gruppi sono assegnati con una mappa di nomi di esercizi. Le alzate laterali sono separate da quelle frontali.","serie-muscolo":"Conta serie di lavoro riconosciute. Le serie marcate come riscaldamento sono escluse quando il documento le indica.","trend-muscolo":"Confronta volume e serie registrati; non misura crescita del muscolo.","equilibrio":"Il rapporto fra gruppi è un’indicazione descrittiva del diario, non un indice clinico o biomeccanico validato."};
+  var copy = {"fonti":"I dati del giorno li inserisci nell'app, le sedute arrivano dal file di Hevy. Tutto è salvato nel tuo account.","colori":"I colori aiutano a distinguere tipi di dati; non aggiungono precisione ai numeri.","mancanti":"Un campo assente resta assente. Per alcuni calcoli il programma usa un valore sostitutivo dichiarato; una giornata senza calorie non equivale a digiuno.","pesata-errata":"Le pesate molto distanti dalle precedenti vengono escluse dalla tendenza. Una pesata esclusa va controllata e, se serve, corretta con «Modifica i dati».","sgarri":"La soglia di “sgarro” è un confronto con il tuo obiettivo calorico, non una misura di surplus o di grasso guadagnato.","settimane":"Le settimane del percorso vanno da lunedì a domenica.","peso-adesso":"È una tendenza stimata dalle pesate recenti. Le correzioni per acqua e creatina sono ipotesi, non analisi della composizione corporea.","ultima":"L’ultima pesata è il numero riportato nel diario, senza deduzioni sulla sua composizione.","media7":"La media comprende le pesate disponibili negli ultimi sette giorni di calendario; il numero di giorni osservati può essere inferiore a sette.","mancano":"La distanza dall’obiettivo è una sottrazione tra peso stimato e obiettivo impostato; oscilla con la bilancia.","partenza":"Il peso iniziale del profilo e la prima pesata registrata possono essere diversi. Il sito deve mostrarli con etichette distinte.","ritmo":"Il ritmo usa una regressione sulle pesate corrette secondo ipotesi sull’acqua. Descrive una tendenza, non kg di grasso a settimana.","percorso":"Il progresso confronta una tendenza stimata con il peso di partenza e l’obiettivo inseriti nel profilo.","grafico-peso":"Il grafico mostra pesate, medie e tendenze. Linee levigate e valori corretti per acqua sono elaborazioni del modello.","obiettivo-kcal":"L’obiettivo calorico è un’impostazione. Il sito non ha verificato che sia un introito personale adeguato.","fabbisogno":"Stima: Mifflin–St Jeor per il riposo, più digestione e attività. I passi includono il lavoro; non aggiungo un turno giornaliero senza data reale. Dopo dati sufficienti calibro la scala con calorie e andamento del peso. Le stime dipendono da acqua e introiti non misurati.","acqua":"I parametri per glicogeno, carboidrati e creatina sono scenari del modello. Creatina riferita: circa 5 g al giorno dal 7 settembre, senza carico. Non misuriamo quanti kg d’acqua hai trattenuto.","margine":"La fascia sulle ipotesi dell’acqua è una prova di sensibilità, non una probabilità di contenere il fabbisogno reale. I pasti fuori casa stimati da foto aggiungono incertezza.","rivisto":"Quando arrivano nuovi dati lo storico può essere ricalcolato. Il valore riveduto non è una previsione che il sito avesse fatto allora.","bilancio":"Per ogni giorno con introito noto: consumo stimato meno calorie registrate. L’aritmetica è verificabile; il consumo e alcuni introiti non sono misurati.","deficit-sett":"Somma dei bilanci dei giorni con calorie registrate nella settimana. I giorni senza calorie sono esclusi.","deficit-tot":"Somma dei bilanci dal 7 settembre sui soli giorni con calorie. Il risultato può cambiare quando si aggiornano stima e dati.","kcalkg":"7.700 kcal per kg è una conversione matematica semplificata: non misura il grasso perso né descrive con precisione ogni giornata.","arrivo":"La data è condizionale a introiti e attività futuri simili allo scenario. Non è una previsione garantita.","prospetto":"Le traiettorie future sono simulazioni con parametri fissi e semplificazioni. Più lunga la previsione, maggiore l’incertezza.","due-ritmi":"Confronto fra calorie medie recenti e obiettivo impostato; entrambi sono scenari, non consigli personalizzati.","restando":"Restare sull’obiettivo è uno scenario aritmetico. Il consumo futuro e il peso effettivo possono differire.","costo-sgarri":"Calorie sopra l’obiettivo divise per un deficit ipotizzato danno un equivalente teorico di giorni, non un ritardo misurato.","per-scadenza":"L’introito richiesto è ricavato invertendo una simulazione. Non è un’indicazione dietetica verificata.","domani":"La prossima pesata è prevista dai dati recenti. Errore e margine sullo stesso storico non dimostrano la precisione futura né distinguono acqua, grasso e muscolo.","tile-kcal":"Confronta calorie registrate e obiettivo impostato. I pasti fuori casa fotografati restano stime.","tile-passi":"Conta i passi registrati, inclusi quelli del lavoro. Tapis roulant e macchina delle scale non sono inclusi nei passi forniti.","tile-sonno":"Riporta le ore di sonno disponibili, senza stimare effetti precisi sul peso del giorno dopo.","tile-sedute":"Conta le sedute importate da Hevy nel periodo scelto.","anelli":"Confronto visivo fra valori registrati e obiettivi del profilo; il colore non stabilisce se un giorno sia sano.","grafico-kcal":"Calorie registrate e consumo stimato sono serie diverse: la seconda dipende dal modello e può essere rivista.","riepilogo":"Medie calcolate sui giorni con il campo presente. È importante leggere quanti giorni entrano in ogni media.","resoconto":"Il testo riassume dati e stime: le differenze energetiche non sono kg di grasso misurati.","semaforo":"Il semaforo confronta valori con obiettivi configurati. Non è una valutazione medica.","av-dati":"Segnala campi mancanti, date o duplicati da verificare nei dati del giorno.","av-stallo":"Uno stallo apparente può dipendere da acqua, rumore della bilancia, introiti o attività. Serve osservare più dati.","av-rapido":"La velocità deriva dalla tendenza stimata; non identifica la composizione del peso perso.","av-sgarri":"Confronto con la soglia calorica scelta, non giudizio su salute o grasso corporeo.","av-forza":"Variazioni degli esercizi registrati possono dipendere da carico, ripetizioni e tecnica.","av-macro":"Confronta macro registrati con target impostati; incongruenze con le calorie possono indicare dati incompleti o arrotondamenti.","av-split":"Segnala differenze nel volume registrato, non certifica equilibrio muscolare o recupero.","tipo-seduta":"Il tipo deriva dal titolo e dagli esercizi riconosciuti. Gli esercizi a tempo sono cardio solo se il nome indica un’attività aerobica.","split":"La classificazione dei gruppi muscolari è approssimativa e non misura lo stimolo fisiologico effettivo.","costanza":"Conteggio delle sedute registrate per periodo. Non misura qualità dell’allenamento.","massimale":"Stima di Epley: carico × (1 + ripetizioni / 30), per 2–10 ripetizioni; a una ripetizione mostra il carico. Non equivale a un test di massimale.","muscoli":"I gruppi sono assegnati con una mappa di nomi di esercizi. Le alzate laterali sono separate da quelle frontali.","serie-muscolo":"Conta serie di lavoro riconosciute. Le serie marcate come riscaldamento sono escluse quando Hevy le indica.","trend-muscolo":"Confronta volume e serie registrati; non misura crescita del muscolo.","equilibrio":"Il rapporto fra gruppi è un’indicazione descrittiva del diario, non un indice clinico o biomeccanico validato."};
   var steps = {
-    fonti: ['Il diario fornisce le righe giornaliere.', 'Dati Palestra fornisce sedute ed esercizi.', 'Il sito rilegge i file quando apri o aggiorni la pagina.'],
+    fonti: ['Il diario fornisce le righe giornaliere.', 'Hevy fornisce sedute ed esercizi.', 'Il sito rilegge i file quando apri o aggiorni la pagina.'],
     mancanti: ['Un campo non scritto resta assente.', 'La media usa solo i giorni in cui quel campo è presente.', 'Controlla sempre quanti giorni entrano nel risultato.'],
-    settimane: ['Il percorso è aggregato da lunedì a domenica.', 'La settimana lavorativa Amazon va da domenica a sabato.', 'I turni non vengono attribuiti a giorni che non conosciamo.'],
+    settimane: ['Il percorso è aggregato da lunedì a domenica.', 'I turni non vengono attribuiti a giorni che non conosciamo.'],
     'peso-adesso': ['Parto dalle pesate recenti, non solo dall’ultima.', 'La linea di tendenza riduce parte delle oscillazioni giornaliere.', 'Le correzioni per acqua sono ipotesi e non misurano grasso o muscolo.'],
     'media7': ['Prendo le pesate disponibili negli ultimi sette giorni di calendario.', 'Sommo i valori e divido per le pesate presenti.', 'La media può essere più lenta nel seguire un cambiamento recente.'],
     ritmo: ['Guardo la pendenza delle pesate recenti corrette secondo il modello.', 'La esprimo in kg per settimana.', 'È una tendenza stimata del peso, non la velocità misurata di perdita del grasso.'],
@@ -5512,7 +5514,7 @@ rulesData = function () {
     domani: ['Uso le pesate disponibili prima della mattina prevista.', 'Aggiungo un’ipotesi sul bilancio e sulle oscillazioni d’acqua.', 'Confronto la previsione con la bilancia, senza attribuire una causa certa allo scarto.'],
     anelli: ['Ogni anello rappresenta un dato registrato e il relativo obiettivo.', 'Un campo mancante resta vuoto.', 'Il completamento visivo non è una valutazione della salute.'],
     riepilogo: ['Raggruppo i giorni nel periodo selezionato.', 'Per ogni colonna uso solo i valori disponibili.', 'Leggi il numero di osservazioni prima di confrontare due settimane.'],
-    split: ['A e D sono due sedute distinte di petto e spalle.', 'B è schiena, C è braccia.', 'Una seduta viene segnata completata quando compare in Dati Palestra nel periodo.'],
+    split: ['A e D sono due sedute distinte di petto e spalle.', 'B è schiena, C è braccia.', 'Una seduta viene segnata completata quando compare in Hevy nel periodo.'],
     costanza: ['Conto le sedute nel periodo scelto.', 'Il calendario mostra quando sono state registrate.', 'Frequenza e qualità dell’allenamento sono informazioni diverse.'],
     massimale: ['Per 2–10 ripetizioni applico la stima di Epley: carico × (1 + ripetizioni / 30).', 'A una ripetizione mostro il carico effettivo.', 'È utile per confrontare serie simili; non sostituisce una prova reale di massimale.'],
     muscoli: ['Riconosco i gruppi muscolari dal nome degli esercizi.', 'Attribuisco una serie intera al gruppo principale e una quota ai gruppi di supporto.', 'È una lettura del diario, non una misura dello stimolo o della crescita.']
@@ -5801,14 +5803,14 @@ async function runImport(plan) {
       }
       n++; if (i % 5 === 0) msg.textContent = 'Salvataggio… ' + n + ' di ' + plan.items.length;
     }
-    msg.textContent = 'Fatto: ' + n + (plan.kind === 'Hevy' ? ' sedute' : ' giorni') + ' importati.';
+    msg.textContent = 'Fatto: ' + n + (plan.kind === 'Hevy' ? ' sedute importate.' : ' giorni importati.');
     $('#imp-prev').hidden = true; $('#imp-go').hidden = true; state.importPlan = null; $('#imp-file').value = '';
   } catch (e) { msg.textContent = 'Import interrotto dopo ' + n + ' elementi. Puoi ripetere: i dati già salvati non si duplicano.'; }
   $('#imp-go').disabled = false;
   renderAll();
 }
 
-/* ---------- Google Drive: diario + Dati Palestra ---------- */
+/* ---------- Google Drive: diario + Hevy ---------- */
 var DOC_ID = '17RxO3I-u3UP5w2vu5luirr_SVr2ofOBxm6G9FlfSsUA';
 var GYM_ID = '1wFg9JEL4vURO-UQ2HP7Z2Gn-zFx3vZO33IpW-u-EeCc';
 var DOC_FIELDS = ['weight', 'kcal', 'protein', 'carbs', 'fat', 'steps', 'sleepH', 'note'];
@@ -6056,7 +6058,7 @@ async function syncGym() {
     var id = entry[0], w = entry[1], cur = state.workouts.get(id); i++;
     if (cur && workSig(cur) === workSig(w)) continue;
     state.workouts.set(id, w); changed++;
-    if (changed % 5 === 0) setSync('', 'Drive · salvo sedute…', 'Salvo le sedute di Dati Palestra: ' + i + ' di ' + parsed.size + '…');
+    if (changed % 5 === 0) setSync('', 'Drive · salvo sedute…', 'Salvo le sedute di Hevy: ' + i + ' di ' + parsed.size + '…');
     await saveDoc('workouts/' + id, w);
   }
   if (parsed.size) {
@@ -6069,7 +6071,7 @@ async function syncDoc() {
   if (syncing) return;
   if (!mcp) { setSync('warn', 'Drive · non disponibile', 'La lettura di Google Drive non è disponibile in questa vista. Ricarica la pagina.'); return; }
   syncing = true; syncTried = true;
-  setSync('', 'Drive · lettura…', 'Leggo il diario e Dati Palestra da Google Drive…');
+  setSync('', 'Drive · lettura…', 'Leggo il diario e Hevy da Google Drive…');
   var a = null, b = null, ea = null, eb = null;
   try { a = await syncMaster(); } catch (e) { ea = e; }
   try { b = await syncGym(); } catch (e) { eb = e; }
@@ -6078,8 +6080,8 @@ async function syncDoc() {
   var parts = [];
   if (a) parts.push('Diario: ' + a.n + ' giorni' + (a.changed ? ', ' + a.changed + ' aggiornati' : ', nessuna novità') + (a.removed ? ', ' + a.removed + ' tolti perché non più nel file' : '') + (a.future ? ', ' + a.future + ' con data futura ignorati (controlla la data nel file)' : '') + (a.suspect ? ', ' + a.suspect + ' con data fuori sequenza ignorati (controlla giorno e mese)' : '') + (a.sleep ? ', sonno in ' + a.sleep : '') + '.');
   else parts.push('Diario: ' + errInfo(ea, 'il diario')[2]);
-  if (b) parts.push('Dati Palestra: ' + b.n + ' sedute' + (b.changed ? ', ' + b.changed + ' aggiornate' : ', nessuna novità') + (b.removed ? ', ' + b.removed + ' tolte perché non più nel file' : '') + '.');
-  else parts.push('Dati Palestra: ' + errInfo(eb, 'Dati Palestra')[2]);
+  if (b) parts.push('Hevy: ' + b.n + ' sedute' + (b.changed ? ', ' + b.changed + ' aggiornate' : ', nessuna novità') + (b.removed ? ', ' + b.removed + ' tolte perché non più nel file' : '') + '.');
+  else parts.push('Hevy: ' + errInfo(eb, 'Hevy')[2]);
   if (a && b) {
     var warnEmpty = !a.n || !b.n;
     setSync(warnEmpty ? 'warn' : 'good', 'Drive · ' + hm(lastSync), 'Letto alle ' + hm(lastSync) + '. ' + parts.join(' ') + (warnEmpty ? ' Un file non contiene righe nel formato atteso.' : ''));
@@ -6780,15 +6782,15 @@ function renderCurio() {
     var last28 = workouts.filter(function(w){return w.date>=addDays(t,-27);});
     var dates = Array.from(new Set(workouts.map(function(w){return w.date;})));
     story('sedute-percorso','Allenamenti',cGym,'LA COSTANZA','Quante volte hai messo piede in palestra nel percorso?',workouts.length+' sedute',
-      'Sedute registrate nel documento, anche quando cadono nello stesso giorno.',
+      'Sedute importate da Hevy, anche quando cadono nello stesso giorno.',
       '<p>Dal ' + fmtDay(s.startDate) + ' risultano <b>' + workouts.length + ' sedute</b> distribuite su <b>' + dates.length + ' giorni</b>. Negli ultimi 28 giorni di calendario ne risultano <b>' + last28.length + '</b>.</p><p>Il conteggio descrive la presenza delle sedute nel file: non misura intensità, qualità o recupero.</p>',
-      'Fonte: date e sedute lette da Dati Palestra.');
+      'Fonte: date e sedute lette da Hevy.');
     var titles = {}, bestTitle = null;
     workouts.forEach(function(w){var title=String(w.title||'Seduta senza titolo').trim();titles[title]=(titles[title]||0)+1;if(!bestTitle||titles[title]>bestTitle.n)bestTitle={title:title,n:titles[title]};});
     if (bestTitle) story('seduta-ricorrente','Allenamenti','#a8c6ff','IL FILO CONDUTTORE','Quale seduta compare più spesso nel diario?',bestTitle.n+' volte',
       '<b>' + esc(bestTitle.title) + '</b> è il titolo più ricorrente.',
       '<p>Tra le ' + workouts.length + ' sedute del percorso, il titolo <b>' + esc(bestTitle.title) + '</b> compare <b>' + bestTitle.n + ' volte</b>. Titoli simili ma scritti in modo diverso restano distinti: è un conteggio del documento, non una classificazione automatica dei muscoli.</p>',
-      'Fonte: titoli delle sedute in Dati Palestra.');
+      'Fonte: titoli delle sedute in Hevy.');
   }
 
   var filter = state.curFilter || 'Tutte', cats = ['Tutte','Bilancia','Energia','Abitudini','Allenamenti'];
