@@ -1602,6 +1602,11 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 #td-chips .kvl .r:nth-child(2){--detail-t:#9bd3ef}#td-chips .kvl .r:nth-child(3){--detail-t:#9bdcbe}#td-chips .kvl .r:nth-child(4){--detail-t:#ffc88e}
 #td-chips .kvl .v{color:var(--detail-t)}
 @media(max-width:520px){#h-chips{grid-template-columns:1fr}#h-chips .insight-uncertainty{grid-column:auto;grid-template-columns:1fr}#h-chips .insight-uncertainty .insight-label,#h-chips .insight-uncertainty strong,#h-chips .insight-uncertainty small{grid-column:auto;grid-row:auto}#h-stats .hs{padding:9px 6px}#fc-rows .fc-line{display:grid;gap:7px}#fc-rows .fc-line b{text-align:left}}
+
+/* Oggi essenziale */
+#tab-oggi #h-chips,#curio-teaser{display:none!important}
+#tab-diario .sumbox{order:0}
+#tab-oggi>.split-today{order:-3;background:linear-gradient(135deg,#21364a,#1b2235)!important;border-color:#57779d}
 .add-data{margin-top:12px}
 .dayhead .add-data{margin:0 0 0 auto}
 .df-bg{position:fixed;inset:0;z-index:300;display:grid;place-items:center;overflow:auto;padding:16px;background:rgba(5,8,18,.72);backdrop-filter:blur(6px)}
@@ -2001,10 +2006,10 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="panel golinks">
         <div class="panel-head"><div class="ph-t"><h2>Tutti i dettagli in Progressi</h2></div></div>
         <div class="golist">
-          <button type="button" class="gol" data-goview="giorno" style="--c:var(--prot)"><b>Giorno per giorno</b><span>calorie, macro, peso e seduta di ogni giorno, calendario</span></button>
-          <button type="button" class="gol" data-goview="peso" style="--c:var(--accent)"><b>Peso e previsione</b><span>grafico del peso, data di arrivo, prospetto dei prossimi mesi</span></button>
-          <button type="button" class="gol" data-goview="calorie" style="--c:var(--kcal)"><b>Calorie e fabbisogno</b><span>fabbisogno stimato, deficit totale, grafico delle calorie</span></button>
-          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Storico</b><span>riepilogo per settimana e mese, resoconto da incollare</span></button>
+          <button type="button" class="gol" data-goview="giorno" style="--c:var(--prot)"><b>Giorno per giorno</b><span>calorie, macro, peso e seduta di ogni giorno, calendario, cose da tenere d'occhio</span></button>
+          <button type="button" class="gol" data-goview="peso" style="--c:var(--accent)"><b>Peso e previsione</b><span>grafico del peso, data di arrivo, prospetto dei prossimi mesi, peso previsto per domattina</span></button>
+          <button type="button" class="gol" data-goview="calorie" style="--c:var(--kcal)"><b>Calorie e fabbisogno</b><span>riferimento della settimana, fabbisogno stimato, deficit totale, grafico delle calorie</span></button>
+          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Storico</b><span>come stai andando, riepilogo per settimana e mese, resoconto da incollare</span></button>
           <button type="button" class="gol" data-goview="curiosita" style="--c:var(--good)"><b>Curiosità</b><span>le cose inaspettate del percorso, spiegate con i tuoi numeri</span></button>
         </div>
       </div>
@@ -6900,6 +6905,19 @@ renderAll();
 
 /* usati dal codice di account, importazione e modulo del giorno */
 window.GJ = { DEF: DEF, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
+/* Oggi tiene solo l'essenziale: gli altri riquadri passano nelle sezioni di Progressi */
+(function slimToday() {
+  var oggi = document.getElementById('tab-oggi');
+  function dsec(n) { return document.querySelector('#tab-diario .dsec[data-dsec="' + n + '"]'); }
+  function afterLead(sec, el) { var lead = sec.querySelector(':scope > .area-lead'); if (lead) lead.after(el); else sec.prepend(el); }
+  var grid = oggi.querySelector(':scope > .grid2'), split = document.getElementById('split-oggi').closest('.panel');
+  split.classList.add('split-today'); oggi.insertBefore(split, grid);
+  dsec('giorno').appendChild(grid.querySelector('[data-cat="avvisi"]')); grid.remove();
+  afterLead(dsec('calorie'), document.getElementById('energy-now'));
+  afterLead(dsec('storico'), oggi.querySelector(':scope > .sumbox'));
+  dsec('peso').appendChild(document.getElementById('tmw'));
+  dsec('peso').appendChild(oggi.querySelector(':scope > .model-note'));
+})();
 init();
 try {
   var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
