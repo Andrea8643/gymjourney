@@ -1,6 +1,6 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0D1120">
+<meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1617,6 +1617,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 .se-row .btn:disabled{opacity:.35}
 .se-row .btn.icon{width:32px;height:32px;min-width:32px;min-height:32px;padding:0;font-size:.85rem}
 .se-row{grid-template-columns:20px minmax(0,1fr) 32px 32px 32px;gap:5px}
+
+.panel[hidden]{display:none!important}
 .add-data{margin-top:12px}
 .dayhead .add-data{margin:0 0 0 auto}
 .df-bg{position:fixed;inset:0;z-index:300;display:grid;place-items:center;overflow:auto;padding:16px;background:rgba(5,8,18,.72);backdrop-filter:blur(6px)}
@@ -1866,7 +1868,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     var t = new Date(), iso = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     var end = new Date(t.getTime() + 84 * 864e5);
     var o = overlay('gj-welcome', '<form style="' + BOX + ';width:min(100%,420px)">'
-      + '<b style="font-size:1.3rem">Benvenuto in GymJourney</b><span style="color:#A6ADC4;font-size:.95rem">Due dati per partire. Li potrai cambiare quando vuoi in Altro → Dati e profilo.</span>'
+      + '<b style="font-size:1.3rem">Benvenuto in GymJourney</b><span style="color:#A6ADC4;font-size:.95rem">Due dati per partire. Li potrai cambiare quando vuoi in Profilo.</span>'
       + '<label style="' + LBL + '">Come ti chiami?<input name="name" required autocomplete="given-name" style="' + INP + '"></label>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
       + '<label style="' + LBL + '">Sesso<select name="sex" style="' + INP + '"><option value="M">Uomo</option><option value="F">Donna</option></select></label>'
@@ -1878,13 +1880,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       + '</div>'
       + '<label style="' + LBL + '">Entro il<input name="end" type="date" required value="' + iso(end) + '" style="' + INP + '"></label>'
       + '<button type="submit" style="' + BTN + '">Inizia</button>'
-      + '<button type="button" data-old style="' + LNK + '">Avevo già i dati nel vecchio sito con i Google Documenti</button></form>');
+      + '</form>');
     var f = o.querySelector('form');
-    o.querySelector('[data-old]').addEventListener('click', function () {
-      o.remove();
-      try { window.GJ.show('dati'); } catch (e) {}
-      setTimeout(function () { var x = document.getElementById('old-pin'); if (x) { x.scrollIntoView({ block: 'center' }); x.focus(); } }, 300);
-    });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       var n = function (k) { return parseFloat(String(f[k].value).replace(',', '.')); };
@@ -1945,7 +1942,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 <div class="wrap">
   <header class="top">
     <div>
-      <span class="eyebrow">Il tuo spazio personale</span><div class="mobile-brand">GymJourney</div><h1 id="h-greet">Ciao</h1><h1 id="h-page" hidden></h1>
+      <span class="eyebrow">Il tuo spazio personale</span><div class="mobile-brand">GymJourney</div><h1 id="h-greet">Ciao</h1><h1 id="h-page" hidden></h1><span id="h-streak" class="streak" hidden></span>
       <div class="sub" id="h-sub"></div>
       <div class="fresh" id="h-fresh"></div>
     </div>
@@ -1960,7 +1957,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <button class="tab" role="tab" data-tab="diario" data-group="diario" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/></svg><span>Progressi</span></button>
       <button class="tab" role="tab" data-tab="allenamenti" data-group="allenamenti corpo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg><span>Allenamenti</span></button>
       <button class="tab" role="tab" data-tab="ricette" data-group="ricette" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c0-1.5 1-2 1-3.5M13 8c0-1.5 1-2 1-3.5"/></svg><span>Ricette</span></button>
-      <button class="tab" role="tab" data-tab="regole" data-group="regole dati" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg><span>Altro</span></button>
+      <button class="tab" role="tab" data-tab="dati" data-group="dati regole" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><span>Profilo</span></button>
     </nav>
   </div>
 
@@ -2302,8 +2299,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 
     <!-- DATI -->
     <section id="tab-regole" class="view" hidden>
-      <div class="segbar" role="tablist" aria-label="Altro"><button type="button" data-sub="regole">Regole</button><button type="button" data-sub="dati">Dati e profilo</button></div>
-      <div class="area-lead" style="--area:#c5a9ff;--area2:#8e8bff"><span class="area-kicker">ALTRO / REGOLE</span><strong>Dietro ogni numero c’è una scelta.</strong><p>Cerca un termine, apri la sua spiegazione e scopri su quali dati si basa.</p><span class="area-mark" aria-hidden="true">?</span></div>
+      <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
+      <div class="area-lead" style="--area:#c5a9ff;--area2:#8e8bff"><span class="area-kicker">PROFILO / COME FUNZIONA</span><strong>Dietro ogni numero c’è una scelta.</strong><p>Cerca un termine, apri la sua spiegazione e scopri su quali dati si basa.</p><span class="area-mark" aria-hidden="true">?</span></div>
       <div class="panel rules-top">
         <div class="panel-head"><h2>Regole: come si calcola ogni numero</h2><span class="hint" id="rules-count"></span></div>
         <p class="r-intro">Qui trovi <b>54 voci</b> per leggere i numeri senza confondere osservazioni, impostazioni e stime. Apri ciò che ti incuriosisce.</p>
@@ -2317,13 +2314,13 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     </section>
 
     <section id="tab-dati" class="view" hidden>
-      <div class="segbar" role="tablist" aria-label="Altro"><button type="button" data-sub="regole">Regole</button><button type="button" data-sub="dati">Dati e profilo</button></div>
-      <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">ALTRO / DATI E PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
+      <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
+      <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
       <div class="panel stack">
         <div class="panel-head" style="margin:0"><h2>Il tuo account</h2><button class="btn ghost fit" type="button" id="acct-out">Esci</button></div>
         <p class="muted" style="margin:0">Sei entrato come <b id="acct-email">—</b>. I tuoi dati sono salvati online e li vedi solo tu, da qualsiasi telefono o computer su cui entri.</p>
       </div>
-      <div class="panel stack">
+      <div class="panel stack" hidden>
         <div class="panel-head" style="margin:0"><h2>Importa dal vecchio sito</h2></div>
         <p class="muted" style="margin:0">Se usavi GymJourney con i Google Documenti, qui copi nel tuo account il diario (pesate, calorie, macro, passi, sonno), il profilo e le ricette. Gli allenamenti invece si caricano dal file di Hevy, qui sotto. Basta farlo una volta; se lo ripeti non si crea niente di doppio.</p>
         <div class="row">
@@ -2849,7 +2846,7 @@ function renderSettings() {
 
 /* ---------- grafica: utilità ---------- */
 var RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-var HEX = { accent: '#7B8CFF', kcal: '#FF6A3D', prot: '#FFC531', carb: '#38B6FF', fat: '#FF5FA2', steps: '#2FE3A5', sleep: '#9D7BFF', good: '#34D399', warn: '#FFB020' };
+var HEX = { accent: '#0A84FF', kcal: '#FA114F', prot: '#A6FF00', carb: '#FF9F0A', fat: '#BF5AF2', steps: '#00E0FF', sleep: '#5E5CE6', good: '#30D158', warn: '#FFD60A' };
 var DOWL = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
@@ -2901,10 +2898,10 @@ function show(tab) {
   state.tab = tab;
   $$('.tab').forEach(function (b) { b.setAttribute('aria-selected', (' ' + (b.dataset.group || b.dataset.tab) + ' ').indexOf(' ' + tab + ' ') >= 0 ? 'true' : 'false'); });
   $$('.segbar button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.sub === tab ? 'true' : 'false'); });
-  var PT = { diario: 'Progressi', allenamenti: 'Allenamenti', corpo: 'Allenamenti', ricette: 'Ricette', regole: 'Altro', dati: 'Altro' };
+  var PT = { diario: 'Progressi', allenamenti: 'Allenamenti', corpo: 'Allenamenti', ricette: 'Ricette', regole: 'Profilo', dati: 'Profilo' };
   $('#h-greet').hidden = tab !== 'oggi'; if ($('#h-fresh')) $('#h-fresh').hidden = tab !== 'oggi'; $('#h-page').hidden = tab === 'oggi'; $('#h-page').textContent = PT[tab] || '';
   $$('main > section').forEach(function (s) { s.hidden = s.id !== 'tab-' + tab; });
-  var sec = $('#tab-' + tab), order = ['oggi', 'diario', 'allenamenti', 'corpo', 'ricette', 'regole', 'dati'];
+  var sec = $('#tab-' + tab), order = ['oggi', 'diario', 'allenamenti', 'corpo', 'ricette', 'dati', 'regole'];
   if (changed && sec) { sec.style.setProperty('--dir', order.indexOf(tab) > order.indexOf(prevTab) ? 1 : -1); sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
   moveInd();
   if (changed) renderAll();
@@ -3590,7 +3587,7 @@ function renderDash() {
 /* ---------- allenamenti ---------- */
 /* Tipi di seduta: sono i titoli delle sedute che arrivano da Hevy. Ogni titolo ha il suo colore,
    assegnato nell'ordine in cui il titolo compare la prima volta, così due tipi diversi non si confondono. */
-var GPAL = ['#FF9466', '#74C0FC', '#F6C85F', '#A897FF', '#5DD6C3', '#F48FB1', '#B5E36B', '#FFB86B', '#8EA8FF', '#E58BE0'];
+var GPAL = ['#FF9F0A', '#0A84FF', '#30D158', '#BF5AF2', '#FF375F', '#64D2FF', '#FFD60A', '#AC8E68', '#5E5CE6', '#FF6482'];
 var gCache = { n: -1, map: {} };
 function normTitle(t) { t = String(t || '').replace(/\s+/g, ' ').trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Seduta'; }
 function groupInfo(g) {
@@ -4570,7 +4567,7 @@ function renderAlerts() {
 function renderSplitBox(id) {
   var box = $('#' + id); if (!box) return;
   var t = todayStr(), ws = weekStart(t), P = splitPlan(ws), sw = P.sw, prev = splitWeek(addDays(ws, -7)), lw = lastWorkoutDate();
-  if (!lw) { box.innerHTML = '<div class="splitnote">Nessuna seduta ancora. Esporta gli allenamenti da Hevy e caricali in Altro → Dati e profilo: i tipi di seduta e i loro colori arrivano dai titoli che usi in Hevy.</div>'; return; }
+  if (!lw) { box.innerHTML = '<div class="splitnote">Nessuna seduta ancora. Esporta gli allenamenti da Hevy e caricali in Profilo: i tipi di seduta e i loro colori arrivano dai titoli che usi in Hevy.</div>'; return; }
   var last = {}; allTitles().forEach(function (x) { last[x.g] = x.last; });
   var N = P.slots.length, daysLeft = diffDays(t, sw.we) + 1, done = P.slots.filter(function (s) { return s.w; }).length;
   var html = '<div class="split-intro"><b>La tua split</b><span>' + (P.custom ? 'L\'ordine dei giorni l\'hai scelto tu.' : 'Ordine preso dalla tua ultima settimana completa su Hevy.') + ' Ogni tipo ha il suo colore, uguale nel calendario.</span><button type="button" class="linkbtn small" data-split-edit>Cambia l\'ordine</button></div><div class="split">' + P.slots.map(function (x) {
@@ -5735,6 +5732,7 @@ function renderAll() {
     computeModel(); renderHeader(); var np = $('#nav-phase'); if (np) np.textContent = 'Percorso di ' + phaseWord() + ' · ' + fmt(S().goalWeight, 1) + ' kg'; renderDash(); renderDiary(); renderWorkouts(); renderBody(); renderRecipes(); renderSettings();
     if (state.tab === 'regole') renderRules();
     try { renderCurio(); } catch (e) {}
+    try { renderExtras(); } catch (e) {}
     decorateHelpControls();
     if (!document.documentElement.classList.contains('intro-on')) setTimeout(revealScan, 30);
   });
@@ -6996,6 +6994,69 @@ window.GJ = { DEF: DEF, syncMaster: syncMaster, goHevy: function () { show('dati
   dsec('peso').appendChild(document.getElementById('tmw'));
   dsec('peso').appendChild(oggi.querySelector(':scope > .model-note'));
 })();
+/* ---------- stile "Cerchi e vetro": profilo a gruppi e serie di settimane ---------- */
+var PF_IC = {
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+  flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  fire: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 4 0-3 0-5 0-7z"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h1M4 12h1M4 18h1"/>',
+  user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/>',
+  up: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
+  shield: '<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>'
+};
+function pfIcon(k, c) { return '<span class="pf-ic" style="background:' + c + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + PF_IC[k] + '</svg></span>'; }
+function buildProfile() {
+  var sec = $('#tab-dati'), form = $('#set-form'); if (!sec || !form || sec.dataset.pf) return; sec.dataset.pf = '1';
+  var setPanel = form.closest('.panel'), acct = $('#acct-out').closest('.panel'), hevy = $('#hevy-panel');
+  var backup = Array.prototype.filter.call(sec.querySelectorAll('.panel'), function (p) { var h = p.querySelector('h2'); return h && /Copia di sicurezza/.test(h.textContent); })[0];
+  var card = document.createElement('div'); card.className = 'panel pf-card'; card.id = 'pf-card';
+  setPanel.parentNode.insertBefore(card, acct);
+  var fs = form.querySelectorAll('fieldset.settings-group'), phaseRow = form.querySelector(':scope > .row'), layout = form.querySelector('.settings-layout');
+  function row(id, ic, c, title, body) {
+    var d = document.createElement('details'); d.className = 'pf-row'; d.id = 'pf-' + id;
+    d.innerHTML = '<summary>' + pfIcon(ic, c) + '<span class="pf-t">' + title + '</span><span class="pf-v" id="pfv-' + id + '"></span><span class="pf-chev" aria-hidden="true">›</span></summary><div class="pf-body"></div>';
+    d.querySelector('.pf-body').appendChild(body); return d;
+  }
+  function group(t, rows) { var g = document.createElement('div'); g.className = 'pf-group'; g.innerHTML = '<div class="pf-gt">' + t + '</div><div class="pf-list"></div>'; rows.forEach(function (r) { g.lastChild.appendChild(r); }); return g; }
+  var body = function (f) { return f.querySelector('.settings-fields'); };
+  var g1 = group('Obiettivi', [row('fase', 'target', HEX.kcal, 'Fase e calcolo', phaseRow), row('percorso', 'flag', HEX.accent, 'Peso e date', body(fs[0])), row('energia', 'fire', HEX.carb, 'Calorie', body(fs[2])), row('macro', 'list', HEX.good, 'Macro e passi', body(fs[3]))]);
+  var g2 = group('Tu', [row('tu', 'user', '#5E5CE6', 'Dati personali', body(fs[1]))]);
+  layout.innerHTML = ''; layout.appendChild(g1); layout.appendChild(g2);
+  var h = setPanel.querySelector('.panel-head'); if (h) h.hidden = true;
+  setPanel.classList.add('pf-settings');
+  [[hevy, 'Allenamenti', 'up', '#FF9F0A'], [backup, 'I tuoi dati', 'shield', '#64D2FF'], [acct, 'Account', 'key', '#8E8E93']].forEach(function (x) {
+    if (!x[0]) return; var t = document.createElement('div'); t.className = 'pf-gt pf-gt-out'; t.textContent = x[1];
+    x[0].parentNode.insertBefore(t, x[0]); var h2 = x[0].querySelector('h2'); if (h2) h2.insertAdjacentHTML('afterbegin', pfIcon(x[2], x[3]));
+    x[0].classList.add('pf-panel');
+  });
+  sec.appendChild(acct.previousElementSibling); sec.appendChild(acct);
+}
+function lastWeight() { var best = null; state.days.forEach(function (v, k) { if (v && v.weight > 0 && (!best || k > best.d)) best = { d: k, w: v.weight }; }); return best; }
+function renderExtras() {
+  var s = S(), t = todayStr();
+  /* serie: settimane consecutive con almeno una seduta (la settimana in corso conta solo se ha già una seduta) */
+  var st = $('#h-streak');
+  if (st) {
+    var ws = weekStart(t), n = 0, k = splitWeek(ws).n ? 0 : 1;
+    while (splitWeek(addDays(ws, -7 * k)).n) { n++; k++; }
+    st.hidden = state.tab !== 'oggi' || n < 1;
+    st.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + PF_IC.fire + '</svg>' + n + (n === 1 ? ' settimana' : ' settimane') + ' di fila in palestra';
+  }
+  buildProfile();
+  var card = $('#pf-card'); if (!card) return;
+  var lw = lastWeight(), w0 = s.startWeight, w1 = s.goalWeight, cur = lw ? lw.w : w0;
+  var pct = w0 && w1 && w0 !== w1 ? Math.max(0, Math.min(1, (w0 - cur) / (w0 - w1))) : 0;
+  var nm = (s.name || '').trim(), ph = s.phase === 'mantenimento' ? 'Mantenimento' : s.phase === 'surplus' ? 'Massa' : 'Cut';
+  card.innerHTML = '<div class="pf-head"><span class="pf-av">' + esc((nm.charAt(0) || '?').toUpperCase()) + '</span><div><b>' + esc(nm || 'Il tuo profilo') + '</b><span>' + ph + ' · da ' + fmt(w0, 1) + ' a ' + fmt(w1, 1) + ' kg' + (s.endDate ? ' · entro il ' + fmtDay(s.endDate) : '') + '</span></div></div>'
+    + '<div class="pf-bar"><span style="width:' + Math.round(pct * 100) + '%"></span></div><div class="pf-bl"><span>' + fmt(w0, 1) + ' kg</span><b>' + (lw ? fmt(cur, 1) + ' kg il ' + fmtDay(lw.d) : 'Nessuna pesata') + '</b><span>' + fmt(w1, 1) + ' kg</span></div>';
+  var set = function (id, v) { var e = $('#pfv-' + id); if (e) e.textContent = v; };
+  set('fase', ph);
+  set('percorso', fmt(w1, 1) + ' kg');
+  set('energia', s.kcalMin === s.kcalMax ? fmt(s.kcalMin, 0) + ' kcal' : fmt(s.kcalMin, 0) + '–' + fmt(s.kcalMax, 0) + ' kcal');
+  set('macro', fmt(s.protein, 0) + ' g prot.');
+  set('tu', s.age ? s.age + ' anni' : '');
+}
 init();
 try {
   var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
@@ -7091,4 +7152,92 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
   window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
 }
 </script>
+<style id="tema-cerchi-vetro">
+/* ===================== Stile "Cerchi e vetro" ===================== */
+:root:not(#z){--bg:#000;--bg-2:#000;--surface:#1C1C1E;--surface-2:#2C2C2E;--surface-3:#3A3A3C;--ink:#fff;--ink-2:#AEAEB2;--ink-3:#8E8E93;--line:#2C2C2E;--line-2:#3A3A3C;
+  --accent:#FA114F;--accent-2:#FF5C8A;--accent-ink:#fff;--kcal:#FA114F;--prot:#A6FF00;--carb:#FF9F0A;--fat:#BF5AF2;--steps:#00E0FF;--sleep:#5E5CE6;--good:#30D158;--warn:#FFD60A;--bad:#FF453A;--gym:#0A84FF;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Figtree","Segoe UI",system-ui,sans-serif;--f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Figtree","Segoe UI",system-ui,sans-serif;--r-lg:22px;--r-md:16px;--r-sm:12px;color-scheme:dark}
+html,body:not(#z):not(#y){background:#000!important;color:#fff;font-family:var(--f-body)!important}
+body:not(#z):not(#y) *{font-family:inherit}
+body .bg-blob,body #bgfx,.top::after,.top .eyebrow:not(#z):not(#y){display:none!important}
+/* titoli grandi come su iPhone */
+.top:not(#z):not(#y){border:0!important;background:none!important;padding-bottom:6px!important}
+.top .mobile-brand:not(#z):not(#y){font:700 .78rem/1 var(--f-body)!important;letter-spacing:.08em;text-transform:uppercase;color:#FA114F!important;margin:0 0 6px!important;-webkit-text-fill-color:#FA114F}
+#h-greet:not(#z):not(#y),#h-page:not(#z):not(#y){font:800 2.3rem/1.06 var(--f-display)!important;letter-spacing:-.025em!important;color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important;margin:0!important}
+#h-sub:not(#z):not(#y){color:#AEAEB2!important;font-size:.95rem!important;margin-top:6px!important}
+.streak:not(#z):not(#y){display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:6px 12px;border-radius:999px;background:#2C2C2E;color:#fff;font:700 .8rem/1 var(--f-body)}
+.streak[hidden]:not(#z):not(#y){display:none!important}
+.streak svg{width:14px;height:14px;color:#FF9F0A}
+/* schede: grigio iPhone, niente sfumature né bordi colorati */
+body .panel:not(#z):not(#y),body .hero-row .tile:not(#z):not(#y),body .sumbox:not(#z):not(#y),body .tmw:not(#z):not(#y),body .energy-now:not(#z):not(#y),body .golinks:not(#z):not(#y),body .cu-teaser:not(#z):not(#y){background:#1C1C1E!important;border:0!important;box-shadow:none!important;border-radius:22px!important}
+body .panel:not(#z):not(#y)::before,body .panel:not(#z):not(#y)::after{display:none!important}
+body .panel .panel:not(#z):not(#y),body .energy-metric:not(#z):not(#y),body .kvl .r:not(#z):not(#y),body .insight-chip:not(#z):not(#y),body .gol:not(#z):not(#y),body .splitnote:not(#z):not(#y),body .alert:not(#z):not(#y),body .model-note:not(#z):not(#y),body details.metric-explain:not(#z):not(#y){background:#2C2C2E!important;border-color:transparent!important;box-shadow:none!important}
+body .area-lead:not(#z):not(#y){display:none!important}
+body .area-lead.cu-head:not(#z):not(#y){display:block!important;background:#1C1C1E!important;border:0!important;box-shadow:none!important}
+body .panel h2:not(#z):not(#y),body .panel-head h2:not(#z):not(#y){font:700 1.3rem/1.2 var(--f-display)!important;letter-spacing:-.015em!important;color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important}
+body .estimate-tag:not(#z):not(#y),body .hero-lbl:not(#z):not(#y),body .lbl:not(#z):not(#y){color:#8E8E93!important}
+body .hint:not(#z):not(#y),body .muted:not(#z):not(#y){color:#8E8E93!important}
+/* cerchi pieni senza alone, come Apple Fitness */
+#rings .prg:not(#z):not(#y){filter:none!important}
+#rings .trk:not(#z):not(#y){stroke-opacity:.22!important}
+/* pulsanti a pillola */
+body .btn:not(#z):not(#y){background:#FA114F!important;color:#fff!important;border:0!important;border-radius:999px!important;box-shadow:none!important;font-weight:700!important;-webkit-text-fill-color:#fff}
+body .btn.ghost:not(#z):not(#y){background:#2C2C2E!important;color:#fff!important}
+body .btn.ghost.icon:not(#z):not(#y){border-radius:50%!important}
+body .btn:disabled:not(#z):not(#y){opacity:.4}
+body .add-data:not(#z):not(#y){padding:14px 18px!important;font-size:1rem!important}
+body .linkbtn:not(#z):not(#y){color:#FF5C8A!important;-webkit-text-fill-color:#FF5C8A}
+body .rq:not(#z):not(#y){background:#2C2C2E!important;color:#AEAEB2!important;border:0!important;box-shadow:none!important;border-radius:999px!important}
+/* controlli a segmenti come su iPhone */
+body .segbar:not(#z):not(#y),body .dviews:not(#z):not(#y){background:#1C1C1E!important;border:0!important;box-shadow:none!important;border-radius:12px!important;padding:3px!important}
+body .segbar button:not(#z):not(#y),body .dviews button:not(#z):not(#y){background:transparent!important;color:#AEAEB2!important;border:0!important;box-shadow:none!important;border-radius:9px!important;font-weight:600!important}
+body .segbar button[aria-selected="true"]:not(#z):not(#y),body .dviews button[aria-selected="true"]:not(#z):not(#y){background:#3A3A3C!important;color:#fff!important}
+body .dviews button::before:not(#z):not(#y),body .dviews button::after:not(#z):not(#y){display:none!important}
+/* campi */
+body input:not(#z):not(#y),body select:not(#z):not(#y),body textarea:not(#z):not(#y){background:#2C2C2E!important;border:1px solid transparent!important;border-radius:12px!important;color:#fff!important;box-shadow:none!important}
+body input:focus:not(#z):not(#y),body select:focus:not(#z):not(#y),body textarea:focus:not(#z):not(#y){border-color:#FA114F!important;outline:none}
+/* barra in basso in vetro, sospesa */
+@media (max-width:1023px){
+  body .tabs:not(#z):not(#y){left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;width:auto!important;border-radius:30px!important;padding:6px 4px!important;background:rgba(30,30,32,.72)!important;border:1px solid rgba(255,255,255,.09)!important;backdrop-filter:blur(24px) saturate(180%)!important;-webkit-backdrop-filter:blur(24px) saturate(180%)!important;box-shadow:0 10px 30px rgba(0,0,0,.5)!important}
+  body:not(#z):not(#y){padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}
+}
+body .tab:not(#z):not(#y){background:transparent!important;color:#8E8E93!important;box-shadow:none!important;transform:none!important}
+body .tab svg:not(#z):not(#y){background:transparent!important;color:inherit!important}
+body .tab[aria-selected="true"]:not(#z):not(#y){color:#FA114F!important;background:transparent!important}
+body .tab[aria-selected="true"]:not(#z):not(#y)::after,body .tab:not(#z):not(#y)::before{display:none!important}
+body .tab-ind:not(#z):not(#y),body #tab-ind:not(#z):not(#y){display:none!important}
+/* profilo a gruppi di righe */
+.pf-card:not(#z):not(#y){padding:18px!important}
+.pf-head{display:flex;gap:14px;align-items:center}
+.pf-av{width:58px;height:58px;border-radius:50%;background:#FA114F;color:#fff;display:grid;place-items:center;font:800 1.5rem/1 var(--f-display);flex:none}
+.pf-head b{display:block;font:700 1.25rem/1.2 var(--f-display);color:#fff}
+.pf-head span{font-size:.85rem;color:#AEAEB2}
+.pf-bar{height:8px;border-radius:9px;background:#3A1220;overflow:hidden;margin-top:16px}
+.pf-bar span{display:block;height:100%;background:#FA114F;border-radius:9px}
+.pf-bl{display:flex;justify-content:space-between;gap:8px;font-size:.75rem;color:#8E8E93;margin-top:6px}
+.pf-bl b{color:#fff}
+body .pf-settings:not(#z):not(#y){background:transparent!important;padding:0!important}
+.pf-settings .settings-layout{display:flex!important;flex-direction:column;gap:18px}
+.pf-gt:not(#z):not(#y){font:600 .78rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:#8E8E93;margin:0 0 8px 16px}
+.pf-gt-out:not(#z):not(#y){margin:8px 0 -8px 16px}
+.pf-list{background:#1C1C1E;border-radius:16px;overflow:hidden}
+.pf-row+.pf-row{border-top:1px solid #2C2C2E}
+.pf-row>summary{list-style:none;display:grid;grid-template-columns:30px auto minmax(0,1fr) 12px;gap:12px;align-items:center;padding:12px 14px;cursor:pointer;color:#fff;font-weight:500}
+.pf-row>summary::-webkit-details-marker{display:none}
+body .pf-row>summary .disclosure-cue:not(#z):not(#y){display:none!important}
+.pf-t{white-space:nowrap}
+.pf-v{color:#8E8E93;font-size:.82rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pf-chev{color:#636366;font-size:1.2rem;transition:transform .2s}
+.pf-row[open] .pf-chev{transform:rotate(90deg)}
+.pf-ic{width:30px;height:30px;border-radius:8px;display:inline-grid;place-items:center;color:#fff;flex:none;vertical-align:middle}
+.pf-ic svg{width:17px;height:17px}
+.pf-body{padding:4px 14px 16px}
+.pf-body .settings-fields,.pf-body.row,.pf-body>.row{display:grid!important;grid-template-columns:1fr 1fr;gap:10px}
+.pf-body .settings-fields .f:has(#s-jobh){grid-column:1/-1}
+.pf-body>.row .btn{grid-column:1/-1}
+body .pf-panel h2:not(#z):not(#y){display:flex!important;align-items:center;gap:12px}
+.pf-settings fieldset{border:0}
+@media (max-width:420px){.pf-body .settings-fields,.pf-body>.row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.pf-chev{transition:none}}
+</style>
 </body></html>
