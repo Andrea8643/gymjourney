@@ -1607,6 +1607,16 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 #tab-oggi #h-chips,#curio-teaser{display:none!important}
 #tab-diario .sumbox{order:0}
 #tab-oggi>.split-today{order:-3;background:linear-gradient(135deg,#21364a,#1b2235)!important;border-color:#57779d}
+
+/* ordine della split */
+.split-intro .linkbtn{margin-left:auto}
+.se-list{display:grid;gap:8px}
+.se-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto auto;gap:6px;align-items:center;padding:6px 6px 6px 10px;border:1px solid #363d5a;border-left:4px solid var(--c);border-radius:12px;background:#171b2d}
+.se-n{font-weight:800;color:var(--c)}
+.se-row select{min-width:0;width:100%}
+.se-row .btn:disabled{opacity:.35}
+.se-row .btn.icon{width:32px;height:32px;min-width:32px;min-height:32px;padding:0;font-size:.85rem}
+.se-row{grid-template-columns:20px minmax(0,1fr) 32px 32px 32px;gap:5px}
 .add-data{margin-top:12px}
 .dayhead .add-data{margin:0 0 0 auto}
 .df-bg{position:fixed;inset:0;z-index:300;display:grid;place-items:center;overflow:auto;padding:16px;background:rgba(5,8,18,.72);backdrop-filter:blur(6px)}
@@ -4508,10 +4518,39 @@ function splitTypes() {
   return Object.keys(cnt).sort(function (a, b) { return ix(a) - ix(b); }).map(function (g) { return { g: g, n: cnt[g], last: last[g] }; });
 }
 /* sedute a settimana: la media delle ultime 4 settimane complete */
-function weeklyTarget() {
+function autoTarget() {
   var ws = weekStart(todayStr()), tot = 0;
   for (var k = 1; k <= 4; k++) tot += splitWeek(addDays(ws, -7 * k)).n;
   return Math.max(1, Math.round(tot / 4)) || 1;
+}
+function weeklyTarget() { return splitOrder().list.length || autoTarget(); }
+/* tutti i titoli arrivati da Hevy, i più recenti prima */
+function allTitles() {
+  var n = {}, last = {};
+  state.workouts.forEach(function (w) { var g = wGroup(w); n[g] = (n[g] || 0) + 1; if (!last[g] || w.date > last[g]) last[g] = w.date; });
+  return Object.keys(n).sort(function (a, b) { return last[a] < last[b] ? 1 : last[a] > last[b] ? -1 : n[b] - n[a]; }).map(function (g) { return { g: g, n: n[g], last: last[g] }; });
+}
+/* senza un ordine scelto: le sedute dell'ultima settimana completa con il numero solito di sedute, nell'ordine in cui le hai fatte */
+function autoOrder() {
+  var ws = weekStart(todayStr()), target = autoTarget(), k, w;
+  for (k = 1; k <= 8; k++) { w = splitWeek(addDays(ws, -7 * k)); if (w.n === target) return w.list.map(wGroup); }
+  for (k = 1; k <= 8; k++) { w = splitWeek(addDays(ws, -7 * k)); if (w.n) return w.list.map(wGroup); }
+  return splitTypes().map(function (x) { return x.g; });
+}
+function splitOrder() { var o = S().splitOrder; return o && o.length ? { list: o.slice(), custom: true } : { list: autoOrder(), custom: false }; }
+/* abbina le sedute della settimana ai giorni della split, in ordine: la prossima è il primo giorno non fatto dopo l'ultimo fatto */
+function splitPlan(ws) {
+  var sw = splitWeek(ws), ord = splitOrder(), ptr = 0, extra = [], i, next = null;
+  var slots = ord.list.map(function (g, n) { return { g: g, k: initials(g), i: n, w: null }; });
+  sw.list.forEach(function (w) {
+    var g = wGroup(w), hit = null, x;
+    for (x = ptr; x < slots.length && !hit; x++) if (!slots[x].w && slots[x].g === g) hit = slots[x];
+    for (x = 0; x < ptr && !hit; x++) if (!slots[x].w && slots[x].g === g) hit = slots[x];
+    if (hit) { hit.w = w; ptr = hit.i + 1; } else extra.push(w);
+  });
+  for (i = ptr; i < slots.length && !next; i++) if (!slots[i].w) next = slots[i];
+  for (i = 0; i < slots.length && !next; i++) if (!slots[i].w) next = slots[i];
+  return { sw: sw, slots: slots, next: next, extra: extra, custom: ord.custom };
 }
 function computeAlerts() {
   var out=[], t=todayStr(), v=state.days.get(t);
@@ -4530,24 +4569,63 @@ function renderAlerts() {
 }
 function renderSplitBox(id) {
   var box = $('#' + id); if (!box) return;
-  var t = todayStr(), sw = splitWeek(weekStart(t)), prev = splitWeek(addDays(weekStart(t), -7)), lw = lastWorkoutDate();
+  var t = todayStr(), ws = weekStart(t), P = splitPlan(ws), sw = P.sw, prev = splitWeek(addDays(ws, -7)), lw = lastWorkoutDate();
   if (!lw) { box.innerHTML = '<div class="splitnote">Nessuna seduta ancora. Esporta gli allenamenti da Hevy e caricali in Altro → Dati e profilo: i tipi di seduta e i loro colori arrivano dai titoli che usi in Hevy.</div>'; return; }
-  var types = splitTypes(), target = weeklyTarget(), daysLeft = diffDays(t, sw.we) + 1;
-  var doneIn = {}; sw.list.forEach(function (w) { var g = wGroup(w); (doneIn[g] = doneIn[g] || []).push(w); });
-  var todo = types.filter(function (x) { return !doneIn[x.g]; }).sort(function (a, b) { return a.last < b.last ? -1 : 1; });
-  var next = todo.length ? todo[0].g : null, N = types.length;
-  var html = '<div class="split-intro"><b>I tuoi tipi di seduta</b><span>Arrivano dai titoli delle sedute in Hevy delle ultime 4 settimane. Ogni tipo ha il suo colore, uguale nel calendario.</span></div><div class="split">' + types.map(function (x, i) {
-    var dw = doneIn[x.g], c = groupInfo(x.g).c, cls = dw ? ' done' : x.g === next ? ' next' : ' todo';
-    var pd = dw ? parseD(dw[0].date) : null;
-    return '<div class="sp' + cls + '" style="--c:' + c + '"><div class="sp-top"><span class="sp-index">' + pad(i + 1) + ' / ' + pad(N) + '</span><span class="sp-state">' + (dw ? 'Fatta' : x.g === next ? 'Prossima' : 'Da fare') + '</span></div><div class="k">' + esc(initials(x.g)) + (dw ? ' <span class="ok">✓</span>' : '') + '</div><div class="g">' + esc(x.g) + '</div><div class="d">'
-      + (dw ? DOW[(pd.getDay() + 6) % 7] + ' ' + pd.getDate() + (dw.length > 1 ? ', ' + dw.length + ' volte' : '') : 'Ultima: ' + fmtShort(x.last)) + '</div></div>';
+  var last = {}; allTitles().forEach(function (x) { last[x.g] = x.last; });
+  var N = P.slots.length, daysLeft = diffDays(t, sw.we) + 1, done = P.slots.filter(function (s) { return s.w; }).length;
+  var html = '<div class="split-intro"><b>La tua split</b><span>' + (P.custom ? 'L\'ordine dei giorni l\'hai scelto tu.' : 'Ordine preso dalla tua ultima settimana completa su Hevy.') + ' Ogni tipo ha il suo colore, uguale nel calendario.</span><button type="button" class="linkbtn small" data-split-edit>Cambia l\'ordine</button></div><div class="split">' + P.slots.map(function (x) {
+    var dw = x.w, isNext = P.next === x, c = groupInfo(x.g).c, cls = dw ? ' done' : isNext ? ' next' : ' todo', pd = dw ? parseD(dw.date) : null;
+    return '<div class="sp' + cls + '" style="--c:' + c + '"><div class="sp-top"><span class="sp-index">' + pad(x.i + 1) + ' / ' + pad(N) + '</span><span class="sp-state">' + (dw ? 'Fatta' : isNext ? 'Prossima' : 'Da fare') + '</span></div><div class="k">' + esc(x.k) + (dw ? ' <span class="ok">✓</span>' : '') + '</div><div class="g">' + esc(x.g) + '</div><div class="d">'
+      + (dw ? DOW[(pd.getDay() + 6) % 7] + ' ' + pd.getDate() : last[x.g] ? 'Ultima: ' + fmtShort(last[x.g]) : 'Mai fatta') + '</div></div>';
   }).join('') + '</div>';
   var lines = [];
-  lines.push('<b>' + sw.n + ' sedute</b> questa settimana (' + fmtShort(sw.ws) + '–' + fmtShort(sw.we) + '); di solito ne fai ' + target + '. ' + (daysLeft === 1 ? 'Resta oggi' : 'Restano ' + daysLeft + ' giorni') + ' fino a domenica.');
+  lines.push('<b>' + done + ' su ' + N + '</b> sedute della split fatte questa settimana (' + fmtShort(sw.ws) + '–' + fmtShort(sw.we) + '). ' + (done >= N ? 'Settimana completata.' : (daysLeft === 1 ? 'Resta oggi' : 'Restano ' + daysLeft + ' giorni') + ' fino a domenica.'));
+  if (P.extra.length) lines.push('In più: ' + P.extra.map(function (w) { return esc(wGroup(w)); }).join(', ') + '.');
   lines.push('Settimana scorsa: ' + prev.n + (prev.n === 1 ? ' seduta.' : ' sedute.'));
   if (lw < sw.ws) lines.push('L\'ultima seduta importata è del ' + fmtDay(lw) + ': se nel frattempo ti sei allenato, esporta di nuovo da Hevy e carica il file.');
   box.innerHTML = html + '<div class="splitnote">' + lines.join(' ') + '</div>';
 }
+/* finestra per scegliere l'ordine dei giorni della split: si scelgono solo titoli già arrivati da Hevy */
+var splitRows = [];
+function splitEditBox() {
+  var box = document.getElementById('split-edit'); if (box) return box;
+  box = document.createElement('div'); box.id = 'split-edit'; box.className = 'df-bg'; box.hidden = true; document.body.appendChild(box);
+  box.addEventListener('change', function (e) { var s = e.target.closest('select[data-i]'); if (s) { splitRows[+s.dataset.i] = s.value; drawSplitEdit(); } });
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (e.target === box || (b && b.hasAttribute('data-x'))) { box.hidden = true; return; } if (!b) return;
+    var i = +(b.dataset.up || b.dataset.down || b.dataset.del || 0), tmp;
+    if (b.dataset.up) { tmp = splitRows[i - 1]; splitRows[i - 1] = splitRows[i]; splitRows[i] = tmp; }
+    else if (b.dataset.down) { tmp = splitRows[i + 1]; splitRows[i + 1] = splitRows[i]; splitRows[i] = tmp; }
+    else if (b.dataset.del) splitRows.splice(i, 1);
+    else if (b.hasAttribute('data-add')) splitRows.push((allTitles()[0] || {}).g);
+    else if (b.hasAttribute('data-save') || b.hasAttribute('data-auto')) {
+      var next = Object.assign({}, S(), { splitOrder: b.hasAttribute('data-save') ? splitRows.filter(Boolean) : [] });
+      state.settings = next; saveDoc('settings/main', next); box.hidden = true; renderAll(); return;
+    } else return;
+    drawSplitEdit();
+  });
+  return box;
+}
+function drawSplitEdit() {
+  var box = splitEditBox(), titles = allTitles(), n = splitRows.length;
+  box.innerHTML = '<div class="panel stack df-card"><div class="panel-head" style="margin:0"><h2>L\'ordine della tua split</h2><button type="button" class="btn ghost icon fit" data-x aria-label="Chiudi">✕</button></div>'
+    + '<p class="muted small" style="margin:0">Scegli quale seduta fai il primo giorno, il secondo e così via. Puoi ripetere lo stesso tipo. I tipi sono i titoli delle tue sedute in Hevy.</p>'
+    + '<div class="se-list">' + splitRows.map(function (g, i) {
+      return '<div class="se-row" style="--c:' + groupInfo(g).c + '"><span class="se-n">' + (i + 1) + '</span><select data-i="' + i + '" aria-label="Giorno ' + (i + 1) + '">'
+        + titles.map(function (x) { return '<option' + (x.g === g ? ' selected' : '') + '>' + esc(x.g) + '</option>'; }).join('') + '</select>'
+        + '<button type="button" class="btn ghost icon fit" data-up="' + i + '" aria-label="Sposta su"' + (i ? '' : ' disabled') + '>↑</button>'
+        + '<button type="button" class="btn ghost icon fit" data-down="' + i + '" aria-label="Sposta giù"' + (i < n - 1 ? '' : ' disabled') + '>↓</button>'
+        + '<button type="button" class="btn ghost icon fit" data-del="' + i + '" aria-label="Togli"' + (n > 1 ? '' : ' disabled') + '>✕</button></div>';
+    }).join('') + '</div>'
+    + '<button type="button" class="btn ghost fit" data-add>+ Aggiungi un giorno</button>'
+    + '<div class="row"><button type="button" class="btn fit" data-save>Salva</button><button type="button" class="btn ghost fit" data-auto>Usa l\'ordine automatico</button></div></div>';
+  box.hidden = false;
+}
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('[data-split-edit]')) return;
+  if (!allTitles().length) return;
+  splitRows = splitOrder().list; drawSplitEdit();
+});
 /* Spiegazioni contestuali: gli stessi valori e periodi dei calcoli visualizzati. */
 function explainBlock(id, tone, title, value, lead, steps, note) {
   return '<article class="explain-card tone-'+tone+'"'+(id?' id="explain-'+id+'" tabindex="-1"':'')+'><div class="explain-heading"><h3>'+title+'</h3>'+(value?'<span class="explain-value">'+value+'</span>':'')+'</div><p class="explain-lead">'+lead+'</p>'+(steps&&steps.length?'<ol class="explain-steps">'+steps.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ol>':'')+(note?'<div class="explain-note"><b>Da ricordare</b><p>'+note+'</p></div>':'')+'</article>';
@@ -5180,8 +5258,8 @@ function rulesData() {
       return row('Grassi', mf != null ? F(mf, 0) + ' g' : '—') + row('Proteine', mp != null ? F(mp, 0) + ' g' : '—') + (st.length ? row('Passi', F(mean(st), 0)) : '');
     } });
   add({ id: 'av-split', g: 'avvisi', t: 'Avviso: settimana di allenamento incompleta', w: 'Da tenere d\'occhio',
-    what: "Scatta se le sedute che mancano per arrivare a 4 sono più dei giorni rimasti fino a domenica.",
-    how: fx(L('Scatta se', AL('sedute mancanti') + ' per arrivare a 4 > giorni rimasti fino a domenica, oggi compreso')),
+    what: "Scatta se le sedute che mancano per completare la split sono più dei giorni rimasti fino a domenica.",
+    how: fx(L('Scatta se', AL('sedute mancanti') + ' per completare la split > giorni rimasti fino a domenica, oggi compreso')),
     why: "Lo mostro solo se Hevy ha già sedute di questa settimana, così non scatta solo perché il documento non è aggiornato." });
 
   /* ---------- allenamenti ---------- */
@@ -5191,10 +5269,10 @@ function rulesData() {
     why: "Il titolo è come chiami tu la seduta, quindi è la fonte più sicura.",
     ex: function () { return wl.slice(-5).reverse().map(function (w) { return row(fmtShort(w.date) + ': ' + esc(w.title), wGroup(w)); }).join(''); } });
   add({ id: 'split', g: 'allenamenti', t: 'Settimana di allenamento', w: 'Oggi e Allenamenti, «Settimana di allenamento»',
-    what: "I tipi di seduta sono i titoli che dai alle sedute in Hevy: quelli usati nelle ultime 4 settimane. Conto quali hai fatto da lunedì a domenica.",
-    how: fx(L('Tipo', 'il titolo della seduta in Hevy'), L('Colore', 'uno diverso per ogni titolo'), L('Prossima', 'il tipo che non fai da più tempo'), L('Di solito', 'la media delle ultime 4 settimane complete')),
+    what: "La split è l'ordine dei tuoi giorni di allenamento, fatto con i titoli delle sedute in Hevy. Lo scegli con «Cambia l'ordine», anche ripetendo lo stesso tipo; se non lo scegli, uso la tua ultima settimana completa. Conto quali giorni hai fatto da lunedì a domenica.",
+    how: fx(L('Tipo', 'il titolo della seduta in Hevy'), L('Colore', 'uno diverso per ogni titolo'), L('Fatta', 'ogni seduta della settimana segna il primo giorno con lo stesso titolo, seguendo l\'ordine'), L('Prossima', 'il primo giorno non fatto dopo l\'ultimo fatto')),
     why: "Così l'ordine delle sedute rispetta come ti alleni davvero.",
-    ex: function () { var sw = splitWeek(weekStart(t)); return row('Questa settimana', sw.n + ' su 4: ' + sw.slots.map(function (x) { return x.k + (x.w ? ' ✓ ' + fmtShort(x.w.date) : ' da fare'); }).join(', ')); } });
+    ex: function () { var P = splitPlan(weekStart(t)); return row('Questa settimana', P.slots.filter(function (x) { return x.w; }).length + ' su ' + P.slots.length + ': ' + P.slots.map(function (x) { return x.g + (x.w ? ' ✓ ' + fmtShort(x.w.date) : ' da fare'); }).join(', ')); } });
   add({ id: 'costanza', g: 'allenamenti', t: 'Costanza', w: 'Allenamenti',
     what: "Il calendario delle sedute, negli ultimi 30 giorni o nel mese scelto. Ogni quadrato è un giorno, colorato col tipo di seduta.",
     how: fx(L(O('Sedute'), AL('sedute') + ' nel periodo'), L(O('Media a settimana'), 'sedute ÷ giorni del periodo × ' + C('7') + ' (per il mese in corso, i giorni passati finora)'), L(O('Durata media'), 'media delle durate, dall\'orario di inizio e fine in Hevy')),
@@ -5414,9 +5492,9 @@ function rulesData() {
     'av-sgarri': { s: 'Ti avvisa per ogni sgarro degli ultimi 7 giorni. Due o più sgarri nella stessa settimana sono un punto critico (rosso).' },
     'av-forza': { s: 'Ti avvisa se su un esercizio importante la tua forza stimata cala per 2 sedute di fila.' },
     'av-macro': { s: 'Ti avvisa se negli ultimi 7 giorni grassi o proteine sono sotto l\'obiettivo, o se cammini meno del previsto.' },
-    'av-split': { s: 'Ti avvisa se le sedute che mancano per arrivare a 4 sono più dei giorni che restano fino a domenica.' },
+    'av-split': { s: 'Ti avvisa se le sedute che mancano per completare la split sono più dei giorni che restano fino a domenica.' },
     'tipo-seduta': { s: 'Ogni seduta prende il suo tipo dal titolo che le dai in Hevy, e ogni tipo ha il suo colore.' },
-    split: { s: 'I tuoi tipi di seduta arrivano dai titoli delle sedute in Hevy. Il sito segna quali hai già fatto da lunedì a domenica e quale non fai da più tempo.' },
+    split: { s: 'La tua split segue l\'ordine che scegli tu, con i titoli delle sedute in Hevy. Il sito segna quali giorni hai già fatto da lunedì a domenica e qual è il prossimo.' },
     costanza: { s: 'Il calendario delle tue sedute: ogni quadrato è un giorno, colorato con il tipo di seduta.',
       p: ['Puoi vedere gli ultimi 30 giorni oppure un mese intero.', 'La media a settimana è: sedute ÷ giorni del periodo × 7 (per il mese in corso conto solo i giorni già passati).'] },
     massimale: { s: 'Per confrontare serie diverse (per esempio 60 kg × 10 e 70 kg × 6), trasformo ogni serie nel peso che potresti alzare una volta sola.',
