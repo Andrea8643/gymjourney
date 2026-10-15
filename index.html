@@ -1763,14 +1763,73 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     });
   });
 
-  /* ---------- archivio: copia locale + solo le novità dal server ---------- */
-  var uid = null, store = new Map(), docL = {}, colL = {}, pend = {}, ready = null, since = 0, lastPull = 0, saveT = 0;
+  /* ---------- archivio ----------
+     Sul server ogni documento è { f: { campo: valore in JSON }, _u } oppure, se salvato prima di questa versione,
+     { j: tutto il documento in JSON, _u }. Il formato vecchio si legge così com'è; i campi in f prevalgono su j,
+     e il valore '-' in f indica un campo cancellato. Una modifica scrive solo i campi cambiati (f.campo, con merge),
+     così due dispositivi che cambiano campi diversi dello stesso giorno non si cancellano a vicenda.
+     In questo browser tengo tre cose:
+     - conf: l'ultimo stato confermato dal server (è anche la copia salvata nel browser per leggere poco);
+     - coda: le modifiche non ancora confermate, salvate subito nel browser, quindi sopravvivono alla ricarica;
+     - store: conf con sopra la coda, cioè quello che l'app mostra.
+     Se il server rifiuta una modifica in modo definitivo, l'app torna al valore confermato e il valore tentato
+     va nell'elenco «Modifiche non salvate», da cui si può rimandare o scaricare. */
+  var uid = null, conf = new Map(), store = new Map(), docL = {}, colL = {}, pend = {}, ready = null, since = 0, lastPull = 0, saveT = 0;
+  var queue = {}, rejected = [], waiters = {}, inflight = {}, qVer = 0, retryT = 0, tries = 0, persistOk = true;
+  var DEL = '-', WAIT = 15000, TIMEOUT = 20000, BACKOFF = [2000, 5000, 15000, 30000, 60000];
+  var PERMANENT = /permission-denied|invalid-argument|failed-precondition|out-of-range|already-exists|unimplemented|not_owner/;
   function cacheKey() { return 'gj-cache-' + uid; }
+  function queueKey() { return 'gj-coda-' + uid; }
+  function rejKey() { return 'gj-nonsalvate-' + uid; }
   function ref(p) { return fs.doc('users/' + uid + '/' + p); }
   function stamp() { return firebase.firestore.FieldValue.serverTimestamp(); }
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function errCode(e) { return e && (e.code || e.message) || String(e); }
+  function withTimeout(pr, ms) {
+    return new Promise(function (res, rej) {
+      var t = setTimeout(function () { var e = new Error('il server non ha confermato'); e.code = 'timeout'; rej(e); }, ms);
+      pr.then(function (v) { clearTimeout(t); res(v); }, function (e) { clearTimeout(t); rej(e); });
+    });
+  }
+  /* documento del server → oggetto dell'app (undefined se cancellato); lancia se illeggibile */
+  function decode(x) {
+    if (!x || x._del) return undefined;
+    var o = typeof x.j === 'string' ? JSON.parse(x.j) : {};
+    if (x.f) Object.keys(x.f).forEach(function (k) { if (x.f[k] === DEL) delete o[k]; else o[k] = JSON.parse(x.f[k]); });
+    return o;
+  }
+  function encodeAll(v) { var f = {}; Object.keys(v).forEach(function (k) { if (v[k] !== undefined) f[k] = JSON.stringify(v[k]); }); return f; }
   function saveCache() {
     clearTimeout(saveT);
-    saveT = setTimeout(function () { var o = {}; store.forEach(function (v, p) { o[p] = v; }); lsSet(cacheKey(), JSON.stringify({ t: since, docs: o })); }, 300);
+    saveT = setTimeout(function () { var o = {}; conf.forEach(function (v, p) { o[p] = v; }); lsSet(cacheKey(), JSON.stringify({ v: 2, t: since, docs: o })); }, 300);
+  }
+  /* la coda si salva subito, senza attese: è l'unica copia delle modifiche non confermate */
+  function saveQueue() {
+    var ok = true;
+    try {
+      if (Object.keys(queue).length) localStorage.setItem(queueKey(), JSON.stringify(queue)); else localStorage.removeItem(queueKey());
+      if (rejected.length) localStorage.setItem(rejKey(), JSON.stringify(rejected)); else localStorage.removeItem(rejKey());
+    } catch (e) { ok = false; }
+    persistOk = ok; notify();
+  }
+  function vis(p) {
+    var e = queue[p], c = conf.get(p);
+    if (!e) return c === undefined ? undefined : copy(c);
+    if (e.mode === 'delete') return undefined;
+    var o = e.mode === 'replace' || c === undefined ? {} : copy(c);
+    Object.keys(e.fields).forEach(function (k) { var v = e.fields[k].v; if (v === DEL) delete o[k]; else o[k] = copy(v); });
+    return o;
+  }
+  /* ricalcola quello che l'app mostra per p; true se è cambiato (chi chiama emette) */
+  function refresh(p) {
+    var v = vis(p);
+    if (same(v, store.get(p))) return false;
+    if (v === undefined) store.delete(p); else store.set(p, v);
+    return true;
+  }
+  function refreshAll() {
+    var ps = {}; store.forEach(function (v, p) { ps[p] = 1; }); conf.forEach(function (v, p) { ps[p] = 1; }); Object.keys(queue).forEach(function (p) { ps[p] = 1; });
+    return Object.keys(ps).filter(refresh);
   }
   function snapDoc(p) { var v = store.get(p); return { exists: v !== undefined, id: p.split('/')[1], data: function () { return copy(v); } }; }
   function snapCol(c) {
@@ -1784,45 +1843,176 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     pend[c] = setTimeout(function () { pend[c] = 0; (colL[c] || []).forEach(function (l) { try { l(snapCol(c)); } catch (e) { console.error(e); } }); }, 40);
   }
   async function pull() {
-    /* 5 minuti di margine: un salvataggio arrivato al server quasi insieme all'ultima lettura non va perso */
-    var from = firebase.firestore.Timestamp.fromMillis(Math.max(0, since - 5 * 60 * 1000)), max = since, changed = [];
+    /* 5 minuti di margine: un salvataggio arrivato al server quasi insieme all'ultima lettura non va perso.
+       since = 0 vuol dire lettura completa: allora tolgo anche i documenti che sul server non esistono più. */
+    var full = !since, from = firebase.firestore.Timestamp.fromMillis(Math.max(0, since - 5 * 60 * 1000)), max = since, changed = [], seen = {};
     var snaps = await Promise.all(COLS.map(function (c) { return fs.collection('users/' + uid + '/' + c).where('_u', '>', from).get({ source: 'server' }); }));
     snaps.forEach(function (q, i) {
       q.forEach(function (d) {
-        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0;
+        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0, v;
         if (t > max) max = t;
-        if (x._del) { if (store.has(p)) { store.delete(p); changed.push(p); } return; }
-        var v; try { v = JSON.parse(x.j); } catch (e) { return; }
-        if (JSON.stringify(store.get(p)) !== JSON.stringify(v)) { store.set(p, v); changed.push(p); }
+        seen[p] = 1;
+        try { v = decode(x); } catch (e) { return; }
+        if (v === undefined) conf.delete(p); else conf.set(p, v);
+        if (refresh(p)) changed.push(p);
       });
     });
+    if (full) conf.forEach(function (v, p) { if (!seen[p]) { conf.delete(p); orphan(p, v); if (refresh(p)) changed.push(p); } });
     since = max; lastPull = Date.now(); saveCache();
     return changed;
   }
+  /* documento presente solo nella copia di una versione precedente e mai arrivato al server */
+  function orphan(p, v) {
+    if (queue[p]) return;
+    rejected.push({ id: rid(), path: p, op: 'replace', value: v, at: new Date().toISOString(), err: 'trovato solo in questo dispositivo, mai salvato sul server' });
+    saveQueue();
+  }
+  function rid() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function load() {
     if (ready) return ready;
     ready = (async function () {
       var u = await userP; uid = u.uid; window.GJ_user = u;
-      try { var c = JSON.parse(lsGet(cacheKey()) || 'null'); if (c) { since = c.t || 0; Object.keys(c.docs || {}).forEach(function (p) { store.set(p, c.docs[p]); }); } } catch (e) {}
+      /* copia del formato precedente (senza v: 2): può contenere modifiche mai confermate, quindi la uso solo
+         per mostrare subito qualcosa e rileggo tutto dal server */
+      try { var c = JSON.parse(lsGet(cacheKey()) || 'null'); if (c) { since = c.v === 2 ? c.t || 0 : 0; Object.keys(c.docs || {}).forEach(function (p) { conf.set(p, c.docs[p]); }); } } catch (e) {}
+      try { queue = JSON.parse(lsGet(queueKey()) || '{}') || {}; } catch (e) { queue = {}; }
+      try { rejected = JSON.parse(lsGet(rejKey()) || '[]') || []; } catch (e) { rejected = []; }
+      Object.keys(queue).forEach(function (p) { if (queue[p].n > qVer) qVer = queue[p].n; Object.keys(queue[p].fields || {}).forEach(function (k) { if (queue[p].fields[k].n > qVer) qVer = queue[p].fields[k].n; }); });
+      refreshAll();
       try { await pull(); } catch (e) { console.warn(e); if (!store.size) throw e; }
       whenDom(function () { account(u); if (!store.has('settings/main')) welcome(); });
+      notify(); flushAll();
     })();
     return ready;
   }
+
+  /* ---------- coda delle modifiche ---------- */
+  function edit(p, mode, fields) {
+    var e = queue[p], n = ++qVer;
+    if (mode === 'delete') e = queue[p] = { mode: 'delete', fields: {}, n: n, at: e ? e.at : Date.now() };
+    else if (mode === 'replace' || (e && e.mode !== 'merge')) e = queue[p] = { mode: 'replace', fields: {}, n: n, at: e ? e.at : Date.now() };
+    else if (!e) e = queue[p] = { mode: 'merge', fields: {}, n: n, at: Date.now() };
+    Object.keys(fields).forEach(function (k) { e.fields[k] = { v: fields[k], n: n }; });
+    e.n = n;
+    saveQueue();
+    if (refresh(p)) emit(p);
+    var w = waitFor(p, n);
+    flushOne(p);
+    return w;
+  }
+  function setDoc(p, data) {
+    var cur = store.get(p), e = queue[p], f = {};
+    data = copy(data);
+    Object.keys(data).forEach(function (k) { if (data[k] === undefined) delete data[k]; });
+    if (e && e.mode !== 'merge') return edit(p, 'replace', data);
+    Object.keys(data).forEach(function (k) { if (!cur || !same(data[k], cur[k])) f[k] = data[k]; });
+    if (cur) Object.keys(cur).forEach(function (k) { if (!(k in data)) f[k] = DEL; });
+    if (!Object.keys(f).length && cur) return e ? waitFor(p, e.n) : Promise.resolve();
+    return edit(p, 'merge', f);
+  }
+  /* la promessa si risolve quando il server conferma; se il server rifiuta in modo definitivo la rifiuta con
+     quel motivo; se dopo 15 secondi non c'è risposta la rifiuta con «queued»: la modifica resta in coda */
+  function waitFor(p, n) {
+    return new Promise(function (res, rej) {
+      var w = { n: n, res: res, rej: rej };
+      w.t = setTimeout(function () { drop(p, w); var e = new Error('in coda: il server non ha ancora confermato'); e.code = 'queued'; rej(e); }, WAIT);
+      (waiters[p] = waiters[p] || []).push(w);
+    });
+  }
+  function drop(p, w) { waiters[p] = (waiters[p] || []).filter(function (x) { return x !== w; }); }
+  function settle(p, n, err) {
+    (waiters[p] || []).filter(function (w) { return w.n <= n; }).forEach(function (w) { clearTimeout(w.t); drop(p, w); if (err) w.rej(err); else w.res(); });
+  }
+  function payload(e) {
+    if (e.mode === 'delete') return [{ _del: true, _u: stamp() }];
+    var f = {};
+    Object.keys(e.fields).forEach(function (k) { var v = e.fields[k].v; if (v === DEL) { if (e.mode === 'merge') f[k] = DEL; } else f[k] = JSON.stringify(v); });
+    if (e.mode === 'replace') return [{ f: f, _u: stamp() }];
+    return [{ f: f, _u: stamp(), _del: firebase.firestore.FieldValue.delete() }, { merge: true }];
+  }
+  /* toglie dalla coda ciò che è stato inviato e non è cambiato nel frattempo */
+  function unqueue(p, snap) {
+    var e = queue[p]; if (!e) return;
+    if (e.n === snap.n) { delete queue[p]; return; }
+    if (e.mode === 'merge' && snap.mode === 'merge') {
+      Object.keys(snap.fields).forEach(function (k) { if (e.fields[k] && e.fields[k].n === snap.fields[k].n) delete e.fields[k]; });
+      if (!Object.keys(e.fields).length) delete queue[p];
+    }
+  }
+  async function flushOne(p) {
+    var e = queue[p]; if (!e || inflight[p] || !uid) return;
+    inflight[p] = true;
+    var snap = JSON.parse(JSON.stringify(e)), good = false;
+    try {
+      var args = payload(snap), r = ref(p);
+      await withTimeout(r.set.apply(r, args), TIMEOUT);
+      good = true;
+      var c = conf.get(p);
+      if (snap.mode === 'delete') conf.delete(p);
+      else {
+        var o = snap.mode === 'replace' || c === undefined ? {} : copy(c);
+        Object.keys(snap.fields).forEach(function (k) { var v = snap.fields[k].v; if (v === DEL) delete o[k]; else o[k] = copy(v); });
+        conf.set(p, o);
+      }
+      unqueue(p, snap); tries = 0; saveCache(); saveQueue();
+      if (refresh(p)) emit(p);
+      settle(p, snap.n);
+    } catch (err) {
+      var code = errCode(err);
+      if (PERMANENT.test(code)) {
+        var at = new Date().toISOString(), cv = conf.get(p);
+        if (snap.mode === 'merge') Object.keys(snap.fields).forEach(function (k) {
+          var v = snap.fields[k].v;
+          rejected.push({ id: rid(), path: p, op: 'field', field: k, value: v === DEL ? null : v, removed: v === DEL, confirmed: cv ? cv[k] : undefined, at: at, err: code });
+        });
+        else rejected.push({ id: rid(), path: p, op: snap.mode, value: snap.mode === 'replace' ? vis(p) : undefined, confirmed: cv, at: at, err: code });
+        unqueue(p, snap); saveQueue();
+        if (refresh(p)) emit(p);
+        settle(p, snap.n, err);
+      } else {
+        if (queue[p]) { queue[p].err = code; queue[p].tries = (queue[p].tries || 0) + 1; saveQueue(); }
+        retryLater();
+      }
+    } finally { inflight[p] = false; }
+    if (good && queue[p] && queue[p].n !== snap.n) flushOne(p);
+  }
+  function flushAll() { clearTimeout(retryT); retryT = 0; Object.keys(queue).forEach(flushOne); }
+  function retryLater() {
+    if (retryT) return;
+    var d = BACKOFF[Math.min(tries, BACKOFF.length - 1)]; tries++;
+    retryT = setTimeout(function () { retryT = 0; flushAll(); }, d);
+  }
+  window.addEventListener('online', function () { tries = 0; flushAll(); });
+  function status() {
+    var ps = Object.keys(queue), oldest = 0, err = '';
+    ps.forEach(function (p) { if (!oldest || queue[p].at < oldest) oldest = queue[p].at; if (queue[p].err) err = queue[p].err; });
+    return { pending: ps.length, paths: ps, oldest: oldest, err: err, rejected: copy(rejected), persisted: persistOk };
+  }
+  function notify() { if (window.GJ_onSync) { try { window.GJ_onSync(status()); } catch (e) { console.error(e); } } }
+  window.GJ_sync = {
+    status: status,
+    /* rimanda al server una modifica rifiutata */
+    retry: function (id) {
+      var r = rejected.filter(function (x) { return x.id === id; })[0]; if (!r) return Promise.resolve();
+      rejected = rejected.filter(function (x) { return x !== r; }); saveQueue();
+      if (r.op === 'field') { var f = {}; f[r.field] = r.removed ? DEL : r.value; if (queue[r.path] && queue[r.path].mode !== 'merge') return Promise.resolve(); return edit(r.path, 'merge', f); }
+      if (r.op === 'delete') return edit(r.path, 'delete', {});
+      return edit(r.path, 'replace', r.value || {});
+    },
+    discard: function (id) { rejected = rejected.filter(function (x) { return x.id !== id; }); saveQueue(); },
+    flush: function () { tries = 0; flushAll(); }
+  };
+
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible' && uid && Date.now() - lastPull > 60 * 1000) pull().then(function (ch) { ch.forEach(emit); }).catch(function () {});
+    if (document.visibilityState !== 'visible' || !uid) return;
+    if (Object.keys(queue).length) { tries = 0; flushAll(); }
+    if (Date.now() - lastPull > 60 * 1000) pull().then(function (ch) { ch.forEach(emit); }).catch(function () {});
   });
   var db = {
     doc: function (p) {
       return {
-        set: async function (data) {
-          store.set(p, copy(data)); emit(p); saveCache();
-          await ref(p).set({ j: JSON.stringify(data), _u: stamp() });
-        },
-        delete: async function () {
-          store.delete(p); emit(p); saveCache();
-          await ref(p).set({ _del: true, _u: stamp() });
-        },
+        set: function (data) { return load().then(function () { return setDoc(p, data); }); },
+        delete: function () { return load().then(function () { return store.has(p) || queue[p] ? edit(p, 'delete', {}) : undefined; }); },
         get: async function () { await load(); return snapDoc(p); },
         onSnapshot: function (cb) { (docL[p] = docL[p] || []).push(cb); load().then(function () { cb(snapDoc(p)); }); return function () {}; }
       };
@@ -1834,26 +2024,20 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       };
     }
   };
-  /* backup completo e ripristino. Non si fidano della copia di questo dispositivo, che può contenere modifiche
-     rifiutate dal server o non ancora confermate: leggono tutti i documenti direttamente dal server,
-     scrivono aspettando la conferma di ciascuno e solo dopo aggiornano la copia locale. */
-  function withTimeout(pr, ms) {
-    return new Promise(function (res, rej) {
-      var t = setTimeout(function () { var e = new Error('il server non ha confermato'); e.code = 'timeout'; rej(e); }, ms);
-      pr.then(function (v) { clearTimeout(t); res(v); }, function (e) { clearTimeout(t); rej(e); });
-    });
-  }
-  /* lettura completa dal server (non solo le novità): ogni documento di ogni raccolta */
+
+  /* ---------- backup completo e ripristino ----------
+     Non si fidano della copia di questo dispositivo: leggono tutti i documenti direttamente dal server,
+     scrivono aspettando la conferma di ciascuno e solo dopo aggiornano lo stato confermato. */
   async function remote() {
     await load();
     var snaps = await withTimeout(Promise.all(COLS.map(function (c) { return fs.collection('users/' + uid + '/' + c).get({ source: 'server' }); })), window.GJ_backup.timeoutMs);
     var docs = {}, bad = [], max = 0;
     snaps.forEach(function (q, i) {
       q.forEach(function (d) {
-        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0;
+        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0, v;
         if (t > max) max = t;
-        if (x._del) return;
-        try { docs[p] = JSON.parse(x.j); } catch (e) { bad.push(p); }
+        try { v = decode(x); } catch (e) { bad.push(p); return; }
+        if (v !== undefined) docs[p] = v;
       });
     });
     return { docs: docs, bad: bad, max: max };
@@ -1865,30 +2049,42 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
     dump: async function () {
       await load();
       try { var r = await remote(); return { docs: r.docs, fromServer: true, bad: r.bad }; }
-      catch (e) { return { docs: window.GJ_backup.current(), fromServer: false, bad: [], error: e && (e.code || e.message) || String(e) }; }
+      catch (e) { return { docs: window.GJ_backup.current(), fromServer: false, bad: [], error: errCode(e) }; }
     },
     remote: remote,
     current: function () { var o = {}; store.forEach(function (v, p) { o[p] = copy(v); }); return o; },
-    /* la copia locale cambia solo dopo la conferma del server */
+    /* scrittura completa del documento; lo stato confermato cambia solo dopo la conferma del server */
     write: async function (p, v) {
       await load();
-      await withTimeout(ref(p).set({ j: JSON.stringify(v), _u: stamp() }), window.GJ_backup.timeoutMs);
-      store.set(p, copy(v)); emit(p); saveCache();
+      await withTimeout(ref(p).set({ f: encodeAll(v), _u: stamp() }), window.GJ_backup.timeoutMs);
+      conf.set(p, copy(v)); saveCache(); if (refresh(p)) emit(p);
     },
     remove: async function (p) {
       await load();
       await withTimeout(ref(p).set({ _del: true, _u: stamp() }), window.GJ_backup.timeoutMs);
-      store.delete(p); emit(p); saveCache();
+      conf.delete(p); saveCache(); if (refresh(p)) emit(p);
     },
-    /* rende la copia locale uguale allo stato appena letto dal server */
+    /* lo stato confermato diventa quello appena letto dal server */
     adopt: function (r) {
-      var ch = [];
-      store.forEach(function (v, p) { if (!(p in r.docs) && r.bad.indexOf(p) < 0) ch.push(p); });
-      ch.forEach(function (p) { store.delete(p); });
-      Object.keys(r.docs).forEach(function (p) { if (JSON.stringify(store.get(p)) !== JSON.stringify(r.docs[p])) { store.set(p, copy(r.docs[p])); ch.push(p); } });
+      conf.forEach(function (v, p) { if (!(p in r.docs) && r.bad.indexOf(p) < 0) conf.delete(p); });
+      Object.keys(r.docs).forEach(function (p) { conf.set(p, copy(r.docs[p])); });
       if (r.max > since) since = r.max;
-      ch.forEach(emit); saveCache();
+      saveCache();
+      var ch = refreshAll(); ch.forEach(emit);
       return ch.length;
+    },
+    /* prima di un ripristino: le modifiche in coda passano nell'elenco «Modifiche non salvate» */
+    clearQueue: function (why) {
+      var at = new Date().toISOString(), n = 0;
+      Object.keys(queue).forEach(function (p) {
+        var e = queue[p], cv = conf.get(p);
+        if (e.mode === 'merge') Object.keys(e.fields).forEach(function (k) { var v = e.fields[k].v; rejected.push({ id: rid(), path: p, op: 'field', field: k, value: v === DEL ? null : v, removed: v === DEL, confirmed: cv ? cv[k] : undefined, at: at, err: why }); n++; });
+        else { rejected.push({ id: rid(), path: p, op: e.mode, value: e.mode === 'replace' ? vis(p) : undefined, confirmed: cv, at: at, err: why }); n++; }
+        var err = new Error(why); err.code = 'restore'; settle(p, e.n, err);
+      });
+      queue = {}; saveQueue();
+      refreshAll().forEach(emit);
+      return n;
     },
     /* ripristino in corso: resta in questo browser finché il controllo sul server non lo trova completo */
     pending: async function () { await load(); try { return JSON.parse(lsGet(rsKey()) || 'null'); } catch (e) { return null; } },
@@ -2032,6 +2228,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 
   <main>
     <div id="banner" class="banner" hidden></div>
+    <div id="sync-banner" class="banner" role="status" hidden></div>
 
     <!-- OGGI -->
     <section id="tab-oggi" class="view">
@@ -2470,6 +2667,12 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="row"><button class="btn fit" id="imp-go" hidden>Importa</button><span class="muted small" id="imp-msg" style="flex:1 1 200px"></span></div>
       </div>
 
+      <div class="panel stack" id="unsaved-panel" hidden>
+        <h2>Modifiche non salvate</h2>
+        <p class="muted" style="margin:0">Il server ha rifiutato queste modifiche. L'app mostra il valore salvato, ma quello che avevi inserito è conservato qui: «Riprova» lo rimanda al server, «Scarta» lo toglie dall'elenco. Puoi anche scaricare l'elenco e reinserire i valori a mano.</p>
+        <div id="unsaved-list" class="stack"></div>
+        <div class="row" style="align-items:center"><button class="btn ghost fit" id="unsaved-dl">Scarica l'elenco</button><span class="muted small" id="unsaved-msg"></span></div>
+      </div>
       <div class="panel stack">
         <h2>Copia di sicurezza</h2>
         <p class="muted">Il backup completo contiene tutto: profilo e impostazioni, ogni giorno del diario con tutti i campi, le sedute di Hevy complete e le ricette. Con «Ripristina» lo ricarichi qui, anche in un account nuovo.</p>
@@ -2554,17 +2757,25 @@ function enqueue(path, fn) {
   queues[path] = next.catch(function () {});
   return next;
 }
+/* la modifica entra subito nella coda dell'archivio (salvata anche nel browser); la promessa dice com'è andata:
+   confermata, rifiutata dal server, oppure «queued» se il server non ha ancora risposto (la coda riprova da sola) */
 function saveDoc(path, data) {
   if (!db) return Promise.resolve();
-  return enqueue(path, function () { return db.doc(path).set(data); }).catch(function (e) { showError(e); throw e; });
+  var p = db.doc(path).set(data); p.catch(showError); return p;
 }
 function deleteDoc(path) {
   if (!db) return Promise.resolve();
-  return enqueue(path, function () { return db.doc(path).delete(); }).catch(function (e) { showError(e); });
+  var p = db.doc(path).delete(); p.catch(showError); return p;
 }
 function showError(e) {
   var b = $('#banner');
   var code = e && e.code;
+  /* in coda o sostituita da un ripristino: lo dice già l'avviso fisso delle modifiche */
+  if (code === 'queued' || code === 'restore') return;
+  if (/permission-denied|invalid-argument|failed-precondition|out-of-range|already-exists|unimplemented/.test(code || '')) {
+    b.textContent = 'Il server ha rifiutato la modifica (' + code + '): l\'app mostra di nuovo il valore salvato. Quello che avevi inserito è in Profilo → «Modifiche non salvate».';
+    b.hidden = false; setTimeout(function () { if (db) b.hidden = true; }, 8000); return;
+  }
   var msg = code === 'not_owner' ? 'Solo il proprietario può modificare i dati: la modifica non è stata salvata.' : code === 'quota_exceeded' ? 'Spazio esaurito: elimina qualche dato vecchio per continuare a salvare.'
     : code === 'resource_exhausted' ? 'Troppe operazioni ravvicinate. Aspetta un attimo e riprova.'
     : code === 'revoked' ? 'L\'accesso a questa pagina è cambiato e il salvataggio non è più disponibile.'
@@ -6120,7 +6331,11 @@ async function runImport(plan) {
     }
     msg.textContent = 'Fatto: ' + (plan.kind === 'Hevy' ? (plan.nNew || 0) + ' sedute nuove' + (n - (plan.nNew || 0) ? ', ' + (n - (plan.nNew || 0)) + ' già presenti (aggiornate)' : '') + '.' : n + ' giorni importati.');
     $('#imp-prev').hidden = true; $('#imp-go').hidden = true; state.importPlan = null; $('#imp-file').value = ''; if ($('#imp-name')) $('#imp-name').textContent = '';
-  } catch (e) { msg.textContent = 'Import interrotto dopo ' + n + ' elementi. Puoi ripetere: i dati già salvati non si duplicano.'; }
+  } catch (e) {
+    msg.textContent = e && e.code === 'queued'
+      ? 'Il server non risponde: ' + n + ' elementi salvati e confermati. Quello in corso è in coda in questo dispositivo e lo salvo appena torna la connessione. Per gli altri ripeti l\'importazione più tardi: non si duplicano.'
+      : 'Import interrotto dopo ' + n + ' elementi' + (e && e.code ? ' (' + e.code + ')' : '') + '. Puoi ripetere: i dati già salvati non si duplicano.';
+  }
   $('#imp-go').disabled = false;
   renderAll();
 }
@@ -6547,6 +6762,7 @@ async function bkApply(mode) {
     catch (e) { if (!confirm('Non riesco a scaricare la copia dei dati di adesso. Continuo lo stesso?')) { msg.textContent = ''; lock(false); return; } }
   }
   /* da qui il ripristino è «in sospeso» finché il controllo sul server non lo trova completo, anche se la pagina si chiude */
+  var queued = GJ_backup.clearQueue ? GJ_backup.clearQueue('sostituita dal ripristino') : 0;
   var rec = { mode: mode, startedAt: new Date().toISOString(), createdAt: bk.createdAt, checksum: bk.checksum, bk: bk };
   if (!GJ_backup.setPending(rec)) { delete rec.bk; GJ_backup.setPending(rec); }
   var writes = df.nuovi.concat(df.diversi), dels = mode === 'replace' ? df.soloQui : [], done = 0, tot = writes.length + dels.length, failed = [];
@@ -6579,7 +6795,7 @@ async function bkApply(mode) {
   } else {
     GJ_backup.setPending(null);
     msg.textContent = 'Ripristino completato e controllato sul server: ' + Object.keys(bk.docs).length + ' voci identiche al backup (' + bkN(writes.length, 'scritta', 'scritte') + ', ' + bkN(df.uguali.length, 'già uguale', 'già uguali') + (dels.length ? ', ' + bkN(dels.length, 'cancellata', 'cancellate') : '') + ').'
-      + (nl ? ' ' + nl + (nl === 1 ? ' voce che su questo dispositivo era diversa dal server è' : ' voci che su questo dispositivo erano diverse dal server sono') + ' nella copia di sicurezza appena scaricata, sezione «diverseDalServer».' : '');
+      + (nl ? ' ' + nl + (nl === 1 ? ' voce che su questo dispositivo era diversa dal server è' : ' voci che su questo dispositivo erano diverse dal server sono') + ' nella copia di sicurezza appena scaricata, sezione «diverseDalServer»' + (queued ? ', e le modifiche che erano in attesa sono in Profilo → «Modifiche non salvate»' : '') + '.' : '');
   }
   try { renderAll(); } catch (e) {}
 }
@@ -6596,6 +6812,66 @@ function bkDrop() {
   $('#bk-msg').textContent = 'Ripristino in sospeso annullato. Sul server restano i dati come sono adesso.';
 }
 window.GJ_bk = { read: bkRead, canon: bkCanon, build: bkBuild, diff: bkDiff, localOnly: bkLocalOnly };
+
+/* ---------- stato dei salvataggi ---------- */
+var syncSt = null, syncT = 0;
+var FIELD_L = { weight: 'Peso', kcal: 'Calorie', protein: 'Proteine', carbs: 'Carboidrati', fat: 'Grassi', steps: 'Passi', sleepH: 'Sonno', bedH: 'Ore a letto', note: 'Nota', meals: 'Pasti', source: 'Origine', date: 'Data' };
+function syncWhere(p) {
+  var s = p.split('/');
+  if (s[0] === 'days') return 'Giorno ' + fmtDay(s[1]);
+  if (s[0] === 'settings') return s[1] === 'main' ? 'Profilo e obiettivi' : s[1] === 'avatar' ? 'Foto del profilo' : 'Impostazioni';
+  if (s[0] === 'workouts') return 'Seduta ' + (/^\d{4}-\d{2}-\d{2}/.test(s[1]) ? fmtDay(s[1].slice(0, 10)) : s[1]);
+  return 'Ricetta ' + s[1];
+}
+function syncVal(v) {
+  if (v === undefined || v === null) return 'vuoto';
+  if (typeof v === 'number') return String(v).replace('.', ',');
+  var t = typeof v === 'string' ? v : JSON.stringify(v);
+  return t.length > 80 ? t.slice(0, 77) + '…' : t;
+}
+function syncWhat(r) {
+  if (r.op === 'field') return { t: syncWhere(r.path) + ' · ' + (FIELD_L[r.field] || r.field), v: r.removed ? 'Avevi cancellato il campo' : 'Avevi inserito: ' + syncVal(r.value), c: 'salvato: ' + syncVal(r.confirmed) };
+  if (r.op === 'delete') return { t: syncWhere(r.path), v: 'Avevi cancellato questa voce', c: 'sul server c\'è ancora' };
+  return { t: syncWhere(r.path), v: 'Avevi inserito la voce intera: ' + syncVal(r.value), c: r.confirmed === undefined ? 'sul server non c\'è' : 'salvata: ' + syncVal(r.confirmed) };
+}
+function renderSync() {
+  var st = syncSt, b = $('#sync-banner'); if (!b || !st) return;
+  clearTimeout(syncT);
+  var rej = st.rejected || [], txt = '';
+  /* le modifiche normali si confermano in pochi decimi di secondo: l'avviso compare solo se l'attesa si allunga */
+  var slow = st.pending && (st.err || Date.now() - st.oldest > 4000);
+  if (st.pending && !slow) syncT = setTimeout(renderSync, 4200);
+  if (slow) txt += (st.pending === 1 ? '1 voce modificata è' : st.pending + ' voci modificate sono') + ' in attesa del server' + (st.err ? ' (' + st.err + ')' : '') + ': ' + (st.persisted ? 'restano in questo dispositivo anche se chiudi la pagina, e riprovo da solo.' : 'ATTENZIONE, questo browser non riesce a conservarle: non chiudere la pagina finché non spariscono.');
+  if (rej.length) txt += (txt ? ' ' : '') + (rej.length === 1 ? '1 modifica non salvata' : rej.length + ' modifiche non salvate') + ': il server le ha rifiutate. Le trovi in Profilo → «Modifiche non salvate».';
+  b.textContent = txt; b.hidden = !txt;
+  var panel = $('#unsaved-panel'); if (!panel) return;
+  panel.hidden = !rej.length;
+  $('#unsaved-list').innerHTML = rej.map(function (r) {
+    var w = syncWhat(r), d = new Date(r.at);
+    return '<div class="unsaved-row"><b>' + bkEsc(w.t) + '</b><span>' + bkEsc(w.v) + ' · ' + bkEsc(w.c) + '</span>'
+      + '<span class="muted small">' + (isNaN(d) ? '' : 'Il ' + d.toLocaleDateString('it-IT') + ' alle ' + hm(d.getTime()) + ' · ') + 'motivo: ' + bkEsc(r.err) + '</span>'
+      + '<div class="row"><button class="btn ghost fit small" data-us="retry" data-id="' + bkEsc(r.id) + '">Riprova</button><button class="btn ghost fit small" data-us="discard" data-id="' + bkEsc(r.id) + '">Scarta</button></div></div>';
+  }).join('');
+}
+window.GJ_onSync = function (st) { syncSt = st; renderSync(); };
+async function unsavedAction(e) {
+  var b = e.target.closest('[data-us]'); if (!b) return;
+  var id = b.dataset.id, msg = $('#unsaved-msg');
+  if (b.dataset.us === 'discard') {
+    if (!confirm('Scarti questa modifica? Il valore che avevi inserito non sarà più recuperabile dall\'app.')) return;
+    GJ_sync.discard(id); msg.textContent = 'Modifica scartata.'; return;
+  }
+  msg.textContent = 'Rimando la modifica al server…';
+  try { await GJ_sync.retry(id); msg.textContent = 'Salvata e confermata dal server.'; }
+  catch (er) { msg.textContent = er && er.code === 'queued' ? 'Il server non ha ancora risposto: la modifica è in coda e riprovo da solo.' : 'Il server l\'ha rifiutata di nuovo (' + (er && er.code || er) + '): resta nell\'elenco.'; }
+  try { renderAll(); } catch (er2) {}
+}
+async function unsavedDownload() {
+  var st = syncSt; if (!st || !dl) return;
+  var list = (st.rejected || []).map(function (r) { var w = syncWhat(r); return { voce: w.t, tentato: w.v, salvato: w.c, quando: r.at, motivo: r.err, percorso: r.path, campo: r.field, valore: r.value }; });
+  await dl.save({ filename: 'gymjourney-modifiche-non-salvate-' + todayStr() + '.json', data: JSON.stringify({ account: window.GJ_backup ? GJ_backup.email() : '', creato: new Date().toISOString(), modifiche: list }, null, 1) });
+  $('#unsaved-msg').textContent = 'Elenco scaricato.';
+}
 
 async function doExport(kind) {
   var msg = $('#ex-msg'), lines, name;
@@ -6784,6 +7060,8 @@ function bind() {
   $('#ex-days').addEventListener('click', function () { doExport('days'); });
   $('#ex-work').addEventListener('click', function () { doExport('work'); });
   $('#bk-down').addEventListener('click', doBackup);
+  $('#unsaved-list').addEventListener('click', unsavedAction);
+  $('#unsaved-dl').addEventListener('click', unsavedDownload);
   $('#bk-file').addEventListener('change', function () { bkPick(this.files && this.files[0]); });
   $('#bk-prev').addEventListener('click', function (e) { var b = e.target.closest('[data-bk]'); if (!b) return; var k = b.dataset.bk; if (k === 'cancel') { bkPending = null; bkClearBox(); return; } if (k === 'resume') { bkResume(); return; } if (k === 'drop') { bkDrop(); return; } bkApply(k); });
 }
@@ -6811,6 +7089,7 @@ async function init() {
   try { mcp = c && c.use ? await c.use('mcp') : null; } catch (e) { mcp = null; }
   if (!db) setOffline(); else subscribe();
   if (db && window.GJ_backup) bkCheckResume();
+  if (window.GJ_sync) { syncSt = GJ_sync.status(); renderSync(); }
   if (!mcp) { setSync('good', 'Pronto', 'Nessuna importazione fatta.'); setTimeout(introData, 400); }
   else maybeSync();
   document.addEventListener('visibilitychange', function () {
@@ -8216,6 +8495,8 @@ body #td-chips .kvl .r .v:not(#z):not(#y){color:#fff!important}
 #hevy-panel .imp-pick:focus-within:not(#z):not(#y){outline:2px solid #fff;outline-offset:2px}
 #imp-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
 #hevy-panel .imp-name:empty:not(#z):not(#y){display:none!important}
+.unsaved-row{display:grid;gap:4px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(246,178,90,.3)}
+#sync-banner{cursor:default}
 #tab-dati .imp-pick:has(#bk-file):not(#z):not(#y){position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto}
 #bk-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
 #bk-msg:empty:not(#z):not(#y){display:none}
