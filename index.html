@@ -1834,6 +1834,19 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       };
     }
   };
+  /* backup completo: tutti i documenti dell'account, identici a come sono salvati */
+  window.GJ_backup = {
+    dump: async function () {
+      await load(); var fromServer = true;
+      try { var ch = await pull(); ch.forEach(emit); } catch (e) { fromServer = false; }
+      var o = {}; store.forEach(function (v, p) { o[p] = copy(v); }); return { docs: o, fromServer: fromServer };
+    },
+    current: function () { var o = {}; store.forEach(function (v, p) { o[p] = copy(v); }); return o; },
+    write: function (p, v) { return db.doc(p).set(v); },
+    remove: function (p) { return db.doc(p).delete(); },
+    email: function () { return (window.GJ_user && window.GJ_user.email) || ''; },
+    cols: COLS.slice()
+  };
   var downloads = {
     save: async function (o) {
       var a = document.createElement('a'), u = URL.createObjectURL(new Blob([o.data], { type: 'text/plain;charset=utf-8' }));
@@ -2410,12 +2423,21 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 
       <div class="panel stack">
         <h2>Copia di sicurezza</h2>
-        <p class="muted">Scarica i tuoi dati in CSV quando vuoi.</p>
-        <div class="row">
-          <button class="btn ghost fit" id="ex-days">Scarica il diario</button>
-          <button class="btn ghost fit" id="ex-work">Scarica gli allenamenti</button>
-          <span class="muted small" id="ex-msg" style="flex:1 1 200px"></span>
+        <p class="muted">Il backup completo contiene tutto: profilo e impostazioni, ogni giorno del diario con tutti i campi, le sedute di Hevy complete e le ricette. Con «Ripristina» lo ricarichi qui, anche in un account nuovo.</p>
+        <div class="row" style="align-items:center">
+          <button class="btn fit" id="bk-down">Scarica il backup completo</button>
+          <label class="btn ghost fit imp-pick">Ripristina da un backup<input id="bk-file" type="file" accept=".json,application/json"></label>
         </div>
+        <span class="muted small" id="bk-msg"></span>
+        <div id="bk-prev" class="stack" hidden></div>
+        <details class="more"><summary>Esportazioni CSV, solo da consultare</summary><div class="in">
+          <p class="muted" style="margin:0 0 8px">Per aprire i dati in un foglio di calcolo. Non contengono tutto (note, orari, durate, impostazioni) e non si possono reimportare: per conservare i dati usa il backup completo.</p>
+          <div class="row">
+            <button class="btn ghost fit" id="ex-days">Scarica il diario</button>
+            <button class="btn ghost fit" id="ex-work">Scarica gli allenamenti</button>
+            <span class="muted small" id="ex-msg" style="flex:1 1 200px"></span>
+          </div>
+        </div></details>
       </div>
     </section>
   </main><footer class="product-footer"><span>GYMJOURNEY · Il tuo percorso in palestra.</span></footer>
@@ -6342,6 +6364,118 @@ function maybeSync() { if (mcp && ((loaded.days && loaded.workouts) || !db) && !
 
 /* ---------- export ---------- */
 function csvCell(v) { v = v == null ? '' : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+/* ---------- backup completo (JSON) ----------
+   formato: { format, version, app, createdAt, account, fromServer, counts, checksum, docs: { 'collezione/id': documento } }
+   checksum = SHA-256 dei documenti in forma canonica (chiavi ordinate): un file modificato o troncato non viene ripristinato. */
+function bkEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+var BK_FORMAT = 'gymjourney-backup', BK_VERSION = 1, BK_PATH = /^(settings|days|workouts|recipes)\/[^\/]+$/;
+function bkCanon(x) {
+  if (Array.isArray(x)) return '[' + x.map(function (v) { return v === undefined ? 'null' : bkCanon(v); }).join(',') + ']';
+  if (x && typeof x === 'object') return '{' + Object.keys(x).sort().filter(function (k) { return x[k] !== undefined && typeof x[k] !== 'function'; }).map(function (k) { return JSON.stringify(k) + ':' + bkCanon(x[k]); }).join(',') + '}';
+  var s = JSON.stringify(x); return s === undefined ? 'null' : s;
+}
+async function bkHash(docs) {
+  if (!(window.crypto && crypto.subtle)) return '';
+  var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(bkCanon(docs)));
+  return 'sha256:' + Array.from(new Uint8Array(b)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+}
+function bkCounts(docs) {
+  var c = { settings: 0, days: 0, workouts: 0, recipes: 0 };
+  Object.keys(docs).forEach(function (p) { var k = p.split('/')[0]; if (k in c) c[k]++; });
+  return c;
+}
+async function bkBuild(docs, fromServer) {
+  var paths = Object.keys(docs).filter(function (p) { return BK_PATH.test(p); }).sort(), o = {};
+  paths.forEach(function (p) { o[p] = docs[p]; });
+  return { format: BK_FORMAT, version: BK_VERSION, app: 'GymJourney', createdAt: new Date().toISOString(), account: window.GJ_backup ? GJ_backup.email() : '',
+    fromServer: fromServer !== false, counts: bkCounts(o), checksum: await bkHash(o), docs: o };
+}
+function bkName(prefix) { return prefix + '-' + todayStr() + '.json'; }
+function bkWhat(c) { return c.days + ' giorni, ' + c.workouts + ' sedute, ' + c.recipes + ' ricette e ' + c.settings + (c.settings === 1 ? ' documento' : ' documenti') + ' di impostazioni'; }
+async function doBackup() {
+  var msg = $('#bk-msg');
+  if (!window.GJ_backup || !dl) { msg.textContent = 'Il backup non è disponibile in questa vista.'; return; }
+  msg.textContent = 'Preparo il backup…';
+  try {
+    var d = await GJ_backup.dump(), bk = await bkBuild(d.docs, d.fromServer);
+    await dl.save({ filename: bkName('gymjourney-backup'), data: JSON.stringify(bk, null, 1) });
+    msg.textContent = 'Backup scaricato: ' + bkWhat(bk.counts) + '.' + (bk.fromServer ? '' : ' Senza connessione: contiene la copia di questo dispositivo, che potrebbe non avere le ultime modifiche fatte altrove.');
+  } catch (e) { msg.textContent = 'Backup non riuscito: ' + (e && e.message || e) + '. Riprova.'; }
+}
+/* legge e controlla un file di backup; restituisce { bk } oppure { error } */
+async function bkRead(text) {
+  var bk; try { bk = JSON.parse(text); } catch (e) { return { error: 'Il file non è un backup di GymJourney (non è JSON leggibile).' }; }
+  if (!bk || bk.format !== BK_FORMAT) return { error: 'Il file non è un backup di GymJourney.' };
+  if (!(bk.version >= 1) || Math.floor(bk.version) !== bk.version) return { error: 'Versione del backup non valida.' };
+  if (bk.version > BK_VERSION) return { error: 'Il backup è stato fatto con una versione più nuova dell\'app: aggiorna la pagina e riprova.' };
+  if (!bk.docs || typeof bk.docs !== 'object' || Array.isArray(bk.docs)) return { error: 'Il backup non contiene dati.' };
+  var bad = Object.keys(bk.docs).filter(function (p) { var v = bk.docs[p]; return !BK_PATH.test(p) || !v || typeof v !== 'object' || Array.isArray(v) || (/^days\//.test(p) && !/^days\/\d{4}-\d{2}-\d{2}$/.test(p)); });
+  if (bad.length) return { error: 'Il backup contiene voci non valide (' + bad.slice(0, 3).join(', ') + (bad.length > 3 ? '…' : '') + '): non lo ripristino.' };
+  if (!bk.docs['settings/main']) return { error: 'Il backup non contiene il profilo (settings/main): non lo ripristino.' };
+  if (bk.checksum) { var h = await bkHash(bk.docs); if (h && h !== bk.checksum) return { error: 'Il file è stato modificato o è danneggiato (il controllo non torna): non lo ripristino.' }; }
+  else if (window.crypto && crypto.subtle) return { error: 'Il backup non ha il codice di controllo: non lo ripristino.' };
+  return { bk: bk };
+}
+/* confronto fra backup e dati attuali */
+function bkDiff(bk, cur) {
+  var r = { nuovi: [], uguali: [], diversi: [], soloQui: [] };
+  Object.keys(bk.docs).forEach(function (p) { if (!(p in cur)) r.nuovi.push(p); else if (bkCanon(cur[p]) === bkCanon(bk.docs[p])) r.uguali.push(p); else r.diversi.push(p); });
+  Object.keys(cur).forEach(function (p) { if (BK_PATH.test(p) && !(p in bk.docs)) r.soloQui.push(p); });
+  return r;
+}
+var bkPending = null;
+async function bkPick(file) {
+  var msg = $('#bk-msg'), box = $('#bk-prev'); box.hidden = true; box.innerHTML = ''; bkPending = null;
+  if (!file) return;
+  var r = await bkRead(await file.text());
+  if (r.error) { msg.textContent = r.error; return; }
+  var bk = r.bk, cur = GJ_backup.current(), df = bkDiff(bk, cur), days = Object.keys(bk.docs).filter(function (p) { return /^days\//.test(p); }).map(function (p) { return p.slice(5); }).sort();
+  var other = bk.account && bk.account !== GJ_backup.email();
+  bkPending = { bk: bk, diff: df };
+  msg.textContent = '';
+  box.innerHTML = '<p style="margin:0"><b>Backup del ' + bkEsc(fmtDay(String(bk.createdAt).slice(0, 10))) + '</b>' + (bk.account ? ' · account ' + bkEsc(bk.account) : '') + '</p>'
+    + '<p class="muted" style="margin:0">Contiene ' + bkWhat(bk.counts) + (days.length ? '; diario dal ' + bkEsc(fmtDay(days[0])) + ' al ' + bkEsc(fmtDay(days[days.length - 1])) : '') + '. Controllo del file: superato.</p>'
+    + (other ? '<p style="margin:0;color:var(--warn)">È il backup di un altro account. Puoi ripristinarlo comunque in questo.</p>' : '')
+    + (bk.fromServer === false ? '<p style="margin:0;color:var(--warn)">Era stato fatto senza connessione: potrebbe non avere le ultime modifiche fatte da altri dispositivi.</p>' : '')
+    + '<p class="muted" style="margin:0">Rispetto ai dati di adesso: ' + df.nuovi.length + ' voci nuove, ' + df.diversi.length + ' diverse, ' + df.uguali.length + ' uguali; ' + df.soloQui.length + ' voci ci sono solo adesso e non nel backup.</p>'
+    + '<p class="muted small" style="margin:0"><b>Unisci</b>: aggiunge le voci nuove e rimette quelle diverse come nel backup; le voci che ci sono solo adesso restano. <b>Sostituisci</b>: rende i dati identici al backup, quindi cancella anche le ' + df.soloQui.length + ' voci che ci sono solo adesso. Prima di cominciare scarico un backup dei dati di adesso.</p>'
+    + '<div class="row"><button class="btn fit" data-bk="merge">Unisci</button><button class="btn ghost fit" data-bk="replace">Sostituisci</button><button class="btn ghost fit" data-bk="cancel">Annulla</button></div>';
+  box.hidden = false;
+}
+async function bkApply(mode) {
+  var msg = $('#bk-msg'), box = $('#bk-prev'), P = bkPending; if (!P) return;
+  var bk = P.bk, cur = GJ_backup.current(), df = bkDiff(bk, cur);
+  if (mode === 'replace' && df.soloQui.length && !confirm('Sostituisci cancella ' + df.soloQui.length + ' voci che non sono nel backup. Prima scarico un backup dei dati di adesso. Continuo?')) return;
+  box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+  /* copia di sicurezza dei dati di adesso, prima di scrivere qualsiasi cosa */
+  if (Object.keys(cur).length) {
+    try { var safe = await bkBuild(cur, true); await dl.save({ filename: bkName('gymjourney-prima-del-ripristino'), data: JSON.stringify(safe, null, 1) }); }
+    catch (e) { if (!confirm('Non riesco a scaricare la copia dei dati di adesso. Continuo lo stesso?')) { box.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); return; } }
+  }
+  var writes = df.nuovi.concat(df.diversi), dels = mode === 'replace' ? df.soloQui : [], done = 0, tot = writes.length + dels.length, failed = [];
+  /* il profilo per ultimo: se qualcosa si interrompe, l'app resta con il profilo di prima */
+  writes.sort(function (a, b) { return (a === 'settings/main') - (b === 'settings/main'); });
+  async function run(list, fn) {
+    for (var i = 0; i < list.length; i += 8) {
+      await Promise.all(list.slice(i, i + 8).map(function (p) { return fn(p).then(function () { done++; }, function (e) { failed.push(p + ': ' + (e && (e.code || e.message) || e)); }); }));
+      msg.textContent = 'Ripristino: ' + done + ' / ' + tot + '…';
+    }
+  }
+  await run(writes, function (p) { return GJ_backup.write(p, bk.docs[p]); });
+  await run(dels, function (p) { return GJ_backup.remove(p); });
+  /* verifica: i dati di adesso devono essere identici al backup, campo per campo */
+  var after = GJ_backup.current(), wrong = Object.keys(bk.docs).filter(function (p) { return bkCanon(after[p]) !== bkCanon(bk.docs[p]); });
+  var extra = mode === 'replace' ? Object.keys(after).filter(function (p) { return BK_PATH.test(p) && !(p in bk.docs); }) : [];
+  bkPending = null; box.hidden = true; box.innerHTML = ''; $('#bk-file').value = '';
+  if (failed.length || wrong.length || extra.length) {
+    msg.textContent = 'Ripristino incompleto: ' + failed.length + ' scritture non riuscite, ' + wrong.length + ' voci diverse dal backup, ' + extra.length + ' voci in più. Il file di backup non è cambiato: puoi ripetere il ripristino. ' + failed.slice(0, 2).join('; ');
+  } else {
+    msg.textContent = 'Ripristino completato e controllato: ' + Object.keys(bk.docs).length + ' voci identiche al backup (' + writes.length + ' scritte, ' + df.uguali.length + ' già uguali' + (dels.length ? ', ' + dels.length + ' cancellate' : '') + ').';
+  }
+  try { renderAll(); } catch (e) {}
+}
+window.GJ_bk = { read: bkRead, canon: bkCanon, build: bkBuild, diff: bkDiff };
+
 async function doExport(kind) {
   var msg = $('#ex-msg'), lines, name;
   if (kind === 'days') {
@@ -6528,6 +6662,9 @@ function bind() {
   
   $('#ex-days').addEventListener('click', function () { doExport('days'); });
   $('#ex-work').addEventListener('click', function () { doExport('work'); });
+  $('#bk-down').addEventListener('click', doBackup);
+  $('#bk-file').addEventListener('change', function () { bkPick(this.files && this.files[0]); });
+  $('#bk-prev').addEventListener('click', function (e) { var b = e.target.closest('[data-bk]'); if (!b) return; if (b.dataset.bk === 'cancel') { bkPending = null; this.hidden = true; this.innerHTML = ''; $('#bk-file').value = ''; return; } bkApply(b.dataset.bk); });
 }
 
 /* ---------- avvio ---------- */
@@ -7957,6 +8094,9 @@ body #td-chips .kvl .r .v:not(#z):not(#y){color:#fff!important}
 #hevy-panel .imp-pick:focus-within:not(#z):not(#y){outline:2px solid #fff;outline-offset:2px}
 #imp-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
 #hevy-panel .imp-name:empty:not(#z):not(#y){display:none!important}
+#tab-dati .imp-pick:has(#bk-file):not(#z):not(#y){position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto}
+#bk-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
+#bk-msg:empty:not(#z):not(#y){display:none}
 #hevy-panel .imp-name:not(#z):not(#y){flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Profilo su computer: righe non troppo larghe */
 @media (min-width:1024px){
