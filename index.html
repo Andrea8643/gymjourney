@@ -1834,16 +1834,65 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       };
     }
   };
-  /* backup completo: tutti i documenti dell'account, identici a come sono salvati */
+  /* backup completo e ripristino. Non si fidano della copia di questo dispositivo, che può contenere modifiche
+     rifiutate dal server o non ancora confermate: leggono tutti i documenti direttamente dal server,
+     scrivono aspettando la conferma di ciascuno e solo dopo aggiornano la copia locale. */
+  function withTimeout(pr, ms) {
+    return new Promise(function (res, rej) {
+      var t = setTimeout(function () { var e = new Error('il server non ha confermato'); e.code = 'timeout'; rej(e); }, ms);
+      pr.then(function (v) { clearTimeout(t); res(v); }, function (e) { clearTimeout(t); rej(e); });
+    });
+  }
+  /* lettura completa dal server (non solo le novità): ogni documento di ogni raccolta */
+  async function remote() {
+    await load();
+    var snaps = await withTimeout(Promise.all(COLS.map(function (c) { return fs.collection('users/' + uid + '/' + c).get({ source: 'server' }); })), window.GJ_backup.timeoutMs);
+    var docs = {}, bad = [], max = 0;
+    snaps.forEach(function (q, i) {
+      q.forEach(function (d) {
+        var x = d.data(), p = COLS[i] + '/' + d.id, t = x._u && x._u.toMillis ? x._u.toMillis() : 0;
+        if (t > max) max = t;
+        if (x._del) return;
+        try { docs[p] = JSON.parse(x.j); } catch (e) { bad.push(p); }
+      });
+    });
+    return { docs: docs, bad: bad, max: max };
+  }
+  function rsKey() { return 'gj-ripristino-' + uid; }
   window.GJ_backup = {
+    timeoutMs: 20000,
+    /* tutti i documenti come sono sul server; senza connessione la copia di questo dispositivo, dichiarata come tale */
     dump: async function () {
-      await load(); var fromServer = true;
-      try { var ch = await pull(); ch.forEach(emit); } catch (e) { fromServer = false; }
-      var o = {}; store.forEach(function (v, p) { o[p] = copy(v); }); return { docs: o, fromServer: fromServer };
+      await load();
+      try { var r = await remote(); return { docs: r.docs, fromServer: true, bad: r.bad }; }
+      catch (e) { return { docs: window.GJ_backup.current(), fromServer: false, bad: [], error: e && (e.code || e.message) || String(e) }; }
     },
+    remote: remote,
     current: function () { var o = {}; store.forEach(function (v, p) { o[p] = copy(v); }); return o; },
-    write: function (p, v) { return db.doc(p).set(v); },
-    remove: function (p) { return db.doc(p).delete(); },
+    /* la copia locale cambia solo dopo la conferma del server */
+    write: async function (p, v) {
+      await load();
+      await withTimeout(ref(p).set({ j: JSON.stringify(v), _u: stamp() }), window.GJ_backup.timeoutMs);
+      store.set(p, copy(v)); emit(p); saveCache();
+    },
+    remove: async function (p) {
+      await load();
+      await withTimeout(ref(p).set({ _del: true, _u: stamp() }), window.GJ_backup.timeoutMs);
+      store.delete(p); emit(p); saveCache();
+    },
+    /* rende la copia locale uguale allo stato appena letto dal server */
+    adopt: function (r) {
+      var ch = [];
+      store.forEach(function (v, p) { if (!(p in r.docs) && r.bad.indexOf(p) < 0) ch.push(p); });
+      ch.forEach(function (p) { store.delete(p); });
+      Object.keys(r.docs).forEach(function (p) { if (JSON.stringify(store.get(p)) !== JSON.stringify(r.docs[p])) { store.set(p, copy(r.docs[p])); ch.push(p); } });
+      if (r.max > since) since = r.max;
+      ch.forEach(emit); saveCache();
+      return ch.length;
+    },
+    /* ripristino in corso: resta in questo browser finché il controllo sul server non lo trova completo */
+    pending: async function () { await load(); try { return JSON.parse(lsGet(rsKey()) || 'null'); } catch (e) { return null; } },
+    setPending: function (o) { try { if (o == null) localStorage.removeItem(rsKey()); else localStorage.setItem(rsKey(), JSON.stringify(o)); return true; } catch (e) { return false; } },
     email: function () { return (window.GJ_user && window.GJ_user.email) || ''; },
     cols: COLS.slice()
   };
@@ -6384,23 +6433,40 @@ function bkCounts(docs) {
   Object.keys(docs).forEach(function (p) { var k = p.split('/')[0]; if (k in c) c[k]++; });
   return c;
 }
-async function bkBuild(docs, fromServer) {
+/* fromServer è vero solo se i documenti sono stati appena letti dal server; extra = sezioni informative, escluse dal controllo e dal ripristino */
+async function bkBuild(docs, fromServer, extra) {
   var paths = Object.keys(docs).filter(function (p) { return BK_PATH.test(p); }).sort(), o = {};
   paths.forEach(function (p) { o[p] = docs[p]; });
-  return { format: BK_FORMAT, version: BK_VERSION, app: 'GymJourney', createdAt: new Date().toISOString(), account: window.GJ_backup ? GJ_backup.email() : '',
-    fromServer: fromServer !== false, counts: bkCounts(o), checksum: await bkHash(o), docs: o };
+  var bk = { format: BK_FORMAT, version: BK_VERSION, app: 'GymJourney', createdAt: new Date().toISOString(), account: window.GJ_backup ? GJ_backup.email() : '',
+    fromServer: fromServer === true, counts: bkCounts(o), checksum: await bkHash(o), docs: o };
+  Object.keys(extra || {}).forEach(function (k) { var v = extra[k]; if (v && (Array.isArray(v) ? v.length : Object.keys(v).length)) bk[k] = v; });
+  return bk;
 }
 function bkName(prefix) { return prefix + '-' + todayStr() + '.json'; }
 function bkWhat(c) { return c.days + ' giorni, ' + c.workouts + ' sedute, ' + c.recipes + ' ricette e ' + c.settings + (c.settings === 1 ? ' documento' : ' documenti') + ' di impostazioni'; }
+function bkErr(e) { return e && (e.code || e.message) || String(e); }
+function bkN(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+/* voci di questo dispositivo diverse dal server: modifiche non confermate, oppure dati cambiati altrove che questa pagina non ha ancora letto */
+function bkLocalOnly(remoteDocs) {
+  var cur = GJ_backup.current(), o = {};
+  Object.keys(cur).forEach(function (p) { if (BK_PATH.test(p) && bkCanon(cur[p]) !== bkCanon(remoteDocs[p])) o[p] = cur[p]; });
+  return o;
+}
+function bkLocalNote(n) { return bkN(n, 'voce', 'voci') + ' di questo dispositivo ' + (n === 1 ? 'è diversa da quella sul server (modifica non confermata dal server, oppure non ancora aggiornata da altri dispositivi)' : 'sono diverse da quelle sul server (modifiche non confermate dal server, oppure non ancora aggiornate da altri dispositivi)'); }
 async function doBackup() {
   var msg = $('#bk-msg');
   if (!window.GJ_backup || !dl) { msg.textContent = 'Il backup non è disponibile in questa vista.'; return; }
-  msg.textContent = 'Preparo il backup…';
+  msg.textContent = 'Leggo tutti i dati dal server…';
   try {
-    var d = await GJ_backup.dump(), bk = await bkBuild(d.docs, d.fromServer);
+    var d = await GJ_backup.dump(), loc = d.fromServer ? bkLocalOnly(d.docs) : {}, nl = Object.keys(loc).length;
+    var bk = await bkBuild(d.docs, d.fromServer, { diverseDalServer: loc, illeggibili: d.bad });
     await dl.save({ filename: bkName('gymjourney-backup'), data: JSON.stringify(bk, null, 1) });
-    msg.textContent = 'Backup scaricato: ' + bkWhat(bk.counts) + '.' + (bk.fromServer ? '' : ' Senza connessione: contiene la copia di questo dispositivo, che potrebbe non avere le ultime modifiche fatte altrove.');
-  } catch (e) { msg.textContent = 'Backup non riuscito: ' + (e && e.message || e) + '. Riprova.'; }
+    msg.textContent = d.fromServer
+      ? 'Backup scaricato, letto dal server: ' + bkWhat(bk.counts) + '.'
+        + (nl ? ' Inoltre ' + bkLocalNote(nl) + (nl === 1 ? ': è nel file a parte, nella sezione «diverseDalServer», e il ripristino non la usa.' : ': sono nel file a parte, nella sezione «diverseDalServer», e il ripristino non le usa.') : '')
+        + (d.bad.length ? ' ' + d.bad.length + ' documenti sul server non sono leggibili e non sono nel backup: ' + d.bad.slice(0, 3).join(', ') + '.' : '')
+      : 'Non riesco a leggere il server (' + d.error + '): ho scaricato la copia di questo dispositivo, che NON è controllata sul server e può non avere le ultime modifiche o contenere modifiche non salvate. Nel file è indicato fromServer: false. Ripeti il backup quando sei online.';
+  } catch (e) { msg.textContent = 'Backup non riuscito: ' + bkErr(e) + '. Riprova.'; }
 }
 /* legge e controlla un file di backup; restituisce { bk } oppure { error } */
 async function bkRead(text) {
@@ -6416,7 +6482,7 @@ async function bkRead(text) {
   else if (window.crypto && crypto.subtle) return { error: 'Il backup non ha il codice di controllo: non lo ripristino.' };
   return { bk: bk };
 }
-/* confronto fra backup e dati attuali */
+/* confronto fra backup e dati sul server */
 function bkDiff(bk, cur) {
   var r = { nuovi: [], uguali: [], diversi: [], soloQui: [] };
   Object.keys(bk.docs).forEach(function (p) { if (!(p in cur)) r.nuovi.push(p); else if (bkCanon(cur[p]) === bkCanon(bk.docs[p])) r.uguali.push(p); else r.diversi.push(p); });
@@ -6424,57 +6490,112 @@ function bkDiff(bk, cur) {
   return r;
 }
 var bkPending = null;
+function bkClearBox() { var box = $('#bk-prev'); box.hidden = true; box.innerHTML = ''; $('#bk-file').value = ''; }
 async function bkPick(file) {
   var msg = $('#bk-msg'), box = $('#bk-prev'); box.hidden = true; box.innerHTML = ''; bkPending = null;
   if (!file) return;
   var r = await bkRead(await file.text());
   if (r.error) { msg.textContent = r.error; return; }
-  var bk = r.bk, cur = GJ_backup.current(), df = bkDiff(bk, cur), days = Object.keys(bk.docs).filter(function (p) { return /^days\//.test(p); }).map(function (p) { return p.slice(5); }).sort();
+  msg.textContent = 'Leggo i dati sul server per confrontarli con il backup…';
+  var rem; try { rem = await GJ_backup.remote(); }
+  catch (e) { msg.textContent = 'Non riesco a leggere i dati sul server (' + bkErr(e) + '). Il ripristino confronta il backup con i dati sul server, quindi serve la connessione: non ho scritto niente, riprova quando sei online.'; $('#bk-file').value = ''; return; }
+  var bk = r.bk, df = bkDiff(bk, rem.docs), nl = Object.keys(bkLocalOnly(rem.docs)).length, days = Object.keys(bk.docs).filter(function (p) { return /^days\//.test(p); }).map(function (p) { return p.slice(5); }).sort();
   var other = bk.account && bk.account !== GJ_backup.email();
-  bkPending = { bk: bk, diff: df };
+  bkPending = { bk: bk };
   msg.textContent = '';
   box.innerHTML = '<p style="margin:0"><b>Backup del ' + bkEsc(fmtDay(String(bk.createdAt).slice(0, 10))) + '</b>' + (bk.account ? ' · account ' + bkEsc(bk.account) : '') + '</p>'
     + '<p class="muted" style="margin:0">Contiene ' + bkWhat(bk.counts) + (days.length ? '; diario dal ' + bkEsc(fmtDay(days[0])) + ' al ' + bkEsc(fmtDay(days[days.length - 1])) : '') + '. Controllo del file: superato.</p>'
     + (other ? '<p style="margin:0;color:var(--warn)">È il backup di un altro account. Puoi ripristinarlo comunque in questo.</p>' : '')
-    + (bk.fromServer === false ? '<p style="margin:0;color:var(--warn)">Era stato fatto senza connessione: potrebbe non avere le ultime modifiche fatte da altri dispositivi.</p>' : '')
-    + '<p class="muted" style="margin:0">Rispetto ai dati di adesso: ' + df.nuovi.length + ' voci nuove, ' + df.diversi.length + ' diverse, ' + df.uguali.length + ' uguali; ' + df.soloQui.length + ' voci ci sono solo adesso e non nel backup.</p>'
-    + '<p class="muted small" style="margin:0"><b>Unisci</b>: aggiunge le voci nuove e rimette quelle diverse come nel backup; le voci che ci sono solo adesso restano. <b>Sostituisci</b>: rende i dati identici al backup, quindi cancella anche le ' + df.soloQui.length + ' voci che ci sono solo adesso. Prima di cominciare scarico un backup dei dati di adesso.</p>'
+    + (bk.fromServer !== true ? '<p style="margin:0;color:var(--warn)">Era stato fatto senza leggere il server: potrebbe non avere le ultime modifiche fatte da altri dispositivi.</p>' : '')
+    + '<p class="muted" style="margin:0">Rispetto ai dati sul server, letti adesso: ' + bkN(df.nuovi.length, 'voce nuova', 'voci nuove') + ', ' + bkN(df.diversi.length, 'diversa', 'diverse') + ', ' + bkN(df.uguali.length, 'uguale', 'uguali') + '; ' + bkN(df.soloQui.length, 'voce c\'è', 'voci ci sono') + ' solo sul server e non nel backup.</p>'
+    + (nl ? '<p style="margin:0;color:var(--warn)">' + bkLocalNote(nl) + '. ' + (nl === 1 ? 'La salvo' : 'Le salvo') + ' nella copia di sicurezza, nella sezione «diverseDalServer»; dopo il ripristino questo dispositivo mostra i dati del server.</p>' : '')
+    + '<p class="muted small" style="margin:0"><b>Unisci</b>: aggiunge le voci nuove e rimette quelle diverse come nel backup; le voci che ci sono solo sul server restano. <b>Sostituisci</b>: rende i dati sul server identici al backup, quindi cancella anche le voci che non sono nel backup. Prima di cominciare rileggo il server e scarico una copia di quello che c\'è.</p>'
     + '<div class="row"><button class="btn fit" data-bk="merge">Unisci</button><button class="btn ghost fit" data-bk="replace">Sostituisci</button><button class="btn ghost fit" data-bk="cancel">Annulla</button></div>';
   box.hidden = false;
 }
+/* ripristino rimasto a metà: si riprende con il backup conservato in questo browser */
+function bkResumeBox(R) {
+  var box = $('#bk-prev');
+  box.innerHTML = '<p style="margin:0;color:var(--warn)"><b>Ripristino in sospeso</b> (' + (R.mode === 'replace' ? 'Sostituisci' : 'Unisci') + ', backup del ' + bkEsc(fmtDay(String(R.createdAt || '').slice(0, 10))) + '): il server non risulta ancora identico al backup.</p>'
+    + (R.bk ? '<p class="muted small" style="margin:0">«Riprendi» rilegge il server e rifà solo quello che non corrisponde ancora al backup, poi controlla di nuovo.</p>'
+      + '<div class="row"><button class="btn fit" data-bk="resume">Riprendi il ripristino</button><button class="btn ghost fit" data-bk="drop">Lascia perdere</button></div>'
+      : '<p class="muted small" style="margin:0">Il backup era troppo grande per conservarlo in questo browser: per riprendere scegli di nuovo lo stesso file con «Ripristina da un backup».</p><div class="row"><button class="btn ghost fit" data-bk="drop">Lascia perdere</button></div>');
+  box.hidden = false;
+}
+async function bkCheckResume() {
+  var R = null; try { R = await GJ_backup.pending(); } catch (e) {}
+  if (!R) return;
+  $('#bk-msg').textContent = 'Un ripristino non è stato completato: alcune voci sul server potrebbero non corrispondere ancora al backup.';
+  bkResumeBox(R);
+  var b = $('#banner'); b.textContent = 'Un ripristino da backup è rimasto a metà. Apri «Profilo» → «Copia di sicurezza» per riprenderlo.'; b.hidden = false;
+  setTimeout(function () { b.hidden = true; }, 12000);
+}
 async function bkApply(mode) {
   var msg = $('#bk-msg'), box = $('#bk-prev'), P = bkPending; if (!P) return;
-  var bk = P.bk, cur = GJ_backup.current(), df = bkDiff(bk, cur);
-  if (mode === 'replace' && df.soloQui.length && !confirm('Sostituisci cancella ' + df.soloQui.length + ' voci che non sono nel backup. Prima scarico un backup dei dati di adesso. Continuo?')) return;
-  box.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
-  /* copia di sicurezza dei dati di adesso, prima di scrivere qualsiasi cosa */
-  if (Object.keys(cur).length) {
-    try { var safe = await bkBuild(cur, true); await dl.save({ filename: bkName('gymjourney-prima-del-ripristino'), data: JSON.stringify(safe, null, 1) }); }
-    catch (e) { if (!confirm('Non riesco a scaricare la copia dei dati di adesso. Continuo lo stesso?')) { box.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); return; } }
+  var bk = P.bk, btns = box.querySelectorAll('button');
+  function lock(v) { btns.forEach(function (b) { b.disabled = v; }); }
+  lock(true);
+  /* lo stato del server può essere cambiato dall'anteprima (altri dispositivi): lo rileggo adesso */
+  msg.textContent = 'Rileggo i dati sul server…';
+  var rem; try { rem = await GJ_backup.remote(); }
+  catch (e) { msg.textContent = 'Non riesco a leggere i dati sul server (' + bkErr(e) + '): non ho scritto niente. Riprova quando sei online.'; lock(false); return; }
+  var df = bkDiff(bk, rem.docs), loc = bkLocalOnly(rem.docs);
+  if (mode === 'replace' && df.soloQui.length && !confirm('Sostituisci cancella ' + df.soloQui.length + ' voci che sono sul server ma non nel backup. Prima scarico una copia dei dati di adesso. Continuo?')) { msg.textContent = ''; lock(false); return; }
+  /* copia di sicurezza: lo stato del server appena letto, più a parte le voci di questo dispositivo diverse dal server */
+  if (Object.keys(rem.docs).length || Object.keys(loc).length) {
+    try { var safe = await bkBuild(rem.docs, true, { diverseDalServer: loc, illeggibili: rem.bad }); await dl.save({ filename: bkName('gymjourney-prima-del-ripristino'), data: JSON.stringify(safe, null, 1) }); }
+    catch (e) { if (!confirm('Non riesco a scaricare la copia dei dati di adesso. Continuo lo stesso?')) { msg.textContent = ''; lock(false); return; } }
   }
+  /* da qui il ripristino è «in sospeso» finché il controllo sul server non lo trova completo, anche se la pagina si chiude */
+  var rec = { mode: mode, startedAt: new Date().toISOString(), createdAt: bk.createdAt, checksum: bk.checksum, bk: bk };
+  if (!GJ_backup.setPending(rec)) { delete rec.bk; GJ_backup.setPending(rec); }
   var writes = df.nuovi.concat(df.diversi), dels = mode === 'replace' ? df.soloQui : [], done = 0, tot = writes.length + dels.length, failed = [];
   /* il profilo per ultimo: se qualcosa si interrompe, l'app resta con il profilo di prima */
   writes.sort(function (a, b) { return (a === 'settings/main') - (b === 'settings/main'); });
   async function run(list, fn) {
     for (var i = 0; i < list.length; i += 8) {
-      await Promise.all(list.slice(i, i + 8).map(function (p) { return fn(p).then(function () { done++; }, function (e) { failed.push(p + ': ' + (e && (e.code || e.message) || e)); }); }));
-      msg.textContent = 'Ripristino: ' + done + ' / ' + tot + '…';
+      await Promise.all(list.slice(i, i + 8).map(function (p) { return fn(p).then(function () { done++; }, function (e) { failed.push(p + ': ' + bkErr(e)); }); }));
+      msg.textContent = 'Ripristino: ' + done + ' / ' + tot + ' confermati dal server…';
     }
   }
   await run(writes, function (p) { return GJ_backup.write(p, bk.docs[p]); });
   await run(dels, function (p) { return GJ_backup.remove(p); });
-  /* verifica: i dati di adesso devono essere identici al backup, campo per campo */
-  var after = GJ_backup.current(), wrong = Object.keys(bk.docs).filter(function (p) { return bkCanon(after[p]) !== bkCanon(bk.docs[p]); });
-  var extra = mode === 'replace' ? Object.keys(after).filter(function (p) { return BK_PATH.test(p) && !(p in bk.docs); }) : [];
-  bkPending = null; box.hidden = true; box.innerHTML = ''; $('#bk-file').value = '';
-  if (failed.length || wrong.length || extra.length) {
-    msg.textContent = 'Ripristino incompleto: ' + failed.length + ' scritture non riuscite, ' + wrong.length + ' voci diverse dal backup, ' + extra.length + ' voci in più. Il file di backup non è cambiato: puoi ripetere il ripristino. ' + failed.slice(0, 2).join('; ');
+  /* controllo: rileggo tutto dal server e confronto campo per campo con il backup */
+  msg.textContent = 'Controllo sul server…';
+  var fin = null, finErr = null;
+  try { fin = await GJ_backup.remote(); GJ_backup.adopt(fin); } catch (e) { finErr = e; }
+  var wrong = fin ? Object.keys(bk.docs).filter(function (p) { return bkCanon(fin.docs[p]) !== bkCanon(bk.docs[p]); }) : [];
+  var extra = fin && mode === 'replace' ? Object.keys(fin.docs).filter(function (p) { return BK_PATH.test(p) && !(p in bk.docs); }) : [];
+  bkPending = null; bkClearBox();
+  var nl = Object.keys(loc).length;
+  if (!fin || failed.length || wrong.length || extra.length) {
+    msg.textContent = 'Ripristino incompleto. '
+      + (fin ? 'Controllo sul server: ' + bkN(wrong.length, 'voce del backup mancante o diversa', 'voci del backup mancanti o diverse') + (mode === 'replace' ? ', ' + bkN(extra.length, 'voce in più', 'voci in più') + (extra.length ? ' (' + extra.slice(0, 3).join(', ') + (extra.length > 3 ? '…' : '') + ', forse aggiunte da un altro dispositivo durante il ripristino)' : '') : '') + '.'
+        : 'Non sono riuscito a rileggere il server per il controllo (' + bkErr(finErr) + ').')
+      + (failed.length ? ' ' + bkN(failed.length, 'operazione non confermata', 'operazioni non confermate') + ' dal server: ' + failed.slice(0, 2).join('; ') + (failed.length > 2 ? '…' : '') + '.' : '')
+      + ' Il backup non è cambiato e il ripristino resta in sospeso in questo browser, anche se chiudi la pagina: con «Riprendi il ripristino» rifaccio solo quello che sul server non corrisponde ancora.';
+    var R = null; try { R = await GJ_backup.pending(); } catch (e) {}
+    if (R) bkResumeBox(R);
   } else {
-    msg.textContent = 'Ripristino completato e controllato: ' + Object.keys(bk.docs).length + ' voci identiche al backup (' + writes.length + ' scritte, ' + df.uguali.length + ' già uguali' + (dels.length ? ', ' + dels.length + ' cancellate' : '') + ').';
+    GJ_backup.setPending(null);
+    msg.textContent = 'Ripristino completato e controllato sul server: ' + Object.keys(bk.docs).length + ' voci identiche al backup (' + bkN(writes.length, 'scritta', 'scritte') + ', ' + bkN(df.uguali.length, 'già uguale', 'già uguali') + (dels.length ? ', ' + bkN(dels.length, 'cancellata', 'cancellate') : '') + ').'
+      + (nl ? ' ' + nl + (nl === 1 ? ' voce che su questo dispositivo era diversa dal server è' : ' voci che su questo dispositivo erano diverse dal server sono') + ' nella copia di sicurezza appena scaricata, sezione «diverseDalServer».' : '');
   }
   try { renderAll(); } catch (e) {}
 }
-window.GJ_bk = { read: bkRead, canon: bkCanon, build: bkBuild, diff: bkDiff };
+async function bkResume() {
+  var R = null; try { R = await GJ_backup.pending(); } catch (e) {}
+  if (!R || !R.bk) return;
+  var r = await bkRead(JSON.stringify(R.bk));
+  if (r.error) { $('#bk-msg').textContent = 'Il backup conservato per riprendere non è più valido (' + r.error + '): scegli di nuovo il file.'; return; }
+  bkPending = { bk: r.bk }; bkApply(R.mode);
+}
+function bkDrop() {
+  if (!confirm('Lasci perdere il ripristino in sospeso? Sul server restano i dati come sono adesso, compreso quello che il ripristino ha già scritto.')) return;
+  GJ_backup.setPending(null); bkClearBox();
+  $('#bk-msg').textContent = 'Ripristino in sospeso annullato. Sul server restano i dati come sono adesso.';
+}
+window.GJ_bk = { read: bkRead, canon: bkCanon, build: bkBuild, diff: bkDiff, localOnly: bkLocalOnly };
 
 async function doExport(kind) {
   var msg = $('#ex-msg'), lines, name;
@@ -6664,7 +6785,7 @@ function bind() {
   $('#ex-work').addEventListener('click', function () { doExport('work'); });
   $('#bk-down').addEventListener('click', doBackup);
   $('#bk-file').addEventListener('change', function () { bkPick(this.files && this.files[0]); });
-  $('#bk-prev').addEventListener('click', function (e) { var b = e.target.closest('[data-bk]'); if (!b) return; if (b.dataset.bk === 'cancel') { bkPending = null; this.hidden = true; this.innerHTML = ''; $('#bk-file').value = ''; return; } bkApply(b.dataset.bk); });
+  $('#bk-prev').addEventListener('click', function (e) { var b = e.target.closest('[data-bk]'); if (!b) return; var k = b.dataset.bk; if (k === 'cancel') { bkPending = null; bkClearBox(); return; } if (k === 'resume') { bkResume(); return; } if (k === 'drop') { bkDrop(); return; } bkApply(k); });
 }
 
 /* ---------- avvio ---------- */
@@ -6689,6 +6810,7 @@ async function init() {
   try { dl = c && c.use ? await c.use('downloads') : null; } catch (e) { dl = null; }
   try { mcp = c && c.use ? await c.use('mcp') : null; } catch (e) { mcp = null; }
   if (!db) setOffline(); else subscribe();
+  if (db && window.GJ_backup) bkCheckResume();
   if (!mcp) { setSync('good', 'Pronto', 'Nessuna importazione fatta.'); setTimeout(introData, 400); }
   else maybeSync();
   document.addEventListener('visibilitychange', function () {
