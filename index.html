@@ -1879,6 +1879,10 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       + '<label style="' + LBL + '">Peso obiettivo (kg)<input name="w1" type="number" step="0.1" min="30" max="300" required inputmode="decimal" style="' + INP + '"></label>'
       + '</div>'
       + '<label style="' + LBL + '">Entro il<input name="end" type="date" required value="' + iso(end) + '" style="' + INP + '"></label>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      + '<label style="' + LBL + '">Passi al giorno, circa<input name="steps" type="number" min="0" max="60000" step="500" value="6000" inputmode="numeric" style="' + INP + '"></label>'
+      + '<label style="' + LBL + '">Allenamenti a settimana<select name="train" style="' + INP + '">' + [0, 1, 2, 3, 4, 5, 6, 7].map(function (x) { return '<option' + (x === 3 ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>'
+      + '</div>'
       + '<button type="submit" style="' + BTN + '">Inizia</button>'
       + '</form>');
     var f = o.querySelector('form');
@@ -1886,13 +1890,14 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       e.preventDefault();
       var n = function (k) { return parseFloat(String(f[k].value).replace(',', '.')); };
       var w = n('w0'), h = n('h'), a = n('age'), sex = f.sex.value, phase = f.phase.value;
-      var tdee = Math.round((10 * w + 6.25 * h - 5 * a + (sex === 'F' ? -161 : 5)) * 1.45 / 10) * 10;
-      var kcal = Math.round((phase === 'cut' ? tdee - 450 : phase === 'surplus' ? tdee + 250 : tdee) / 10) * 10;
-      var prot = Math.round(w * 2), fat = Math.round(w * 0.8), carbs = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+      var steps = n('steps') >= 0 ? n('steps') : 6000, train = parseInt(f.train.value, 10) || 0;
+      var tdee = window.GJ.startTdee({ w: w, h: h, age: a, sex: sex, steps: steps, train: train });
+      var T = window.GJ.targetsFor({ phase: phase, tdee: tdee, w: w, h: h, age: a, sex: sex, goal: n('w1'), start: iso(t), end: f.end.value });
+      var kcal = T.kcal, prot = T.prot, fat = T.fat, carbs = T.carbs;
       var s = Object.assign({}, window.GJ.DEF, {
         name: f.name.value.trim(), sex: sex, age: a, heightCm: h, startWeight: w, goalWeight: n('w1'), phase: phase,
         startDate: iso(t), endDate: f.end.value, tdee: tdee, tdeeAuto: true, kcalMin: kcal, kcalMax: kcal,
-        protein: prot, carbs: carbs, fat: fat, jobHours: 0, jobStart: '', creatineStart: '', events: []
+        protein: prot, carbs: carbs, fat: fat, jobHours: 0, jobStart: '', creatineStart: '', events: [], stepsTypical: steps, trainPerWeek: train
       });
       db.doc('settings/main').set(s).catch(function () {});
       /* il peso scritto qui è anche la prima pesata del diario */
@@ -2559,8 +2564,8 @@ function weightNow(asOf) {
   var av = movAvg(ws), avg7 = av[av.length - 1].v;
   var base = { last: last, avg7: avg7, avg7From: addDays(last.d, -6), n7: ws.filter(function (p) { return p.d >= addDays(last.d, -6); }).length, at: at, stale: diffDays(last.d, t) };
   var span = NOW_DAYS, pts = cleanPts(at, addDays(last.d, -(span - 1)));
-  while (pts.length < 5 && span < 21) { span += 4; pts = cleanPts(at, addDays(last.d, -(span - 1))); }
-  if (pts.length < 5) return Object.assign(base, { w: avg7, method: 'media', se: null, n: pts.length, at: last.d });
+  while (pts.length < 5 && span < 29) { span += 4; pts = cleanPts(at, addDays(last.d, -(span - 1))); }
+  if (pts.length < 3 || pts.length < 5 && diffDays(pts[0].d, pts[pts.length - 1].d) < 7) return Object.assign(base, { w: avg7, method: 'media', se: null, n: pts.length, at: last.d });
   var wm = waterModel(at), xT = wm.X[at] || 0, qT = persistW(at), x0 = pts[0].d, F = olsFit(pts, x0);
   if (!F) return Object.assign(base, { w: avg7, method: 'media', se: null, n: pts.length, at: last.d });
   /* valori arrotondati come li mostro nelle regole, così ogni conto scritto torna esatto (differenza dal valore pieno sotto 0,01 kg) */
@@ -2577,7 +2582,7 @@ function trendRate(days) {
   var t = todayStr(), ws = weightsSeries().filter(function (p) { return p.d <= t; }); if (!ws.length) return null;
   days = days || 28;
   var last = ws[ws.length - 1].d, from = addDays(last, -(days - 1)), pts = cleanPts(last, from);
-  if (pts.length < 6) return null;
+  if (pts.length < 4 || pts.length < 6 && diffDays(pts[0].d, pts[pts.length - 1].d) < 14) return null;
   var F = olsFit(pts, from);
   return F ? { perWeek: F.b * 7, seWeek: F.sd / Math.sqrt(F.sxx) * 7, n: pts.length, from: pts[0].d, to: last } : null;
 }
@@ -3849,10 +3854,39 @@ function activityAt(d) {
   var mk = (v.protein > 0 ? v.protein * 4 : 0) + (v.carbs > 0 ? v.carbs * 4 : 0) + (v.fat > 0 ? v.fat * 9 : 0);
   var tef = v.kcal > 0 ? (mk > 0 ? 0.25 * (v.protein || 0) * 4 + 0.07 * (v.carbs || 0) * 4 + 0.02 * (v.fat || 0) * 9 + 0.1 * Math.max(0, v.kcal - mk) : 0.1 * v.kcal) : 0.1 * bmr * 1.5;
   var steps = v.steps != null && v.steps >= 0 ? v.steps : null;
-  var stepsK = (steps != null ? steps : 5000) * 0.5 * W * (0.415 * H / 100) / 1000;
+  var stepsK = (steps != null ? steps : stepsFill(d)) * 0.5 * W * (0.415 * H / 100) / 1000;
   var wl = workoutLoad(d, W);
   var job = 0; /* I passi includono quelli di lavoro. I turni effettivi non sono nel diario: nessuna aggiunta giornaliera inventata. */
   return { total: rest + tef + stepsK + wl.k + job, W: W, bmr: bmr, rest: rest, tef: tef, steps: steps, stepsK: stepsK, workK: wl.k, workMin: wl.mins, workN: wl.n, job: job };
+}
+/* passi di un giorno senza passi scritti: media dei giorni vicini (±14), poi i passi abituali del profilo, poi 5.000 */
+function stepsFill(d) {
+  var a = [], t = todayStr(); for (var i = -14; i <= 14; i++) { var dd = addDays(d, i), v = state.days.get(dd); if (dd < t && v && v.steps > 0) a.push(v.steps); }
+  return a.length >= 3 ? mean(a) : S().stepsTypical > 0 ? S().stepsTypical : 5000;
+}
+/* fabbisogno di partenza, con lo stesso modello del sito: metabolismo × 1,15 + passi + allenamenti, più la digestione (circa il 10%) */
+function startTdee(o) {
+  var bmr = 10 * o.w + 6.25 * o.h - 5 * o.age + (o.sex === 'F' ? -161 : 5);
+  var stepsK = (o.steps > 0 ? o.steps : 5000) * 0.5 * o.w * (0.415 * o.h / 100) / 1000, workK = (o.train || 0) * 75 / 60 * 2.5 * o.w / 7;
+  return Math.round((bmr * 1.15 + stepsK + workK) / 0.9 / 10) * 10;
+}
+/* obiettivi: deficit (o surplus) ricavato da peso obiettivo e data, dentro limiti sicuri; macro sul peso di riferimento */
+function targetsFor(o) {
+  var bmr = 10 * o.w + 6.25 * o.h - 5 * o.age + (o.sex === 'F' ? -161 : 5), floor = Math.ceil(Math.max(o.sex === 'F' ? 1200 : 1500, bmr) / 10) * 10;
+  var weeks = Math.max(1, diffDays(o.start, o.end) / 7), kcal = o.tdee, note = '';
+  if (o.phase === 'cut') {
+    var need = (o.w - o.goal) / weeks * KCAL_KG / 7, lo = 0.10 * o.tdee, hi = Math.min(0.25 * o.tdee, 0.01 * o.w * KCAL_KG / 7);
+    var def = Math.min(hi, Math.max(lo, need)); kcal = o.tdee - def;
+    if (need > hi) note = 'per la data scelta servirebbe un deficit troppo forte: uso il massimo sicuro';
+    if (kcal < floor) { kcal = floor; note = 'non scendo sotto il minimo sicuro di ' + fmt(floor, 0) + ' kcal'; }
+  } else if (o.phase === 'surplus') {
+    var needS = (o.goal - o.w) / weeks * KCAL_KG / 7; kcal = o.tdee + Math.min(0.10 * o.tdee, Math.max(0.05 * o.tdee, needS));
+  }
+  kcal = Math.round(kcal / 10) * 10;
+  var ref = Math.min(o.w, 25 * Math.pow(o.h / 100, 2));
+  var prot = Math.round(ref * (o.phase === 'cut' ? 2.0 : 1.8)), fat = Math.round(Math.max(0.8 * ref, 0.25 * kcal / 9));
+  var carbs = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+  return { kcal: kcal, prot: prot, fat: fat, carbs: carbs, floor: floor, def: o.tdee - kcal, note: note };
 }
 function waterModel(endD) {
   var s = S(), X = {}, x = 0, cs = [];
@@ -3870,30 +3904,67 @@ function crWater(d) { var s = S(); return s.creatineStart && d >= s.creatineStar
 function glyOn() { var s = S(); return s.phase !== 'mantenimento' && (s.glyStart != null ? !!s.glyStart : s.phase === 'cut'); }
 function glyFull() { var s = S(); if (!glyOn()) return 0; var a = WATER0 * Math.min(1.25, (s.startWeight > 0 ? s.startWeight : 66) / 66); return s.phase === 'surplus' ? -a : a; }
 function glyWater(d) { var g = glyFull(); if (!g) return 0; var i = diffDays(S().startDate, d); return i < 0 ? g : g * Math.exp(-i / WATER0_TAU); }
-function dataEstimate(sun, wm, act) {
-  var s = S(), st = s.startDate, bad = isOutlier(), tis = function (d) { var v = state.days.get(d); return v && v.weight > 0 && !bad[d] ? v.weight - glyWater(d) - (wm.X[d] || 0) - crWater(d) : null; };
-  var A = [], B = [];
-  for (var i = 0; i < 5 && A.length < 3; i++) { var d1 = addDays(st, i), t1 = tis(d1); if (t1 != null) A.push({ i: i, t: t1, w: state.days.get(d1).weight }); }
-  for (var j = 6; j >= 0; j--) { var d2 = addDays(sun, -j), t2 = tis(d2); if (t2 != null) B.push({ i: diffDays(st, d2), t: t2, w: state.days.get(d2).weight }); }
-  if (A.length < 2 || B.length < 4) return null;
-  var ci = mean(A.map(function (p) { return p.i; })), ce = mean(B.map(function (p) { return p.i; }));
-  var a = Math.round(ci), b = Math.round(ce);
-  if (b - a < 12) return null;
-  var SI = 0, SA = 0, nK = 0;
-  for (var k = a; k < b; k++) { var dd = addDays(st, k), v = state.days.get(dd) || {}, ac = act[dd] || activityAt(dd); SA += ac.total; if (v.kcal > 0) { SI += v.kcal; nK++; } }
-  SA = Math.round(SA);
-  if (nK < (b - a) * 0.85) return null;
-  SI = Math.round(SI * (b - a) / nK);
-  var Ts = rnd(mean(A.map(function (p) { return p.t; })), 2), Te = rnd(mean(B.map(function (p) { return p.t; })), 2), dT = rnd(Te - Ts, 2);
-  var sdRes = function (arr) { var m = mean(arr.map(function (p) { return p.t; })); return Math.sqrt(arr.reduce(function (x, p) { return x + (p.t - m) * (p.t - m); }, 0) / Math.max(1, arr.length - 1)) || .5; };
-  var Xend = mean(B.map(function (p) { return wm.X[addDays(st, p.i)] || 0; })), crEnd = mean(B.map(function (p) { return crWater(addDays(st, p.i)); }));
-  var glyStart = mean(A.map(function (p) { return glyWater(addDays(st, p.i)); }));
-  var sdT = Math.sqrt(Math.pow(0.5 * glyStart, 2) + Math.pow(0.5 * crEnd, 2) + Math.pow(0.35 * Xend, 2) + Math.pow(Math.max(.3, sdRes(A)), 2) / A.length + Math.pow(Math.max(.3, sdRes(B)), 2) / B.length + 0.15 * 0.15);
-  var n = b - a, tdAvg = (SI - KCAL_KG * dT) / n, tdSD = Math.sqrt(Math.pow(KCAL_KG * sdT / n, 2) + 100 * 100);
-  var k2 = rnd((SI - KCAL_KG * dT) / SA, 4);
-  return { k: k2, kSD: tdSD / (SA / n), tdAvg: tdAvg, tdSD: tdSD, SI: SI, SA: SA, nK: nK, n: n, from: addDays(st, a), to: addDays(st, b), dT: dT,
-    wStart: mean(A.map(function (p) { return p.w; })), wEnd: mean(B.map(function (p) { return p.w; })), glyStart: glyStart, crEnd: crEnd, Xend: Xend, sdT: sdT, Ts: Ts, Te: Te,
-    Xstart: mean(A.map(function (p) { return wm.X[addDays(st, p.i)] || 0; })), crStart: mean(A.map(function (p) { return crWater(addDays(st, p.i)); })), glyEnd: mean(B.map(function (p) { return glyWater(addDays(st, p.i)); })) };
+/* ===== fabbisogno dai dati =====
+   Per ogni pesata pulita (senza acqua) vale il bilancio dell'energia:
+     peso pulito = peso pulito all'inizio + (calorie mangiate fino al giorno prima − k × consumo stimato dall'attività) ÷ 7.700
+   quindi  peso pulito − mangiate ÷ 7.700 = costante − k × attività ÷ 7.700: una retta. La sua pendenza è k, la correzione del tuo corpo.
+   Uso tutte le pesate valide del periodo, anche poche o irregolari; i giorni senza calorie li stimo con la media dei giorni vicini.
+   Periodo: le ultime 5 settimane (fino a 9 se ci sono meno di 8 pesate), mai prima dell'inizio della fase. Così il numero segue
+   anche l'adattamento del corpo durante la dieta, invece di fare la media di tutto il percorso. */
+var DE_DAYS = 35, DE_MAXDAYS = 63, DE_MINW = 4, DE_MINSPAN = 10, DE_MINCOV = 0.7;
+function deValidW(d, bad) { var v = state.days.get(d); return v && v.weight > 0 && !bad[d]; }
+function deWindow(to) {
+  var st = S().startDate, bad = isOutlier(), lim = addDays(to, -(DE_MAXDAYS - 1)), from = addDays(to, -(DE_DAYS - 1));
+  if (lim < st) lim = st; if (from < st) from = st;
+  var cnt = function (a) { var n = 0; for (var d = a; d <= to; d = addDays(d, 1)) if (deValidW(d, bad)) n++; return n; };
+  while (cnt(from) < 8 && from > lim) { from = addDays(from, -7); if (from < lim) from = lim; }
+  return from;
+}
+function dataEstimate(to, wm, act, from) {
+  var s = S(), bad = isOutlier(); from = from || deWindow(to); if (from < s.startDate) from = s.startDate;
+  var pts = [];
+  for (var d = from; d <= to; d = addDays(d, 1)) if (deValidW(d, bad)) { var v0 = state.days.get(d); pts.push({ d: d, w: v0.weight, c: v0.weight - glyWater(d) - (wm.X[d] || 0) - crWater(d) }); }
+  if (pts.length < DE_MINW) return { none: true, why: { code: 'pesate', n: pts.length, from: from, to: to } };
+  var f0 = pts[0].d, f1 = pts[pts.length - 1].d, n = diffDays(f0, f1);
+  if (n < DE_MINSPAN) return { none: true, why: { code: 'span', days: n, from: f0, to: f1 } };
+  var nK = 0, I = [], A = [], logged = function (dd) { var v = state.days.get(dd); return dd < todayStr() && v && v.kcal > 0 ? v.kcal : null; };
+  for (var k = 0; k < n; k++) { var dk = addDays(f0, k); if (logged(dk) != null) nK++; }
+  if (nK < n * DE_MINCOV) return { none: true, why: { code: 'calorie', nK: nK, n: n, from: f0, to: f1 } };
+  var imp = 0;
+  for (k = 0; k < n; k++) {
+    var dd = addDays(f0, k), kc = logged(dd);
+    if (kc == null) { var near = []; for (var q = -7; q <= 7; q++) { var x0 = logged(addDays(dd, q)); if (x0 != null) near.push(x0); } kc = near.length ? mean(near) : null; imp += kc || 0; }
+    I.push(kc); A.push((act[dd] || activityAt(dd)).total);
+  }
+  var fillI = mean(I.filter(function (x) { return x != null; })); I = I.map(function (x) { return x == null ? fillI : x; });
+  var xs = [], ys = [], CI = 0, CA = 0, p = 0;
+  for (k = 0; k <= n; k++) {
+    var dk2 = addDays(f0, k);
+    if (p < pts.length && pts[p].d === dk2) { xs.push(CA / KCAL_KG); ys.push(pts[p].c - CI / KCAL_KG); p++; }
+    if (k < n) { CI += I[k]; CA += A[k]; }
+  }
+  var m = xs.length, mx = mean(xs), my = mean(ys), sxx = 0, sxy = 0, sse = 0;
+  for (k = 0; k < m; k++) { sxx += (xs[k] - mx) * (xs[k] - mx); sxy += (xs[k] - mx) * (ys[k] - my); }
+  if (!(sxx > 0)) return { none: true, why: { code: 'span', days: n, from: f0, to: f1 } };
+  var b = sxy / sxx, a = my - b * mx;
+  for (k = 0; k < m; k++) { var r = ys[k] - (a + b * xs[k]); sse += r * r; }
+  var kData = Math.min(1.6, Math.max(0.6, -b)), sig = Math.max(0.3, Math.sqrt(sse / Math.max(1, m - 2)));
+  var SI = Math.round(CI), SA = Math.round(CA);
+  /* incertezza: quanto le pesate si scostano dalla retta + ipotesi sull'acqua + giorni senza calorie + errore casuale delle calorie segnate */
+  var g0 = glyWater(f0), g1 = glyWater(f1), c0 = crWater(f0), c1 = crWater(f1), X0 = wm.X[f0] || 0, X1 = wm.X[f1] || 0;
+  var sdW = Math.sqrt(Math.pow(0.5 * (g0 - g1), 2) + Math.pow(0.5 * (c1 - c0), 2) + 0.15 * 0.15);
+  var kSD = Math.sqrt(sig * sig / sxx + Math.pow(KCAL_KG * sdW / SA, 2) + Math.pow(0.15 * imp / SA, 2) + Math.pow(150 / Math.sqrt(nK) * n / SA, 2));
+  var dT = rnd((SI - kData * SA) / KCAL_KG, 2), Ts = rnd(a, 2), Te = rnd(Ts + dT, 2);
+  return { k: rnd(kData, 4), kSD: kSD, tdAvg: (SI - KCAL_KG * dT) / n, tdSD: kSD * SA / n, SI: SI, SA: SA, nK: nK, n: n, imputed: n - nK, npts: m, sig: sig, from: f0, to: f1, dT: dT,
+    Ts: Ts, Te: Te, wStart: Ts + g0 + X0 + c0, wEnd: Te + g1 + X1 + c1, glyStart: g0, glyEnd: g1, Xstart: X0, Xend: X1, crStart: c0, crEnd: c1, sdT: sdW };
+}
+/* unisce formula e dati: più i dati sono precisi, più contano (media pesata con le incertezze) */
+var PRIOR_SD = 0.10;
+function blendTD(prior, de) {
+  var pSD = Math.round(prior * PRIOR_SD);
+  if (!de || de.none) return { v: prior, sd: pSD, pSD: pSD, wD: 0, dataTD: null, dataSD: null };
+  var dataTD = Math.round(de.k * prior), dataSD = Math.max(1, Math.round(de.kSD * prior)), wD = pSD * pSD / (pSD * pSD + dataSD * dataSD);
+  return { v: Math.round(prior + wD * (dataTD - prior)), sd: Math.round(1 / Math.sqrt(1 / (pSD * pSD) + 1 / (dataSD * dataSD))), pSD: pSD, wD: rnd(wD, 3), dataTD: dataTD, dataSD: dataSD };
 }
 function weeklyWeightCheck(w, wm) {
   if (!w.complete) return null;
@@ -3918,7 +3989,7 @@ function weeklyWeightCheck(w, wm) {
 function computeModel() {
   var s = S(), end = lastDataDate(), t = todayStr(), m = { tdee: s.tdee, auto: s.tdeeAuto !== false, weeks: [], cur: null, series: [], fc: null };
   if (end) {
-    var wm = waterModel(end), act = {}, lastDe = null;
+    var wm = waterModel(end), act = {}, lastK = null;
     smoothW.bad = isOutlier();
     for (var d = s.startDate; d <= end; d = addDays(d, 1)) act[d] = activityAt(d);
     smoothW.bad = null;
@@ -3927,32 +3998,34 @@ function computeModel() {
       for (var i = 0; i < 7; i++) { var dd = addDays(ws, i); if (dd >= s.startDate && dd <= end) days.push(dd); }
       if (!days.length) continue;
       var avg = function (k) { return mean(days.map(function (x) { return act[x][k] || 0; })); };
-      var prior = Math.round(avg('total')), pSD = Math.round(prior * 0.10);
-      /* completa: il diario ha la riga di domenica con le calorie (o domenica è già passata). Solo una settimana completa ha la sua misura dai dati:
-         così il numero grande, il bilancio dei suoi giorni e la previsione usano sempre lo stesso valore */
-      var sunV = state.days.get(sun) || {}, complete = sun <= end && sun < t && days.length === 7 && days.every(function (x) { var dv = state.days.get(x); return dv && dv.kcal > 0; });
-      var de = complete ? dataEstimate(sun, waterModel(sun), act) : null, v = prior, sd = pSD, wD = 0, dataTD = null, dataSD = null, deUse = de, fromPrev = false;
-      if (de) lastDe = de; else if (lastDe) { deUse = lastDe; fromPrev = true; }
-      if (deUse) { de = deUse;
-        dataTD = Math.round(de.k * prior); dataSD = Math.round(de.kSD * prior);
-        wD = 1;
-        v = dataTD; sd = Math.max(250, dataSD);
-      }
+      var prior = Math.round(avg('total'));
+      /* completa: la domenica è passata (non servono più le calorie di tutti i giorni) */
+      var complete = sun <= end && sun < t && days.length === 7;
+      var to = sun < end ? sun : end, est = dataEstimate(to, waterModel(to), act), de = null, fromPrev = false, B = blendTD(prior, est);
+      if (est && !est.none) { de = est; lastK = { k: B.v / prior, kSD: B.sd / prior, de: est, wD: B.wD, dataTD: B.dataTD, dataSD: B.dataSD, k0: est.k }; }
+      else if (lastK) { de = lastK.de; fromPrev = true; B = { v: Math.round(lastK.k * prior), sd: Math.round(lastK.kSD * prior), pSD: Math.round(prior * PRIOR_SD), wD: lastK.wD, dataTD: Math.round(lastK.k0 * prior), dataSD: Math.round(lastK.dataSD / (lastK.dataTD / lastK.k0) * prior) }; }
+      var v = B.v, sd = B.sd, wD = B.wD, dataTD = B.dataTD, dataSD = B.dataSD, pSD = B.pSD;
       var stp = days.map(function (x) { return act[x].steps; }).filter(function (x) { return x != null; });
       m.weeks.push({ n: Math.floor(diffDays(weekStart(s.startDate), ws) / 7) + 1, ws: ws, sun: sun, complete: complete, days: days.length, fromPrev: fromPrev,
-        prior: prior, pSD: pSD, de: de, dataTD: dataTD, dataSD: dataSD, wD: wD, v: Math.round(v), sd: sd,
+        prior: prior, pSD: pSD, de: de, dataTD: dataTD, dataSD: dataSD, wD: wD, v: Math.round(v), sd: sd, why: est && est.none ? est.why : null,
+        verified: !!(de && !fromPrev && wD >= 0.5 && complete),
         parts: { bmr: avg('bmr'), rest: avg('rest'), tef: avg('tef'), stepsK: avg('stepsK'), workK: avg('workK'), job: avg('job'), W: avg('W') },
         steps: stp.length ? mean(stp) : null, workMin: days.reduce(function (x, d2) { return x + act[d2].workMin; }, 0), workN: days.reduce(function (x, d2) { return x + act[d2].workN; }, 0) });
     }
     /* fabbisogno rivisto: ogni settimana passata ricalcolata con la correzione misurata più recente (tutti i dati di oggi) */
-    var lastM = null; m.weeks.forEach(function (w) { if (w.de && !w.fromPrev) lastM = w; });
+    /* ultimo verificato: l'ultima settimana chiusa in cui i dati contano almeno quanto la formula */
+    var lastM = null; m.weeks.forEach(function (w) { if (w.verified) lastM = w; });
     m.lastM = lastM;
+    /* rivisto: ogni settimana chiusa ricalcolata con le pesate e le calorie di 2 settimane prima e 2 dopo (quelle dopo allora non c'erano) */
     m.weeks.forEach(function (w) {
       w.vr = w.v;
-      if (lastM && w.n < lastM.n) {
-        var p = w.prior, dTD = Math.round(lastM.de.k * p);
-        w.vr = dTD; w.rv = { dTD: dTD, wD: 1 };
-      }
+      if (!w.complete) return;
+      var b0 = addDays(w.sun, 14); if (b0 > end) b0 = end;
+      var a0 = addDays(b0, -(DE_DAYS - 1)), lim = addDays(b0, -(DE_MAXDAYS - 1)), bad = isOutlier(), cnt = function (x) { var nn = 0; for (var dd = x; dd <= b0; dd = addDays(dd, 1)) if (deValidW(dd, bad)) nn++; return nn; };
+      if (a0 > addDays(w.ws, -14)) a0 = addDays(w.ws, -14);
+      while (cnt(a0) < 8 && a0 > lim && a0 > s.startDate) a0 = addDays(a0, -7);
+      var er = dataEstimate(b0, wm, act, a0 < s.startDate ? s.startDate : a0);
+      if (er && !er.none) { var BR = blendTD(w.prior, er); w.vr = BR.v; w.rv = { de: er, wD: BR.wD, dataTD: BR.dataTD, sd: BR.sd }; }
     });
     m.weeks.forEach(function (w) { w.localCheck = weeklyWeightCheck(w, wm); });
     var done = m.weeks.filter(function (w) { return w.complete; });
@@ -3968,7 +4041,7 @@ function computeModel() {
       [0.6, 1.2, 2.0].forEach(function (w0) { [0, 0.8, 1.5].forEach(function (cr) { [0, 0.0015, 0.003].forEach(function (beta) {
         WATER0 = w0; CR_MAX = cr; CARB_BETA = beta;
         var dw = waterModel(m.lastM.sun), de2 = dataEstimate(m.lastM.sun, dw, act);
-        if (de2 && isFinite(de2.k)) vals.push(Math.round(de2.k * m.lastM.prior));
+        if (de2 && !de2.none && isFinite(de2.k)) vals.push(blendTD(m.lastM.prior, de2).v);
       }); }); });
     } finally { WATER0 = saveW; CR_MAX = saveC; CARB_BETA = saveB; }
     if (vals.length) m.sensitivityRange = { lo: Math.min.apply(null, vals), hi: Math.max.apply(null, vals), n: vals.length };
@@ -3991,7 +4064,7 @@ function renderTdee() {
     /* la prossima settimana da chiudere: quella dopo l'ultima completa; si ricalcola appena il diario ha la sua domenica con le calorie */
     var nxt = null; model.weeks.forEach(function (w) { if (!w.complete && !nxt) nxt = w; });
     var nSun = nxt ? nxt.sun : addDays(c.sun, 7);
-    chips += kvr('Settimana', c.complete ? 'sette giorni con calorie registrate' : 'settimana in corso o incompleta', 'n. ' + c.n, fmtShort(c.ws) + ' – ' + fmtShort(c.sun), '', HEX.kcal);
+    chips += kvr('Settimana', c.complete ? 'settimana chiusa' : 'settimana in corso', 'n. ' + c.n, fmtShort(c.ws) + ' – ' + fmtShort(c.sun), '', HEX.kcal);
     chips += model.sensitivityRange ? kvr('Sensibilità alle ipotesi sull’acqua', 'Quanto può cambiare per l’acqua trattenuta', fmt(model.sensitivityRange.lo,0) + '–' + fmt(model.sensitivityRange.hi,0) + ' kcal') : '';
     chips += kvr('Aggiornamento della stima', 'al caricamento di dati nuovi o corretti; una nuova calibrazione richiede dati sufficienti', 'A ogni lettura dei dati');
     if (!model.auto) chips += kvr('Nei calcoli', '', 'valore fisso');
@@ -4018,9 +4091,9 @@ function renderTdee() {
   h += '<h3 style="margin:20px 0 6px">Settimana per settimana</h3><div class="tw"><table class="week-table"><thead><tr><th>Settimana</th><th>Stima alla chiusura</th><th>Rivista oggi</th><th>Controllo dalle pesate</th></tr></thead><tbody>'
     + model.weeks.map(function (w) {
       var lc = w.localCheck, revised = w.vr != null ? w.vr : w.v;
-      return '<tr><td><b>' + w.n + ' · ' + fmtShort(w.ws) + '–' + fmtShort(w.sun) + '</b><small>' + (w.complete ? '7 giorni con calorie' : 'in corso o incompleta') + '</small></td>'
-        + '<td>' + (w.complete ? fmt(w.v, 0) + ' kcal/die<small>Ricostruita con i dati disponibili entro quella domenica usando il modello attuale; non è una schermata salvata allora.</small>' : '—<small>Settimana non chiusa</small>') + '</td>'
-        + '<td class="week-now">' + fmt(revised, 0) + ' kcal/die<small>' + (w.complete ? 'Stima calibrata, ricalcolabile' : 'Provvisoria') + '</small></td>'
+      return '<tr><td><b>' + w.n + ' · ' + fmtShort(w.ws) + '–' + fmtShort(w.sun) + '</b><small>' + (w.complete ? (w.verified ? 'verificata dai dati' : 'chiusa, dati ancora pochi') : 'in corso') + '</small></td>'
+        + '<td>' + (w.complete ? fmt(w.v, 0) + ' kcal/die<small>Con i dati fino a quella domenica' + (w.de && !w.fromPrev ? ': i dati pesano il ' + Math.round(w.wD * 100) + '%' : w.fromPrev ? ': correzione della settimana prima' : ': solo formula') + '.</small>' : '—<small>Settimana non chiusa</small>') + '</td>'
+        + '<td class="week-now">' + fmt(revised, 0) + ' kcal/die<small>' + (w.rv ? 'Con 2 settimane prima e 2 dopo' : w.complete ? 'Come alla chiusura' : 'Provvisoria') + '</small></td>'
         + '<td>' + (lc ? (Math.abs(lc.local - revised) > 500 ? '<b>Non conclusivo</b><small>La pendenza delle ' + lc.n + ' pesate diverge molto dalla revisione: acqua e rumore possono dominare.</small>' : '<b>Compatibile</b><small>La pendenza delle ' + lc.n + ' pesate è vicina alla revisione, ma non la conferma.</small>') : 'Non disponibile<small>Servono 7 introiti e almeno 5 pesate valide nella settimana.</small>') + '</td></tr>';
     }).join('') + '</tbody></table></div>'
     + '<p class="muted small" style="margin-top:12px">Il controllo locale confronta la pendenza delle pesate corrette per ipotesi sull’acqua con la revisione energetica. Su sette giorni il risultato numerico sarebbe instabile, quindi mostro solo se è compatibile o non conclusivo. Nuovi dati possono cambiare la revisione. Nessuna colonna misura il consumo certo della settimana.</p>'
@@ -4050,10 +4123,17 @@ function forecast(td) {
   if (ws.length < 3) return null;
   var NW = weightNow(); if (!NW) return null;
   var trend = NW.w, from = NW.at;
-  var kd = dayList().filter(function (d) { return d < t && state.days.get(d).kcal > 0; });
+  var kd = dayList().filter(function (d) { return d < t && d >= s.startDate && state.days.get(d).kcal > 0; });
   if (kd.length < 5) return null;
   var lastK = kd[kd.length - 1], w0 = addDays(lastK, -13), win = kd.filter(function (d) { return d >= w0; });
   var intake = Math.round(mean(win.map(function (d) { return state.days.get(d).kcal; }))), mid = (s.kcalMin + s.kcalMax) / 2;
+  var projected = null;
+  if (from < t) {
+    var E0 = energyAt(td), c0 = trend - persistW(from), nLog = 0;
+    for (var dd = from; dd < t; dd = addDays(dd, 1)) { var vv = state.days.get(dd), kk = vv && vv.kcal > 0 ? vv.kcal : intake; if (vv && vv.kcal > 0) nLog++; c0 -= (tdAtW(E0, c0 + persistW(dd)) - kk) / KCAL_KG; }
+    projected = { from: from, last: NW.last.d, w: trend, nLog: nLog, days: diffDays(from, t) };
+    trend = rnd(c0 + persistW(t), 2); from = t;
+  }
   /* la direzione viene dalla fase (obiettivo rispetto al peso di partenza), non da dove sei oggi: così se superi l'obiettivo il sito lo dice */
   var dir = goalDir(), remaining = s.goalWeight - trend, gone = (trend - s.goalWeight) * dir, done = gone >= -0.1, maint = s.phase === 'mantenimento';
   /* mantenimento: sei a posto finché resti entro 1 kg dal peso obiettivo; fuori dalla fascia la direzione è verso l'obiettivo */
@@ -4086,7 +4166,7 @@ function forecast(td) {
   return {
     trend: trend, from: from, NW: NW, intake: intake, nDays: win.length, winFrom: win[0], winTo: lastK, rateNow: rateNow, ratePlan: ratePlan, tdNow: tdNow, E: E,
     now: arrival(intake), plan: arrival(mid), cheats: cheats.length, cheatList: cheats.map(function (d) { return { d: d, k: state.days.get(d).kcal, x: Math.max(0, state.days.get(d).kcal - mid) }; }), extra: extra, defPlan: defPlan, costDays: dir < 0 && defPlan > 50 ? Math.round(extra) / Math.round(defPlan) : null,
-    reqIntake: req, reqFloor: reqFloor, reqUnsafe: reqUnsafe, reqTooHigh: reqTooHigh, floorArr: floorArr, maint: maint, bmrNow: bmrNow, left: left, mid: mid, dir: dir, done: done, gone: gone, remaining: remaining, stale: NW.stale > 3
+    projected: projected, reqIntake: req, reqFloor: reqFloor, reqUnsafe: reqUnsafe, reqTooHigh: reqTooHigh, floorArr: floorArr, maint: maint, bmrNow: bmrNow, left: left, mid: mid, dir: dir, done: done, gone: gone, remaining: remaining, stale: NW.stale > 3
   };
 }
 /* giorni di ritardo di una lista di sgarri: kcal mangiate oltre l'obiettivo ÷ deficit al giorno che avresti restando sull'obiettivo */
@@ -4214,7 +4294,7 @@ function renderProjection() {
   $('#proj-text').textContent = 'Due scenari matematici fino alla scadenza o alla data di arrivo: media degli ultimi 14 giorni registrati (' + fmt(f.intake,0) + ' kcal) oppure obiettivo impostato (' + fmt(f.mid,0) + ' kcal). Oltre il raggiungimento di ' + fmt(S().goalWeight,1) + ' kg non proietto un ulteriore calo.';
   var head = '<thead><tr><th>Data</th><th>Ritmo recente</th><th>Obiettivo impostato</th></tr></thead><tbody>';
   var rows = P.marks.map(function (m) { var k = diffDays(P.from,m.d), a=P.sc[0].sim[k], b=P.sc[1].sim[k];
-    var cell = function (sc, weight) { return sc.arr && sc.arr.date && sc.arr.date <= m.d ? 'Obiettivo raggiunto il ' + fmtShort(sc.arr.date) : isFinite(weight) ? fmt(weight,1) + ' kg (scenario)' : '—'; };
+    var cell = function (sc, weight) { return sc.arr && sc.arr.done ? 'Obiettivo già raggiunto' : sc.arr && sc.arr.date && sc.arr.date <= m.d ? 'Obiettivo raggiunto il ' + fmtShort(sc.arr.date) : sc.floor && sc.floor <= m.d ? 'Sotto il peso sano (BMI 18,5)' : isFinite(weight) ? fmt(weight,1) + ' kg (scenario)' : '—'; };
     return '<tr><td>' + fmtShort(m.d) + '</td><td>' + cell(P.sc[0],a) + '</td><td>' + cell(P.sc[1],b) + '</td></tr>'; }).join('');
   $('#proj-table').innerHTML = head + rows + '</tbody>';
   $('#proj-note').textContent = 'Le date e i pesi sono scenari condizionati, non misure né previsioni garantite. La tabella termina alla scadenza o alla data d’arrivo; oltre l’obiettivo non assume di continuare a perdere peso.';
@@ -4235,7 +4315,7 @@ function renderModel() {
   } else tc.parentNode.hidden=true;
   var f=model.fc, s=S(), big=$('#fc-v'); $('#fc-title').textContent='Quando arrivi a '+fmt(s.goalWeight,1)+' kg';
   if(!f){big.textContent='—';$('#fc-chips').innerHTML='';$('#fc-rows').textContent='Servono almeno tre pesate e cinque giorni con calorie.';return;}
-  big.textContent=f.done?(f.maint?'Sei nel tuo peso, entro 1 kg':'Obiettivo raggiunto nel modello'):(f.now&&f.now.date?fmtDay(f.now.date):'Non raggiunto nello scenario');
+  big.textContent=f.done?(f.maint?'Sei nel tuo peso, entro 1 kg':f.projected?'Potresti esserci già: pesati':'Obiettivo raggiunto nel modello'):(f.now&&f.now.date?fmtDay(f.now.date):'Non raggiunto nello scenario');
   var lead = f.now && f.now.date ? diffDays(f.now.date, s.endDate) : null;
   $('#fc-chips').innerHTML='<span class="chip context-chip ' + (lead == null ? 'context-neutral' : lead >= 0 ? 'context-positive' : 'context-caution') + '">' + (lead == null ? 'Data non disponibile' : lead >= 0 ? lead + ' giorni prima della scadenza' : Math.abs(lead) + ' giorni dopo la scadenza') + '</span><span class="chip context-chip context-note">Scenari, non date garantite</span>';
   var arrival = function (a) { return a && a.done ? 'Già raggiunto nel modello' : a && a.date ? fmtDay(a.date) : 'Non raggiunto nella simulazione'; };
@@ -4251,6 +4331,7 @@ function renderModel() {
         + line('Mangiando il minimo sicuro', fmt(f.reqFloor,0) + ' kcal al giorno da domani', arrival(f.floorArr))
       : f.reqTooHigh ? line('Per arrivare entro ' + fmtDay(s.endDate), 'servirebbero più di 8.000 kcal al giorno', 'Scadenza non realistica')
       : line('Per arrivare entro ' + fmtDay(s.endDate), 'calorie medie al giorno, da oggi', f.reqIntake != null ? fmt(Math.round(f.reqIntake / 10) * 10,0) + ' kcal al giorno' : f.maint && f.done ? 'Resta così' : '—')) + '</div>';
+  if (f.projected) rows += '<p class="caption">L’ultima pesata è del ' + fmtDay(f.projected.last) + ': il peso di oggi (' + fmt(f.trend,1) + ' kg) lo stimo dalle calorie dei ' + f.projected.days + ' giorni dopo' + (f.projected.nLog < f.projected.days ? ' (' + f.projected.nLog + ' scritti, gli altri con la tua media)' : '') + '. Pesati per una previsione più sicura.</p>';
   if (f.cheatList.length) rows += '<div class="fc-extra"><b>Sgarri oltre la soglia configurata</b><div>' + f.cheatList.map(function (x) { return fmtShort(x.d) + ': ' + fmt(x.k,0) + ' kcal (' + sgn(x.x,0) + ' sul target)'; }).join(' · ') + '</div></div>';
   rows += '<p class="caption">L’equivalente di giorni sopra il target non è un ritardo misurato: quei giorni sono già compresi nella media e nella data «mangiando come adesso», quindi non vanno aggiunti di nuovo. Il calcolo usa 7.700 kcal/kg e una spesa che cambia col peso; acqua, attività futura e calorie dei pasti stimati possono spostare le date. Il valore per la scadenza è un risultato matematico, non una prescrizione alimentare.</p>';
   $('#fc-rows').innerHTML=rows;
@@ -4693,14 +4774,14 @@ function energyMethodHTML(date) {
   ],'I passi comprendono già lavoro e vita quotidiana. Non aggiungo automaticamente 8 ore di magazzino: mancano i turni reali per data. Scale e tapis roulant in palestra sono stimati dalle sedute registrate.'));
   blocks.push(explainBlock('', 'history','Perché può cambiare da martedì a mercoledì?','Ricalcolo con nuovi dati','Cambia la stima che abbiamo della settimana quando cambiano le informazioni disponibili.',[
     '<b>Nuovi dati o correzioni.</b> Quando apri il sito o premi Aggiorna, vengono riletti i documenti. Nuovi passi, calorie, macro, sedute o pesate possono cambiare le medie.',
-    '<b>Settimana aperta.</b> La stima usa i giorni disponibili, non conosce in anticipo il resto della settimana. Una settimana è completa quando tutti e sette i giorni hanno calorie registrate.',
+    '<b>Settimana aperta.</b> La stima usa i giorni disponibili, non conosce in anticipo il resto della settimana. Una settimana è chiusa quando la domenica è passata.',
     '<b>Revisione anche del passato.</b> Se mercoledì la stima della settimana cambia, il sito ricalcola anche lunedì e martedì con il nuovo valore comune. Non mantiene nei bilanci il valore che vedevi martedì.',
-    '<b>Settimane precedenti.</b> Una nuova calibrazione può aggiornare anche lo storico. “Alla chiusura” è una ricostruzione con i dati entro quella domenica; “rivista oggi” usa la calibrazione più recente.'
+    '<b>Settimane precedenti.</b> Una nuova calibrazione può aggiornare anche lo storico. “Alla chiusura” usa i dati fino a quella domenica; “rivista oggi” usa anche le pesate e le calorie delle 2 settimane dopo.'
   ],'Riaprire la pagina senza nuovi dati non rende da solo il fabbisogno più preciso. Nessun valore settimanale diventa un consumo certo solo perché la settimana è finita.'));
   blocks.push(explainBlock('', 'check','Dati mancanti e precisione','Ipotesi visibili','Un numero ben calcolato resta limitato dalla qualità degli elementi da cui deriva.',[
-    'Per calibrare servono almeno 2 pesate iniziali, 4 finali, almeno 12 giorni fra i gruppi e calorie presenti in almeno l’85% del tratto usato.',
-    'Se mancano i passi, la stima dell’attività usa 5.000 passi. Se manca la durata di una seduta, usa una durata tipica ricavata dal diario, oppure 75 minuti se non disponibile.',
-    'I giorni senza calorie non entrano come zero nei bilanci; nella calibrazione, se la copertura supera la soglia, l’introito mancante viene stimato dalla media disponibile.',
+    'Per calibrare servono almeno 4 pesate che coprano almeno 10 giorni, nelle ultime 5 settimane (fino a 9 se ti pesi poco), e le calorie di almeno 7 giorni su 10 fra la prima e l’ultima pesata.',
+    'Se mancano i passi di un giorno, uso la media dei tuoi passi nei giorni vicini (o 5.000 se non ne hai). Se manca la durata di una seduta, usa una durata tipica ricavata dal diario, oppure 75 minuti se non disponibile.',
+    'I giorni senza calorie non entrano come zero nei bilanci; nella calibrazione li stimo con la media dei giorni vicini (7 prima e 7 dopo).',
     'Acqua, creatina, porzioni stimate da foto e intensità dell’attività aggiungono incertezza. Il modello non può distinguerle tutte attraverso il peso.'
   ],'Il fabbisogno è una stima energetica. Le fasce di sensibilità mostrano l’effetto di alcune ipotesi, non una garanzia di precisione.'));
   return '<div class="explain-grid">'+blocks.join('')+'</div>';
@@ -4709,7 +4790,7 @@ function summaryExplanationHTML() {
   var n=weightNow(), f=model.fc, c=model.cur, al=state.alerts||[], t=todayStr(), s=S();
   var cards=[];
   cards.push(explainBlock('trend','weight','1 · Tendenza stimata del peso',n?fmt(n.w,2)+' kg':'Dati insufficienti','È il livello di peso suggerito dall’insieme delle pesate recenti. Aiuta a leggere la direzione del percorso quando la bilancia oscilla.',n?[
-    n.method==='tendenza'?'Uso <b>'+n.n+' pesate</b> dal '+fmtShort(n.from)+' al '+fmtShort(n.to)+'. Parto da una finestra di 10 giorni e la allargo se ci sono meno di 5 pesate.':'Con poche pesate uso la media disponibile degli ultimi sette giorni come ripiego.',
+    n.method==='tendenza'?'Uso <b>'+n.n+' pesate</b> dal '+fmtShort(n.from)+' al '+fmtShort(n.to)+'. Parto da una finestra di 10 giorni e la allargo fino a 30 se ci sono meno di 5 pesate (bastano 3 pesate su almeno 7 giorni).':'Con poche pesate uso la media disponibile degli ultimi sette giorni come ripiego.',
     n.method==='tendenza'?'Applico le correzioni ipotizzate per acqua e creatina, traccio una retta fra i punti e la leggo al <b>'+fmtDay(n.at)+'</b>. Riaggiungo la componente persistente prevista dal modello.':'La media somma le pesate presenti e le divide per il loro numero; i giorni senza peso non valgono zero.',
     'La pesata più recente è <b>'+fmt(n.last.w,1)+' kg</b>; una differenza rispetto alla tendenza è possibile perché i due numeri descrivono cose diverse.'
   ]:['Aggiungi le pesate al diario per stimare una tendenza.'],'È una stima del peso, non una misura del grasso. Le correzioni per acqua restano ipotesi. Se mancano nuove pesate, la retta viene prolungata al massimo di tre giorni.'));
@@ -4779,7 +4860,7 @@ function renderSummaryBox() {
   function tile(id,tone,title,value,caption){return '<div class="summary-metric tone-'+tone+'"><div class="summary-metric-top"><span>'+title+'</span><button type="button" class="metric-explain" data-summary-help="'+id+'" aria-controls="sum-more" aria-label="Spiega '+title+'">Spiega <svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div><b>'+value+'</b><small>'+caption+'</small></div>';}
   $('#sum-kv').innerHTML=[
     tile('trend','weight','Tendenza stimata del peso',n?fmt(n.w,2)+' kg':'—','La direzione delle pesate recenti'),
-    tile('energy','energy',s.tdeeAuto===false?'Fabbisogno fisso':c&&c.complete&&!c.fromPrev?'Ultimo fabbisogno verificato':'Fabbisogno stimato',fmt(c?model.tdee:s.tdee,0)+' kcal al giorno',s.tdeeAuto===false?'Valore fisso nel profilo':c?(c.complete?'Settimana completa · ':'Settimana incompleta · ')+fmtShort(c.ws)+'–'+fmtShort(c.sun):'Valore iniziale del profilo'),
+    tile('energy','energy',s.tdeeAuto===false?'Fabbisogno fisso':c&&c.verified?'Ultimo fabbisogno verificato':'Fabbisogno stimato',fmt(c?model.tdee:s.tdee,0)+' kcal al giorno',s.tdeeAuto===false?'Valore fisso nel profilo':c?(c.complete?'Settimana completa · ':'Settimana incompleta · ')+fmtShort(c.ws)+'–'+fmtShort(c.sun):'Valore iniziale del profilo'),
     tile('checks','check','Controlli dei dati',al.length+' '+(al.length===1?'segnalazione':'segnalazioni'),al.length?'Campi da ricontrollare nel diario':'Nessuna segnalazione da questi controlli'),
     tile('last','weight','Ultima pesata',n?fmt(n.last.w,1)+' kg':'—',n?'Registrata il '+fmtDay(n.last.d):'Nessuna pesata valida'),
     tile('goal','goal','Scenario obiettivo',f&&f.now&&f.now.date?fmtDay(f.now.date):f&&f.done?'Raggiunto nel modello':'Data non disponibile','Simulazione se proseguono le ipotesi attuali')
@@ -4966,7 +5047,7 @@ function rulesData() {
       L('Colore', '<span class="st-good">verde</span> in linea, o più veloce senza superare l\'' + C('1%') + ' del peso a settimana · <span class="st-warn">giallo</span> più lento, o oltre l\'1%')),
     why: "Per il ritmo uso 4 settimane e non 10 giorni: la pendenza ha bisogno di più giorni per non dipendere da un singolo sgarro. Tolgo l'acqua dei carboidrati, altrimenti dopo uno sgarro i chili d'acqua che se ne vanno sembrerebbero grasso perso. Tolgo anche l'acqua della creatina: nelle prime settimane sale di qualche etto e nasconderebbe una parte del grasso perso, mentre il ritmo deve dire quanto tessuto perdi. Con meno di 6 pesate non lo calcolo. Il ± è l'incertezza statistica della pendenza.",
     ex: function () {
-      var TRr = trendRate(28), sl = TRr ? rnd(TRr.perWeek, 2) : null, tr = targetRate(); if (sl == null) return '<p class="small muted">Servono almeno 6 pesate nelle ultime 4 settimane.</p>';
+      var TRr = trendRate(28), sl = TRr ? rnd(TRr.perWeek, 2) : null, tr = targetRate(); if (sl == null) return '<p class="small muted">Servono almeno 6 pesate nelle ultime 4 settimane, oppure 4 che coprano almeno 2 settimane.</p>';
       tr = rnd(tr, 2); var df = rnd(sl - tr, 2);
       return row('Pesate usate', TRr.n + ', dal ' + fmtDay(TRr.from) + ' al ' + fmtDay(TRr.to) + ', pulite dall\'acqua') + row('Ritmo dalla bilancia', O(sgn(sl, 2) + ' kg a settimana') + ' ±' + F(TRr.seWeek, 2))
         + row('Piano', '(' + F(s.goalWeight, 1) + ' − ' + F(s.startWeight, 2) + ') ÷ ' + F(diffDays(s.startDate, s.endDate) / 7, 2) + ' settimane = ' + sgn(tr, 2) + ' kg a settimana')
@@ -5011,8 +5092,9 @@ function rulesData() {
         L('Allenamenti', P('peso') + ' × (' + C('2,5') + ' × ' + AL('ore di pesi') + ' + ' + C('7') + ' × ' + AL('ore di cardio') + ')'),
         L('Lavoro', PF('ore di lavoro a settimana') + ' ÷ 7 × ' + C('1,2') + ' × ' + P('peso') + ' × ' + C('0,8')),
         L(O('Stima dall\'attività'), 'somma delle 6 voci', true)]),
-      ST(2, 'Quanto hai consumato davvero', 'da bilancia e calorie, dal primo giorno fino a quella settimana', [
-        L('Consumo vero', KC('calorie mangiate') + ' + ' + C('7.700') + ' × ' + P('peso stimato perso') + ' (le pesate pulite dall\'acqua)'),
+      ST(2, 'Quanto hai consumato davvero', 'da bilancia e calorie delle ultime ' + C('5') + ' settimane (fino a ' + C('9') + ' se ti pesi poco)', [
+        L('Peso stimato perso', 'dalla retta che passa meglio fra tutte le ' + P('pesate pulite') + ' del periodo, tenendo conto delle calorie di ogni giorno'),
+        L('Consumo vero', KC('calorie mangiate') + ' (i giorni mancanti stimati con i giorni vicini) + ' + C('7.700') + ' × ' + P('peso stimato perso')),
         L(O('Correzione del corpo'), 'consumo vero ÷ stima dall\'attività dello stesso periodo', true)]),
       ST(3, 'Unisco le due stime', 'più i dati reali sono precisi, più contano', [
         L('Peso dei dati', 'incertezza formula² ÷ (incertezza formula² + incertezza dati²)'),
@@ -5034,8 +5116,8 @@ function rulesData() {
         + row('<b>Stima dall\'attività</b>', [bmrD, vitaD, tefD, stepsD, workD, jobD].map(function (x) { return F(x, 0); }).join(' + ') + ' = ' + O(F(cur.prior, 0) + ' kcal'));
       if (de) {
         var e77 = Math.round(KCAL_KG * de.dT), cons = de.SI - e77;
-        h += row('Periodo dei dati reali', fmtDay(de.from) + ' – ' + fmtDay(de.to) + ', ' + de.n + ' giorni' + (cur.fromPrev ? ' (la settimana non ha ancora dati suoi: uso l\'ultima misura)' : ''))
-          + row('Calorie mangiate nel periodo', KC(F(de.SI, 0)) + (de.nK < de.n ? ' (' + de.nK + ' giorni registrati, portati a ' + de.n + ' con la loro media)' : ''))
+        h += row('Periodo dei dati reali', fmtDay(de.from) + ' – ' + fmtDay(de.to) + ', ' + de.n + ' giorni, ' + de.npts + ' pesate' + (cur.fromPrev ? ' (la settimana non ha ancora dati suoi: uso l\'ultima misura)' : ''))
+          + row('Calorie mangiate nel periodo', KC(F(de.SI, 0)) + (de.nK < de.n ? ' (' + de.nK + ' giorni registrati; gli altri ' + (de.n - de.nK) + ' stimati con la media dei giorni vicini)' : ''))
           + row('peso stimato perso', P(F(-de.dT, 2) + ' kg') + ' × 7.700 = ' + F(-e77, 0) + ' kcal')
           + row('Consumo vero', KC(F(de.SI, 0)) + ' + ' + F(-e77, 0) + ' = ' + F(cons, 0) + ' kcal, cioè ' + O(F(cons / de.n, 0)) + ' al giorno')
           + row('Stima dall\'attività dello stesso periodo', F(de.SA, 0) + ' kcal, cioè ' + F(de.SA / de.n, 0) + ' al giorno')
@@ -5058,20 +5140,20 @@ function rulesData() {
       var parts = function (w, g, x, c, tot) { var a = [rnd(w, 2), rnd(g, 2), rnd(x, 2), rnd(c, 2)], r = rnd(a[0] - a[1] - a[2] - a[3], 2), fix = rnd(r - tot, 2); if (fix) a[2] = rnd(a[2] + fix, 2); return a; };
       var A = parts(de.wStart, de.glyStart, de.Xstart, de.crStart, de.Ts), B = parts(de.wEnd, de.glyEnd, de.Xend, de.crEnd, de.Te);
       var ln = function (a, t2) { return F(a[0], 2) + (a[1] < 0 ? ' + ' : ' − ') + F(Math.abs(a[1]), 2) + ' (glicogeno) ' + (a[2] < 0 ? '+ ' : '− ') + F(Math.abs(a[2]), 2) + ' (carboidrati) − ' + F(a[3], 2) + ' (creatina) = ' + F(t2, 2) + ' kg'; };
-      return '<p class="small muted">Medie delle prime pesate (dal ' + fmtShort(de.from) + ') e degli ultimi 7 giorni del periodo (fino al ' + fmtShort(addDays(de.to, 3)) + ').</p>'
+      return '<p class="small muted">Valori della retta delle pesate al primo (' + fmtShort(de.from) + ') e all\'ultimo giorno (' + fmtShort(de.to) + ') del periodo usato per il fabbisogno.</p>'
         + row('peso stimato all\'inizio', ln(A, de.Ts)) + row('peso stimato alla fine', ln(B, de.Te))
         + row('peso stimato perso', F(de.Ts, 2) + ' − ' + F(de.Te, 2) + ' = ' + F(-de.dT, 2) + ' kg');
     } });
   add({ id: 'margine', g: 'energia', t: 'Il margine ± del fabbisogno', w: 'Progressi › Calorie',
     what: "Quanto può sbagliare il calcolo, in più o in meno. È una deviazione standard: il valore vero sta dentro la fascia circa 2 volte su 3, e dentro il doppio della fascia 19 volte su 20.",
     how: fx(L(O('Margine'), '1 ÷ √(1 ÷ incertezza formula² + 1 ÷ incertezza dati²), arrotondato a ' + C('50') + ' kcal'), L('Incertezza formula', C('10%') + ' della stima dall\'attività'),
-      L('Incertezza dati', C('7.700') + ' × errore sul ' + P('peso stimato') + ' ÷ giorni, più ' + C('100') + ' kcal per le ' + KC('calorie') + ' segnate')),
+      L('Incertezza dati', 'quanto le ' + P('pesate') + ' si scostano dalla retta, più le ipotesi sull\'acqua, i giorni senza ' + KC('calorie') + ' e un errore casuale di ' + C('150') + ' kcal al giorno nelle calorie segnate')),
     why: "L'errore sul peso stimato viene da quanto ballano le pesate e dalle stime dell'acqua. Si divide per i giorni, quindi ogni settimana in più lo riduce. Non conta invece un errore sistematico nelle calorie segnate (per esempio olio non pesato): se ogni giorno manca la stessa quantità, il fabbisogno risulta più alto dello stesso valore.",
     ex: function () { if (!cur) return ''; var m = r50(cur.sd) || 50; return row('Settimana ' + cur.n, '√ … = ' + F(cur.sd, 0) + ' → ±' + F(m, 0) + ' kcal') + row('Fascia', F(cur.v, 0) + ' − ' + F(m, 0) + ' = ' + F(cur.v - m, 0) + ' · ' + F(cur.v, 0) + ' + ' + F(m, 0) + ' = ' + F(cur.v + m, 0)); } });
   add({ id: 'rivisto', g: 'energia', t: 'Fabbisogno «calcolato allora» e «rivisto»', w: 'Deficit totale, riepilogo, fabbisogno',
-    what: "Il fabbisogno di una settimana viene calcolato la domenica in cui finisce, con i dati di allora. Più avanti, con più settimane registrate, so meglio quanto consuma il tuo corpo rispetto alla formula. Allora ricalcolo le settimane passate: ognuna con la sua attività (passi, sedute, lavoro) e con la correzione più recente.",
-    how: fx(L(O('Rivisto'), 'stima dall\'attività di quella settimana corretta con la correzione dell\'ultima settimana misurata, unite come al passo 3 del fabbisogno'), L('Non cambiano', 'l\'ultima settimana misurata e quelle dopo')),
-    why: "Nelle prime 2 settimane la bilancia non basta (servono almeno 12 giorni), quindi allora il fabbisogno era solo formula. Il valore rivisto è il più preciso possibile per ogni settimana. Lo uso per il bilancio del giorno, il riepilogo e il deficit totale.",
+    what: "Il fabbisogno di una settimana viene calcolato la domenica in cui finisce, con i dati fino ad allora. Le pesate dei giorni dopo dicono però molto su quella settimana: per questo ricalcolo ogni settimana chiusa usando anche le 2 settimane successive (sempre almeno 5 settimane di dati, se ci sono).",
+    how: fx(L(O('Rivisto'), 'stesso calcolo del fabbisogno, con le ' + P('pesate') + ' e le ' + KC('calorie') + ' dalle ' + C('2') + ' settimane prima alle ' + C('2') + ' settimane dopo'), L('Settimana in corso', 'non viene rivista: usa i dati fino a oggi')),
+    why: "Una settimana guardata solo dal passato sa poco della sua fine; con i giorni dopo la retta delle pesate è più stabile. Uso solo 2 settimane per lato, così ogni settimana ha il suo valore e si vede se il corpo consuma meno col passare della dieta. Il valore rivisto lo uso per il bilancio del giorno, il riepilogo e il deficit totale.",
     ex: function () {
       return model.weeks.map(function (w) { return row('Settimana ' + w.n + ', ' + fmtShort(w.ws) + '–' + fmtShort(w.sun), 'allora ' + F(w.v, 0) + (w.vr !== w.v ? ' → rivisto ' + F(w.vr, 0) : ' (uguale)')); }).join('');
     } });
@@ -5751,9 +5833,9 @@ function bindRules() {
 function renderCurrentEnergy() {
   var box=$('#energy-now-body');if(!box)return;
   var s=S(),t=todayStr(),x=energyContext(t),td=x.td,w=x.w,c=x.c,v=state.days.get(t)||{},target=Math.round((s.kcalMin+s.kcalMax)/2),rem=v.kcal>0?target-v.kcal:null;
-  var label=x.fixed?'Valore fisso':w?(w.complete?'Settimana completa':'Stima provvisoria'):c?'Riferimento dalla settimana disponibile':'Valore iniziale';
+  var label=x.fixed?'Valore fisso':w?(w.complete?'Settimana chiusa':'Stima provvisoria'):c?'Riferimento dalla settimana disponibile':'Valore iniziale';
   var subtitle=x.fixed?'Scelto nel profilo':w?'Media dei giorni disponibili · '+x.range:c?'Nessun dato nella settimana corrente':'In attesa dei dati';
-  var meaning=x.fixed?'Il valore rimane costante finché cambi l’impostazione.':w&&!w.complete?'La settimana è ancora incompleta: il consumo medio viene aggiornato con i dati disponibili.':w?'Sono presenti sette giorni con calorie. La stima può ancora essere rivista quando cambia la calibrazione.':c?'In attesa dei dati della settimana corrente, uso il riferimento disponibile del '+x.range+'.':'Per ora uso il fabbisogno iniziale indicato nel profilo.';
+  var meaning=x.fixed?'Il valore rimane costante finché cambi l’impostazione.':w&&!w.complete?'La settimana è ancora incompleta: il consumo medio viene aggiornato con i dati disponibili.':w?'La settimana è chiusa. La stima può ancora essere rivista con i dati delle settimane dopo.':c?'In attesa dei dati della settimana corrente, uso il riferimento disponibile del '+x.range+'.':'Per ora uso il fabbisogno iniziale indicato nel profilo.';
   box.innerHTML='<div class="energy-status"><span class="status-pill">'+label+'</span><span>'+subtitle+'</span></div><div class="energy-now-grid">'
     +'<div class="energy-metric primary"><small>Oggi, '+fmtDay(t)+'</small><b>'+fmt(td,0)+' kcal</b><span>Consumo stimato del giorno</span></div>'
     +'<div class="energy-metric"><small>Obiettivo impostato</small><b>'+fmt(target,0)+' kcal</b><span>Il target salvato nel profilo</span></div>'
@@ -6373,17 +6455,24 @@ function bind() {
 
   $('#s-phase').addEventListener('change', function () { $('#s-gly-l').hidden = this.value === 'mantenimento'; if (S().glyStart == null) $('#s-gly').value = this.value === 'surplus' ? '0' : '1'; });
   $('#s-preset').addEventListener('click', function () {
-    var ph = $('#s-phase').value, t = num($('#s-tdee').value) || TD();
-    if (ph === 'mantenimento') { $('#s-kmin').value = t - 50; $('#s-kmax').value = t + 50; }
-    else if (ph === 'surplus') { $('#s-kmin').value = t + 200; $('#s-kmax').value = t + 350; }
-    $('#s-msg').textContent = ph === 'cut' ? 'Per il cut imposta tu le kcal: dipendono dal deficit che vuoi tenere.' : 'Valori indicativi inseriti. Controllali e premi Salva obiettivi.';
+    var s = S(), ph = $('#s-phase').value, td = Math.round(tdeeForDate(todayStr()));
+    var g = function (id, d) { var v = num(String($(id).value).replace(',', '.')); return v != null ? v : d; };
+    var NW0 = null; try { NW0 = weightNow(); } catch (er) {}
+    var w = NW0 ? NW0.w : g('#s-w0', s.startWeight), goal = g('#s-w1', s.goalWeight);
+    var r = targetsFor({ phase: ph, tdee: td, w: w, h: g('#s-h', s.heightCm), age: g('#s-age', s.age), sex: $('#s-sex').value, goal: goal, start: todayStr(), end: $('#s-end').value || s.endDate });
+    $('#s-kmin').value = r.kcal; $('#s-kmax').value = r.kcal; $('#s-p').value = r.prot; $('#s-c').value = r.carbs; $('#s-f').value = r.fat;
+    $('#s-msg').textContent = 'Dal tuo fabbisogno di adesso (' + fmt(td, 0) + ' kcal): ' + fmt(r.kcal, 0) + ' kcal' + (ph === 'cut' ? ', deficit di ' + fmt(r.def, 0) + ' (' + fmt(r.def / td * 100, 0) + '%)' : ph === 'surplus' ? ', surplus di ' + fmt(-r.def, 0) : '') + ', proteine ' + r.prot + ' g, grassi ' + r.fat + ' g, carboidrati ' + r.carbs + ' g' + (r.note ? '. Nota: ' + r.note : '') + '. Controlla e premi Salva obiettivi.';
   });
   $('#set-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var next = Object.assign({}, S(), { phase: $('#s-phase').value, tdeeAuto: $('#s-tdee-auto').value === '1', name: $('#s-name').value.trim(), sex: $('#s-sex').value, glyStart: $('#s-gly').value === '1' });
     Object.keys(SF).forEach(function (k) { var el_ = $(SF[k]); if (el_.type === 'date') { if (el_.value) next[k] = el_.value; } else { var v = num(el_.value.replace(',', '.')); if (v != null) next[k] = v; } });
     state.settings = next; saveDoc('settings/main', next); renderAll();
-    $('#s-msg').textContent = 'Obiettivi salvati.';
+    var warn = [], mk = (next.protein || 0) * 4 + (next.carbs || 0) * 4 + (next.fat || 0) * 9, midK = (next.kcalMin + next.kcalMax) / 2, Hm = (next.heightCm || 170) / 100;
+    if (next.kcalMin > next.kcalMax) warn.push('le calorie minime sono più alte delle massime');
+    if (mk > 0 && midK > 0 && Math.abs(mk - midK) > midK * 0.08) warn.push('i macro fanno ' + fmt(mk, 0) + ' kcal (4 × proteine + 4 × carboidrati + 9 × grassi), le calorie sono ' + fmt(midK, 0));
+    if (next.goalWeight > 0 && next.goalWeight / (Hm * Hm) < 18.5) warn.push('il peso obiettivo è sotto il peso sano (BMI ' + fmt(next.goalWeight / (Hm * Hm), 1) + ', il minimo è 18,5)');
+    $('#s-msg').textContent = 'Obiettivi salvati.' + (warn.length ? ' Attenzione: ' + warn.join('; ') + '.' : '');
   });
 
   $('#imp-file').addEventListener('change', function (e) {
@@ -7029,7 +7118,7 @@ renderAll();
 
 
 /* usati dal codice di account, importazione e modulo del giorno */
-window.GJ = { DEF: DEF, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
+window.GJ = { DEF: DEF, startTdee: startTdee, targetsFor: targetsFor, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
 /* Oggi tiene solo l'essenziale: gli altri riquadri passano nelle sezioni di Progressi */
 (function slimToday() {
   var oggi = document.getElementById('tab-oggi');
@@ -7170,7 +7259,7 @@ function renderTodayRings() {
 }
 function renderNeed() {
   var box = $('#need-body'); if (!box) return;
-  var t = todayStr(), x = energyContext(t), L = model && model.lastM, lv = L ? (L.dataTD != null ? L.dataTD : L.vr != null ? L.vr : L.v) : null;
+  var t = todayStr(), x = energyContext(t), L = model && model.lastM, lv = L ? L.v : null;
   var nowSub = x.fixed ? 'Valore fisso scelto nel profilo' : x.w ? (x.w.complete ? 'Settimana ' + x.range + ', completa' : 'Stima della settimana in corso: si aggiorna fino a domenica') : x.c ? 'Dalla settimana ' + x.range + ': questa settimana non ha ancora dati' : 'Valore iniziale del profilo: si aggiorna con i tuoi dati';
   var lastSub = L ? 'Settimana ' + fmtShort(L.ws) + '–' + fmtShort(L.sun) + ', misurata con pesate e calorie' + (x.fixed ? ' (ora usi il valore fisso)' : '') : lastMissWhy();
   box.innerHTML = '<div class="nc-grid">'
@@ -7182,16 +7271,14 @@ function renderNeed() {
 }
 /* perché manca ancora l'ultimo fabbisogno verificato: stessi requisiti della verifica con la bilancia */
 function lastMissWhy() {
-  var ws = (model.weeks || []).filter(function (w) { return w.complete; });
-  if (!ws.length) return 'Arriva dopo una settimana con le calorie di tutti i giorni e qualche pesata';
-  var s = S(), last = ws[ws.length - 1], a = 0, b = 0, i;
-  var has = function (d) { var v = state.days.get(d); return v && v.weight > 0; };
-  for (i = 0; i < 5; i++) if (has(addDays(s.startDate, i))) a++;
-  for (i = 0; i < 7; i++) if (has(addDays(last.sun, -i))) b++;
-  if (a < 2) return 'Servono almeno 2 pesate nei primi 5 giorni della fase';
-  if (b < 4) return 'Servono almeno 4 pesate nell\'ultima settimana completa';
-  if (diffDays(s.startDate, last.sun) < 16) return 'Arriva dopo circa 3 settimane: servono almeno 12 giorni fra le prime e le ultime pesate';
-  return 'Mancano le calorie di troppi giorni dall\'inizio della fase';
+  var ws = model.weeks || [], w = ws[ws.length - 1];
+  if (!w) return 'Arriva dopo un paio di settimane con pesate e calorie';
+  var y = w.why;
+  if (y && y.code === 'pesate') return 'Servono almeno 4 pesate nelle ultime settimane (ora ' + y.n + ')';
+  if (y && y.code === 'span') return 'Le pesate devono coprire almeno 10 giorni (ora ' + y.days + ')';
+  if (y && y.code === 'calorie') return 'Servono le calorie di almeno 7 giorni su 10 fra la prima e l\'ultima pesata (ora ' + y.nK + ' su ' + y.n + ')';
+  if (w.de && !w.fromPrev && w.wD < 0.5) return 'I dati ci sono ma sono ancora pochi: pesano il ' + Math.round(w.wD * 100) + '% contro la formula. Con altre pesate diventa verificato';
+  return 'Arriva alla fine della prima settimana chiusa con dati sufficienti';
 }
 function avatarKey() { var a = state.avatar || ''; return a.length + ':' + a.slice(-24) + '|' + (S().name || ''); }
 function renderLayoutB() {
@@ -7295,7 +7382,7 @@ function dayTitle(date) {
 }
 function renderCoerenza() {
   var c = model.cur, h = document.getElementById('td-h');
-  if (h) h.textContent = S().tdeeAuto === false ? 'Fabbisogno fisso' : c && c.complete && !c.fromPrev ? 'Ultimo fabbisogno verificato' : 'Fabbisogno stimato';
+  if (h) h.textContent = S().tdeeAuto === false ? 'Fabbisogno fisso' : c && c.verified ? 'Ultimo fabbisogno verificato' : 'Fabbisogno stimato';
 }
 (function coerenza() {
   var f = document.getElementById('imp-file'), nm = document.getElementById('imp-name');
