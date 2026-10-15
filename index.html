@@ -2664,6 +2664,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="row" style="align-items:center"><label class="btn fit imp-pick">Scegli il file di Hevy<input id="imp-file" type="file" accept=".csv,text/csv,.txt"></label><span class="muted small imp-name" id="imp-name"></span></div>
         <details class="more"><summary>Come esportare il file da Hevy</summary><div class="in"><p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p></div></details>
         <pre class="prev" id="imp-prev" hidden></pre>
+        <div id="imp-amb" class="stack" hidden></div>
         <div class="row"><button class="btn fit" id="imp-go" hidden>Importa</button><span class="muted small" id="imp-msg" style="flex:1 1 200px"></span></div>
       </div>
 
@@ -2795,19 +2796,22 @@ function dayList() { return Array.from(state.days.keys()).sort(); }
 /* pesate valide: scarto solo quelle lontane più di 3 kg dalla mediana delle pesate vicine (±7 giorni, almeno 3), quasi sempre un errore di battitura */
 var OUTLIER_KG = 3;
 function weightsSeries() {
-  var all = dayList().filter(function (d) { return state.days.get(d).weight > 0; }).map(function (d) { return { d: d, w: state.days.get(d).weight }; }), bad = [];
+  var all = dayList().filter(function (d) { return state.days.get(d).weight > 0; }).map(function (d) { return { d: d, w: state.days.get(d).weight }; }), bad = [], conf = [];
   var ok = all.filter(function (p) {
     var nb = all.filter(function (q) { return q !== p && Math.abs(diffDays(p.d, q.d)) <= 7; }).map(function (q) { return q.w; }).sort(function (a, b) { return a - b; });
     if (nb.length < 3) {
       /* poche pesate vicine (i primi giorni): confronto col peso di partenza, con 1 kg di tolleranza in più per l'acqua dei primi giorni */
-      var s0 = S(); if (s0.startWeight > 0 && Math.abs(diffDays(s0.startDate, p.d)) <= 14 && Math.abs(p.w - s0.startWeight) > OUTLIER_KG + 1) { bad.push({ d: p.d, w: p.w, med: s0.startWeight }); return false; }
+      var s0 = S(); if (s0.startWeight > 0 && Math.abs(diffDays(s0.startDate, p.d)) <= 14 && Math.abs(p.w - s0.startWeight) > OUTLIER_KG + 1) return flag({ d: p.d, w: p.w, med: s0.startWeight, n: 0, start: true });
       return true;
     }
     var h = nb.length >> 1, med = nb.length % 2 ? nb[h] : (nb[h - 1] + nb[h]) / 2;
-    if (Math.abs(p.w - med) > OUTLIER_KG) { bad.push({ d: p.d, w: p.w, med: med }); return false; }
+    if (Math.abs(p.w - med) > OUTLIER_KG) return flag({ d: p.d, w: p.w, med: med, n: nb.length });
     return true;
   });
-  state.wOutliers = bad;
+  /* confermata = nel giorno c'è wOk uguale al peso scritto: se poi correggi il peso, la conferma non vale più */
+  function flag(x) { var v = state.days.get(x.d); if (v && v.wOk === x.w) { conf.push(x); return true; } bad.push(x); return false; }
+  state.wOutliers = bad; state.wConfirmed = conf;
+  state.wCount = { all: all.length, ok: ok.length, bad: bad.length, conf: conf.length };
   return ok;
 }
 function movAvg(series) {
@@ -4983,11 +4987,46 @@ function computeAlerts() {
   if(bad.length) out.push({lvl:'info',t:'Controlla calorie e macro',x:bad.length+(bad.length===1?' giorno negli ultimi 14 mostra ':' giorni negli ultimi 14 mostrano ')+'oltre il 10% (almeno 120 kcal) di differenza fra le calorie scritte e quelle che risultano dai macro. Possibili fibre, alcol, arrotondamenti o dati da correggere: '+bad.map(fmtShort).join(', ')+'.',short:'calorie e macro da controllare'});
   return out;
 }
+function wCountsText() {
+  weightsSeries(); var c = state.wCount || { all: 0, ok: 0, bad: 0, conf: 0 };
+  if (!c.all) return 'Nel diario non ci sono ancora pesate.';
+  return 'Pesate nel diario: ' + c.all + '. Incluse nei calcoli: ' + c.ok + (c.conf ? ' (di cui ' + c.conf + (c.conf === 1 ? ' confermata' : ' confermate') + ' da te dopo l\'avviso)' : '')
+    + '. Escluse: ' + c.bad + (c.bad ? ' (' + state.wOutliers.map(function (x) { return fmtShort(x.d) + ' ' + fmt(x.w, 1) + ' kg'; }).join(', ') + '): le trovi in Oggi, «Pesata da controllare».' : '.');
+}
+/* pesate messe da parte: un avviso per ciascuna (le 3 più recenti), con il confronto e i due pulsanti */
+function wCheckText(x) {
+  var diff = x.w - x.med;
+  return 'Il ' + fmtDay(x.d) + ' hai scritto ' + fmt(x.w, 1) + ' kg, ma '
+    + (x.start ? 'il peso di partenza del profilo è ' + fmt(x.med, 1) + ' kg e nei giorni vicini ci sono meno di 3 pesate per un confronto'
+      : 'le ' + x.n + ' pesate dei 7 giorni prima e dopo sono intorno a ' + fmt(x.med, 1) + ' kg')
+    + ' (' + (diff > 0 ? '+' : '−') + fmt(Math.abs(diff), 1) + ' kg). Per ora non la uso nei calcoli. Se il peso è giusto premi «È giusta» e rientra nei conti; se è un errore di battitura correggilo.';
+}
+function wCheckAlerts() {
+  weightsSeries();
+  var o = (state.wOutliers || []).slice().sort(function (a, b) { return a.d < b.d ? 1 : -1; }), out = [];
+  o.slice(0, 3).forEach(function (x) { out.push({ lvl: 'warn', t: 'Pesata da controllare', x: wCheckText(x), short: 'pesata del ' + fmtShort(x.d) + ' da controllare', wchk: x }); });
+  if (o.length > 3) out.push({ lvl: 'warn', t: 'Altre pesate da controllare', x: 'Ci sono altre ' + (o.length - 3) + (o.length - 3 === 1 ? ' pesata messa' : ' pesate messe') + ' da parte: ' + o.slice(3).map(function (x) { return fmtShort(x.d) + ' ' + fmt(x.w, 1) + ' kg'; }).join(', ') + '. Controllale una alla volta: dopo le prime tre compaiono qui.', short: 'altre pesate da controllare' });
+  return out;
+}
+function alertHTML(a) {
+  return '<div class="alert" style="--c:' + LVL_C[a.lvl] + '"><i></i><div><div class="at">' + esc(a.t) + '</div><div class="ax">' + esc(a.x) + '</div>'
+    + (a.wchk ? '<div class="row al-act"><button type="button" class="btn ghost fit small" data-wok="' + esc(a.wchk.d) + '" data-w="' + a.wchk.w + '">È giusta</button><button type="button" class="btn ghost fit small" data-wfix="' + esc(a.wchk.d) + '">Correggi</button></div>' : '')
+    + '</div></div>';
+}
+/* le pesate da controllare compaiono anche in cima a Oggi, prima degli anelli, non solo nel Diario */
+function renderWCheckToday(al) {
+  var oggi = $('#tab-oggi'); if (!oggi) return;
+  var box = $('#wchk-today');
+  if (!box) { box = document.createElement('div'); box.id = 'wchk-today'; box.className = 'stack'; oggi.insertBefore(box, oggi.firstChild); }
+  var w = al.filter(function (a) { return a.wchk || a.t === 'Altre pesate da controllare'; });
+  box.innerHTML = w.map(alertHTML).join(''); box.hidden = !w.length;
+}
 function renderAlerts() {
-  var al = state.alerts = computeAlerts();
+  var al = state.alerts = wCheckAlerts().concat(computeAlerts());
+  renderWCheckToday(al);
   $('#al-count').textContent = al.length ? al.length + (al.length === 1 ? ' avviso' : ' avvisi') : 'Nessun avviso';
   $('#alerts').innerHTML = al.length ? al.map(function (a) {
-    return '<div class="alert" style="--c:' + LVL_C[a.lvl] + '"><i></i><div><div class="at">' + esc(a.t) + '</div><div class="ax">' + esc(a.x) + '</div></div></div>';
+    return alertHTML(a);
   }).join('') : '<div class="alert" style="--c:' + LVL_C.info + '"><i></i><div><div class="at">Nessuna anomalia dei dati rilevata</div><div class="ax">Questo controllo non valuta salute, composizione corporea o precisione del fabbisogno.</div></div></div>';
 }
 function renderSplitBox(id) {
@@ -5107,7 +5146,7 @@ function summaryExplanationHTML() {
   ],'Il conteggio riguarda tipi di avviso, non necessariamente il numero di giornate. Zero segnalazioni non certifica completezza, salute o esattezza del fabbisogno.'));
   cards.push(explainBlock('last','weight','4 · Ultima pesata',n?fmt(n.last.w,1)+' kg':'Nessuna pesata','È l’osservazione più recente accettata dalla serie delle pesate, prima di applicare le correzioni della tendenza.',[
     n?'Nel diario: <b>'+fmtDay(n.last.d)+'</b>, <b>'+fmt(n.last.w,1)+' kg</b>.':'Serve almeno una pesata valida nel diario.',
-    'Leggo il valore scritto nel diario; i filtri del sito possono escludere pesate considerate anomale.',
+    'Leggo il valore scritto nel diario. ' + esc(wCountsText()),
     'La bilancia include acqua, tessuti e contenuto intestinale. Un aumento o un calo di un giorno non ne identifica la composizione.'
   ],'La data conta: se non ti sei ancora pesato oggi, “ultima pesata” continua a indicare quella precedente.'));
   cards.push(explainBlock('goal','goal','5 · Scenario obiettivo',f&&f.now&&f.now.date?fmtDay(f.now.date):f&&f.done?'Obiettivo raggiunto nel modello':'Data non disponibile','È la data simulata di arrivo al peso obiettivo se proseguono le ipotesi del modello.',f?[
@@ -5259,8 +5298,9 @@ function rulesData() {
       return row('Giorni senza pesata', nw.length ? nw.map(fmtShort).join(', ') : 'nessuno') + row('Giorni senza passi', ns.length ? ns.map(fmtShort).join(', ') : 'nessuno');
     } });
   add({ id: 'pesata-errata', g: 'fonti', t: 'Pesate scritte male e date sbagliate', w: 'Tutti i calcoli sul peso, avvisi',
-    what: "Il sito non cancella mai una pesata perché è alta o bassa: gli sgarri e l'acqua restano. Scarta solo quella che non può essere vera, e te lo dice con un avviso.",
-    how: fx(L('Pesata scartata', P('pesata') + ' lontana più di ' + C(OUTLIER_KG + ' kg') + ' dalla mediana delle pesate dei 7 giorni prima e dopo (almeno 3)'),
+    what: "Il sito non cancella mai una pesata perché è alta o bassa: gli sgarri e l'acqua restano. Mette da parte solo quella che sembra un errore di battitura, e te lo dice in Oggi con l'avviso «Pesata da controllare»: se è giusta la confermi e rientra nei conti, se è sbagliata la correggi.",
+    how: fx(L('Pesata da controllare', P('pesata') + ' lontana più di ' + C(OUTLIER_KG + ' kg') + ' dalla mediana delle pesate dei 7 giorni prima e dopo (almeno 3); nei primi giorni, con meno di 3 pesate vicine, più di ' + C((OUTLIER_KG + 1) + ' kg') + ' dal peso di partenza'),
+      L('È giusta', 'la pesata rientra in tutti i calcoli e resta segnata come confermata; se poi cambi il peso di quel giorno, la conferma non vale più'),
       L('Fuori scala', 'sotto ' + C('30') + ' o sopra ' + C('250') + ' kg (per esempio «6,41» invece di «64,1»)'),
       L('Data futura', 'una riga con una data dopo domani viene ignorata e segnalata nella scheda Dati'),
       L('Numeri', '«1.417», «1 417» e «1417» sono millequattrocentodiciassette; con punto e virgola insieme («1.417,5») l\'ultimo segno separa i decimali')),
@@ -5269,7 +5309,10 @@ function rulesData() {
       weightsSeries(); var o = state.wOutliers || [], all = dayList().filter(function (d) { return state.days.get(d).weight > 0; }), big = null;
       all.forEach(function (d) { var w = state.days.get(d).weight, nb = all.filter(function (e) { return e !== d && Math.abs(diffDays(d, e)) <= 7; }).map(function (e) { return state.days.get(e).weight; }).sort(function (a, b) { return a - b; });
         if (nb.length < 3) return; var h = nb.length >> 1, med = nb.length % 2 ? nb[h] : (nb[h - 1] + nb[h]) / 2; if (!big || Math.abs(w - med) > Math.abs(big.x)) big = { d: d, x: w - med, w: w, med: med }; });
-      return row('Pesate scartate ora', o.length ? o.map(function (x) { return fmtShort(x.d) + ' ' + F(x.w, 1) + ' kg (vicine ' + F(x.med, 1) + ')'; }).join(', ') : 'nessuna')
+      var cf = state.wConfirmed || [];
+      return row('Pesate incluse ed escluse', esc(wCountsText()))
+        + row('Pesate da controllare ora', o.length ? o.map(function (x) { return fmtShort(x.d) + ' ' + F(x.w, 1) + ' kg (vicine ' + F(x.med, 1) + ')'; }).join(', ') : 'nessuna')
+        + (cf.length ? row('Confermate da te', cf.map(function (x) { return fmtShort(x.d) + ' ' + F(x.w, 1) + ' kg'; }).join(', ')) : '')
         + (big ? row('Scarto più grande tra le tue pesate', F(big.w, 1) + ' kg il ' + fmtShort(big.d) + ' contro ' + F(big.med, 2) + ' delle vicine: ' + sgn(big.x, 2) + ' kg') : '');
     } });
   add({ id: 'sgarri', g: 'fonti', t: 'Sgarri: cosa sono e come contano', w: 'Previsione, avvisi, deficit',
@@ -5302,10 +5345,11 @@ function rulesData() {
         L('Margine ±', '√(errore della retta letta a oggi² + ' + C('0,2') + '²): l\'errore della retta viene da quanto le pesate pulite si scostano dalla retta e da quante sono; 0,2 kg copre le stime dell\'acqua e una discesa non perfettamente dritta. Vale 2 volte su 3; il doppio vale 19 volte su 20')])),
     why: "Una pesata singola sbaglia di 1–2 kg per acqua, sale e cibo. La media di 7 giorni toglie il rumore ma descrive il peso di circa 3 giorni prima. La retta usa tutte le pesate recenti e si legge direttamente a oggi: se stai scendendo, può stare qualche etto sotto l'ultima pesata, perché oggi sei già un giorno più avanti. Ho scelto " + NOW_DAYS + " giorni provandoli su un diario vero di diverse settimane: per ogni giorno ho stimato il peso con le sole pesate dei giorni prima e l'ho confrontato con la pesata vera. Con 10 giorni l'errore era il più piccolo (meglio di 14 e 21 giorni); buona parte di quello che resta è il ballo della bilancia da un giorno all'altro, che nessun calcolo può togliere. L'acqua dei carboidrati la tolgo perché dopo uno sgarro la bilancia sale di 1–2 kg d'acqua che se ne va in pochi giorni: lasciata nella retta, la farebbe pendere troppo. La creatina invece trattiene acqua finché la prendi: è peso stimato sulla bilancia, quindi la tolgo solo per tracciare la retta (mentre sale falserebbe la pendenza) e la rimetto alla fine. L'acqua dei carboidrati di oggi non la rimetto: tra 1–2 giorni non c'è più. Se le pesate sono meno di 5 uso la media di 7 giorni. Oltre 3 giorni senza pesate non allungo la retta.",
     ex: function () {
-      if (!NW) return '';
-      if (NW.method !== 'tendenza') return row('Pesate negli ultimi giorni', NW.n + ': uso la media di 7 giorni, ' + O(F(NW.w, 2) + ' kg'));
+      var wc = row('Pesate incluse ed escluse', esc(wCountsText()));
+      if (!NW) return wc;
+      if (NW.method !== 'tendenza') return wc + row('Pesate negli ultimi giorni', NW.n + ': uso la media di 7 giorni, ' + O(F(NW.w, 2) + ' kg'));
       var sx = function (v) { return (v >= 0 ? ' − ' : ' + ') + F(Math.abs(v), 2); };
-      return '<div class="small muted" style="margin:4px 0 8px">Pesate dal ' + fmtDay(NW.from) + ' al ' + fmtDay(NW.to) + ': bilancia − ' + CA('acqua dei carboidrati') + ' − acqua che resta = pesata pulita</div><div class="wgrid">'
+      return wc + '<div class="small muted" style="margin:4px 0 8px">Pesate dal ' + fmtDay(NW.from) + ' al ' + fmtDay(NW.to) + ': bilancia − ' + CA('acqua dei carboidrati') + ' − acqua che resta = pesata pulita</div><div class="wgrid">'
         + NW.pts.map(function (p) { return '<span><small>' + fmtShort(p.d) + '</small>' + P(F(p.w, 1)) + '<small>' + CA(sx(p.x)) + sx(p.q) + ' = <b style="color:var(--ink)">' + F(p.c, 2) + '</b></small></span>'; }).join('') + '</div>'
         + row('Giorno medio e pesata pulita media', 'giorno ' + F(NW.mx, 2) + ' · ' + P(F(NW.my, 2) + ' kg'))
         + row('Pendenza', sgn(NW.slope, 4) + ' kg al giorno, cioè ' + sgn(NW.slope * 7, 2) + ' a settimana')
@@ -5802,8 +5846,8 @@ function rulesData() {
       p: ['Verde: sei in linea, nessun problema.', 'Giallo: niente di grave, ma da guardare.', 'Rosso: c\'è qualcosa da sistemare.', 'Blu: è solo un\'informazione, non un giudizio.', 'I colori dei dati (peso blu, calorie arancio, proteine gialle, carboidrati azzurri, grassi rosa, passi verde acqua, allenamenti viola) servono a riconoscere un dato a colpo d\'occhio negli anelli, nei grafici e nelle formule.'] },
     mancanti: { s: 'Se un giorno manca un dato, quel giorno non conta come zero: semplicemente non entra nella media di quel dato.',
       p: ['Esempio: se in 7 giorni hai scritto i passi solo in 5, la media dei passi è fatta su quei 5 giorni.', 'Contare 0 passi per un giorno non scritto abbasserebbe la media in modo falso.', 'Vale per tutto: peso, calorie, macro, passi e sonno.'] },
-    'pesata-errata': { s: 'Se una pesata è sicuramente un errore di battitura (per esempio 26,2 invece di 62,2), il sito la mette da parte e te lo dice. Le pesate alte dopo uno sgarro invece restano.',
-      p: ['Per ogni pesata guardo quelle della settimana prima e della settimana dopo.', 'Se è lontana più di 3 kg da quelle vicine, non può essere vera: in un giorno il peso non cambia così tanto.', 'La metto da parte e compare l\'avviso «Pesata scartata», finché non la correggi nel diario.', 'Uno sgarro fa salire la bilancia di 1–2 kg: è normale, e quella pesata resta nei conti.'] },
+    'pesata-errata': { s: 'Se una pesata sembra un errore di battitura (per esempio 26,2 invece di 62,2), il sito la mette da parte e te lo chiede. Le pesate alte dopo uno sgarro invece restano.',
+      p: ['Per ogni pesata guardo quelle della settimana prima e della settimana dopo.', 'Se è lontana più di 3 kg da quelle vicine, non può essere vera: in un giorno il peso non cambia così tanto.', 'La metto da parte e in Oggi compare l\'avviso «Pesata da controllare», con il confronto e due pulsanti: «È giusta» la rimette nei conti, «Correggi» apre il giorno.', 'Uno sgarro fa salire la bilancia di 1–2 kg: è normale, e quella pesata resta nei conti.'] },
     sgarri: { s: 'Uno sgarro è un giorno in cui mangi più di ' + KCL(thr) + ', cioè il tuo obiettivo più il 30%. Le sue calorie restano sempre nei conti, tutte.',
       v: vizCheat,
       p: ['Il tuo obiettivo è ' + KCL(s.kcalMax) + '. Il 30% in più fa ' + KCL(thr) + ': sopra questa soglia il giorno è uno sgarro (la barra rossa nel disegno).', '«Sgarro» è solo un\'etichetta per fartelo notare: il giorno non viene mai tolto né aggiustato.', 'Gli sgarri pesano in tre posti: nel deficit (mangi di più, il deficit cala), nella previsione (la data di arrivo si sposta in avanti) e negli avvisi.', 'Decide il numero, non la nota: uno «sgarro controllato» sotto ' + KCL(thr) + ' non conta come sgarro.'],
@@ -6192,11 +6236,95 @@ function parseCSV(text) {
   if (cell.length || row.length) { row.push(cell); rows.push(row); }
   return rows.filter(function (r) { return r.some(function (x) { return x.trim() !== ''; }); });
 }
-function mnum(v) {
-  if (v == null) return null; v = String(v).trim().replace(/\s/g, ''); if (!v) return null;
-  if (v.indexOf(',') >= 0 && v.indexOf('.') >= 0) v = v.replace(/\./g, '').replace(',', '.'); else v = v.replace(',', '.');
-  var n = parseFloat(v); return isNaN(n) ? null : n;
+/* ---------- un solo lettore di numeri, per il modulo del giorno e per tutti gli import ----------
+   «.» e «,» possono essere separatori delle migliaia o dei decimali. La regola:
+   - con tutti e due («1.850,5», «1,850.5») l'ultimo è il decimale;
+   - spazi, spazi stretti e apostrofi fra gruppi di 3 cifre sono migliaia («1 850», «1'850»);
+   - lo stesso segno ripetuto («1.234.567») è migliaia;
+   - un solo segno seguito da 1, 2 o più di 3 cifre è decimale («70,5», «1.85»);
+   - un solo segno seguito da esattamente 3 cifre («1.850») è ambiguo: decide la colonna intera (se altre righe
+     usano lo stesso segno come decimale, o l'altro), poi il tipo di dato (calorie, passi, ripetizioni e secondi
+     sono interi: niente 3 decimali), poi l'intervallo plausibile. Se restano possibili tutte e due le letture,
+     il risultato è «ambiguo» e l'import chiede quale sia giusta.
+   Le unità scritte nella cella («1850 kcal», «120 g») si ignorano; due numeri nella stessa cella non si leggono. */
+var NUM_KIND = {
+  kcal: { int: 1, min: 0, max: 10000, u: 'kcal' }, steps: { int: 1, min: 0, max: 100000, u: 'passi' }, reps: { int: 1, min: 0, max: 1000, u: 'ripetizioni' }, sec: { int: 1, min: 0, max: 86400, u: 's' },
+  weight: { min: 30, max: 300, u: 'kg' }, protein: { min: 0, max: 500, u: 'g' }, carbs: { min: 0, max: 1500, u: 'g' }, fat: { min: 0, max: 500, u: 'g' },
+  sleepH: { min: 0, max: 20, u: 'h' }, kg: { min: 0, max: 1000, u: 'kg' }, lbs: { min: 0, max: 2200, u: 'lb' }, km: { min: 0, max: 500, u: 'km' }, any: { min: -1e12, max: 1e12, u: '' }
+};
+function numTokens(s) {
+  s = String(s == null ? '' : s).trim(); if (!s) return [];
+  s = s.replace(/(\d)[\s  '’](?=\d{3}(?!\d))/g, '$1');
+  return (s.match(/-?\d[\d.,]*/g) || []).map(function (t) { return t.replace(/[.,]+$/, ''); });
 }
+function numSepInfo(t) {
+  var d = (t.match(/\./g) || []).length, c = (t.match(/,/g) || []).length;
+  if (d && c) return { dec: t.lastIndexOf(',') > t.lastIndexOf('.') ? ',' : '.' };
+  if (!d && !c) return {};
+  var sep = d ? '.' : ',', parts = t.replace(/^-/, '').split(sep);
+  if (parts.length > 2) return { dec: sep === '.' ? ',' : '.' };
+  if (parts[1].length !== 3 || /^0+$/.test(parts[0]) || parts[0].length > 3) return { dec: sep };
+  return { amb: sep };
+}
+function numParse(t, dec) {
+  var neg = t.charAt(0) === '-', s = neg ? t.slice(1) : t, th = dec === '.' ? ',' : '.';
+  var ip = s.split(dec)[0], fp = s.split(dec).length > 2 ? null : s.split(dec)[1];
+  if (fp === null || (fp !== undefined && !/^\d+$/.test(fp))) return null;
+  var g = ip.split(th);
+  if (g.length > 1 && (!/^\d{1,3}$/.test(g[0]) || g.slice(1).some(function (x) { return !/^\d{3}$/.test(x); }))) return null;
+  var n = parseFloat(g.join('') + (fp !== undefined ? '.' + fp : ''));
+  return isNaN(n) ? null : neg ? -n : n;
+}
+/* { v } valore letto (null se la cella è vuota) · { bad } non leggibile o fuori scala · { amb: [lettura decimale, lettura migliaia], sep } */
+function readNum(s, kind, dec, first) {
+  var K = NUM_KIND[kind] || NUM_KIND.any, toks = numTokens(s);
+  if (!toks.length) return String(s == null ? '' : s).trim() ? { bad: true } : { v: null };
+  if (toks.length > 1 && !first) return { bad: true };
+  var t = toks[0], inf = numSepInfo(t), v;
+  function ok(n) { return n != null && n >= K.min && n <= K.max; }
+  if (inf.amb) {
+    var a = numParse(t, inf.amb), b = numParse(t, inf.amb === '.' ? ',' : '.');
+    if (dec) v = dec === inf.amb ? a : b;
+    else if (K.int) v = b;                                     /* interi: «1.850» = milleottocentocinquanta */
+    else { var oa = ok(a), ob = ok(b); if (oa && ob) return { amb: [a, b], sep: inf.amb }; v = oa ? a : ob ? b : null; }
+  } else v = numParse(t, inf.dec || dec || '.');
+  if (v == null || !ok(v)) return { bad: true };
+  if (K.int) v = Math.round(v);
+  return { v: v };
+}
+/* separatore decimale di una colonna intera: dai valori che non lasciano dubbi; null se nessuno lo dice o se si contraddicono */
+function colDec(values) {
+  var seen = {};
+  values.forEach(function (x) { numTokens(x).slice(0, 1).forEach(function (t) { var i = numSepInfo(t); if (i.dec) seen[i.dec] = 1; }); });
+  var k = Object.keys(seen); return k.length === 1 ? k[0] : null;
+}
+/* lettore di una colonna: decide il separatore una volta per tutte le righe e tiene i casi ambigui e quelli scartati */
+function numCol(rows, c, kind, name, over) {
+  if (c < 0) return null;
+  var auto = colDec(rows.map(function (r) { return r[c]; })), dec = over || auto;
+  var col = { c: c, kind: kind, name: name, dec: dec, by: over ? 'scelta' : auto ? 'dati' : 'tipo', amb: null, bad: 0, badEx: '', ex: null };
+  col.get = function (r) {
+    var x = readNum(r[c], kind, dec);
+    if (x.amb) { if (!col.amb) col.amb = { raw: String(r[c]).trim(), a: x.amb[0], b: x.amb[1], sep: x.sep }; return null; }
+    if (x.bad) { col.bad++; if (!col.badEx) col.badEx = String(r[c]).trim(); return null; }
+    if (x.v != null && !col.ex && /[.,\s]/.test(String(r[c]).trim())) col.ex = { raw: String(r[c]).trim(), v: x.v };
+    return x.v;
+  };
+  return col;
+}
+function numShow(v, kind) { var K = NUM_KIND[kind] || NUM_KIND.any; return (K.int ? fmt(v, 0) : String(Math.round(v * 1000) / 1000).replace('.', ',')) + (K.u && K.u !== 'passi' && K.u !== 'ripetizioni' ? ' ' + K.u : ''); }
+/* righe dell'anteprima su come è stata letta ogni colonna di numeri, e domande sui casi ambigui */
+function numColsInfo(cols) {
+  var lines = [], amb = [];
+  cols.forEach(function (col) {
+    if (!col) return;
+    if (col.amb) amb.push({ key: col.key, name: col.name, raw: col.amb.raw, opts: [{ dec: col.amb.sep, label: numShow(col.amb.a, col.kind) }, { dec: col.amb.sep === '.' ? ',' : '.', label: numShow(col.amb.b, col.kind) }] });
+    if (col.ex) lines.push('«' + col.name + '»: «' + col.ex.raw + '» letto come ' + numShow(col.ex.v, col.kind) + (col.by === 'scelta' ? ' (come hai scelto)' : col.by === 'dati' ? ' (decimali con «' + col.dec + '», come nelle altre righe)' : NUM_KIND[col.kind].int ? ' (numero intero: il segno separa le migliaia)' : ''));
+    if (col.bad) lines.push('«' + col.name + '»: ' + col.bad + (col.bad === 1 ? ' valore non letto perché fuori scala o illeggibile (' : ' valori non letti perché fuori scala o illeggibili (es. ') + '«' + col.badEx + '»): ' + (col.bad === 1 ? 'il giorno tiene' : 'quei giorni tengono') + ' il valore che aveva.');
+  });
+  return { lines: lines, amb: amb };
+}
+function mnum(v) { var x = readNum(v, 'any'); return x.v == null ? null : x.v; }
 var MONTHMAP = { gen: 1, jan: 1, feb: 2, mar: 3, apr: 4, mag: 5, may: 5, giu: 6, jun: 6, lug: 7, jul: 7, ago: 8, aug: 8, set: 9, sep: 9, ott: 10, oct: 10, nov: 11, dic: 12, dec: 12 };
 function validYMD(y, m, d) { var dt = new Date(Date.UTC(+y, +m - 1, +d)); return dt.getUTCFullYear() === +y && dt.getUTCMonth() === +m - 1 && dt.getUTCDate() === +d; }
 function parseAnyDate(s) {
@@ -6212,44 +6340,49 @@ function findCol(headers, pats) {
   for (var i = 0; i < headers.length; i++) for (var j = 0; j < pats.length; j++) if (headers[i].indexOf(pats[j]) >= 0) return i;
   return -1;
 }
-function planImport(text) {
+function planImport(text, ov) {
+  ov = ov || {};
   var rows = parseCSV(text);
   if (!rows.length) return { error: 'Il file è vuoto.' };
-  if (parseAnyDate(rows[0][0])) return planHealth(rows, { d: 0, s: 1, sl: 2, b: 3 });
+  if (parseAnyDate(rows[0][0])) return planHealth(rows, { d: 0, s: 1, sl: 2, b: 3 }, ov, ['passi', 'sonno', 'a letto']);
   if (rows.length < 2) return { error: 'Il file ha una sola riga.' };
   var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
-  if (head.indexOf('exercise_title') >= 0) return planHevy(head, rows.slice(1));
+  if (head.indexOf('exercise_title') >= 0) return planHevy(head, rows.slice(1), ov);
   var cSl = findCol(head, ['sonno', 'sleep']);
-  if (cSl >= 0 && findCol(head, ['calor', 'kcal', 'energ']) < 0) return planHealth(rows.slice(1), { d: findCol(head, ['data', 'date', 'giorno']), s: findCol(head, ['passi', 'steps']), sl: cSl, b: findCol(head, ['letto', 'bed']) });
-  return planYazio(head, rows.slice(1));
+  if (cSl >= 0 && findCol(head, ['calor', 'kcal', 'energ']) < 0) { var hc = { d: findCol(head, ['data', 'date', 'giorno']), s: findCol(head, ['passi', 'steps']), sl: cSl, b: findCol(head, ['letto', 'bed']) }; return planHealth(rows.slice(1), hc, ov, [rows[0][hc.s], rows[0][hc.sl], rows[0][hc.b]]); }
+  return planYazio(head, rows.slice(1), ov, rows[0]);
 }
-function stepsNum(v) {
-  var s = String(v == null ? '' : v).replace(/[^\d.,]/g, '').replace(/[.,]\d{1,2}$/, '');
-  var n = parseInt(s.replace(/[.,]/g, ''), 10); return n > 0 ? n : null;
+/* ore: «7:30» oppure un numero di ore («7,5»), con il lettore comune */
+function hoursCol(rows, c, name, over) {
+  var col = numCol(rows, c, 'sleepH', name, over); if (!col) return null;
+  var get = col.get;
+  col.get = function (r) { var m = String(r[c] == null ? '' : r[c]).replace(/\s/g, '').match(/^(\d{1,2}):(\d{2})/); if (m) return +m[2] < 60 && +m[1] + (+m[2]) / 60 <= 20 ? +m[1] + (+m[2]) / 60 : null; return get(r); };
+  return col;
 }
-function hoursNum(v) {
-  var s = String(v == null ? '' : v).replace(/\s/g, ''), m;
-  if ((m = s.match(/^(\d{1,2}):(\d{2})/))) return +m[1] + (+m[2]) / 60;
-  m = s.match(/\d+(?:[.,]\d+)?/); if (!m) return null;
-  var n = parseFloat(m[0].replace(',', '.')); return n > 0 ? n : null;
-}
-function planHealth(rows, c) {
+function planHealth(rows, c, ov, names) {
+  ov = ov || {};
   var map = new Map(), bad = 0;
+  var cS = numCol(rows, c.s, 'steps', (names && names[0]) || 'passi', ov.s), cSl = hoursCol(rows, c.sl, (names && names[1]) || 'sonno', ov.sl), cB = hoursCol(rows, c.b, (names && names[2]) || 'a letto', ov.b);
+  [cS, cSl, cB].forEach(function (x, i) { if (x) x.key = ['s', 'sl', 'b'][i]; });
   rows.forEach(function (r) {
     var dt = parseAnyDate(r[c.d]); if (!dt) { bad++; return; }
-    map.set(dt.d, { steps: c.s >= 0 ? stepsNum(r[c.s]) : null, sleep: c.sl >= 0 ? hoursNum(r[c.sl]) : null, bed: c.b >= 0 ? hoursNum(r[c.b]) : null });
+    var s = cS ? cS.get(r) : null, sl = cSl ? cSl.get(r) : null, b = cB ? cB.get(r) : null;
+    map.set(dt.d, { steps: s > 0 ? s : null, sleep: sl > 0 ? sl : null, bed: b > 0 ? b : null });
   });
   var items = []; map.forEach(function (h, d) { items.push({ health: true, date: d, h: h }); });
   if (!items.length) return { error: 'Non riesco a leggere le date nel file.' };
   items.sort(function (x, y) { return x.date < y.date ? -1 : 1; });
-  var nS = items.filter(function (i) { return i.h.steps; }).length, nSl = items.filter(function (i) { return i.h.sleep || i.h.bed; }).length;
-  var onlyBed = items.filter(function (i) { return !i.h.sleep && i.h.bed; }).length;
-  var last = items[items.length - 1];
-  return { kind: 'Salute', items: items, text: 'Riconosciuto: file di Apple Salute.\n' + items.length + ' giorni dal ' + fmtShort(items[0].date) + ' al ' + fmtShort(last.date) + '.\n' + nS + ' con i passi, ' + nSl + ' con il sonno.' + (onlyBed ? '\n' + onlyBed + ' notti hanno solo il tempo "a letto": uso quello come sonno.' : '') + '\nUltima riga: ' + fmtShort(last.date) + ' · ' + (last.h.steps ? fmt(last.h.steps, 0) + ' passi' : 'passi assenti') + ' · ' + (last.h.sleep || last.h.bed ? fmtH(last.h.sleep || last.h.bed) + ' h di sonno' : 'sonno assente') + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') };
+  var nS = items.filter(function (i) { return i.h.steps; }).length, nSl = items.filter(function (i) { return i.h.sleep; }).length;
+  var onlyBed = items.filter(function (i) { return !i.h.sleep && i.h.bed; }).length, info = numColsInfo([cS, cSl, cB]);
+  var plan = { kind: 'Salute', items: items, amb: info.amb, text: 'Riconosciuto: file di Apple Salute.\n' + items.length + ' giorni dal ' + fmtShort(items[0].date) + ' al ' + fmtShort(items[items.length - 1].date) + '.\n' + nS + ' con i passi, ' + nSl + ' con il sonno.' + (onlyBed ? '\n' + onlyBed + ' notti hanno solo il tempo «a letto»: lo salvo come ore a letto, il sonno resta vuoto.' : '') + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') };
+  return importPreview(plan, info.lines);
 }
-function planHevy(head, rows) {
+function planHevy(head, rows, ov) {
+  ov = ov || {};
   var ix = function (n) { return head.indexOf(n); };
   var cT = ix('title'), cS = ix('start_time'), cE = ix('exercise_title'), cK = ix('weight_kg'), cL = ix('weight_lbs'), cR = ix('reps'), cY = ix('set_type'), cEnd = ix('end_time'), cSec = ix('duration_seconds'), cKm = ix('distance_km'), cMi = ix('distance_miles');
+  var nK = numCol(rows, cK, 'kg', 'weight_kg', ov.kg), nL = numCol(rows, cL, 'lbs', 'weight_lbs', ov.lbs), nR = numCol(rows, cR, 'reps', 'reps', ov.reps), nSec = numCol(rows, cSec, 'sec', 'duration_seconds', ov.sec), nKm = numCol(rows, cKm, 'km', 'distance_km', ov.km), nMi = numCol(rows, cMi, 'km', 'distance_miles', ov.mi);
+  [[nK, 'kg'], [nL, 'lbs'], [nR, 'reps'], [nSec, 'sec'], [nKm, 'km'], [nMi, 'mi']].forEach(function (x) { if (x[0]) x[0].key = x[1]; });
   var map = new Map(), bad = 0;
   rows.forEach(function (r) {
     var dt = parseAnyDate(r[cS]); if (!dt) { bad++; return; }
@@ -6262,66 +6395,119 @@ function planHevy(head, rows) {
     }
     var w = map.get(id), name = (r[cE] || '').trim(); if (!name) return;
     if (w._idx[name] == null) { w._idx[name] = w.exercises.length; w.exercises.push({ name: name, sets: [] }); }
-    var kg = cK >= 0 ? mnum(r[cK]) || 0 : cL >= 0 ? Math.round((mnum(r[cL]) || 0) * 0.45359237 * 100) / 100 : 0, reps = parseInt(r[cR], 10) || 0;
+    var kg = nK ? nK.get(r) || 0 : nL ? Math.round((nL.get(r) || 0) * 0.45359237 * 100) / 100 : 0, reps = nR ? nR.get(r) || 0 : 0;
     var type = cY >= 0 ? String(r[cY] || '').toLowerCase() : '';
     var set = { kg: kg, reps: reps }; if (type.indexOf('warm') >= 0) set.w = 1;
-    var sec = cSec >= 0 ? mnum(r[cSec]) : null, km = cKm >= 0 ? mnum(r[cKm]) : cMi >= 0 && mnum(r[cMi]) != null ? mnum(r[cMi]) * 1.609344 : null;
+    var sec = nSec ? nSec.get(r) : null, km = nKm ? nKm.get(r) : nMi ? (function (m) { return m != null ? m * 1.609344 : null; })(nMi.get(r)) : null;
     if (sec > 0) set.sec = Math.round(sec); if (km > 0) set.km = Math.round(km * 100) / 100;
     w.exercises[w._idx[name]].sets.push(set);
   });
   var items = Array.from(map.entries()).map(function (e) { var v = e[1]; delete v._idx; return { path: 'workouts/' + e[0], data: v }; });
   if (!items.length) return { error: 'Non riesco a leggere le date delle sedute (colonna start_time).' };
   var dates = items.map(function (i) { return i.data.date; }).sort(); items.sort(function (a, b) { return a.path < b.path ? -1 : 1; });
-  return { kind: 'Hevy', items: items, text: 'Riconosciuto: export di Hevy.\n' + items.length + ' sedute dal ' + fmtShort(dates[0]) + ' al ' + fmtShort(dates[dates.length - 1]) + '.' + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') + (cK < 0 && cL >= 0 ? '\nI carichi sono in libbre: li converto in kg.' : cK < 0 ? '\nAttenzione: il file non ha la colonna dei carichi, i pesi resteranno a 0.' : '') + '\nUltima seduta: ' + items[items.length - 1].data.title + '.' };
+  var info = numColsInfo([nK, nL, nR, nSec, nKm, nMi]);
+  var plan = { kind: 'Hevy', items: items, amb: info.amb, text: 'Riconosciuto: export di Hevy.\n' + items.length + ' sedute dal ' + fmtShort(dates[0]) + ' al ' + fmtShort(dates[dates.length - 1]) + '.' + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') + (cK < 0 && cL >= 0 ? '\nI carichi sono in libbre: li converto in kg.' : cK < 0 ? '\nAttenzione: il file non ha la colonna dei carichi, i pesi resteranno a 0.' : '') + '\nUltima seduta: ' + items[items.length - 1].data.title + '.' };
+  return importPreview(plan, info.lines);
 }
-function planYazio(head, rows) {
+var NUTR = ['kcal', 'protein', 'carbs', 'fat'];
+function planYazio(head, rows, ov, rawHead) {
+  ov = ov || {};
   var cD = findCol(head, ['date', 'data', 'giorno', 'datum', 'day']);
   var cK = findCol(head, ['calor', 'kcal', 'energ']), cP = findCol(head, ['protein', 'proteine', 'eiwei']), cC = findCol(head, ['carb', 'carbo', 'kohlen']), cF = findCol(head, ['fat', 'grass', 'fett']);
   var cW = findCol(head, ['weight', 'peso', 'gewicht']), cS = findCol(head, ['steps', 'passi', 'schritte']);
-  if (cD < 0 || (cK < 0 && cP < 0 && cW < 0)) return { error: 'Formato non riconosciuto. Colonne trovate: ' + head.join(', ') + '. Mi servono almeno una colonna con la data e una con calorie, macro o peso.' };
+  if (cD < 0 || (cK < 0 && cP < 0 && cC < 0 && cF < 0 && cW < 0)) return { error: 'Formato non riconosciuto. Colonne trovate: ' + head.join(', ') + '. Mi servono almeno una colonna con la data e una con calorie, macro o peso.' };
+  var nm = function (c) { return String((rawHead || head)[c] || '').trim(); };
+  var col = { kcal: numCol(rows, cK, 'kcal', nm(cK), ov.kcal), protein: numCol(rows, cP, 'protein', nm(cP), ov.protein), carbs: numCol(rows, cC, 'carbs', nm(cC), ov.carbs), fat: numCol(rows, cF, 'fat', nm(cF), ov.fat), weight: numCol(rows, cW, 'weight', nm(cW), ov.weight), steps: numCol(rows, cS, 'steps', nm(cS), ov.steps) };
+  Object.keys(col).forEach(function (k) { if (col[k]) col[k].key = k; });
   var map = new Map(), bad = 0;
   rows.forEach(function (r) {
     var dt = parseAnyDate(r[cD]); if (!dt) { bad++; return; }
-    var a = map.get(dt.d) || { kcal: 0, protein: 0, carbs: 0, fat: 0, hasN: false, weight: null, steps: null };
-    if (cK >= 0 && mnum(r[cK]) != null) { a.kcal += mnum(r[cK]); a.hasN = true; }
-    if (cP >= 0 && mnum(r[cP]) != null) a.protein += mnum(r[cP]);
-    if (cC >= 0 && mnum(r[cC]) != null) a.carbs += mnum(r[cC]);
-    if (cF >= 0 && mnum(r[cF]) != null) a.fat += mnum(r[cF]);
-    if (cW >= 0 && mnum(r[cW]) > 0) a.weight = mnum(r[cW]);
-    if (cS >= 0 && mnum(r[cS]) > 0) a.steps = mnum(r[cS]);
+    /* ogni valore è presente o assente per conto suo: una colonna che manca, o una cella vuota, non scrive niente */
+    var a = map.get(dt.d) || { kcal: null, protein: null, carbs: null, fat: null, weight: null, steps: null };
+    NUTR.forEach(function (k) { var v = col[k] ? col[k].get(r) : null; if (v != null) a[k] = (a[k] || 0) + v; });
+    var w = col.weight ? col.weight.get(r) : null; if (w > 0) a.weight = w;
+    var s = col.steps ? col.steps.get(r) : null; if (s > 0) a.steps = s;
     map.set(dt.d, a);
   });
   var skipped = 0, items = [];
   map.forEach(function (a, d) {
-    var cur = state.days.get(d) || {}, hasMeals = cur.meals && cur.meals.length;
+    var cur = state.days.get(d) || {}, hasMeals = cur.meals && cur.meals.length, hasN = NUTR.some(function (k) { return a[k] != null; });
     items.push({ merge: true, path: 'days/' + d, date: d, a: a, keepNutrition: !!hasMeals });
-    if (hasMeals && a.hasN) skipped++;
+    if (hasMeals && hasN) skipped++;
   });
   if (!items.length) return { error: 'Non riesco a leggere le date (colonna "' + head[cD] + '").' };
   items.sort(function (x, y) { return x.date < y.date ? -1 : 1; });
-  var withK = items.filter(function (i) { return i.a.hasN; }).length, withW = items.filter(function (i) { return i.a.weight; }).length;
-  return { kind: 'Yazio', items: items, text: 'Letto come export di Yazio (formato interpretato dalle intestazioni: controlla i numeri).\n' + items.length + ' giorni dal ' + fmtShort(items[0].date) + ' al ' + fmtShort(items[items.length - 1].date) + '.\n' + withK + ' con calorie e macro, ' + withW + ' con peso.' + (skipped ? '\n' + skipped + ' giorni hanno già i pasti inseriti a mano: le loro calorie non vengono toccate.' : '') + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') };
+  var withK = items.filter(function (i) { return i.a.kcal != null; }).length, withW = items.filter(function (i) { return i.a.weight; }).length;
+  var missing = NUTR.filter(function (k) { return !col[k]; }).map(function (k) { return { kcal: 'calorie', protein: 'proteine', carbs: 'carboidrati', fat: 'grassi' }[k]; });
+  var info = numColsInfo([col.kcal, col.protein, col.carbs, col.fat, col.weight, col.steps]);
+  var plan = { kind: 'Yazio', items: items, amb: info.amb, text: 'Letto come export di Yazio (formato interpretato dalle intestazioni: controlla i numeri qui sotto).\n' + items.length + ' giorni dal ' + fmtShort(items[0].date) + ' al ' + fmtShort(items[items.length - 1].date) + '.\n' + withK + ' con le calorie, ' + withW + ' con il peso.' + (missing.length ? '\nIl file non ha ' + missing.join(', ') + ': quei valori non li tocco.' : '') + (skipped ? '\n' + skipped + ' giorni hanno già i pasti inseriti a mano: le loro calorie e macro non vengono toccate.' : '') + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') };
+  return importPreview(plan, info.lines);
+}
+/* come verrà salvato un giorno: i valori nuovi e quelli che sostituiscono qualcosa di già presente */
+var IMP_L = { kcal: ['calorie', 'kcal'], protein: ['proteine', 'protein'], carbs: ['carboidrati', 'carbs'], fat: ['grassi', 'fat'], weight: ['peso', 'weight'], steps: ['passi', 'steps'], sleepH: ['sonno', 'sleepH'], bedH: ['a letto', 'sleepH'] };
+function importNext(it) {
+  var cur = state.days.get(it.date) || {}, next = Object.assign({}, cur, { date: it.date });
+  if (it.health) {
+    if (it.h.steps) next.steps = it.h.steps;
+    if (it.h.sleep) next.sleepH = Math.round(it.h.sleep * 100) / 100;
+    if (it.h.bed) next.bedH = Math.round(it.h.bed * 100) / 100;
+  } else {
+    if (!it.keepNutrition) NUTR.forEach(function (k) { if (it.a[k] != null) next[k] = k === 'kcal' ? Math.round(it.a[k]) : round1(it.a[k]); });
+    if (it.a.weight) next.weight = it.a.weight;
+    if (it.a.steps) next.steps = Math.round(it.a.steps);
+  }
+  return { cur: cur, next: next };
+}
+function impVal(k, v) { return k === 'sleepH' || k === 'bedH' ? fmtH(v) + ' h' : numShow(v, IMP_L[k][1]); }
+function importPreview(plan, colLines) {
+  var lines = [];
+  if (colLines.length) lines.push('', 'Numeri letti:'), colLines.forEach(function (l) { lines.push('· ' + l); });
+  if (plan.kind !== 'Hevy') {
+    var changed = 0, chEx = '';
+    plan.items.forEach(function (it) {
+      var x = importNext(it);
+      Object.keys(IMP_L).forEach(function (k) { if (x.cur[k] != null && x.next[k] != null && x.cur[k] !== x.next[k]) { changed++; if (!chEx) chEx = fmtShort(it.date) + ': ' + IMP_L[k][0] + ' ' + impVal(k, x.cur[k]) + ' → ' + impVal(k, x.next[k]); } });
+    });
+    lines.push('', 'Prime 3 righe come verranno salvate:');
+    plan.items.slice(0, 3).forEach(function (it) {
+      var x = importNext(it), parts = [];
+      Object.keys(IMP_L).forEach(function (k) { if (x.next[k] != null && x.next[k] !== x.cur[k]) parts.push(IMP_L[k][0] + ' ' + impVal(k, x.next[k]) + (x.cur[k] != null ? ' (prima ' + impVal(k, x.cur[k]) + ')' : '')); });
+      lines.push('· ' + fmtShort(it.date) + ': ' + (parts.length ? parts.join(', ') : 'niente da cambiare'));
+    });
+    lines.push(changed ? 'Valori già presenti che verrebbero sostituiti: ' + changed + ' (es. ' + chEx + ').' : 'Nessun valore già presente viene sostituito.');
+  }
+  if (plan.amb.length) lines.push('', 'Prima di importare scegli qui sotto come leggere ' + (plan.amb.length === 1 ? 'una colonna' : plan.amb.length + ' colonne') + '.');
+  plan.text += lines.join('\n');
+  return plan;
+}
+/* anteprima dell'import; con i casi ambigui il pulsante resta spento finché non si sceglie come leggerli */
+function showImportPlan() {
+  var prev = $('#imp-prev'), go = $('#imp-go'), amb = $('#imp-amb');
+  var plan; try { plan = planImport(state.importText, state.importOv); } catch (err) { plan = { error: 'Non riesco a leggere questo file.' }; }
+  prev.hidden = false; amb.hidden = true; amb.innerHTML = '';
+  if (plan.error) { prev.textContent = plan.error; go.hidden = true; state.importPlan = null; return; }
+  prev.textContent = plan.text; state.importPlan = plan; go.hidden = false;
+  go.textContent = 'Importa ' + (plan.kind === 'Hevy' ? plan.items.length + ' sedute' : plan.items.length + ' giorni');
+  go.disabled = !!plan.amb.length;
+  if (plan.amb.length) {
+    amb.innerHTML = plan.amb.map(function (a) {
+      return '<label class="f"><span>Nella colonna «' + bkEsc(a.name) + '» il valore «' + bkEsc(a.raw) + '» può voler dire due cose. Quale è giusta?</span><select data-amb="' + bkEsc(a.key) + '"><option value="">Scegli…</option>'
+        + a.opts.map(function (o) { return '<option value="' + bkEsc(o.dec) + '">' + bkEsc(o.label) + '</option>'; }).join('') + '</select></label>';
+    }).join('');
+    amb.hidden = false;
+  }
 }
 async function runImport(plan) {
   var msg = $('#imp-msg'), n = 0;
+  if (plan.amb && plan.amb.length) { msg.textContent = 'Scegli prima come leggere i numeri ambigui.'; return; }
   $('#imp-go').disabled = true;
   try {
     for (var i = 0; i < plan.items.length; i++) {
       var it = plan.items[i];
-      if (it.health) {
-        var hc = state.days.get(it.date) || {}, hn = Object.assign({}, hc, { date: it.date });
-        if (it.h.steps) hn.steps = it.h.steps;
-        if (it.h.sleep || it.h.bed) hn.sleepH = Math.round((it.h.sleep || it.h.bed) * 100) / 100;
-        if (it.h.bed) hn.bedH = Math.round(it.h.bed * 100) / 100;
-        state.days.set(it.date, hn);
-        await saveDoc('days/' + it.date, hn);
-      } else if (it.merge) {
-        var cur = state.days.get(it.date) || {}, next = Object.assign({}, cur, { date: it.date });
-        if (it.a.hasN && !it.keepNutrition) { next.kcal = Math.round(it.a.kcal); next.protein = round1(it.a.protein); next.carbs = round1(it.a.carbs); next.fat = round1(it.a.fat); }
-        if (it.a.weight) next.weight = it.a.weight;
-        if (it.a.steps) next.steps = it.a.steps;
-        state.days.set(it.date, next);
-        await saveDoc(it.path, next);
+      if (it.health || it.merge) {
+        var nx = importNext(it).next;
+        state.days.set(it.date, nx);
+        await saveDoc('days/' + it.date, nx);
       } else {
         if (!state.workouts.has(it.path.split('/')[1])) plan.nNew = (plan.nNew || 0) + 1;
         state.workouts.set(it.path.split('/')[1], it.data);
@@ -6346,17 +6532,8 @@ var GYM_ID = '1wFg9JEL4vURO-UQ2HP7Z2Gn-zFx3vZO33IpW-u-EeCc';
 var DOC_FIELDS = ['weight', 'kcal', 'protein', 'carbs', 'fat', 'steps', 'sleepH', 'note'];
 var mcp = null, loaded = { days: false, workouts: false }, syncing = false, lastSync = 0, syncTried = false;
 
-function intNum(v) {
-  var str = String(v == null ? '' : v).replace(/(\d)[\s\u00a0\u202f]+(?=\d{3}(?!\d))/g, '$1');
-  var m = str.match(/-?\d[\d.,]*/); if (!m) return null;
-  var s = m[0].replace(/[.,]+$/, '');
-  if (s.indexOf('.') >= 0 && s.indexOf(',') >= 0) {
-    s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
-    var n0 = parseFloat(s); return isNaN(n0) ? null : n0;
-  }
-  if (/^-?\d{1,3}([.,]\d{3})+$/.test(s)) return parseInt(s.replace(/[.,]/g, ''), 10);
-  var n = parseFloat(s.replace(',', '.')); return isNaN(n) ? null : n;
-}
+/* testo libero del diario: il primo numero della frase, con il lettore comune; un caso ambiguo non si importa */
+function intNum(v, kind) { var x = readNum(v, kind || 'any', null, true); return x.v == null ? null : x.v; }
 function weightNum(v) {
   var m = String(v == null ? '' : v).match(/\d+(?:[.,]\d+)?/); if (!m) return null;
   var n = parseFloat(m[0].replace(',', '.')); return n >= 30 && n <= 250 ? n : null;
@@ -6405,11 +6582,11 @@ function mlFields(seg) {
     key = key.toLowerCase(); val = String(val).replace(/^[\s:=|,;\-–—]+/, '').replace(/[\s|,;\-–—•·]+$/, '').trim();
     if (!val) return;
     if (/^peso/.test(key)) { if (rec.weight == null) { var w = weightNum(val); if (w) rec.weight = w; } }
-    else if (/^(in|kcal|calorie|introito)$/.test(key)) { if (rec.kcal == null) { var k = intNum(val); if (k > 0 && k < 20000) rec.kcal = Math.round(k); } }
-    else if (/^(p|prot|proteine)$/.test(key)) { if (rec.protein == null) { var pr = intNum(val); if (pr != null && pr >= 0 && pr < 2000) rec.protein = pr; } }
-    else if (/^(c|carb|carbo|carboidrati)$/.test(key)) { if (rec.carbs == null) { var c = intNum(val); if (c != null && c >= 0 && c < 3000) rec.carbs = c; } }
-    else if (/^(f|g|grassi|fat)$/.test(key)) { if (rec.fat == null) { var f = intNum(val); if (f != null && f >= 0 && f < 1500) rec.fat = f; } }
-    else if (/^(passi|steps)$/.test(key)) { if (rec.steps == null) { var st = intNum(val); if (st != null && st >= 0 && st < 200000) rec.steps = Math.round(st); } }
+    else if (/^(in|kcal|calorie|introito)$/.test(key)) { if (rec.kcal == null) { var k = intNum(val, 'kcal'); if (k > 0 && k < 20000) rec.kcal = Math.round(k); } }
+    else if (/^(p|prot|proteine)$/.test(key)) { if (rec.protein == null) { var pr = intNum(val, 'protein'); if (pr != null && pr >= 0 && pr < 2000) rec.protein = pr; } }
+    else if (/^(c|carb|carbo|carboidrati)$/.test(key)) { if (rec.carbs == null) { var c = intNum(val, 'carbs'); if (c != null && c >= 0 && c < 3000) rec.carbs = c; } }
+    else if (/^(f|g|grassi|fat)$/.test(key)) { if (rec.fat == null) { var f = intNum(val, 'fat'); if (f != null && f >= 0 && f < 1500) rec.fat = f; } }
+    else if (/^(passi|steps)$/.test(key)) { if (rec.steps == null) { var st = intNum(val, 'steps'); if (st != null && st >= 0 && st < 200000) rec.steps = Math.round(st); } }
     else if (/^(sonno|dormito|sleep)$/.test(key)) { if (rec.sleepH == null) { var sl = sleepNum(val); if (sl) rec.sleepH = Math.round(sl * 100) / 100; } }
     else if (/^note?a?$/.test(key)) { if (rec.note == null) rec.note = val.replace(/\s{2,}/g, ' ').slice(0, 400); }
   };
@@ -6815,7 +6992,7 @@ window.GJ_bk = { read: bkRead, canon: bkCanon, build: bkBuild, diff: bkDiff, loc
 
 /* ---------- stato dei salvataggi ---------- */
 var syncSt = null, syncT = 0;
-var FIELD_L = { weight: 'Peso', kcal: 'Calorie', protein: 'Proteine', carbs: 'Carboidrati', fat: 'Grassi', steps: 'Passi', sleepH: 'Sonno', bedH: 'Ore a letto', note: 'Nota', meals: 'Pasti', source: 'Origine', date: 'Data' };
+var FIELD_L = { wOk: 'Pesata confermata', weight: 'Peso', kcal: 'Calorie', protein: 'Proteine', carbs: 'Carboidrati', fat: 'Grassi', steps: 'Passi', sleepH: 'Sonno', bedH: 'Ore a letto', note: 'Nota', meals: 'Pasti', source: 'Origine', date: 'Data' };
 function syncWhere(p) {
   var s = p.split('/');
   if (s[0] === 'days') return 'Giorno ' + fmtDay(s[1]);
@@ -6871,6 +7048,16 @@ async function unsavedDownload() {
   var list = (st.rejected || []).map(function (r) { var w = syncWhat(r); return { voce: w.t, tentato: w.v, salvato: w.c, quando: r.at, motivo: r.err, percorso: r.path, campo: r.field, valore: r.value }; });
   await dl.save({ filename: 'gymjourney-modifiche-non-salvate-' + todayStr() + '.json', data: JSON.stringify({ account: window.GJ_backup ? GJ_backup.email() : '', creato: new Date().toISOString(), modifiche: list }, null, 1) });
   $('#unsaved-msg').textContent = 'Elenco scaricato.';
+}
+
+/* «È giusta»: segno nel giorno che quel peso è confermato; «Correggi»: apro il giorno */
+function wCheckAction(e) {
+  var b = e.target.closest('[data-wok],[data-wfix]'); if (!b) return;
+  if (b.dataset.wfix) { if (window.openDayForm) window.openDayForm(b.dataset.wfix); return; }
+  var d = b.dataset.wok, w = +b.dataset.w, v = state.days.get(d);
+  if (!v || v.weight !== w) { renderAll(); return; }
+  b.disabled = true;
+  saveDay(d, function (x) { x.wOk = w; }).catch(function () {});
 }
 
 async function doExport(kind) {
@@ -7041,20 +7228,16 @@ function bind() {
   });
 
   $('#imp-file').addEventListener('change', function (e) {
-    var f = e.target.files[0], prev = $('#imp-prev'), go = $('#imp-go'), msg = $('#imp-msg');
-    msg.textContent = ''; state.importPlan = null; prev.hidden = true; go.hidden = true;
+    var f = e.target.files[0], msg = $('#imp-msg');
+    msg.textContent = ''; state.importPlan = null; $('#imp-prev').hidden = true; $('#imp-go').hidden = true; $('#imp-amb').hidden = true;
     if (!f) return;
     var rd = new FileReader();
-    rd.onload = function () {
-      var plan; try { plan = planImport(String(rd.result)); } catch (err) { plan = { error: 'Non riesco a leggere questo file.' }; }
-      prev.hidden = false;
-      if (plan.error) { prev.textContent = plan.error; return; }
-      prev.textContent = plan.text; state.importPlan = plan; go.hidden = false; go.textContent = 'Importa ' + (plan.kind === 'Hevy' ? plan.items.length + ' sedute' : plan.items.length + ' giorni');
-    };
+    rd.onload = function () { state.importText = String(rd.result); state.importOv = {}; showImportPlan(); };
     rd.onerror = function () { prev.hidden = false; prev.textContent = 'Non riesco ad aprire il file.'; };
     rd.readAsText(f);
   });
   $('#imp-go').addEventListener('click', function () { if (state.importPlan) runImport(state.importPlan); });
+  $('#imp-amb').addEventListener('change', function (e) { var s = e.target.closest('select[data-amb]'); if (!s || !s.value) return; state.importOv[s.dataset.amb] = s.value; showImportPlan(); });
   $('#sync-btn').addEventListener('click', function () { window.GJ_importOld(); });
   
   $('#ex-days').addEventListener('click', function () { doExport('days'); });
@@ -7062,6 +7245,7 @@ function bind() {
   $('#bk-down').addEventListener('click', doBackup);
   $('#unsaved-list').addEventListener('click', unsavedAction);
   $('#unsaved-dl').addEventListener('click', unsavedDownload);
+  document.addEventListener('click', wCheckAction);
   $('#bk-file').addEventListener('change', function () { bkPick(this.files && this.files[0]); });
   $('#bk-prev').addEventListener('click', function (e) { var b = e.target.closest('[data-bk]'); if (!b) return; var k = b.dataset.bk; if (k === 'cancel') { bkPending = null; bkClearBox(); return; } if (k === 'resume') { bkResume(); return; } if (k === 'drop') { bkDrop(); return; } bkApply(k); });
 }
@@ -7691,7 +7875,7 @@ renderAll();
 
 
 /* usati dal codice di account, importazione e modulo del giorno */
-window.GJ = { DEF: DEF, startTdee: startTdee, targetsFor: targetsFor, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
+window.GJ = { DEF: DEF, readNum: readNum, startTdee: startTdee, targetsFor: targetsFor, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
 /* Oggi tiene solo l'essenziale: gli altri riquadri passano nelle sezioni di Progressi */
 (function slimToday() {
   var oggi = document.getElementById('tab-oggi');
@@ -8018,11 +8202,11 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
       if (m) { if (m[2] && +m[2] > 59) return undefined; v = Math.round((+m[1] + (+m[2] || 0) / 60) * 100) / 100; }
     }
     if (v == null) {
-      /* calorie e passi sono numeri interi: 1.850 o 1,850 = milleottocentocinquanta */
-      if ((k === 'kcal' || k === 'steps') && /^\d{1,3}([.,]\d{3})+$/.test(t)) t = t.replace(/[.,]/g, '');
-      if (!/^\d+([.,]\d+)?$/.test(t)) return undefined;
-      v = parseFloat(t.replace(',', '.'));
-      if (k === 'kcal' || k === 'steps') v = Math.round(v);
+      /* lettore comune all'import: 1.850 kcal = milleottocentocinquanta, 70.500 kg = 70,5; un caso ambiguo va riscritto */
+      if (!/^-?[\d.,]+$/.test(t)) return undefined;
+      var x = G.readNum(t, k);
+      if (x.bad || x.amb || x.v == null) return undefined;
+      v = x.v;
     }
     if (isNaN(v) || v < RANGE[k][0] || v > RANGE[k][1]) return undefined;
     return v;
@@ -8495,6 +8679,8 @@ body #td-chips .kvl .r .v:not(#z):not(#y){color:#fff!important}
 #hevy-panel .imp-pick:focus-within:not(#z):not(#y){outline:2px solid #fff;outline-offset:2px}
 #imp-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
 #hevy-panel .imp-name:empty:not(#z):not(#y){display:none!important}
+.alert .al-act{margin-top:8px;gap:8px}
+#tab-oggi>#wchk-today{order:-10}
 .unsaved-row{display:grid;gap:4px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(246,178,90,.3)}
 #sync-banner{cursor:default}
 #tab-dati .imp-pick:has(#bk-file):not(#z):not(#y){position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto}
