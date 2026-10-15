@@ -1895,6 +1895,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         protein: prot, carbs: carbs, fat: fat, jobHours: 0, jobStart: '', creatineStart: '', events: []
       });
       db.doc('settings/main').set(s).catch(function () {});
+      /* il peso scritto qui è anche la prima pesata del diario */
+      try { var pr = window.GJ.saveDay(iso(t), function (d) { d.weight = w; d.source = 'app'; }); if (pr && pr.catch) pr.catch(function () {}); } catch (er) {}
       o.remove();
     });
   }
@@ -1942,11 +1944,11 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 <div class="wrap">
   <header class="top">
     <div>
-      <span class="eyebrow">Il tuo spazio personale</span><div class="mobile-brand">GymJourney</div><h1 id="h-greet">Ciao</h1><h1 id="h-page" hidden></h1><span id="h-streak" class="streak" hidden></span>
+      <span class="h-date" id="h-date"></span><h1 id="h-greet">Ciao</h1><h1 id="h-page" hidden></h1><span id="h-streak" class="streak" hidden></span>
       <div class="sub" id="h-sub"></div>
       <div class="fresh" id="h-fresh"></div>
     </div>
-    <div class="top-actions"><button type="button" id="sync-pill" hidden></button><button type="button" id="acct-pill" class="sync" hidden>Account</button></div>
+    <div class="top-actions"><button type="button" id="sync-pill" hidden></button><button type="button" id="acct-pill" class="sync" hidden>Account</button><button type="button" id="h-avatar" class="h-av" aria-label="Apri il tuo profilo"></button></div>
   </header>
 
   <div class="nav">
@@ -1966,6 +1968,21 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 
     <!-- OGGI -->
     <section id="tab-oggi" class="view">
+      <div class="panel hero-today" id="hero-today" data-cat="giorno">
+        <div class="ht-head"><button type="button" class="ht-nav" data-htgo="-1" aria-label="Giorno precedente">‹</button><span class="ht-lbl" id="ht-lbl">Calorie di oggi</span><button type="button" class="ht-nav" data-htgo="1" aria-label="Giorno successivo">›</button><span class="ht-pct" id="ht-pct"></span></div>
+        <div class="ht-body"><svg id="ht-rings" viewBox="0 0 200 200" role="img" aria-label="Cerchi di calorie, proteine, carboidrati, grassi, passi e sonno"></svg><div class="ht-legend" id="ht-legend"></div></div>
+        <div class="ht-foot" id="ht-foot"></div>
+        <button type="button" class="btn add-data" id="ht-add">+ Inserisci i dati di oggi</button>
+      </div>
+      <div class="panel need-card" id="need-card" data-cat="energia">
+        <div class="panel-head"><div class="ph-t"><h2>Il tuo fabbisogno</h2><button type="button" class="rq nc-why-btn" id="nc-why-btn" data-why="nc-why" aria-expanded="false" aria-controls="nc-why">Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
+        <div id="need-body"></div>
+        <div class="nc-why" id="nc-why" hidden>
+          <p><b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia ogni volta che aggiungi calorie, passi, sedute o pesate. I bilanci di oggi usano questo numero.</p>
+          <p><b>Ultimo verificato</b> viene dall'ultima settimana finita con le calorie di tutti i giorni: il sito confronta quanto hai mangiato con come è cambiato il peso. È il valore più affidabile.</p>
+          <button type="button" class="linkbtn small" data-gorule="fabbisogno">Come si calcola, passo per passo ›</button>
+        </div>
+      </div>
       <div class="panel rings-card rings-top" data-cat="giorno">
           <div class="panel-head" style="margin:0"><div class="ph-t"><h2>La tua giornata</h2><button type="button" class="rq" data-rule="anelli" aria-label="Come si calcola" title="Come si calcola">?</button></div><button class="linkbtn small" id="go-diary">Apri il giorno</button></div>
           <button type="button" class="btn fit add-data" data-adddata="today">+ Inserisci i dati di oggi</button>
@@ -1978,7 +1995,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         </div>
       <div class="hero-row">
         <div class="panel hero-main" data-cat="peso">
-          <div class="ph-t hero-top"><div class="hero-lbl" id="h-lbl">Peso attuale</div><button type="button" class="rq" data-rule="ritmo" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+          <div class="ph-t hero-top"><div class="hero-lbl" id="h-lbl">Peso attuale</div><button type="button" class="rq h-why-btn" id="h-why-btn" data-why="h-why" aria-expanded="false" aria-controls="h-why">Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div>
           <div class="big"><span class="val" id="h-weight">—</span><span class="unit">kg</span></div>
           <div class="chips" id="h-chips"></div>
           <div class="journey" aria-label="Percorso verso l'obiettivo">
@@ -1986,13 +2003,18 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
             <div class="j-labels"><span>Partenza <b id="j-start">—</b></span><span style="text-align:right">Obiettivo <b id="j-goal">—</b></span></div>
           </div>
           <div class="hero-stats" id="h-stats"></div>
+          <div class="nc-why" id="h-why" hidden>
+            <p><b>Tendenza stimata</b> è il peso indicato dalle pesate degli ultimi giorni, senza l'acqua trattenuta dai carboidrati. Si muove meno della bilancia e dice meglio dove stai andando.</p>
+            <p><b>Ritmo</b> sono i kg a settimana che stai cambiando adesso, accanto a quelli previsti dal piano. <b>Ti mancano</b> sono i kg fino al tuo obiettivo, <b>Giorni</b> quelli fino alla scadenza.</p>
+            <button type="button" class="linkbtn small" data-gorule="peso-adesso">Come si calcola, passo per passo ›</button>
+          </div>
         </div>
         <div class="tiles" id="tiles"></div>
       </div>
       <details class="model-note"><summary>Come leggere numeri, stime e previsioni</summary><div class="model-note-body">Peso, consumo e date previste dipendono da calorie registrate, bilancia e ipotesi sull’acqua. I passi includono già quelli del lavoro; senza i turni per data non attribuisco un consumo aggiuntivo ai singoli giorni. I pasti fuori casa stimati da foto aumentano l’incertezza.</div></details>
 
       <div class="panel energy-now" id="energy-now" data-cat="energia">
-        <div class="panel-head"><div><span class="estimate-tag">Questa settimana</span><h2>Il tuo riferimento energetico</h2></div><button type="button" class="rq" data-rule="fabbisogno" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+        <div class="panel-head"><div><span class="estimate-tag">Questa settimana</span><h2>Fabbisogno ad oggi</h2></div><button type="button" class="rq" data-rule="fabbisogno" aria-label="Come si calcola" title="Come si calcola">?</button></div>
         <div id="energy-now-body"></div>
       </div>
       <div class="panel tmw" data-cat="peso" id="tmw">
@@ -2016,7 +2038,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
           <button type="button" class="gol" data-goview="giorno" style="--c:var(--prot)"><b>Giorno per giorno</b><span>calorie, macro, peso e seduta di ogni giorno, calendario, cose da tenere d'occhio</span></button>
           <button type="button" class="gol" data-goview="peso" style="--c:var(--accent)"><b>Peso e previsione</b><span>grafico del peso, data di arrivo, prospetto dei prossimi mesi, peso previsto per domattina</span></button>
           <button type="button" class="gol" data-goview="calorie" style="--c:var(--kcal)"><b>Calorie e fabbisogno</b><span>riferimento della settimana, fabbisogno stimato, deficit totale, grafico delle calorie</span></button>
-          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Storico</b><span>come stai andando, riepilogo per settimana e mese, resoconto da incollare</span></button>
+          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Settimane</b><span>medie degli ultimi 7 giorni, riepilogo per settimana e mese, resoconto da incollare</span></button>
           <button type="button" class="gol" data-goview="curiosita" style="--c:var(--good)"><b>Curiosità</b><span>le cose inaspettate del percorso, spiegate con i tuoi numeri</span></button>
         </div>
       </div>
@@ -2028,7 +2050,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <button type="button" data-dview="giorno" style="--c:var(--prot)">Giorno</button>
         <button type="button" data-dview="peso" style="--c:var(--accent)">Peso</button>
         <button type="button" data-dview="calorie" style="--c:var(--kcal)">Calorie</button>
-        <button type="button" data-dview="storico" style="--c:var(--carb)">Storico</button>
+        <button type="button" data-dview="storico" style="--c:var(--carb)">Settimane</button>
         <button type="button" data-dview="curiosita" style="--c:var(--good)">Curiosità</button>
       </div>
       <div class="dsec" data-dsec="giorno">
@@ -2066,8 +2088,8 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
             </div>
             <div class="cal" id="cal"></div>
             <div class="legend">
-              <span><i style="background:rgba(95,212,158,.5)"></i>In target</span>
-              <span><i style="background:rgba(246,178,90,.55)"></i>Sopra</span>
+              <span><i style="background:rgba(48,209,88,.5)"></i>In target</span>
+              <span><i style="background:rgba(255,214,10,.55)"></i>Sopra</span>
               <span><i style="background:rgba(255,255,255,.18)"></i>Sotto</span>
             </div>
           </div>
@@ -2119,7 +2141,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="area-lead" style="--area:#ffad77;--area2:#ff745d"><span class="area-kicker">PROGRESSI / ENERGIA</span><strong>La tua energia, giorno dopo giorno.</strong><p>Calorie registrate, consumo stimato e differenza: guarda il quadro prima di aprire i dettagli.</p><span class="area-mark" aria-hidden="true">⚡</span></div>
       <div class="grid2">
         <div class="panel mcard" data-cat="energia">
-          <div class="panel-head"><div class="ph-t"><h2>Il tuo fabbisogno stimato</h2><button type="button" class="rq" data-rule="fabbisogno" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
+          <div class="panel-head"><div class="ph-t"><h2 id="td-h">Ultimo fabbisogno verificato</h2><button type="button" class="rq" data-rule="fabbisogno" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
           <div class="big2"><span id="td-v">—</span><small>kcal al giorno</small><span class="td-arr" id="td-arr" hidden aria-hidden="true" title="La settimana da cui viene questo numero è scritta qui sotto"><svg viewBox="0 0 24 24"><path d="M12 4v15M5.5 12.5 12 19l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
           <div id="td-chips"></div>
           <div class="chart-box" style="margin-top:10px" hidden><svg id="td-chart" class="chart" role="img" aria-label="Andamento del fabbisogno stimato"></svg><div class="tip"></div></div>
@@ -2248,7 +2270,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="body-grid">
           <div class="figs">
             <figure><svg id="body-front" viewBox="0 0 100 200" role="group" aria-label="Muscoli visti davanti"></svg><figcaption>Davanti</figcaption></figure>
-            <figure><svg id="body-back" viewBox="0 0 100 200" role="group" aria-label="Muscoli visti dietro"></svg><figcaption>Dietro</figcaption></figure>
+            <figure><svg id="body-back" viewBox="0 -1 100 222" role="group" aria-label="Muscoli visti dietro"></svg><figcaption>Dietro</figcaption></figure>
             <div class="bscale" id="body-scale"><span>Meno allenato</span><i></i><span id="body-scale-max"></span></div>
             <p class="bhint">Tocca un muscolo per vedere i dettagli.</p>
           </div>
@@ -2305,7 +2327,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="panel-head"><h2>Regole: come si calcola ogni numero</h2><span class="hint" id="rules-count"></span></div>
         <p class="r-intro">Qui trovi <b>54 voci</b> per leggere i numeri senza confondere osservazioni, impostazioni e stime. Apri ciò che ti incuriosisce.</p>
         <ol class="r-how3"><li><b>Che cosa vedi</b><span>il significato del numero</span></li><li><b>Da dove arriva</b><span>i dati e i passaggi quando sono disponibili</span></li><li><b>Quanto fidarti</b><span>i limiti che contano davvero</span></li></ol>
-        <p class="muted small">Il pulsante <span class="rq" style="pointer-events:none;width:22px;height:22px;font-size:.75rem;display:inline-grid;vertical-align:-5px">?</span> accanto ai riquadri ti porta alla voce relativa. Una spiegazione del modello non trasforma una stima in una misura.</p>
+        <p class="muted small">Il pulsante <b>Spiega</b> accanto ai riquadri apre la spiegazione lì dove sei; qui trovi tutte le voci. Una spiegazione del modello non trasforma una stima in una misura.</p>
         <details class="more r-gloss"><summary>Le parole da sapere</summary><div class="in" id="rules-gloss"></div></details>
         <label class="f rules-search"><span>Cerca una regola</span><input type="search" id="rules-q" placeholder="Scrivi una o più parole: fabbisogno, sgarri, allenamento, peso…" autocomplete="off"></label>
         <div class="chips" id="rules-index"></div>
@@ -2372,9 +2394,9 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       </div>
 
       <div class="panel stack" id="hevy-panel">
-        <h2>Importa gli allenamenti da Hevy</h2>
-        <p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui sotto. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p>
-        <div class="row"><label class="f" style="flex:2 1 240px">File CSV<input id="imp-file" type="file" accept=".csv,text/csv,.txt"></label></div>
+        <h2>Importa da Hevy</h2>
+        <div class="row" style="align-items:center"><label class="btn fit imp-pick">Scegli il file di Hevy<input id="imp-file" type="file" accept=".csv,text/csv,.txt"></label><span class="muted small imp-name" id="imp-name"></span></div>
+        <details class="more"><summary>Come esportare il file da Hevy</summary><div class="in"><p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p></div></details>
         <pre class="prev" id="imp-prev" hidden></pre>
         <div class="row"><button class="btn fit" id="imp-go" hidden>Importa</button><span class="muted small" id="imp-msg" style="flex:1 1 200px"></span></div>
       </div>
@@ -2712,9 +2734,9 @@ function dayStatsHTML(date) {
   if (!has) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Il diario non contiene ancora calorie, peso e passi per questo giorno. Toccando «Modifica i dati» li aggiungi quando vuoi.</div>';
   return st('Peso', d.weight > 0 ? fmt(d.weight, 1) : '—', 'kg', HEX.accent)
     + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : '—', 'kcal', HEX.kcal)
-    + st('Bilancio', d.kcal > 0 ? sgn(d.kcal - td, 0) : '—', 'kcal', d.kcal > 0 && d.kcal - td > 0 ? HEX.warn : HEX.good, d.kcal > 0 ? 'su ' + fmt(td, 0) + ' di fabbisogno<span class="s2">(' + tdeeLabel(date) + ')</span>' : '')
+    + st('Bilancio', d.kcal > 0 ? sgn(d.kcal - td, 0) : '—', 'kcal', d.kcal > 0 && d.kcal - td > 0 ? HEX.warn : HEX.good, d.kcal > 0 ? 'su ' + fmt(td, 0) + ' di fabbisogno' : '')
     + st('Passi', d.steps > 0 ? fmt(d.steps, 0) : '—', '', HEX.steps)
-    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'ore', HEX.sleep)
+    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'h', HEX.sleep)
     + wTile;
 }
 function dayWorkHTML(date) {
@@ -2730,8 +2752,9 @@ function dayWorkHTML(date) {
 }
 function renderDiary() {
   var date = state.sel, d = state.days.get(date) || {};
-  $('#d-date-txt').textContent = cap(fmtLong(date));
-  $('#d-title').textContent = cap(fmtLong(date));
+  var pdd = parseD(date); $('#d-date-txt').textContent = cap(DOW[(pdd.getDay() + 6) % 7]) + ' ' + pdd.getDate() + ' ' + (date === todayStr() ? MESI_L : MESI)[pdd.getMonth()] + (pdd.getFullYear() !== new Date().getFullYear() ? ' ' + pdd.getFullYear() : '');
+  $('#d-title').textContent = 'I dati del giorno';
+  $('#d-today').hidden = date === todayStr();
   $('#d-src').hidden = d.source !== 'doc';
   $('#d-note').hidden = !d.note; $('#d-note').textContent = d.note || '';
   $('#d-stats').innerHTML = dayStatsHTML(date);
@@ -3067,7 +3090,8 @@ function barChart(svg, cfg) {
 /* ---------- intestazione ed eroe ---------- */
 function renderHeader() {
   var s = S(), now = new Date(), h = now.getHours(), t = todayStr();
-  $('#h-greet').textContent = (h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera') + (s.name ? ', ' + s.name : '');
+  $('#h-greet').textContent = 'Ciao' + (s.name ? ', ' + s.name : '');
+  var hd = $('#h-date'); if (hd) hd.textContent = cap(DOWL[(now.getDay() + 6) % 7]) + ' ' + now.getDate() + ' ' + MESI_L[now.getMonth()];
   var tot = Math.max(1, diffDays(s.startDate, s.endDate) + 1), day = diffDays(s.startDate, t) + 1, ph = phaseLabel().toLowerCase();
   var phase = day < 1 ? 'Il ' + ph + ' parte il ' + fmtShort(s.startDate) : day > tot ? 'Hai superato la data obiettivo del ' + fmtShort(s.endDate) : 'Giorno ' + day + ' di ' + tot + ' del ' + ph;
   $('#h-sub').textContent = cap(DOWL[(now.getDay() + 6) % 7]) + ' ' + now.getDate() + ' ' + MESI_L[now.getMonth()] + '. ' + phase + '.';
@@ -3077,7 +3101,7 @@ function renderHero() {
   var NW = weightNow(), lastAvg = NW ? NW.w : null;
   var TRr = trendRate(28), slope = TRr ? rnd(TRr.perWeek, 2) : null, tr = targetRate(), dir = goalDir();
   if (tr != null) tr = rnd(tr, 2);
-  $('#h-lbl').innerHTML = last ? 'Tendenza stimata del peso<span class="hero-sub">' + (NW.method === 'tendenza' ? 'tendenza degli ultimi ' + NW.span + ' giorni, al netto dell\'acqua dei carboidrati, letta ' + (NW.at === t ? 'a oggi, ' : 'al ') + fmtShort(NW.at) : 'media di 7 giorni, ' + fmtShort(NW.avg7From) + '–' + fmtShort(last.d)) + '</span>' : 'Ancora nessuna pesata';
+  $('#h-lbl').innerHTML = '<span class="hl-t">Tendenza stimata del peso</span><span class="hero-sub">' + (!last ? 'Ancora nessuna pesata: aggiungila dal pulsante sotto i cerchi' : NW.method === 'tendenza' ? 'Ultimi ' + NW.span + ' giorni, senza l\'acqua dei carboidrati' + (NW.at === t ? '' : ' · al ' + fmtShort(NW.at)) : NW.n7 === 1 ? 'Una sola pesata, ' + fmtShort(last.d) : 'Media di ' + NW.n7 + ' pesate, ' + fmtShort(NW.avg7From < S().startDate ? S().startDate : NW.avg7From) + '–' + fmtShort(last.d)) + '</span>';
   countTo($('#h-weight'), lastAvg, 2);
   var chips = '', uncertaintyChip = '';
   if (last) {
@@ -3103,14 +3127,14 @@ function renderHero() {
   });
   var rem = lastAvg != null ? rnd((s.goalWeight - lastAvg) * dir, 2) : null, left = diffDays(t, s.endDate);
   $('#h-stats').innerHTML =
-    '<div class="hs"><div class="l">Ritmo</div><div class="v ' + (slope != null && tr != null ? (rnd(Math.abs(slope - tr), 2) <= 0.15 || (slope * Math.sign(tr) > Math.abs(tr) && !(lastAvg && Math.abs(slope) > lastAvg * 0.01)) ? 'good' : 'warn') : '') + '">' + (slope != null ? sgn(slope, 2) : '—') + '<span class="faint" style="font-size:.8rem;font-weight:500"> kg/sett</span></div><div class="s">' + (tr != null ? 'Piano ' + sgn(tr, 2) : 'Servono più pesate') + '</div></div>'
+    '<div class="hs"><div class="l">Ritmo</div><div class="v ' + (slope != null && tr != null ? (rnd(Math.abs(slope - tr), 2) <= 0.15 || (slope * Math.sign(tr) > Math.abs(tr) && !(lastAvg && Math.abs(slope) > lastAvg * 0.01)) ? 'good' : 'warn') : '') + '">' + (slope != null ? sgn(slope, 2) + '<span class="faint" style="font-size:.8rem;font-weight:500"> kg/sett</span>' : '—') + '</div><div class="s">' + (tr != null ? 'previsto ' + sgn(tr, 2) : 'Servono più pesate') + '</div></div>'
     + (rem != null && rem <= 0.1 ? '<div class="hs"><div class="l">' + (rem < -0.05 ? 'Oltre l\'obiettivo' : 'Obiettivo') + '</div><div class="v good">' + (rem < -0.05 ? fmt(-rem, 2) + ' kg' : 'raggiunto') + '</div><div class="s">' + fmt(s.goalWeight) + ' kg</div></div>'
-      : '<div class="hs"><div class="l">Ti mancano</div><div class="v acc">' + (rem != null ? fmt(rem, 2) + ' kg' : '—') + '</div><div class="s">Da adesso a ' + fmt(s.goalWeight) + '</div></div>')
-    + '<div class="hs"><div class="l">' + (left >= 0 ? 'Giorni rimasti' : 'Oltre la scadenza') + '</div><div class="v">' + Math.abs(left) + '</div><div class="s">Scadenza ' + fmtShort(s.endDate) + '</div></div>';
+      : '<div class="hs"><div class="l">Ti mancano</div><div class="v acc">' + (rem != null ? fmt(rem, 2) + ' kg' : '—') + '</div><div class="s">per arrivare a ' + fmt(s.goalWeight, 1) + ' kg</div></div>')
+    + '<div class="hs"><div class="l">' + (left >= 0 ? 'Giorni' : 'In ritardo') + '</div><div class="v">' + Math.abs(left) + '</div><div class="s">' + (left >= 0 ? 'fino al ' : 'dal ') + fmtShort(s.endDate) + '</div></div>';
 }
 
 var RINGS = [{ k: 'kcal', c: HEX.kcal, r: 92 }, { k: 'protein', c: HEX.prot, r: 78 }, { k: 'carbs', c: HEX.carb, r: 64 }, { k: 'fat', c: HEX.fat, r: 50 }, { k: 'steps', c: HEX.steps, r: 36 }, { k: 'sleep', c: HEX.sleep, r: 22 }];
-function ringDay() { var t = todayStr(); if (!state.ringSel || state.ringSel > t) state.ringSel = t; return state.ringSel; }
+function ringDay() { var t = todayStr(); if (state.ringBase !== t) { state.ringBase = t; state.ringSel = t; } if (!state.ringSel || state.ringSel > t) state.ringSel = t; return state.ringSel; }
 function ringFirst() { var l = dayList(), f = S().startDate; if (l.length && l[0] < f) f = l[0]; return f; }
 function ringGo(n) { var t = todayStr(), d = addDays(ringDay(), n); if (d > t) d = t; if (d < ringFirst()) d = ringFirst(); state.ringSel = d; state.ringAnim = n; renderRings(); tmRefresh(true); }
 /* ---------- domani sulla bilancia ---------- */
@@ -3147,7 +3171,7 @@ function renderTomorrow() {
   if (last.kcal > 0) names.push('calorie registrate: ' + fmt(last.kcal, 0) + ' kcal');
   var workouts = Array.from(state.workouts.values()).filter(function (w) { return w.date === addDays(R, -1); });
   if (workouts.length) names.push('allenamento registrato ieri: le oscillazioni d’acqua legate allo sforzo non sono misurate');
-  var html = '<div class="weigh-sub">Cosa ci si aspettava dalla bilancia</div><div class="weigh-top"><div class="weigh-value"><small>Previsione per ' + fmtDay(R) + '</small><b>' + fmt(M.pr, 1) + ' kg</b><span>Valore centrale del modello</span></div><div class="weigh-value"><small>Margine ricostruito</small><b>' + fmt(lo, 1) + '–' + fmt(hi, 1) + '</b><span>kg · ±' + fmt(mg, 1) + ' sulla previsione</span></div></div>';
+  var html = '<div class="weigh-sub">Cosa ci si aspettava dalla bilancia</div><div class="weigh-top"><div class="weigh-value"><small>Previsione per ' + fmtDay(R) + '</small><b>' + fmt(M.pr, 1) + ' kg</b><span>Valore più probabile</span></div><div class="weigh-value"><small>Margine normale</small><b>' + fmt(lo, 1) + '–' + fmt(hi, 1) + '</b><span>kg · ±' + fmt(mg, 1) + ' sulla previsione</span></div></div>';
   html += '<div class="weigh-explain"><b>Da cosa nasce la previsione</b>Combina le pesate recenti con il bilancio energetico stimato del giorno precedente e con ipotesi sull’acqua legata a carboidrati e creatina.' + (names.length ? ' Dati di ieri: ' + esc(names.join(' · ')) + '.' : '') + ' Non conosce sale, liquidi, contenuto intestinale e orario della pesata.</div>';
   html += '<div class="weigh-sub">Confronto reale</div>';
   if (measured == null) html += '<div class="weigh-compare"><b>Pesata non ancora registrata</b><p>Quando inserisci il peso di stamattina, qui appariranno differenza, posizione nel margine e spiegazione.</p></div>';
@@ -3159,9 +3183,9 @@ function renderTomorrow() {
     html += '<div class="weigh-compare ' + cls + '"><div class="weigh-compare-head"><b>Previsione e bilancia</b><span class="weigh-badge">' + label + '</span></div>';
     html += '<div class="weigh-numbers"><div><small>Previsto</small><b>' + fmt(M.pr, 1) + '</b></div><div><small>Bilancia</small><b>' + fmt(measured, 1) + '</b></div><div><small>Differenza</small><b>' + sgn(diff, 1) + '</b></div></div>';
     html += '<div class="weigh-bar" role="img" aria-label="Valore previsto ' + fmt(M.pr, 1) + ' kg; margine ' + fmt(lo, 1) + '–' + fmt(hi, 1) + ' kg; bilancia ' + fmt(measured, 1) + ' kg"><span class="weigh-band" style="left:' + pct(M.pr - mg) + '%;width:' + (pct(M.pr + mg) - pct(M.pr - mg)) + '%"></span><span class="weigh-mid"></span><span class="weigh-dot" style="left:' + pct(measured) + '%"></span></div>';
-    html += '<p>La bilancia è ' + fmt(ad, 1) + ' kg ' + (diff >= 0 ? 'sopra' : 'sotto') + ' la previsione' + (ratio <= 1 ? ' e rientra nel margine ricostruito.' : ' e supera il margine ricostruito di ' + fmt(ad - mg, 1) + ' kg.') + ' Questo scarto, da solo, non misura grasso perso o guadagnato.</p>';
+    html += '<p>La bilancia è ' + fmt(ad, 1) + ' kg ' + (diff >= 0 ? 'sopra' : 'sotto') + ' la previsione' + (ratio <= 1 ? ' e rientra nel margine normale.' : ' e supera il margine normale di ' + fmt(ad - mg, 1) + ' kg.') + ' Questo scarto, da solo, non misura grasso perso o guadagnato.</p>';
     html += '<details class="weigh-why"><summary><span>Esplora il perché dello scarto</span><small>Quali dati lo spiegano, cosa resta ignoto</small></summary><div class="weigh-why-body">'
-      + '<div class="why-step"><i>01</i><div><b>Prima guarda la distanza</b><p>Lo scarto è di ' + fmt(ad, 1) + ' kg rispetto al centro. ' + (ratio <= 1 ? 'È entro il margine ricostruito di ±' + fmt(mg, 1) + ' kg: una differenza di questa dimensione è già comparsa nei dati usati dal modello.' : 'È oltre il margine ricostruito di ' + fmt(ad - mg, 1) + ' kg: vale la pena osservare le prossime pesate, senza attribuire subito lo scarto a grasso.') + '</p></div></div>'
+      + '<div class="why-step"><i>01</i><div><b>Prima guarda la distanza</b><p>Lo scarto è di ' + fmt(ad, 1) + ' kg rispetto al centro. ' + (ratio <= 1 ? 'È entro il margine normale di ±' + fmt(mg, 1) + ' kg: una differenza di questa dimensione è già comparsa nei dati usati dal modello.' : 'È oltre il margine normale di ' + fmt(ad - mg, 1) + ' kg: vale la pena osservare le prossime pesate, senza attribuire subito lo scarto a grasso.') + '</p></div></div>'
       + '<div class="why-step"><i>02</i><div><b>Considera ciò che può muovere la bilancia</b><p>' + (last.carbs > 0 ? 'I ' + fmt(last.carbs, 0) + ' g di carboidrati registrati ieri possono modificare temporaneamente l’acqua associata al glicogeno; la risposta individuale non è misurata. ' : '') + (workouts.length ? 'Hai registrato un allenamento ieri: anche lo sforzo può accompagnarsi a oscillazioni temporanee. ' : '') + 'Sale, liquidi, cibo da digerire, bagno e ora della pesata non sono registrati. Non possiamo separare queste cause con un solo numero.</p></div></div>'
       + '<div class="why-step"><i>03</i><div><b>Controlla la tendenza, non una mattina</b><p>Una nuova pesata nelle stesse condizioni aiuta a capire se è una fluttuazione o un cambiamento persistente. Lo scarto di oggi da solo non misura grasso, muscolo o acqua.</p></div></div>'
       + '<p class="why-evidence">Come è costruito il margine: ±' + fmt(mg, 1) + ' kg contiene ' + M.within + ' degli ultimi ' + M.n + ' errori ricostruiti. È una verifica sullo stesso percorso, non una probabilità garantita per le prossime pesate.</p></div></details></div>';
@@ -3460,7 +3484,7 @@ function sparkSvg(vals, hex, kind) {
       return '<rect x="' + (i * bw + bw * .2).toFixed(1) + '" y="' + (40 - hh).toFixed(1) + '" width="' + (bw * .6).toFixed(1) + '" height="' + hh.toFixed(1) + '" rx="2" fill="' + hex + '" opacity="' + (v > 0 ? .9 : .15) + '"/>';
     }).join('') + '</svg>';
   }
-  if (mx === mn) { mx += 1; mn -= 1; }
+  var fl = Math.abs(mx) * 0.15 || 1; if (mx - mn < fl) { var mid = (mx + mn) / 2; mx = mid + fl / 2; mn = mid - fl / 2; }
   var pts = [];
   vals.forEach(function (v, i) { if (v != null && v > 0) pts.push([i / (vals.length - 1) * 200, 36 - (v - mn) / (mx - mn) * 30]); });
   var gid = 'sp' + hex.slice(1), d = smoothPath(pts), lp = pts[pts.length - 1];
@@ -3469,10 +3493,10 @@ function sparkSvg(vals, hex, kind) {
     + '</svg>';
 }
 var TILES = [
-  { id: 'kcal', c: HEX.kcal, l: 'Calorie medie, 7 giorni', u: 'kcal' },
-  { id: 'steps', c: HEX.steps, l: 'Passi medi, 7 giorni', u: '' },
-  { id: 'sleep', c: HEX.sleep, l: 'Sonno medio, 7 giorni', u: 'ore' },
-  { id: 'work', c: HEX.accent, l: 'Sedute, 7 giorni', u: '' }
+  { id: 'kcal', c: HEX.kcal, l: 'Calorie medie', u: 'kcal' },
+  { id: 'steps', c: HEX.steps, l: 'Passi medi', u: '' },
+  { id: 'sleep', c: HEX.sleep, l: 'Sonno medio', u: 'h' },
+  { id: 'work', c: HEX.accent, l: 'Sedute', u: '' }
 ];
 function renderTiles() {
   var box = $('#tiles');
@@ -3498,7 +3522,7 @@ function renderTiles() {
   var sl = d7.map(function (d) { return get(d, 'sleepH'); }).filter(Boolean), avgSl = mean(sl);
   countTo($('#tv-sleep'), avgSl, 2, fmtH);
   tc('sleep', avgSl == null ? '' : avgSl >= (s.sleepGoal || 8) * 0.95 ? 'var(--good)' : 'var(--warn)');
-  $('#ts-sleep').textContent = avgSl != null ? 'Ultime ' + sl.length + (sl.length === 1 ? ' notte' : ' notti') : 'Aggiungi "Sonno: 7h30" nel diario';
+  $('#ts-sleep').textContent = avgSl != null ? 'Ultime ' + sl.length + (sl.length === 1 ? ' notte' : ' notti') : 'Inseriscilo dal pulsante sotto i cerchi, in Oggi';
   $('#tg-sleep').innerHTML = sparkSvg(d14.map(function (d) { return get(d, 'sleepH'); }), HEX.sleep);
   var t = todayStr(), wl = Array.from(state.workouts.values());
   var w7 = wl.filter(function (w) { return w.date >= addDays(t, -6) && w.date <= t; }).length;
@@ -3609,7 +3633,7 @@ function wGroup(w) { return normTitle(w.title); }
 function renderCalDetail() {
   var box = $('#cal-detail'), d = state.calSel; if (!box || !d) return;
   var v = state.days.get(d) || {};
-  box.innerHTML = '<div class="cd-head"><h3>' + esc(cap(fmtLong(d))) + '</h3><button type="button" class="linkbtn small" data-day="' + d + '">Apri nel diario</button></div>'
+  box.innerHTML = '<div class="cd-head"><h3>' + esc(dayTitle(d)) + '</h3><button type="button" class="linkbtn small" data-day="' + d + '">Apri nel diario</button></div>'
     + '<div class="daystats">' + dayStatsHTML(d) + '</div>'
     + (v.note ? '<div class="daynote">' + esc(v.note) + '</div>' : '')
     + (v.kcal > 0 ? '<div class="bars">' + barsFor(d, false) + '</div>' : '')
@@ -3945,7 +3969,7 @@ function computeModel() {
 }
 /* quale fabbisogno usa il sito, e dove: ogni numero che compare nelle schede, spiegato con i valori di oggi */
 function tdUseHTML() {
-  var t=todayStr();return '<div class="energy-compare"><div><small>Bilancio di oggi</small><b>'+fmt(tdeeForDate(t),0)+' kcal</b><span>'+fmtDay(t)+'</span></div><div><small>Riferimento della simulazione</small><b>'+fmt(model.tdee,0)+' kcal/die</b><span>adattato al peso nello scenario</span></div></div><details class="more"><summary>Perché qui vedo due fabbisogni?</summary><div class="in">'+energyMethodHTML(t)+'</div></details>';
+  var t=todayStr();return '<div class="energy-compare"><div><small>Fabbisogno di oggi</small><b>'+fmt(tdeeForDate(t),0)+' kcal</b><span>'+fmtDay(t)+'</span></div><div><small>Riferimento della simulazione</small><b>'+fmt(model.tdee,0)+' kcal al giorno</b><span>adattato al peso nello scenario</span></div></div><details class="more"><summary>Perché qui vedo due fabbisogni?</summary><div class="in">'+energyMethodHTML(t)+'</div></details>';
 }
 
 function renderTdee() {
@@ -3958,7 +3982,7 @@ function renderTdee() {
     var nxt = null; model.weeks.forEach(function (w) { if (!w.complete && !nxt) nxt = w; });
     var nSun = nxt ? nxt.sun : addDays(c.sun, 7);
     chips += kvr('Settimana', c.complete ? 'sette giorni con calorie registrate' : 'settimana in corso o incompleta', 'n. ' + c.n, fmtShort(c.ws) + ' – ' + fmtShort(c.sun), '', HEX.kcal);
-    chips += model.sensitivityRange ? kvr('Sensibilità alle ipotesi sull’acqua', 'Scenario, non intervallo di confidenza; non comprende errori delle foto dei pasti', fmt(model.sensitivityRange.lo,0) + '–' + fmt(model.sensitivityRange.hi,0) + ' kcal') : '';
+    chips += model.sensitivityRange ? kvr('Sensibilità alle ipotesi sull’acqua', 'Quanto può cambiare per l’acqua trattenuta', fmt(model.sensitivityRange.lo,0) + '–' + fmt(model.sensitivityRange.hi,0) + ' kcal') : '';
     chips += kvr('Aggiornamento della stima', 'al caricamento di dati nuovi o corretti; una nuova calibrazione richiede dati sufficienti', 'A ogni lettura dei dati');
     if (!model.auto) chips += kvr('Nei calcoli', '', 'valore fisso');
   }
@@ -4188,9 +4212,9 @@ function renderModel() {
     tc.parentNode.hidden = false;
     var x0=ser[0].d, x1=ser[ser.length-1].d, vals=ser.map(function(x){return x.v;});
     if (diffDays(x0,x1)<14) x1=addDays(x0,14);
-    lineChart(tc,{h:190,x0:x0,x1:x1,ymin:Math.min.apply(null,vals)-150,ymax:Math.max.apply(null,vals)+150,dec:0,hex:HEX.accent,
+    lineChart(tc,{h:190,x0:x0,x1:x1,ymin:Math.min.apply(null,vals)-150,ymax:Math.max.apply(null,vals)+150,dec:0,hex:HEX.kcal,
       lines:[],events:[],path:ser.map(function(p){return {d:p.d,v:p.v};}),dots:ser.map(function(p){return {d:p.d,v:p.v};}),
-      hoverItems:function(xs,ys){return ser.map(function(p){return {x:xs(p.d),y:ys(p.v),text:'Settimana '+p.w.n+': '+fmt(p.v,0)+' kcal/die stimate; valore ricalcolabile'};});}});
+      hoverItems:function(xs,ys){return ser.map(function(p){return {x:xs(p.d),y:ys(p.v),text:'Settimana '+p.w.n+': '+fmt(p.v,0)+' kcal al giorno stimate; valore ricalcolabile'};});}});
   } else tc.parentNode.hidden=true;
   var f=model.fc, s=S(), big=$('#fc-v'); $('#fc-title').textContent='Quando arrivi a '+fmt(s.goalWeight,1)+' kg';
   if(!f){big.textContent='—';$('#fc-chips').innerHTML='';$('#fc-rows').textContent='Servono almeno tre pesate e cinque giorni con calorie.';return;}
@@ -4201,11 +4225,11 @@ function renderModel() {
   var line = function (l, sub, v) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small></div><b>' + v + '</b></div>'; };
   var rate = f.rateNow * 7;
   var rows = '<div class="fc-grid">'
-    + line('Ritmo atteso', 'con ' + fmt(f.intake,0) + ' kcal/die e consumo stimato al peso attuale', sgn(rate,2) + ' kg/sett')
+    + line('Ritmo atteso', 'con ' + fmt(f.intake,0) + ' kcal al giorno e consumo stimato al peso attuale', sgn(rate,2) + ' kg/sett')
     + line('Mangiando come adesso', 'media ' + fmt(f.intake,0) + ' kcal su ' + f.nDays + ' giorni registrati, ' + fmtShort(f.winFrom) + '–' + fmtShort(f.winTo) + ', giorni fuori target compresi', arrival(f.now))
-    + line('Restando sull’obiettivo impostato', fmt(f.mid,0) + ' kcal/die da domani', arrival(f.plan))
-    + line('Sgarri registrati', f.cheats + ' giorni oltre ' + fmt(s.kcalMax * 1.3,0) + ' kcal; ' + fmt(f.extra,0) + ' kcal sopra il target in quei giorni', f.costDays != null ? '≈' + fmt(f.costDays,1) + ' giorni teorici' : '—')
-    + line('Per arrivare entro ' + fmtDay(s.endDate), 'introito medio matematico da oggi nello scenario', f.reqIntake != null ? fmt(f.reqIntake,0) + ' kcal/die' : '—') + '</div>';
+    + line('Restando sull’obiettivo impostato', fmt(f.mid,0) + ' kcal al giorno da domani', arrival(f.plan))
+    + (f.cheats ? line('Giorni molto sopra l’obiettivo', f.cheats + (f.cheats === 1 ? ' giorno' : ' giorni') + ' oltre ' + fmt(s.kcalMax * 1.3,0) + ' kcal, ' + fmt(f.extra,0) + ' kcal in più in tutto', f.costDays != null ? '≈' + fmt(f.costDays,1) + ' giorni di ritardo' : '—') : '')
+    + line('Per arrivare entro ' + fmtDay(s.endDate), 'calorie medie al giorno, da oggi', f.reqIntake != null ? fmt(f.reqIntake,0) + ' kcal al giorno' : '—') + '</div>';
   if (f.cheatList.length) rows += '<div class="fc-extra"><b>Sgarri oltre la soglia configurata</b><div>' + f.cheatList.map(function (x) { return fmtShort(x.d) + ': ' + fmt(x.k,0) + ' kcal (' + sgn(x.x,0) + ' sul target)'; }).join(' · ') + '</div></div>';
   rows += '<p class="caption">L’equivalente di giorni sopra il target non è un ritardo misurato: quei giorni sono già compresi nella media e nella data «mangiando come adesso», quindi non vanno aggiunti di nuovo. Il calcolo usa 7.700 kcal/kg e una spesa che cambia col peso; acqua, attività futura e calorie dei pasti stimati possono spostare le date. Il valore per la scadenza è un risultato matematico, non una prescrizione alimentare.</p>';
   $('#fc-rows').innerHTML=rows;
@@ -4554,7 +4578,7 @@ function computeAlerts() {
   if(v && !(v.kcal>0)) out.push({lvl:'info',t:'Giornata ancora incompleta',x:'Per oggi sono presenti altri dati, ma non le calorie. Non viene trattata come giornata da zero calorie.',short:'calorie di oggi mancanti'});
   var recent=dayList().filter(function(d){return d>=addDays(t,-13)&&d<=t;});
   var bad=recent.filter(function(d){var r=state.days.get(d)||{},k=(r.protein||0)*4+(r.carbs||0)*4+(r.fat||0)*9;return r.kcal>0&&r.protein!=null&&r.carbs!=null&&r.fat!=null&&Math.abs(r.kcal-k)>100;});
-  if(bad.length) out.push({lvl:'info',t:'Controlla calorie e macro',x:bad.length+(bad.length===1?' giorno negli ultimi 14 mostra ':' giorni negli ultimi 14 mostrano ')+'oltre 100 kcal di differenza fra calorie registrate e 4P+4C+9F. Possibili fibre, alcol, arrotondamenti o dati da correggere: '+bad.map(fmtShort).join(', ')+'.',short:'calorie e macro da controllare'});
+  if(bad.length) out.push({lvl:'info',t:'Controlla calorie e macro',x:bad.length+(bad.length===1?' giorno negli ultimi 14 mostra ':' giorni negli ultimi 14 mostrano ')+'oltre 100 kcal di differenza fra le calorie scritte e quelle che risultano dai macro. Possibili fibre, alcol, arrotondamenti o dati da correggere: '+bad.map(fmtShort).join(', ')+'.',short:'calorie e macro da controllare'});
   return out;
 }
 function renderAlerts() {
@@ -4634,17 +4658,17 @@ function energyContext(date) {
 }
 function energyMethodHTML(date) {
   var x=energyContext(date), c=x.c, s=S(), blocks=[];
-  if(x.fixed) return explainBlock('', 'energy', 'Quale fabbisogno sto usando?',fmt(x.td,0)+' kcal/die','È attiva la modalità fissa del profilo.', ['Il valore impostato è usato in tutti i giorni e in tutte le settimane.','Nuove pesate, passi e calorie non modificano automaticamente questo valore.','Puoi scegliere il calcolo dinamico in Dati e profilo.'],'Il valore scelto è un’impostazione: il sito non lo misura nel tuo corpo.');
-  blocks.push(explainBlock('', 'energy', 'Un valore medio, condiviso dai giorni',fmt(x.td,0)+' kcal/die',x.w?'Nel bilancio del '+fmtDay(date)+' uso la stima della settimana <b>'+x.range+'</b>.':c?'Non ci sono ancora dati per la settimana di questo giorno. Uso come riferimento la settimana <b>'+x.range+'</b>.':'Non ci sono ancora dati sufficienti: uso il fabbisogno iniziale del profilo.',[
+  if(x.fixed) return explainBlock('', 'energy', 'Quale fabbisogno sto usando?',fmt(x.td,0)+' kcal al giorno','È attiva la modalità fissa del profilo.', ['Il valore impostato è usato in tutti i giorni e in tutte le settimane.','Nuove pesate, passi e calorie non modificano automaticamente questo valore.','Puoi scegliere il calcolo dinamico in Dati e profilo.'],'Il valore scelto è un’impostazione: il sito non lo misura nel tuo corpo.');
+  blocks.push(explainBlock('', 'energy', 'Un valore medio, condiviso dai giorni',fmt(x.td,0)+' kcal al giorno',x.w?'Nel bilancio del '+fmtDay(date)+' uso la stima della settimana <b>'+x.range+'</b>.':c?'Non ci sono ancora dati per la settimana di questo giorno. Uso come riferimento la settimana <b>'+x.range+'</b>.':'Non ci sono ancora dati sufficienti: uso il fabbisogno iniziale del profilo.',[
     'Tutti i giorni della stessa settimana usano lo stesso fabbisogno medio nella versione attuale dei calcoli.',
     'Il bilancio nel diario è <b>calorie registrate − fabbisogno stimato</b>: un risultato negativo indica un deficit stimato.',
     'L’attività può essere diversa ogni giorno; il modello la aggrega in una media settimanale. Il valore assegnato al martedì non è una misura del consumo reale di quel martedì.'
   ],'Le settimane del sito vanno da lunedì a domenica.'));
   var parts=c&&c.parts;
-  blocks.push(explainBlock('', 'energy','Da quali elementi nasce la stima?',c?fmt(c.prior,0)+' kcal/die di base':'In attesa dei dati','Prima costruisco una stima dall’attività e dal profilo; poi, quando possibile, la calibro con lo storico.',[
-    '<b>Riposo e attività di base.</b> Mifflin–St Jeor: 10 × peso + 6,25 × altezza − 5 × età + '+(s.sex==='F'?'(−161)':'5')+'. Il codice moltiplica poi per 1,15 per includere un’attività di base ipotizzata.'+(parts?' In questa settimana: circa <b>'+fmt(parts.rest,0)+' kcal/die</b>.':''),
-    '<b>Digestione.</b> Una quota stimata delle calorie dei macro: 25% delle proteine, 7% dei carboidrati, 2% dei grassi; la quota calorica residua al 10%.'+(parts?' Media: <b>'+fmt(parts.tef,0)+' kcal/die</b>.':''),
-    '<b>Passi e palestra.</b> I passi sono tradotti in distanza usando altezza e lunghezza del passo ipotizzata; la palestra usa durata e intensità convenzionali.'+(parts?' Medie: <b>'+fmt(parts.stepsK,0)+'</b> dai passi e <b>'+fmt(parts.workK,0)+' kcal/die</b> dalla palestra.':''),
+  blocks.push(explainBlock('', 'energy','Da quali elementi nasce la stima?',c?fmt(c.prior,0)+' kcal al giorno di base':'In attesa dei dati','Prima costruisco una stima dall’attività e dal profilo; poi, quando possibile, la calibro con lo storico.',[
+    '<b>Riposo e attività di base.</b> Mifflin–St Jeor: 10 × peso + 6,25 × altezza − 5 × età + '+(s.sex==='F'?'(−161)':'5')+'. Il codice moltiplica poi per 1,15 per includere un’attività di base ipotizzata.'+(parts?' In questa settimana: circa <b>'+fmt(parts.rest,0)+' kcal al giorno</b>.':''),
+    '<b>Digestione.</b> Una quota stimata delle calorie dei macro: 25% delle proteine, 7% dei carboidrati, 2% dei grassi; la quota calorica residua al 10%.'+(parts?' Media: <b>'+fmt(parts.tef,0)+' kcal al giorno</b>.':''),
+    '<b>Passi e palestra.</b> I passi sono tradotti in distanza usando altezza e lunghezza del passo ipotizzata; la palestra usa durata e intensità convenzionali.'+(parts?' Medie: <b>'+fmt(parts.stepsK,0)+'</b> dai passi e <b>'+fmt(parts.workK,0)+' kcal al giorno</b> dalla palestra.':''),
     '<b>Calibrazione sullo storico.</b> Con abbastanza pesate e calorie confronto energia registrata e variazione del peso corretta secondo le ipotesi sull’acqua. Ricavo un fattore da applicare alla stima di base.'+(x.calibrated?' Fattore utilizzato: <b>× '+fmt(c.de.k,3)+'</b>, ricavato dal '+fmtShort(c.de.from)+' al '+fmtShort(c.de.to)+'.':' Non è ancora disponibile una calibrazione sufficiente.')
   ],'I passi comprendono già lavoro e vita quotidiana. Non aggiungo automaticamente 8 ore di magazzino: mancano i turni reali per data. Scale e tapis roulant in palestra sono stimati dalle sedute registrate.'));
   blocks.push(explainBlock('', 'history','Perché può cambiare da martedì a mercoledì?','Ricalcolo con nuovi dati','Cambia la stima che abbiamo della settimana quando cambiano le informazioni disponibili.',[
@@ -4669,11 +4693,11 @@ function summaryExplanationHTML() {
     n.method==='tendenza'?'Applico le correzioni ipotizzate per acqua e creatina, traccio una retta fra i punti e la leggo al <b>'+fmtDay(n.at)+'</b>. Riaggiungo la componente persistente prevista dal modello.':'La media somma le pesate presenti e le divide per il loro numero; i giorni senza peso non valgono zero.',
     'La pesata più recente è <b>'+fmt(n.last.w,1)+' kg</b>; una differenza rispetto alla tendenza è possibile perché i due numeri descrivono cose diverse.'
   ]:['Aggiungi le pesate al diario per stimare una tendenza.'],'È una stima del peso, non una misura del grasso. Le correzioni per acqua restano ipotesi. Se mancano nuove pesate, la retta viene prolungata al massimo di tre giorni.'));
-  cards.push(explainBlock('energy','energy','2 · Consumo stimato',c?fmt(model.tdee,0)+' kcal/die':fmt(s.tdee,0)+' kcal/die',s.tdeeAuto===false?'È il fabbisogno fisso scelto nel profilo.':'Questo riquadro riassume il fabbisogno della '+(c&&c.complete?'più recente settimana con sette giorni di calorie registrate.':'settimana disponibile, ancora incompleta.'),[
+  cards.push(explainBlock('energy','energy','2 · Consumo stimato',c?fmt(model.tdee,0)+' kcal al giorno':fmt(s.tdee,0)+' kcal al giorno',s.tdeeAuto===false?'È il fabbisogno fisso scelto nel profilo.':'Questo riquadro riassume il fabbisogno della '+(c&&c.complete?'più recente settimana con sette giorni di calorie registrate.':'settimana disponibile, ancora incompleta.'),[
     c?'Periodo di riferimento: <b>'+fmtShort(c.ws)+'–'+fmtShort(c.sun)+'</b>. Il numero è una media giornaliera della settimana.':'In assenza di una settimana uso il valore iniziale del profilo.',
     s.tdeeAuto===false?'Il sito usa questo valore in tutti i giorni finché lo cambi nel profilo.':'La base combina riposo, digestione, passi e palestra. Quando i dati sono sufficienti viene calibrata con calorie e variazione del peso.',
     'Per <b>oggi, '+fmtDay(t)+'</b>, il bilancio usa <b>'+fmt(tdeeForDate(t),0)+' kcal</b>. Può differire dal riepilogo perché la settimana corrente è un altro periodo.'
-  ],'La scheda “Il tuo riferimento energetico” qui sotto spiega il valore corrente, il ricalcolo e l’effetto sui giorni passati.'));
+  ],'La scheda “Fabbisogno ad oggi” qui sotto spiega il valore corrente, il ricalcolo e l’effetto sui giorni passati.'));
   cards.push(explainBlock('checks','check','3 · Controlli dei dati',al.length+' '+(al.length===1?'segnalazione':'segnalazioni'),'Sono controlli automatici del diario, utili per trovare campi incompleti o valori da ricontrollare.',[
     'Controllo se la riga di oggi contiene altri dati ma non le calorie.',
     'Negli ultimi 14 giorni confronto le calorie registrate con <b>4 × proteine + 4 × carboidrati + 9 × grassi</b>, quando tutti i macro sono presenti. Segnalo differenze oltre 100 kcal.',
@@ -4686,8 +4710,8 @@ function summaryExplanationHTML() {
   ],'La data conta: se non ti sei ancora pesato oggi, “ultima pesata” continua a indicare quella precedente.'));
   cards.push(explainBlock('goal','goal','5 · Scenario obiettivo',f&&f.now&&f.now.date?fmtDay(f.now.date):f&&f.done?'Obiettivo raggiunto nel modello':'Data non disponibile','È la data simulata di arrivo al peso obiettivo se proseguono le ipotesi del modello.',f?[
     'Parto dalla tendenza di <b>'+fmt(f.trend,2)+' kg</b>, letta al '+fmtDay(f.from)+', verso l’obiettivo di <b>'+fmt(s.goalWeight,1)+' kg</b>.',
-    'Uso <b>'+fmt(f.intake,0)+' kcal/die</b>: media dei '+f.nDays+' giorni con calorie dal '+fmtShort(f.winFrom)+' al '+fmtShort(f.winTo)+', in una finestra di 14 giorni. Sono inclusi anche i giorni sopra obiettivo.',
-    'Parto dal fabbisogno di riferimento di <b>'+fmt(model.tdee,0)+' kcal/die</b> e lo adatto al peso nella simulazione'+(s.tdeeAuto===false?' (in modalità fissa resta costante).':'. All’inizio dello scenario: circa <b>'+fmt(f.tdNow,0)+' kcal/die</b>.'),
+    'Uso <b>'+fmt(f.intake,0)+' kcal al giorno</b>: media dei '+f.nDays+' giorni con calorie dal '+fmtShort(f.winFrom)+' al '+fmtShort(f.winTo)+', in una finestra di 14 giorni. Sono inclusi anche i giorni sopra obiettivo.',
+    'Parto dal fabbisogno di riferimento di <b>'+fmt(model.tdee,0)+' kcal al giorno</b> e lo adatto al peso nella simulazione'+(s.tdeeAuto===false?' (in modalità fissa resta costante).':'. All’inizio dello scenario: circa <b>'+fmt(f.tdNow,0)+' kcal al giorno</b>.'),
     'Simulo il bilancio giorno per giorno con la conversione semplificata di 7.700 kcal/kg. Nuovi introiti, attività, pesate o revisioni del modello possono spostare la data.'
   ]:['Servono almeno tre pesate e cinque giorni con calorie per costruire lo scenario.'],'È una simulazione condizionale, non una scadenza garantita né una previsione esatta della bilancia in quel giorno.'));
   return '<div class="explain-intro"><b>Una bussola per leggere il percorso</b><p>Ogni scheda spiega il significato, il periodo e i passaggi del numero che hai appena visto.</p></div><div class="explain-grid">'+cards.join('')+'</div>';
@@ -4709,7 +4733,7 @@ function inlineExplanationHTML(id) {
     'tile-sedute':['Conto le sedute registrate nel periodo indicato.','Due sedute nello stesso giorno contano come due sedute.','Il totale descrive la frequenza registrata, senza misurare qualità o recupero.']
   };
   var tone=/peso|ultima|media7|ritmo|mancano|partenza/.test(id)?'weight':/kcal|fabbisogno|deficit|bilancio/.test(id)?'energy':/av-|semaforo/.test(id)?'check':/arrivo|prospetto|domani/.test(id)?'goal':'history';
-  return explainBlock('',tone,r.t,'',r.pl&&r.pl.s||r.what,(r.pl&&r.pl.p&&r.pl.p.length?r.pl.p:extra[id])||[],'Puoi confrontare questa spiegazione con il periodo e i dati mostrati nel riquadro.')+'<button type="button" class="context-link" data-gorule="'+esc(id)+'">Apri la voce nelle Regole ↗</button>';
+  return explainBlock('',tone,r.t,'',r.pl&&r.pl.s||r.what,(r.pl&&r.pl.p&&r.pl.p.length?r.pl.p:extra[id])||[],'Puoi confrontare questa spiegazione con il periodo e i dati mostrati nel riquadro.')+'<button type="button" class="context-link" data-gorule="'+esc(id)+'">Apri la voce in Come funziona ↗</button>';
 }
 var helpSeq=0;
 function decorateHelpControls(){
@@ -4731,11 +4755,11 @@ function openLocalExplanation(b){
 
 function renderSummaryBox() {
   var n=weightNow(),f=model.fc,c=model.cur,al=state.alerts||[],s=S();
-  $('#sum-head').textContent='Il percorso nei dati disponibili';
+  $('#sum-head').textContent='Il percorso in breve';
   function tile(id,tone,title,value,caption){return '<div class="summary-metric tone-'+tone+'"><div class="summary-metric-top"><span>'+title+'</span><button type="button" class="metric-explain" data-summary-help="'+id+'" aria-controls="sum-more" aria-label="Spiega '+title+'">Spiega <svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div><b>'+value+'</b><small>'+caption+'</small></div>';}
   $('#sum-kv').innerHTML=[
     tile('trend','weight','Tendenza stimata del peso',n?fmt(n.w,2)+' kg':'—','La direzione delle pesate recenti'),
-    tile('energy','energy','Consumo stimato',fmt(c?model.tdee:s.tdee,0)+' kcal/die',s.tdeeAuto===false?'Valore fisso nel profilo':c?(c.complete?'Settimana completa · ':'Settimana incompleta · ')+fmtShort(c.ws)+'–'+fmtShort(c.sun):'Valore iniziale del profilo'),
+    tile('energy','energy',s.tdeeAuto===false?'Fabbisogno fisso':c&&c.complete&&!c.fromPrev?'Ultimo fabbisogno verificato':'Fabbisogno stimato',fmt(c?model.tdee:s.tdee,0)+' kcal al giorno',s.tdeeAuto===false?'Valore fisso nel profilo':c?(c.complete?'Settimana completa · ':'Settimana incompleta · ')+fmtShort(c.ws)+'–'+fmtShort(c.sun):'Valore iniziale del profilo'),
     tile('checks','check','Controlli dei dati',al.length+' '+(al.length===1?'segnalazione':'segnalazioni'),al.length?'Campi da ricontrollare nel diario':'Nessuna segnalazione da questi controlli'),
     tile('last','weight','Ultima pesata',n?fmt(n.last.w,1)+' kg':'—',n?'Registrata il '+fmtDay(n.last.d):'Nessuna pesata valida'),
     tile('goal','goal','Scenario obiettivo',f&&f.now&&f.now.date?fmtDay(f.now.date):f&&f.done?'Raggiunto nel modello':'Data non disponibile','Simulazione se proseguono le ipotesi attuali')
@@ -4750,7 +4774,7 @@ function renderFresh() {
   if (!ld) { box.innerHTML = ''; return; }
   var gap = diffDays(ld, t), stale = gap >= 2;
   box.className = 'fresh' + (stale ? ' stale' : '');
-  box.innerHTML = '<i></i><span>Dati aggiornati al <b>' + fmtDay(ld) + '</b>' + (stale ? ', mancano i giorni dal ' + fmtShort(addDays(ld, 1)) : '') + (lw ? '. Ultima seduta registrata: ' + fmtShort(lw) : '') + '.</span>';
+  box.innerHTML = '<i></i><span>Dati aggiornati al <b>' + fmtDay(ld) + '</b>' + (stale ? ', mancano i giorni dal ' + fmtShort(addDays(ld, 1)) : '') + (lw ? '. Ultima seduta registrata: ' + fmtDay(lw) : '') + '.</span>';
 }
 /* ---------- deficit totale: giorno per giorno con il fabbisogno della propria settimana ---------- */
 function renderTotal() {
@@ -4861,7 +4885,7 @@ function rulesData() {
     ex: function () { var n = wk(t); return row('Oggi siamo nella settimana', n + ', ' + fmtShort(weekStart(t)) + '–' + fmtShort(addDays(weekStart(t), 6))) + row('Settimana 1', fmtShort(s.startDate) + '–' + fmtShort(addDays(weekStart(s.startDate), 6))); } });
 
   /* ---------- peso ---------- */
-  add({ id: 'peso-adesso', g: 'peso', t: 'Il tuo peso adesso: linea di tendenza', w: 'Oggi, riquadro del peso e riassunto',
+  add({ id: 'peso-adesso', g: 'peso', t: 'Il tuo peso adesso: linea di tendenza', w: 'Oggi, riquadro del peso; Progressi › Settimane, riassunto',
     what: "Il numero che il sito usa come tuo peso attuale, calcolato per il giorno in cui apri il sito. Tutti i calcoli sul percorso partono da qui: ti mancano, kg dalla partenza, barra del percorso, previsione e prospetto.",
     how: fx(ST(1, 'Prendo le pesate degli ultimi ' + NOW_DAYS + ' giorni', 'i ' + NOW_DAYS + ' giorni che finiscono con l\'ultima pesata; ne servono almeno 5, se mancano allargo fino a 21 giorni', [L('Pesate', P('peso') + ' di ogni giorno, con il giorno come numero: 0, 1, 2…')]),
       ST(2, 'Tolgo l\'acqua', 'le stesse stime che uso per il fabbisogno', [
@@ -4889,7 +4913,7 @@ function rulesData() {
         + row('Acqua dei carboidrati di oggi, non aggiunta', sgn(NW.xT, 2) + ' kg: una pesata oggi segnerebbe in media ' + F(NW.w + NW.xT, 2) + ' kg')
         + row('Per confronto', 'media di 7 giorni ' + P(F(NW.avg7, 2)) + ' · ultima pesata ' + P(F(NW.last.w, 1)));
     } });
-  add({ id: 'ultima', g: 'peso', t: 'Ultima pesata', w: 'Oggi, riquadro del peso e riassunto',
+  add({ id: 'ultima', g: 'peso', t: 'Ultima pesata', w: 'Oggi, riquadro del peso; Progressi › Settimane, riassunto',
     what: "Il peso dell'ultimo giorno che nel diario ha una pesata, così come l'hai scritto. Lo mostro solo come riferimento: il tuo peso adesso è la linea di tendenza.",
     how: fx(L(O('Ultima pesata'), P('Peso') + ' della riga più recente del diario che lo contiene')),
     why: "Una singola pesata può stare 1–2 kg sopra o sotto il tuo peso stimato per acqua, sale, carboidrati e intestino. Per questo non la uso per nessun calcolo sul percorso.",
@@ -4904,7 +4928,7 @@ function rulesData() {
       return row('Pesate dal ' + fmtDay(a) + ' al ' + fmtDay(last.d), pts.map(function (p) { return fmtShort(p.d) + ' ' + F(p.w, 1); }).join(' · '))
         + row('Calcolo', '(' + pts.map(function (p) { return F(p.w, 1); }).join(' + ') + ') ÷ ' + pts.length + ' = ' + F(mean(pts.map(function (p) { return p.w; })), 2) + ' kg');
     } });
-  add({ id: 'mancano', g: 'peso', t: 'Ti mancano', w: 'Oggi, riquadro del peso e riassunto',
+  add({ id: 'mancano', g: 'peso', t: 'Ti mancano', w: 'Oggi, riquadro del peso; Progressi › Settimane, riassunto',
     what: "Quanti kg separano il tuo peso adesso (la linea di tendenza letta a oggi) dall'obiettivo. Se l'hai già superato, il sito scrive di quanto.",
     how: fx(L(O('Ti mancano'), P('peso adesso') + ' − ' + PF('obiettivo')), L('Obiettivo raggiunto', 'quando mancano ' + C('0,1') + ' kg o meno: è sotto il margine del peso adesso')),
     why: "Uso il peso adesso e non l'ultima pesata: come dal medico, si dà il peso più affidabile, non quello di una mattina con più o meno acqua.",
@@ -4928,7 +4952,7 @@ function rulesData() {
         + row('Piano', '(' + F(s.goalWeight, 1) + ' − ' + F(s.startWeight, 2) + ') ÷ ' + F(diffDays(s.startDate, s.endDate) / 7, 2) + ' settimane = ' + sgn(tr, 2) + ' kg a settimana')
         + row('Differenza', sgn(sl, 2) + ' − (' + sgn(tr, 2) + ') = ' + sgn(df, 2) + ' kg a settimana → ' + (Math.abs(df) <= 0.15 ? 'in linea' : ((tr < 0 && sl > tr) || (tr > 0 && sl < tr)) ? 'più lento del piano' : 'più veloce del piano'));
     } });
-  add({ id: 'percorso', g: 'peso', t: 'Barra del percorso, giorni e scadenza', w: 'Oggi, riquadro del peso e intestazione',
+  add({ id: 'percorso', g: 'peso', t: 'Barra del percorso, giorni e scadenza', w: 'Oggi, riquadro del peso; Profilo',
     what: "La barra mostra quanta strada hai fatto dal peso di partenza all'obiettivo. Il segno verticale è dove dovresti essere oggi secondo il calendario.",
     how: fx(L(O('Strada fatta'), '(' + PF('partenza') + ' − ' + P('peso adesso') + ') ÷ (' + PF('partenza') + ' − ' + PF('obiettivo') + ')'),
       L(O('Segno del calendario'), 'giorni passati ÷ giorni da ' + PF('inizio') + ' a ' + PF('scadenza')),
@@ -4941,7 +4965,7 @@ function rulesData() {
         + row('Calendario', diffDays(s.startDate, t) + ' ÷ ' + tot + ' giorni = ' + F(clamp01(diffDays(s.startDate, t) / tot) * 100, 0) + '%')
         + row('Giorni rimasti', F(diffDays(t, s.endDate), 0) + ' fino al ' + fmtDay(s.endDate));
     } });
-  add({ id: 'grafico-peso', g: 'peso', t: 'Grafico del peso', w: 'Progressi › Peso e previsione',
+  add({ id: 'grafico-peso', g: 'peso', t: 'Grafico del peso', w: 'Progressi › Peso',
     what: "Il grafico mette insieme pesate, media, tendenza, piano e previsione: ogni linea ha uno stile diverso.",
     how: fx(L('Pallini', 'le ' + P('pesate') + ' vere'), L('Linea piena', 'media di 7 giorni di ogni pesata'), L('Linea bianca corta', 'la tendenza delle ultime 2 settimane: finisce sul tuo ' + P('peso adesso')),
       L('Tratteggio', 'il piano: ' + PF('partenza') + ' + (' + PF('obiettivo') + ' − ' + PF('partenza') + ') × giorni passati ÷ giorni totali'), L('Puntini', 'la previsione fino all\'arrivo')),
@@ -4957,7 +4981,7 @@ function rulesData() {
       dd.forEach(function (d) { c[kcalStatus(state.days.get(d).kcal)]++; });
       return row('Dal ' + fmtShort(s.startDate), c.ok + ' giorni in target, ' + c.under + ' sotto, ' + c.over + ' sopra');
     } });
-  add({ id: 'fabbisogno', g: 'energia', t: 'fabbisogno stimato della settimana', w: 'Progressi › Calorie e fabbisogno',
+  add({ id: 'fabbisogno', g: 'energia', t: 'Fabbisogno stimato della settimana', w: 'Oggi, «Il tuo fabbisogno»; Progressi › Calorie',
     what: "Quante calorie consuma il tuo corpo in un giorno medio di quella settimana. Lo calcolo per ogni settimana da lunedì a domenica, unendo due stime: una dalla tua attività giorno per giorno e una da quello che dicono davvero bilancia e calorie dal " + fmtDay(s.startDate) + ". Quale numero uso: per il bilancio di un giorno il fabbisogno della sua settimana (per la settimana in corso una stima che cambia fino a domenica); il numero grande è quello dell'ultima settimana completa; le previsioni partono da lì, portato al tuo peso di adesso. «Dall'attività» e «dai dati» non li uso mai da soli: sono i due ingredienti.",
     how: fx(ST(1, 'Quanto consumi con la tua attività', 'calcolato per ogni giorno, poi faccio la media della settimana', [
         L('Metabolismo a riposo', C('10') + ' × ' + P('peso') + ' + ' + C('6,25') + ' × ' + PF('altezza') + ' − ' + C('5') + ' × ' + PF('età') + ' + ' + C('5')),
@@ -5018,7 +5042,7 @@ function rulesData() {
         + row('peso stimato all\'inizio', ln(A, de.Ts)) + row('peso stimato alla fine', ln(B, de.Te))
         + row('peso stimato perso', F(de.Ts, 2) + ' − ' + F(de.Te, 2) + ' = ' + F(-de.dT, 2) + ' kg');
     } });
-  add({ id: 'margine', g: 'energia', t: 'Il margine ± del fabbisogno', w: 'Progressi › Calorie e fabbisogno',
+  add({ id: 'margine', g: 'energia', t: 'Il margine ± del fabbisogno', w: 'Progressi › Calorie',
     what: "Quanto può sbagliare il calcolo, in più o in meno. È una deviazione standard: il valore vero sta dentro la fascia circa 2 volte su 3, e dentro il doppio della fascia 19 volte su 20.",
     how: fx(L(O('Margine'), '1 ÷ √(1 ÷ incertezza formula² + 1 ÷ incertezza dati²), arrotondato a ' + C('50') + ' kcal'), L('Incertezza formula', C('10%') + ' della stima dall\'attività'),
       L('Incertezza dati', C('7.700') + ' × errore sul ' + P('peso stimato') + ' ÷ giorni, più ' + C('100') + ' kcal per le ' + KC('calorie') + ' segnate')),
@@ -5036,7 +5060,7 @@ function rulesData() {
     how: fx(L(O('Bilancio'), KC('calorie mangiate') + ' − ' + KC('fabbisogno della sua settimana')), L('Segno', 'negativo = deficit · positivo = surplus')),
     why: "Il consumo di un singolo giorno non si può misurare, quindi uso la media della sua settimana.",
     ex: function () { var v = ld && state.days.get(ld); return v && v.kcal > 0 ? row(cap(fmtLong(ld)), KC(F(v.kcal, 0)) + ' − ' + KC(F(tdeeForDate(ld), 0)) + ' = ' + O(sgn(v.kcal - tdeeForDate(ld), 0) + ' kcal')) : ''; } });
-  add({ id: 'deficit-sett', g: 'energia', t: 'Deficit medio della settimana', w: 'Oggi, riassunto in alto',
+  add({ id: 'deficit-sett', g: 'energia', t: 'Deficit medio della settimana', w: 'Progressi › Settimane, riassunto in alto',
     what: "Quante calorie al giorno, in media, hai consumato più di quante ne hai mangiate nella settimana dell'ultimo dato.",
     how: fx(L(O('Deficit medio'), KC('fabbisogno medio della settimana') + ' − ' + KC('calorie mangiate in media')), L('Giorni', 'solo quelli con le calorie registrate')),
     why: "Un deficit positivo vuol dire che il corpo ha preso la differenza dalle riserve, soprattutto grasso.",
@@ -5046,7 +5070,7 @@ function rulesData() {
       if (!ki.length) return ''; var nd = Math.round(mean(kt)), ea = Math.round(mean(ki));
       return row('Settimana ' + wk(a) + ', ' + ki.length + ' giorni', KC(F(nd, 0)) + ' − ' + KC(F(ea, 0)) + ' = ' + O(F(nd - ea, 0) + ' kcal al giorno'));
     } });
-  add({ id: 'deficit-tot', g: 'energia', t: 'Deficit totale e confronto con la bilancia', w: 'Progressi › Calorie e fabbisogno',
+  add({ id: 'deficit-tot', g: 'energia', t: 'Deficit totale e confronto con la bilancia', w: 'Progressi › Calorie',
     what: "La somma del deficit di ogni giorno dal primo giorno del percorso all'ultimo registrato. Ogni giorno usa il fabbisogno rivisto della sua settimana.",
     how: fx(L(O('Deficit totale'), 'somma su tutti i giorni di (' + KC('fabbisogno della sua settimana') + ' − ' + KC('calorie mangiate') + ')'),
       L(O('Grasso equivalente'), 'deficit totale ÷ ' + C('7.700')),
@@ -5064,7 +5088,7 @@ function rulesData() {
 
   /* ---------- previsione ---------- */
   var f = model.fc;
-  add({ id: 'arrivo', g: 'previsione', t: 'Data di arrivo prevista', w: 'Oggi (riassunto), Progressi › Peso e previsione',
+  add({ id: 'arrivo', g: 'previsione', t: 'Data di arrivo prevista', w: 'Progressi › Peso; Progressi › Settimane, riassunto',
     what: "Il giorno in cui il tuo peso arriva all'obiettivo se continui a mangiare come nelle ultime 2 settimane. Parte dal tuo peso adesso, la linea di tendenza letta a oggi.",
     how: fx(ST(1, 'Da dove parto', '', [
         L('Kg da perdere', PF('obiettivo') + ' − ' + P('peso adesso')),
@@ -5082,7 +5106,7 @@ function rulesData() {
         + row('Ritmo di partenza', '(' + F(f.intake, 0) + ' − ' + F(f.tdNow, 0) + ') ÷ 7.700 × 7 = ' + sgn(f.rateNow * 7, 2) + ' kg a settimana');
       return h + (f.now && f.now.date ? row('Arrivo', fmtDay(f.from) + ' + ' + f.now.days + ' giorni = ' + fmtDay(f.now.date)) : '');
     } });
-  add({ id: 'prospetto', g: 'previsione', t: 'Prospetto: se continui così', w: 'Progressi › Peso e previsione',
+  add({ id: 'prospetto', g: 'previsione', t: 'Prospetto: se continui così', w: 'Progressi › Peso',
     what: "Confronta due scenari fino alla scadenza o alla data di arrivo: continuare con le calorie medie recenti oppure restare sull'obiettivo impostato. Dopo il raggiungimento del peso obiettivo la tabella non ipotizza altro calo.",
     how: fx(L('Simulazione', 'la stessa della data di arrivo, limitata a 90 giorni e interrotta al raggiungimento dell’obiettivo'), L('Come adesso', KC('calorie medie delle ultime 2 settimane') + ', sgarri compresi'),
       L('Sull\'obiettivo', KC(F((s.kcalMin + s.kcalMax) / 2, 0) + ' kcal') + ' ogni giorno')),
@@ -5097,17 +5121,17 @@ function rulesData() {
     how: fx(L(O('Ritmo dalla bilancia'), 'pendenza della retta delle ' + P('pesate pulite') + ' delle ultime 4 settimane'), L(O('Ritmo atteso'), '(' + KC('calorie medie') + ' − ' + KC('fabbisogno adesso') + ') ÷ ' + C('7.700') + ' × ' + C('7'))),
     why: "Nel breve possono essere diversi per l'acqua: dopo uno sgarro la bilancia sale anche se il grasso no. Su 3–4 settimane si avvicinano. Se restano lontani a lungo, di solito le calorie segnate non sono precise.",
     ex: function () { var TRr = trendRate(28), sl = TRr ? TRr.perWeek : null; return (sl != null ? row('Dalla bilancia', sgn(sl, 2) + ' kg a settimana') : '') + (f ? row('Atteso dalle calorie', sgn(f.rateNow * 7, 2) + ' kg a settimana') : ''); } });
-  add({ id: 'restando', g: 'previsione', t: 'Arrivo restando sull\'obiettivo calorie', w: 'Progressi › Peso e previsione',
+  add({ id: 'restando', g: 'previsione', t: 'Arrivo restando sull\'obiettivo calorie', w: 'Progressi › Peso',
     what: "La data se da domani mangiassi esattamente il tuo obiettivo ogni giorno.",
     how: fx(L(O('Arrivo'), 'stessa simulazione della data di arrivo, con ' + KC(F((s.kcalMin + s.kcalMax) / 2, 0) + ' kcal') + ' ogni giorno')),
     why: "Ti mostra quanto ti avvicini se rispetti il piano alla lettera.",
     ex: function () { return f && f.plan && f.plan.date ? row('Arrivo', fmtDay(f.plan.date) + ' (' + sgn(f.ratePlan * 7, 2) + ' kg a settimana)') : ''; } });
-  add({ id: 'costo-sgarri', g: 'previsione', t: 'Ritardo causato dagli sgarri', w: 'Progressi › Peso e previsione, avvisi',
+  add({ id: 'costo-sgarri', g: 'previsione', t: 'Ritardo causato dagli sgarri', w: 'Progressi › Peso, avvisi',
     what: "Quanti giorni di ritardo ti hanno causato gli sgarri: tutti quelli dal " + fmtDay(s.startDate) + " nella previsione, quelli degli ultimi 7 giorni negli avvisi. Sono i giorni di dieta che servono a recuperare le calorie in più.",
     how: fx(L('Calorie in più', 'somma su ogni sgarro di (' + KC('calorie') + ' − ' + PF(F((s.kcalMin + s.kcalMax) / 2, 0)) + ')'), L(O('Ritardo in giorni'), 'calorie in più ÷ (' + KC('fabbisogno adesso') + ' − ' + PF(F((s.kcalMin + s.kcalMax) / 2, 0)) + '), arrotondato al giorno, minimo 1')),
     why: "Uno sgarro non si cancella: va ripagato con giorni di deficit. Il confronto è con il piano: le calorie in più sono quelle oltre l'obiettivo, e ogni giorno sull'obiettivo ne recupera quanto il deficit pieno. Il ritardo è già dentro le date di arrivo e non va sommato: lo sgarro ha già alzato il peso adesso, da cui partono le previsioni. Il numero dice quanti giorni prima saresti arrivato senza quegli sgarri: data restando sull'obiettivo − ritardo.",
     ex: function () { if (!f) return ''; var cd0 = f.costDays != null && f.extra > 0 ? Math.max(1, Math.round(f.costDays)) : null; return (f.cheatList || []).map(function (c) { return row(fmtDay(c.d), F(c.k, 0) + ' − ' + F(f.mid, 0) + ' = ' + F(c.x, 0) + ' kcal in più'); }).join('') + row('Dal ' + fmtDay(s.startDate), f.cheats && f.costDays != null ? f.cheats + (f.cheats === 1 ? ' sgarro, ' : ' sgarri, ') + F(f.extra, 0) + ' kcal ÷ (' + F(f.tdNow, 0) + ' − ' + F(f.mid, 0) + ' = ' + F(f.defPlan, 0) + ') = ' + F(f.costDays, 2) + ' → ' + cd0 + ' giorni' : 'nessuno sgarro') + (cd0 && f.plan && f.plan.date && !f.plan.done ? row('Senza sgarri', fmtDay(f.plan.date) + ' − ' + cd0 + ' giorni = ' + fmtDay(addDays(f.plan.date, -cd0))) : ''); } });
-  add({ id: 'per-scadenza', g: 'previsione', t: 'Calorie per arrivare entro la scadenza', w: 'Progressi › Peso e previsione',
+  add({ id: 'per-scadenza', g: 'previsione', t: 'Calorie per arrivare entro la scadenza', w: 'Progressi › Peso',
     what: "Quante calorie al giorno dovresti mangiare da adesso per arrivare all'obiettivo esattamente alla scadenza.",
     how: fx(L(O('Calorie al giorno'), 'quelle che, con la stessa simulazione, portano il ' + P('peso') + ' all\'' + PF('obiettivo') + ' esattamente alla ' + PF('scadenza') + ', arrotondate a ' + C('10')), L('Limite', 'sotto ' + C('1.300') + ' kcal ti avviso che sono troppo poche')),
     why: "1.300 kcal è la soglia minima che uso: sotto, con il tuo peso e quattro allenamenti a settimana, il deficit diventa troppo aggressivo e aumenta il rischio di perdere muscolo. La cerco per tentativi (dimezzando l'intervallo 40 volte), quindi è precisa al centesimo di kcal prima dell'arrotondamento.",
@@ -5116,8 +5140,8 @@ function rulesData() {
   /* ---------- medie ---------- */
   var d7 = lastNDays(7), g = function (d, k) { var v = state.days.get(d); return v && v[k] > 0 ? v[k] : null; };
   var TMm = model && model.tm && model.tm.P ? model.tm : null;
-  add({ id: 'domani', g: 'previsione', t: 'Domani sulla bilancia', w: 'Oggi, riquadro «Domani sulla bilancia»',
-    what: "Il peso che la bilancia dovrebbe segnare il mattino dopo l'ultimo giorno con le calorie nel diario, con il margine e il motivo: calorie del giorno, acqua dei carboidrati, acqua della creatina. Tiene conto dei giorni prima, non solo dell'ultimo. Il riquadro segue il giorno scelto con le freccette (in alto in «La tua giornata» o nel riquadro stesso): per un giorno passato mostra la previsione per quella mattina, rifatta come la sera prima con le sole pesate e calorie fino ad allora, e il confronto con la bilancia vera di quella mattina.",
+  add({ id: 'domani', g: 'previsione', t: 'Domani sulla bilancia', w: 'Progressi › Peso, «Domani sulla bilancia»',
+    what: "Il peso che la bilancia dovrebbe segnare il mattino dopo l'ultimo giorno con le calorie nel diario, con il margine e il motivo: calorie del giorno, acqua dei carboidrati, acqua della creatina. Tiene conto dei giorni prima, non solo dell'ultimo. Il riquadro segue il giorno scelto con le freccette (nel riquadro stesso): per un giorno passato mostra la previsione per quella mattina, rifatta come la sera prima con le sole pesate e calorie fino ad allora, e il confronto con la bilancia vera di quella mattina.",
     how: fx(ST(1, 'Peso pulito di quel mattino', 'dalle pesate degli ultimi ' + TM_DAYS + ' giorni, non da una sola', [
         L('Pesata pulita', P('bilancia') + ' − ' + CA('acqua dei carboidrati') + ' − acqua della creatina'),
         L('Portata a quel mattino', P('pesata pulita') + ' + Σ (' + KC('calorie') + ' − ' + KC('fabbisogno della settimana') + ') dei giorni dopo ÷ ' + C('7.700')),
@@ -5148,23 +5172,23 @@ function rulesData() {
         + row('Margine', '±' + F(M.margin, 1) + ' kg: ' + M.within + ' errori su ' + M.n + ' sono dentro · errore medio ' + F(M.mae, 2) + ' kg')
         + row('Ultime prove', M.errs.slice(-7).map(function (e) { return fmtShort(e.t) + ': previsto ' + F(e.p, 1) + ', bilancia ' + F(e.w, 1); }).join(' · '));
     } });
-  add({ id: 'tile-kcal', g: 'medie', t: 'Calorie medie, 7 giorni', w: 'Oggi, riquadri',
+  add({ id: 'tile-kcal', g: 'medie', t: 'Calorie medie, 7 giorni', w: 'Progressi › Settimane, Ultimi 7 giorni',
     what: "La media delle calorie degli ultimi 7 giorni di calendario fino a oggi, con il bilancio medio.",
     how: fx(L(O('Media'), 'somma delle ' + KC('calorie') + ' dei giorni registrati tra oggi−6 e oggi ÷ quanti sono'), L(O('Bilancio'), 'media di (' + KC('calorie') + ' − ' + KC('fabbisogno della sua settimana') + ')'),
       L('Colore', '<span class="st-good">verde</span> nel target · <span class="st-warn">giallo</span> sopra · <span class="st-acc">blu</span> sotto')),
     why: "7 giorni di calendario fino a oggi: se il diario è indietro, la media usa solo i giorni presenti.",
     ex: function () { var v = d7.filter(function (d) { return g(d, 'kcal'); }); return v.length ? row(fmtShort(d7[0]) + '–' + fmtShort(d7[6]) + ', ' + v.length + ' giorni', F(mean(v.map(function (d) { return g(d, 'kcal'); })), 0) + ' kcal, bilancio ' + sgn(mean(v.map(function (d) { return g(d, 'kcal') - tdeeForDate(d); })), 0)) : row('Ultimi 7 giorni', 'nessun dato'); } });
-  add({ id: 'tile-passi', g: 'medie', t: 'Passi medi, 7 giorni', w: 'Oggi, riquadri e avvisi',
+  add({ id: 'tile-passi', g: 'medie', t: 'Passi medi, 7 giorni', w: 'Progressi › Settimane, Ultimi 7 giorni',
     what: "La media dei passi degli ultimi 7 giorni di calendario fino a oggi.",
     how: fx(L(O('Media'), 'somma dei ' + PA('passi') + ' dei giorni registrati ÷ quanti sono'), L('Colore', '<span class="st-good">verde</span> da ' + PF(F(s.stepsMin, 0)) + ' passi in su · <span class="st-warn">giallo</span> sotto')),
     why: "L'obiettivo è il minimo del tuo profilo (" + F(s.stepsMin, 0) + "–" + F(s.stepsMax, 0) + ").",
     ex: function () { var v = d7.map(function (d) { return g(d, 'steps'); }).filter(Boolean); return v.length ? row(v.length + ' giorni', F(mean(v), 0) + ' passi al giorno') : ''; } });
-  add({ id: 'tile-sonno', g: 'medie', t: 'Sonno medio, 7 giorni', w: 'Oggi, riquadri',
+  add({ id: 'tile-sonno', g: 'medie', t: 'Sonno medio, 7 giorni', w: 'Progressi › Settimane, Ultimi 7 giorni',
     what: "La media delle ore dormite nelle notti registrate degli ultimi 7 giorni.",
     how: fx(L(O('Media'), 'somma delle ' + SO('ore dormite') + ' ÷ notti registrate'), L('Quale notte', 'quella tra il 14 e il 15 va sulla riga del 15: la notte che finisce la mattina di quel giorno'), L('Colore', '<span class="st-good">verde</span> dal ' + C('95%') + ' dell\'obiettivo di ' + PF(F(s.sleepGoal || 8, 0) + ' ore') + ' in su · <span class="st-warn">giallo</span> sotto')),
     why: "Le notti senza «Sonno» nel diario non contano.",
     ex: function () { var v = d7.map(function (d) { return g(d, 'sleepH'); }).filter(Boolean); return row('Notti registrate', v.length ? v.length + ', media ' + fmtH(mean(v)) : 'nessuna'); } });
-  add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Oggi, riquadri',
+  add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Progressi › Settimane, Ultimi 7 giorni',
     what: "Le sedute in Hevy negli ultimi 7 giorni e nelle ultime 4 settimane, fino a oggi. Le barrette sono le sedute di ciascuna delle ultime 8 settimane.",
     how: fx(L(O('Sedute'), AL('sedute') + ' con data tra oggi−6 e oggi, oppure tra oggi−27 e oggi'), L('Colore', '<span class="st-good">verde</span> da 4 · <span class="st-acc">blu</span> 3 · <span class="st-warn">giallo</span> meno di 3')),
     why: "Contano tutte le sedute, cardio compreso.",
@@ -5178,13 +5202,13 @@ function rulesData() {
       L('Numeri sotto il grafico', 'media dei giorni con dati, giorni nel target, e in più: bilancio sul ' + KC('fabbisogno della settimana') + ' (calorie), grammi per kg di peso (proteine), totale (passi), giorno più alto (carboidrati e grassi), notte più corta (sonno)'),
       L('Colore della scritta', '<span class="st-good">verde</span> calorie in target, proteine, carboidrati, grassi e sonno da ' + C('95%') + ' dell\'obiettivo in su («in target, mancano…» tra 95% e 100%), passi da ' + C('100%') + ' · <span class="st-warn">giallo</span> sopra (calorie oltre ' + F(K.hi, 0) + ', carboidrati oltre il ' + C('115%') + ', grassi oltre il ' + C('125%') + ') · <span class="st-bad">rosso</span> grassi sotto il ' + C('60%') + ', sonno sotto le ' + C('6 ore'))),
     why: "Gli obiettivi sono quelli del profilo." });
-  add({ id: 'grafico-kcal', g: 'medie', t: 'Grafico delle calorie', w: 'Progressi › Calorie e fabbisogno',
+  add({ id: 'grafico-kcal', g: 'medie', t: 'Grafico delle calorie', w: 'Progressi › Calorie',
     what: "Le calorie di ogni giorno delle ultime 4 settimane. La fascia verde è l'obiettivo con la tolleranza (" + F(K.lo, 0) + "–" + F(K.hi, 0) + "). I giorni molto alti sono tagliati in cima, con il numero scritto sopra.",
     how: fx(L(O('Altezza della barra'), KC('calorie') + ' del giorno'), L('Linea verde', PF('obiettivo') + ', scritto in verde anche sull\'asse a sinistra'), L('Fascia verde', PF('obiettivo') + ' ± ' + C('50') + ' kcal'), L('Tratteggio grigio', KC('fabbisogno') + ' dell\'ultima settimana completa'), L('Interruttore acceso', 'una linea colorata per ogni settimana, all\'altezza del ' + KC('fabbisogno di quella settimana') + '; l\'ultima, se la settimana è in corso, è una stima'), L('Tocco su una barra', KC('calorie') + ', ' + KC('fabbisogno della sua settimana') + ' e bilancio di quel giorno')),
     why: "Il taglio in cima evita che un solo sgarro schiacci tutte le altre barre. Il bilancio di ogni giorno usa il fabbisogno della sua settimana, non quello di oggi." });
 
   /* ---------- riepilogo ---------- */
-  add({ id: 'riepilogo', g: 'riepilogo', t: 'Colonne del riepilogo', w: 'Progressi › Storico',
+  add({ id: 'riepilogo', g: 'riepilogo', t: 'Colonne del riepilogo', w: 'Progressi › Settimane',
     what: "Una riga per settimana o per mese, dal " + fmtDay(s.startDate) + ".",
     how: fx(L(O('Peso medio'), 'media delle ' + P('pesate') + ' del periodo'), L(O('Variazione'), 'peso medio − peso medio del periodo prima'), L(O('Calorie'), 'media delle ' + KC('calorie') + ' dei giorni registrati'),
       L(O('Bilancio'), 'media di (' + KC('calorie') + ' − ' + KC('fabbisogno rivisto della settimana') + ')'), L(O('Macro, passi, sonno'), 'medie di ' + PR('proteine') + ', ' + CA('carboidrati') + ', ' + GR('grassi') + ', ' + PA('passi') + ', ' + SO('sonno') + ' dei giorni in cui ci sono'),
@@ -5195,7 +5219,7 @@ function rulesData() {
       var w = dd.filter(function (v) { return v.weight > 0; }).map(function (v) { return v.weight; });
       return row('Settimana ' + wk(a) + ', peso medio', w.length ? '(' + w.map(function (x) { return F(x, 1); }).join(' + ') + ') ÷ ' + w.length + ' = ' + F(mean(w), 2) + ' kg' : '—');
     } });
-  add({ id: 'resoconto', g: 'riepilogo', t: 'Giudizi del resoconto della settimana', w: 'Progressi › Storico',
+  add({ id: 'resoconto', g: 'riepilogo', t: 'Giudizi del resoconto della settimana', w: 'Progressi › Settimane',
     what: "Il testo da incollare nel diario, con un giudizio accanto a ogni media.",
     how: fx(L('Macro', '«critico» sotto il ' + C('60%') + ' · «sotto» sotto il ' + C('95%') + ' · «sopra» oltre il ' + C('110%') + ' ' + PR('proteine') + ', ' + C('115%') + ' ' + CA('carboidrati') + ', ' + C('125%') + ' ' + GR('grassi')),
       L('Deficit medio', '«ottimo» da ' + C('500') + ' kcal · «buono» da ' + C('250') + ' · «minimo» sotto 250 · «in surplus» se positivo'),
@@ -5203,7 +5227,7 @@ function rulesData() {
     why: "Le tolleranze sopra il target sono più larghe dove superarlo fa meno danno: qualche grammo di grassi in più conta meno di proteine sotto." });
 
   /* ---------- avvisi ---------- */
-  add({ id: 'semaforo', g: 'avvisi', t: 'Semaforo del riassunto', w: 'Oggi, in alto',
+  add({ id: 'semaforo', g: 'avvisi', t: 'Semaforo del riassunto', w: 'Progressi › Settimane, riassunto in alto',
     what: "Il colore riassume a che punto sei rispetto alla scadenza.",
     how: fx(L('<span class="st-good">Verde</span>', 'arrivo previsto entro la scadenza'), L('<span class="st-warn">Giallo</span>', 'da 1 a 7 giorni dopo la scadenza, oppure verde con un avviso critico attivo'), L('<span class="st-bad">Rosso</span>', 'oltre 7 giorni dopo, oppure al ritmo attuale non ti avvicini')),
     why: "La data di arrivo è il numero che riassume peso, calorie e sgarri insieme.",
@@ -5265,7 +5289,7 @@ function rulesData() {
     how: fx(L('PS', 'titolo con «petto» o «spalle»'), L('S', 'titolo con «schiena»'), L('B', 'titolo con «braccia», «bicipiti» o «tricipiti»'), L('G', 'titolo con «gambe»'), L('C', 'tutti gli esercizi a tempo (minuti o secondi)'), L('Altro', 'tutto il resto')),
     why: "Il titolo è come chiami tu la seduta, quindi è la fonte più sicura.",
     ex: function () { return wl.slice(-5).reverse().map(function (w) { return row(fmtShort(w.date) + ': ' + esc(w.title), wGroup(w)); }).join(''); } });
-  add({ id: 'split', g: 'allenamenti', t: 'Settimana di allenamento', w: 'Oggi e Allenamenti, «Settimana di allenamento»',
+  add({ id: 'split', g: 'allenamenti', t: 'Settimana di allenamento', w: 'Allenamenti, «La tua split»',
     what: "La split è l'ordine dei tuoi giorni di allenamento, fatto con i titoli delle sedute in Hevy. Lo scegli con «Cambia l'ordine», anche ripetendo lo stesso tipo; se non lo scegli, uso la tua ultima settimana completa. Conto quali giorni hai fatto da lunedì a domenica.",
     how: fx(L('Tipo', 'il titolo della seduta in Hevy'), L('Colore', 'uno diverso per ogni titolo'), L('Fatta', 'ogni seduta della settimana segna il primo giorno con lo stesso titolo, seguendo l\'ordine'), L('Prossima', 'il primo giorno non fatto dopo l\'ultimo fatto')),
     why: "Così l'ordine delle sedute rispetta come ti alleni davvero.",
@@ -5458,7 +5482,7 @@ function rulesData() {
       p: ['Parto dal tuo peso pulito (grasso e muscolo): le pesate degli ultimi 10 giorni senza l\'acqua, ognuna aggiornata con tutte le calorie mangiate da allora. Così uno sgarro resta nel conto finché il deficit non lo smaltisce.',
         'Aggiungo il bilancio del giorno: calorie mangiate meno fabbisogno della settimana, diviso 7.700.',
         'Aggiungo l\'acqua. Ogni grammo di carboidrati sopra il tuo solito porta con sé circa 1,5 g di acqua e il giorno dopo ne resta la metà: i carboidrati di ieri contano per metà, quelli di due giorni fa per un quarto. Poi c\'è l\'acqua della creatina, che resta finché la prendi.',
-        'Il margine viene dal passato: per ogni mattina ho confrontato la previsione della sera prima con la bilancia vera.', 'Quando ti pesi, il riquadro «Confronto reale» mette la previsione accanto alla bilancia vera, con i colori di un semaforo: verde se era centrata (meno di 0,3 kg di differenza), giallo se era dentro il margine, rosso se era fuori. La barretta mostra la fascia del margine attorno alla previsione e il punto dove è caduta la bilancia. Dice anche quali cause sono più probabili guardando i tuoi dati del giorno prima (calorie e grammi di cibo, carboidrati, allenamento, sonno), quanto può essere grasso vero e quanto quella pesata sposta il tuo peso adesso.', 'Con le freccette, in alto in «La tua giornata» o nel riquadro stesso, puoi tornare a qualsiasi giorno: vedi cosa ci si aspettava dalla bilancia quella mattina e il confronto con la pesata vera. Per i giorni passati la previsione è rifatta come la sera prima, usando solo le pesate e le calorie fino ad allora.'],
+        'Il margine viene dal passato: per ogni mattina ho confrontato la previsione della sera prima con la bilancia vera.', 'Quando ti pesi, il riquadro «Confronto reale» mette la previsione accanto alla bilancia vera, con i colori di un semaforo: verde se era centrata (meno di 0,3 kg di differenza), giallo se era dentro il margine, rosso se era fuori. La barretta mostra la fascia del margine attorno alla previsione e il punto dove è caduta la bilancia. Dice anche quali cause sono più probabili guardando i tuoi dati del giorno prima (calorie e grammi di cibo, carboidrati, allenamento, sonno), quanto può essere grasso vero e quanto quella pesata sposta il tuo peso adesso.', 'Con le freccette del riquadro puoi tornare a qualsiasi giorno: vedi cosa ci si aspettava dalla bilancia quella mattina e il confronto con la pesata vera. Per i giorni passati la previsione è rifatta come la sera prima, usando solo le pesate e le calorie fino ad allora.'],
       e: function () { var M = model.tm; var nd0 = M && M.P ? parseD(M.t).getDate() : 0; return M && M.P ? 'Per ' + (nd0 === 1 || nd0 === 8 || nd0 === 11 ? 'l\'' : 'il ') + fmtDay(M.t) + ': ' + B(fmt(M.pr, 1) + ' kg') + ', tra ' + fmt(M.lo, 1) + ' e ' + fmt(M.hi, 1) + '. Finora l\'errore medio è ' + fmt(M.mae, 2) + ' kg.' : ''; } },
     restando: { s: 'La data in cui arriveresti se da domani mangiassi esattamente ' + KCL(mid) + ' ogni giorno.',
       e: function () { return f && f.plan && f.plan.date ? 'Restando su ' + KCL(mid) + ' arriveresti il ' + B(fmtDay(f.plan.date)) + '.' : ''; } },
@@ -5711,7 +5735,7 @@ function renderCurrentEnergy() {
   var subtitle=x.fixed?'Scelto nel profilo':w?'Media dei giorni disponibili · '+x.range:c?'Nessun dato nella settimana corrente':'In attesa dei dati';
   var meaning=x.fixed?'Il valore rimane costante finché cambi l’impostazione.':w&&!w.complete?'La settimana è ancora incompleta: il consumo medio viene aggiornato con i dati disponibili.':w?'Sono presenti sette giorni con calorie. La stima può ancora essere rivista quando cambia la calibrazione.':c?'In attesa dei dati della settimana corrente, uso il riferimento disponibile del '+x.range+'.':'Per ora uso il fabbisogno iniziale indicato nel profilo.';
   box.innerHTML='<div class="energy-status"><span class="status-pill">'+label+'</span><span>'+subtitle+'</span></div><div class="energy-now-grid">'
-    +'<div class="energy-metric primary"><small>Fabbisogno usato oggi · '+fmtDay(t)+'</small><b>'+fmt(td,0)+' kcal</b><span>Consumo stimato del giorno</span></div>'
+    +'<div class="energy-metric primary"><small>Oggi, '+fmtDay(t)+'</small><b>'+fmt(td,0)+' kcal</b><span>Consumo stimato del giorno</span></div>'
     +'<div class="energy-metric"><small>Obiettivo impostato</small><b>'+fmt(target,0)+' kcal</b><span>Il target salvato nel profilo</span></div>'
     +'<div class="energy-metric"><small>'+(rem==null?'Differenza rispetto al target':rem<0?'Oltre il target registrato':'Restano sul target')+'</small><b>'+fmt(rem==null?td-target:Math.abs(rem),0)+' kcal</b><span>'+(rem==null?'Fabbisogno stimato meno obiettivo':'Con '+fmt(v.kcal,0)+' kcal registrate oggi')+'</span></div></div>'
     +'<div class="energy-reading"><div><span class="reading-label">COSA SIGNIFICA ADESSO</span><p>'+meaning+'</p></div><ul><li><b>Nel bilancio di oggi:</b> confronto le calorie registrate con <strong>'+fmt(td,0)+' kcal</strong>.</li><li><b>Nei giorni della stessa settimana:</b> uso lo stesso valore medio aggiornato'+(x.fallback?' quando la settimana ha una propria stima':'')+'.</li><li><b>Se arrivano nuovi dati:</b> '+(x.fixed?'il valore fisso resta invariato.':'possono cambiare la stima e i bilanci già mostrati per quella settimana.')+'</li></ul></div>'
@@ -5729,10 +5753,13 @@ function renderAll() {
   if (pending) return; pending = true;
   requestAnimationFrame(function () {
     pending = false;
-    computeModel(); renderHeader(); var np = $('#nav-phase'); if (np) np.textContent = 'Percorso di ' + phaseWord() + ' · ' + fmt(S().goalWeight, 1) + ' kg'; renderDash(); renderDiary(); renderWorkouts(); renderBody(); renderRecipes(); renderSettings();
+    computeModel(); renderHeader(); var np = $('#nav-phase'); if (np) np.textContent = phaseDayText() ? cap(phaseWord()) + ' · ' + phaseDayText() : 'Percorso di ' + phaseWord() + ' · ' + fmt(S().goalWeight, 1) + '\u00a0kg'; renderDash(); renderDiary(); renderWorkouts(); renderBody(); renderRecipes(); renderSettings();
     if (state.tab === 'regole') renderRules();
     try { renderCurio(); } catch (e) {}
-    try { renderExtras(); } catch (e) {}
+    try { renderExtras(); } catch (e) { console.error(e); }
+    try { renderLayoutB(); } catch (e) { console.error(e); }
+    try { markWideTables(); } catch (e) {}
+    try { renderCoerenza(); } catch (e) { console.error(e); }
     decorateHelpControls();
     if (!document.documentElement.classList.contains('intro-on')) setTimeout(revealScan, 30);
   });
@@ -5885,7 +5912,7 @@ async function runImport(plan) {
       n++; if (i % 5 === 0) msg.textContent = 'Salvataggio… ' + n + ' di ' + plan.items.length;
     }
     msg.textContent = 'Fatto: ' + n + (plan.kind === 'Hevy' ? ' sedute importate.' : ' giorni importati.');
-    $('#imp-prev').hidden = true; $('#imp-go').hidden = true; state.importPlan = null; $('#imp-file').value = '';
+    $('#imp-prev').hidden = true; $('#imp-go').hidden = true; state.importPlan = null; $('#imp-file').value = ''; if ($('#imp-name')) $('#imp-name').textContent = '';
   } catch (e) { msg.textContent = 'Import interrotto dopo ' + n + ' elementi. Puoi ripetere: i dati già salvati non si duplicano.'; }
   $('#imp-go').disabled = false;
   renderAll();
@@ -6232,7 +6259,7 @@ function dpRender(dir) {
   pop.innerHTML = '<div class="dp-h"><button type="button" data-dpm="-1" aria-label="Mese precedente"' + (dp.ym <= minYm ? ' disabled' : '') + '>‹</button><b>' + MESI_L[m - 1] + ' ' + y + '</b><button type="button" data-dpm="1" aria-label="Mese successivo"' + (dp.ym >= maxYm ? ' disabled' : '') + '>›</button></div>'
     + (months.length > 1 ? '<div class="dp-mo">' + months.map(function (k) { return '<button type="button" data-dpy="' + k + '" class="' + (k === dp.ym ? 'on' : '') + '">' + MESI[+k.slice(5, 7) - 1] + (k.slice(0, 4) !== t.slice(0, 4) ? ' ' + k.slice(2, 4) : '') + '</button>'; }).join('') + '</div>' : '')
     + '<div class="dp-g' + (dir ? ' swap' : '') + '" style="--dd:' + (dir || 1) + '">' + cells + '</div>'
-    + '<div class="dp-f"><div class="lg"><span><i style="background:rgba(95,212,158,.5)"></i>in target</span><span><i style="background:rgba(246,178,90,.6)"></i>sopra</span><span><i style="background:var(--sleep);border-radius:50%"></i>allenamento</span></div>'
+    + '<div class="dp-f"><div class="lg"><span><i style="background:rgba(48,209,88,.5)"></i>in target</span><span><i style="background:rgba(255,214,10,.55)"></i>sopra</span><span><i style="background:var(--sleep);border-radius:50%"></i>allenamento</span></div>'
     + '<div class="bt"><button type="button" class="btn ghost sm" data-dp="' + s.startDate + '">Inizio</button><button type="button" class="btn sm" data-dp="' + t + '">Oggi</button></div></div>';
   var on = pop.querySelector('.dp-mo .on'); if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
@@ -6363,6 +6390,7 @@ function bind() {
 function subscribe() {
   var fail = function (e) { if (e && e.code === 'revoked') showError(e); };
   db.doc('settings/main').onSnapshot(function (s) { if (s.exists) state.settings = Object.assign({}, DEF, s.data()); renderAll(); }, fail);
+  db.doc('settings/avatar').onSnapshot(function (s) { var d = s.exists ? s.data() : null; state.avatar = d && d.img ? d.img : null; renderAll(); }, fail);
   db.collection('days').onSnapshot(function (q) {
     var m = new Map(); q.docs.forEach(function (d) { m.set(d.id, d.data()); }); state.days = m; renderAll();
     if (!loaded.days && !q.metadata.fromCache) { loaded.days = true; maybeSync(); }
@@ -6797,7 +6825,7 @@ function renderCurio() {
     var dd = diffDays(f.plan.date, f.now.date);
     story('due-scenari','Energia','#ffc17d','IL BIVIO','Quanto cambia la data se cambia l’introito?',Math.abs(dd)+' giorni',
       'Due simulazioni con le stesse ipotesi sul consumo, ma calorie diverse.',
-      '<p>Con la media registrata degli ultimi <b>' + f.nDays + ' giorni</b> (' + fmt(f.intake,0) + ' kcal/die, sgarri compresi), la simulazione indica il <b>' + fmtDay(f.now.date) + '</b>. Con l’obiettivo impostato di <b>' + fmt(target,0) + ' kcal/die</b> indica il <b>' + fmtDay(f.plan.date) + '</b>.</p><p>La differenza di ' + Math.abs(dd) + ' giorni dipende dallo scenario scelto. Sono date condizionali: attività, registrazioni e peso reale potranno cambiarle.</p>',
+      '<p>Con la media registrata degli ultimi <b>' + f.nDays + ' giorni</b> (' + fmt(f.intake,0) + ' kcal al giorno, sgarri compresi), la simulazione indica il <b>' + fmtDay(f.now.date) + '</b>. Con l’obiettivo impostato di <b>' + fmt(target,0) + ' kcal al giorno</b> indica il <b>' + fmtDay(f.plan.date) + '</b>.</p><p>La differenza di ' + Math.abs(dd) + ' giorni dipende dallo scenario scelto. Sono date condizionali: attività, registrazioni e peso reale potranno cambiarle.</p>',
       'Fonte: due scenari del modello di previsione; non sono date garantite.');
   }
   if (model && model.weeks && model.weeks.length) {
@@ -6806,11 +6834,11 @@ function renderCurio() {
       var wa = complete[0], wz = complete[complete.length-1], deltaNeed = wz.vr - wa.vr;
       story('consumo-nel-tempo','Energia',cEnergy,'CAMBIA NEL TEMPO','Il consumo stimato è rimasto sempre uguale?',sgn(deltaNeed,0)+' kcal',
         'Differenza fra prima e ultima settimana completa, entrambe riviste oggi.',
-        '<p>La prima settimana completa è stimata oggi a <b>' + fmt(wa.vr,0) + ' kcal/die</b>; l’ultima a <b>' + fmt(wz.vr,0) + ' kcal/die</b>. Il modello usa peso, passi, allenamenti e correzione dai dati disponibili, quindi la stima settimanale può cambiare.</p><p>Non è una misura diretta del metabolismo e non dimostra quale singolo fattore abbia causato la differenza.</p>',
+        '<p>La prima settimana completa è stimata oggi a <b>' + fmt(wa.vr,0) + ' kcal al giorno</b>; l’ultima a <b>' + fmt(wz.vr,0) + ' kcal al giorno</b>. Il modello usa peso, passi, allenamenti e correzione dai dati disponibili, quindi la stima settimanale può cambiare.</p><p>Non è una misura diretta del metabolismo e non dimostra quale singolo fattore abbia causato la differenza.</p>',
         'Fonte: stime riviste del fabbisogno delle settimane complete.');
       if (wa.v !== wa.vr) story('settimana-rivista','Energia','#ffce79','IL NUMERO CAMBIA','Perché una settimana passata mostra due fabbisogni?',fmt(wa.v,0)+' → '+fmt(wa.vr,0),
         'La stima alla chiusura e quella rivista oggi rispondono a due domande diverse.',
-        '<p>Per la settimana del <b>' + fmtDay(wa.ws) + '</b>, la ricostruzione con i dati disponibili alla chiusura dà <b>' + fmt(wa.v,0) + ' kcal/die</b>. Ricalcolando oggi con più dati, il modello dà <b>' + fmt(wa.vr,0) + ' kcal/die</b>.</p><p>Il primo valore è ricostruito con il modello attuale: non è una fotografia salvata allora. Il secondo resta una stima e può ancora cambiare.</p>',
+        '<p>Per la settimana del <b>' + fmtDay(wa.ws) + '</b>, la ricostruzione con i dati disponibili alla chiusura dà <b>' + fmt(wa.v,0) + ' kcal al giorno</b>. Ricalcolando oggi con più dati, il modello dà <b>' + fmt(wa.vr,0) + ' kcal al giorno</b>.</p><p>Il primo valore è ricostruito con il modello attuale: non è una fotografia salvata allora. Il secondo resta una stima e può ancora cambiare.</p>',
         'Fonte: stesso modello, due quantità di dati disponibili.');
     }
   }
@@ -6818,15 +6846,15 @@ function renderCurio() {
     var topK = logged.map(function (d) { return {d:d,k:state.days.get(d).kcal}; }).sort(function (a,b) {return b.k-a.k;})[0];
     story('giorno-piu-ricco','Energia','#ff8d84','IL PICCO','Qual è stata la giornata con più calorie registrate?',fmt(topK.k,0)+' kcal',
       'Il valore più alto presente nel diario, non un giudizio sulla giornata.',
-      '<p>Il <b>' + fmtDay(topK.d) + '</b> hai registrato <b>' + fmt(topK.k,0) + ' kcal</b>. Il fabbisogno stimato per quella settimana è <b>' + fmt(tdeeForDate(topK.d),0) + ' kcal/die</b>; la differenza aritmetica è <b>' + sgn(topK.k-tdeeForDate(topK.d),0) + ' kcal</b>.</p><p>Il fabbisogno e alcuni pasti fuori casa sono stimati: questa differenza non equivale a grasso guadagnato in quel giorno.</p>',
+      '<p>Il <b>' + fmtDay(topK.d) + '</b> hai registrato <b>' + fmt(topK.k,0) + ' kcal</b>. Il fabbisogno stimato per quella settimana è <b>' + fmt(tdeeForDate(topK.d),0) + ' kcal al giorno</b>; la differenza aritmetica è <b>' + sgn(topK.k-tdeeForDate(topK.d),0) + ' kcal</b>.</p><p>Il fabbisogno e alcuni pasti fuori casa sono stimati: questa differenza non equivale a grasso guadagnato in quel giorno.</p>',
       'Fonte: massimo delle calorie registrate e stima settimanale del consumo.');
     var recentFrom = addDays(end,-13), recent = logged.filter(function (d) { return d >= recentFrom; });
     if (recent.length >= 5) {
       var avg = mean(recent.map(function (d) {return state.days.get(d).kcal;}));
       var ordinary = recent.filter(function (d) {return !isCheatK(state.days.get(d).kcal);});
-      story('media-con-tutto','Energia','#ffc17d','NESSUN GIORNO SPARISCE','La media delle ultime due settimane include anche gli sgarri?',fmt(avg,0)+' kcal/die',
+      story('media-con-tutto','Energia','#ffc17d','NESSUN GIORNO SPARISCE','La media delle ultime due settimane include anche gli sgarri?',fmt(avg,0)+' kcal al giorno',
         'Sì: ogni giorno con calorie registrate entra nella media.',
-        '<p>Dal <b>' + fmtDay(recentFrom) + '</b> al <b>' + fmtDay(end) + '</b> ci sono <b>' + recent.length + ' giorni</b> con calorie. La loro media è <b>' + fmt(avg,0) + ' kcal/die</b>, includendo ' + (recent.length-ordinary.length) + ' giorni sopra la soglia usata dal sito per l’etichetta “sgarro”.</p>' + (ordinary.length ? '<p>Escludendo solo per confronto quei giorni, la media sarebbe <b>' + fmt(mean(ordinary.map(function (d) {return state.days.get(d).kcal;})),0) + ' kcal/die</b>. La previsione principale usa invece la media completa.</p>' : ''),
+        '<p>Dal <b>' + fmtDay(recentFrom) + '</b> al <b>' + fmtDay(end) + '</b> ci sono <b>' + recent.length + ' giorni</b> con calorie. La loro media è <b>' + fmt(avg,0) + ' kcal al giorno</b>, includendo ' + (recent.length-ordinary.length) + ' giorni sopra la soglia usata dal sito per l’etichetta “sgarro”.</p>' + (ordinary.length ? '<p>Escludendo solo per confronto quei giorni, la media sarebbe <b>' + fmt(mean(ordinary.map(function (d) {return state.days.get(d).kcal;})),0) + ' kcal al giorno</b>. La previsione principale usa invece la media completa.</p>' : ''),
         'Fonte: calorie presenti negli ultimi 14 giorni di calendario.');
     }
     var above = logged.filter(function (d) {return state.days.get(d).kcal > target;});
@@ -7048,8 +7076,9 @@ function renderExtras() {
   var lw = lastWeight(), w0 = s.startWeight, w1 = s.goalWeight, cur = lw ? lw.w : w0;
   var pct = w0 && w1 && w0 !== w1 ? Math.max(0, Math.min(1, (w0 - cur) / (w0 - w1))) : 0;
   var nm = (s.name || '').trim(), ph = s.phase === 'mantenimento' ? 'Mantenimento' : s.phase === 'surplus' ? 'Massa' : 'Cut';
-  card.innerHTML = '<div class="pf-head"><span class="pf-av">' + esc((nm.charAt(0) || '?').toUpperCase()) + '</span><div><b>' + esc(nm || 'Il tuo profilo') + '</b><span>' + ph + ' · da ' + fmt(w0, 1) + ' a ' + fmt(w1, 1) + ' kg' + (s.endDate ? ' · entro il ' + fmtDay(s.endDate) : '') + '</span></div></div>'
-    + '<div class="pf-bar"><span style="width:' + Math.round(pct * 100) + '%"></span></div><div class="pf-bl"><span>' + fmt(w0, 1) + ' kg</span><b>' + (lw ? fmt(cur, 1) + ' kg il ' + fmtDay(lw.d) : 'Nessuna pesata') + '</b><span>' + fmt(w1, 1) + ' kg</span></div>';
+  var pfHtml = '<div class="pf-head"><button type="button" class="pf-av" data-photo aria-label="Cambia la foto del profilo">' + avatarHTML(nm) + '<span class="pf-cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span></button><div class="pf-who"><b>' + esc(nm || 'Il tuo profilo') + '</b><span>' + ph + (phaseDayText() ? ' · ' + phaseDayText() : '') + ' · da ' + fmt(w0, 1) + ' a ' + fmt(w1, 1) + ' kg' + (s.endDate ? ' · entro il ' + fmtDay(s.endDate) : '') + '</span>' + '<span class="pf-photo-acts"><button type="button" class="linkbtn small" data-photo>' + (state.avatar ? 'Cambia foto' : 'Aggiungi una foto') + '</button>' + (state.avatar ? '<button type="button" class="linkbtn small" data-photo-del>Rimuovi</button>' : '') + '</span>' + (state.photoMsg ? '<span class="pf-photo-msg">' + esc(state.photoMsg) + '</span>' : '') + '</div></div>'
+    + '<div class="pf-bar"><span style="width:' + Math.round(pct * 100) + '%"></span></div><div class="pf-bl"><span>' + fmt(w0, 1) + ' kg</span><b>' + (lw ? fmt(cur, 1) + ' kg il ' + fmtDay(lw.d) : 'Nessuna pesata') + '</b><span>' + fmt(w1, 1) + ' kg</span></div>' + ($('#h-fresh') && $('#h-fresh').textContent.trim() ? '<div class="pf-fresh">' + $('#h-fresh').innerHTML + '</div>' : '');
+  if (card._h !== pfHtml) { card._h = pfHtml; card.innerHTML = pfHtml; }
   var set = function (id, v) { var e = $('#pfv-' + id); if (e) e.textContent = v; };
   set('fase', ph);
   set('percorso', fmt(w1, 1) + ' kg');
@@ -7057,6 +7086,200 @@ function renderExtras() {
   set('macro', fmt(s.protein, 0) + ' g prot.');
   set('tu', s.age ? s.age + ' anni' : '');
 }
+/* ---------- Oggi come l'anteprima "Cerchi e vetro" ---------- */
+function avatarHTML(name) {
+  var a = state.avatar;
+  if (a && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(a)) return '<img src="' + a + '" alt="">';
+  return esc((String(name || '').trim().charAt(0) || '?').toUpperCase());
+}
+var HT_R = [92, 77, 62, 47, 32, 17];
+function htMetrics(d) {
+  var s = S(), n0 = function (x) { return fmt(x, 0); };
+  return [
+    { k: 'kcal', n: 'Calorie', c: HEX.kcal, v: d.kcal, g: s.kcalMax, f: n0, u: '' },
+    { k: 'protein', n: 'Proteine', c: HEX.prot, v: d.protein, g: s.protein, f: n0, u: ' g' },
+    { k: 'carbs', n: 'Carboidrati', c: HEX.carb, v: d.carbs, g: s.carbs, f: n0, u: ' g' },
+    { k: 'fat', n: 'Grassi', c: HEX.fat, v: d.fat, g: s.fat, f: n0, u: ' g' },
+    { k: 'steps', n: 'Passi', c: HEX.steps, v: d.steps, g: s.stepsMin, f: n0, u: '' },
+    { k: 'sleep', n: 'Sonno', c: HEX.sleep, v: d.sleepH, g: s.sleepGoal || 8, f: fmtH, u: ' h' }
+  ];
+}
+/* stessa regola dei cerchi originali: calorie nel target del profilo, carboidrati fino a +15%, grassi fino a +25% */
+function htState(m) {
+  if (!(m.v > 0) || !(m.g > 0)) return '';
+  if (m.k === 'kcal') { var k = kcalStatus(m.v); return k === 'ok' ? 'ok' : k === 'over' ? 'over' : ''; }
+  if (m.k === 'carbs') return m.v > m.g * 1.15 ? 'over' : m.v >= m.g * 0.95 ? 'ok' : '';
+  if (m.k === 'fat') return m.v > m.g * 1.25 ? 'over' : m.v >= m.g * 0.95 ? 'ok' : '';
+  return m.v >= m.g ? 'ok' : '';
+}
+function renderTodayRings() {
+  var box = $('#hero-today'), svg = $('#ht-rings'); if (!box || !svg) return;
+  var t = todayStr(), day = ringDay(), d = state.days.get(day) || {}, isT = day === t, ago = diffDays(day, t), M = htMetrics(d);
+  if (!svg.dataset.init) {
+    svg.dataset.init = '1';
+    M.forEach(function (m, i) {
+      var r = HT_R[i], C = 2 * Math.PI * r;
+      var tk = el('circle', { class: 'ht-trk', cx: 100, cy: 100, r: r, 'stroke-width': 12.5, fill: 'none' }); tk.style.stroke = m.c; svg.appendChild(tk);
+      var p = el('circle', { class: 'ht-ring', id: 'htr-' + m.k, cx: 100, cy: 100, r: r, 'stroke-width': 12.5, fill: 'none', stroke: m.c, 'stroke-linecap': 'round', 'stroke-dasharray': C.toFixed(2), transform: 'rotate(-90 100 100)' });
+      p.style.strokeDashoffset = C.toFixed(2); svg.appendChild(p);
+    });
+  }
+  requestAnimationFrame(function () {
+    M.forEach(function (m, i) {
+      var C = 2 * Math.PI * HT_R[i], f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, c = $('#htr-' + m.k);
+      if (c) { c.style.strokeDashoffset = (C * (1 - f)).toFixed(2); c.style.opacity = f > 0 ? 1 : 0; }
+    });
+  });
+  var pd = parseD(day), dn = isT ? 'oggi' : ago === 1 ? 'ieri' : DOWL[(pd.getDay() + 6) % 7].slice(0, 3) + ' ' + pd.getDate() + ' ' + MESI[pd.getMonth()];
+  $('#ht-lbl').textContent = 'Calorie di ' + dn;
+  var pct = $('#ht-pct');
+  pct.textContent = M[0].g > 0 && M[0].v > 0 ? Math.round(M[0].v / M[0].g * 100) + '%' : '';
+  pct.classList.toggle('over', htState(M[0]) === 'over');
+  $('#ht-legend').innerHTML = M.map(function (m) {
+    var has = m.v > 0, st = htState(m), rg = m.k === 'kcal' && !kRange().fixed;
+    var lab = m.n + ' ' + (has ? m.f(m.v) : 'nessun dato') + ' su ' + (rg ? kRange().label : m.f(m.g)) + m.u + (st === 'ok' ? ', nel target' : st === 'over' ? ', sopra il target' : '') + '. Apri il giorno in Progressi';
+    return '<button type="button" class="ht-row" data-htk="' + m.k + '" aria-label="' + esc(lab) + '"><span class="n">' + m.n + '</span><b style="color:' + m.c + '">' + (has ? m.f(m.v) : '–') + (rg ? '' : '<small> / ' + m.f(m.g) + m.u + '</small>') + (st === 'ok' ? '<em aria-hidden="true">✓</em>' : st === 'over' ? '<em class="over" aria-hidden="true">▲</em>' : '') + '</b>' + (rg ? '<small class="ht-rg">obiettivo ' + kRange().label + '</small>' : '') + '</button>';
+  }).join('');
+  var hasFood = M.some(function (m) { return m.k !== 'sleep' && m.v > 0; }), hasAny = hasFood || !!(d.weight > 0);
+  $('#ht-foot').innerHTML = !isT ? '<button type="button" class="linkbtn small" data-htback>Torna a oggi</button>' : '';
+  $('#ht-add').textContent = isT ? (hasFood ? 'Aggiorna i dati di oggi' : '+ Inserisci i dati di oggi') : (hasAny ? 'Modifica i dati di ' : '+ Inserisci i dati di ') + dn;
+  state.renderedDay = t;
+  box.querySelector('[data-htgo="1"]').disabled = isT;
+  box.querySelector('[data-htgo="-1"]').disabled = day <= ringFirst();
+}
+function renderNeed() {
+  var box = $('#need-body'); if (!box) return;
+  var t = todayStr(), x = energyContext(t), L = model && model.lastM, lv = L ? (L.dataTD != null ? L.dataTD : L.vr != null ? L.vr : L.v) : null;
+  var nowSub = x.fixed ? 'Valore fisso scelto nel profilo' : x.w ? (x.w.complete ? 'Settimana ' + x.range + ', completa' : 'Stima della settimana in corso: si aggiorna fino a domenica') : x.c ? 'Dalla settimana ' + x.range + ': questa settimana non ha ancora dati' : 'Valore iniziale del profilo: si aggiorna con i tuoi dati';
+  var lastSub = L ? 'Settimana ' + fmtShort(L.ws) + '–' + fmtShort(L.sun) + ', misurata con pesate e calorie' + (x.fixed ? ' (ora usi il valore fisso)' : '') : lastMissWhy();
+  box.innerHTML = '<div class="nc-grid">'
+    + '<div class="nc-cell"><small>Ad oggi</small><b style="color:' + HEX.kcal + '">' + fmt(x.td, 0) + '<span>kcal</span></b><span class="nc-sub">' + nowSub + '</span></div>'
+    + '<div class="nc-cell"><small>Ultimo verificato</small><b style="color:' + HEX.good + '">' + (lv != null ? fmt(lv, 0) + '<span>kcal</span>' : '<span class="nc-none">—</span>') + '</b><span class="nc-sub">' + lastSub + '</span></div>'
+    + '</div><p class="nc-note">Il tuo obiettivo è ' + kRange().label + ' kcal al giorno.</p>';
+  var p0 = document.querySelector('#nc-why p');
+  if (p0) p0.innerHTML = x.fixed ? '<b>Ad oggi</b> è il valore fisso che hai scelto nel profilo: non cambia con i tuoi dati. I bilanci di oggi usano questo numero.' : '<b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia ogni volta che aggiungi calorie, passi, sedute o pesate. I bilanci di oggi usano questo numero.';
+}
+/* perché manca ancora l'ultimo fabbisogno verificato: stessi requisiti della verifica con la bilancia */
+function lastMissWhy() {
+  var ws = (model.weeks || []).filter(function (w) { return w.complete; });
+  if (!ws.length) return 'Arriva dopo una settimana con le calorie di tutti i giorni e qualche pesata';
+  var s = S(), last = ws[ws.length - 1], a = 0, b = 0, i;
+  var has = function (d) { var v = state.days.get(d); return v && v.weight > 0; };
+  for (i = 0; i < 5; i++) if (has(addDays(s.startDate, i))) a++;
+  for (i = 0; i < 7; i++) if (has(addDays(last.sun, -i))) b++;
+  if (a < 2) return 'Servono almeno 2 pesate nei primi 5 giorni della fase';
+  if (b < 4) return 'Servono almeno 4 pesate nell\'ultima settimana completa';
+  if (diffDays(s.startDate, last.sun) < 16) return 'Arriva dopo circa 3 settimane: servono almeno 12 giorni fra le prime e le ultime pesate';
+  return 'Mancano le calorie di troppi giorni dall\'inizio della fase';
+}
+function avatarKey() { var a = state.avatar || ''; return a.length + ':' + a.slice(-24) + '|' + (S().name || ''); }
+function renderLayoutB() {
+  var av = $('#h-avatar'); if (av && av.dataset.k !== avatarKey()) { av.dataset.k = avatarKey(); av.innerHTML = avatarHTML(S().name); }
+  renderTodayRings(); renderNeed();
+}
+function setPhotoMsg(m) {
+  state.photoMsg = m; renderAll();
+  clearTimeout(state.photoT); if (m) state.photoT = setTimeout(function () { state.photoMsg = ''; renderAll(); }, 8000);
+}
+function pickAvatar(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type || '')) { setPhotoMsg('Scegli una foto (JPG o PNG).'); return; }
+  var url = URL.createObjectURL(file), im = new Image();
+  im.onload = function () {
+    var N = 320, c = document.createElement('canvas'), side = Math.min(im.naturalWidth, im.naturalHeight);
+    c.width = c.height = N;
+    var g = c.getContext('2d'); g.fillStyle = '#2C2C2E'; g.fillRect(0, 0, N, N);
+    g.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, 0, 0, N, N);
+    URL.revokeObjectURL(url);
+    var data = c.toDataURL('image/jpeg', 0.85);
+    state.avatar = data;
+    saveDoc('settings/avatar', { img: data }).catch(function () { setPhotoMsg('Foto non salvata: riprova con internet.'); });
+    setPhotoMsg('');
+  };
+  im.onerror = function () { URL.revokeObjectURL(url); setPhotoMsg('Questa foto non si apre: prova con un\'altra.'); };
+  im.src = url;
+}
+(function layoutB() {
+  /* medie dei 7 giorni: in Progressi > Storico, in cima */
+  var st = document.querySelector('#tab-diario .dsec[data-dsec="storico"]'), tiles = document.getElementById('tiles');
+  if (st && tiles) {
+    var p = document.createElement('div'); p.className = 'panel week-tiles'; p.id = 'week-tiles'; p.setAttribute('data-cat', 'storico');
+    p.innerHTML = '<div class="panel-head"><div class="ph-t"><h2>Ultimi 7 giorni</h2></div><span class="hint">medie e sedute</span></div>';
+    p.appendChild(tiles);
+    var lead = st.querySelector(':scope > .area-lead'); if (lead) lead.after(p); else st.prepend(p);
+  }
+  var hero = document.getElementById('hero-today'), x0 = null, y0 = null;
+  hero.addEventListener('click', function (e) {
+    var g = e.target.closest('[data-htgo]'); if (g) { if (!g.disabled) { ringGo(+g.dataset.htgo); renderLayoutB(); } return; }
+    if (e.target.closest('[data-htback]')) { state.ringSel = todayStr(); renderRings(); tmRefresh(true); renderLayoutB(); return; }
+    if (e.target.closest('#ht-add')) { if (state.renderedDay !== todayStr()) { renderAll(); } window.openDayForm(ringDay()); return; }
+    if (e.target.closest('.ht-row')) { state.sel = ringDay(); state.calMonth = state.sel.slice(0, 7); setDview('giorno', true); }
+  });
+  hero.addEventListener('touchstart', function (e) { var q = e.touches[0]; x0 = q.clientX; y0 = q.clientY; }, { passive: true });
+  hero.addEventListener('touchend', function (e) {
+    if (x0 == null) return; var q = e.changedTouches[0], dx = q.clientX - x0, dy = q.clientY - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { ringGo(dx < 0 ? 1 : -1); renderLayoutB(); }
+  }, { passive: true });
+  document.getElementById('h-avatar').addEventListener('click', function () { show('dati'); });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-why]'); if (!b) return;
+    var w = document.getElementById(b.dataset.why), open = w.hidden; w.hidden = !open; b.setAttribute('aria-expanded', String(open));
+  });
+  /* riaprendo l'app (o tornando al computer) il giorno dopo, Oggi riparte dal giorno nuovo */
+  function dayCheck() { if (document.visibilityState === 'visible' && state.renderedDay && state.renderedDay !== todayStr()) renderAll(); }
+  document.addEventListener('visibilitychange', dayCheck);
+  window.addEventListener('focus', dayCheck);
+  window.addEventListener('pageshow', dayCheck);
+  setInterval(dayCheck, 60000);
+  /* foto profilo: un solo campo file, fuori dalla scheda che si ridisegna */
+  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'pf-photo'; inp.hidden = true; document.body.appendChild(inp);
+  inp.addEventListener('change', function () { pickAvatar(inp.files && inp.files[0]); inp.value = ''; });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-photo]')) { inp.click(); return; }
+    if (e.target.closest('[data-photo-del]')) { state.avatar = null; deleteDoc('settings/avatar').catch(function () {}); setPhotoMsg(''); }
+  });
+})();
+/* ---------- rifiniture ---------- */
+function phaseDayText() {
+  var s = S(), t = todayStr(), tot = Math.max(1, diffDays(s.startDate, s.endDate) + 1), n = diffDays(s.startDate, t) + 1;
+  return n >= 1 && n <= tot ? 'giorno ' + n + ' di ' + tot : '';
+}
+/* tabelle larghe: una sfumatura a destra dice che si possono scorrere */
+function markWideTables() {
+  $$('.tw').forEach(function (tw) { tw.classList.toggle('tw-more', tw.scrollLeft + tw.clientWidth < tw.scrollWidth - 2); });
+}
+(function rifiniture() {
+  document.addEventListener('scroll', function (e) { var tw = e.target && e.target.closest ? e.target.closest('.tw') : null; if (tw) tw.classList.toggle('tw-more', tw.scrollLeft + tw.clientWidth < tw.scrollWidth - 2); }, true);
+  window.addEventListener('resize', markWideTables);
+  /* Esc chiude la scheda dei dati del giorno e l'ordine della split, e il cursore torna al pulsante che le ha aperte */
+  var opener = null;
+  document.addEventListener('click', function (e) { var t = e.target.closest('#ht-add,[data-adddata],[data-split-edit]'); if (t) opener = t; }, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var closed = false;
+    ['dayform', 'split-edit'].forEach(function (id) { var b = document.getElementById(id); if (b && !b.hidden) { b.hidden = true; closed = true; } });
+    if (closed && opener && document.contains(opener)) { try { opener.focus({ preventScroll: true }); } catch (er) {} }
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-split-edit]')) return;
+    setTimeout(function () { var b = document.getElementById('split-edit'); if (b && !b.hidden) { var f = b.querySelector('select,button'); if (f) f.focus(); } }, 60);
+  });
+  document.addEventListener('toggle', function (e) { if (e.target.open) markWideTables(); }, true);
+})();
+/* ---------- coerenza ---------- */
+/* titolo di un giorno come in Progressi > Giorno: "Mer 14 ottobre" (l'anno solo se non è quello in corso) */
+function dayTitle(date) {
+  var p = parseD(date);
+  return cap(DOW[(p.getDay() + 6) % 7]) + ' ' + p.getDate() + ' ' + MESI_L[p.getMonth()] + (p.getFullYear() !== new Date().getFullYear() ? ' ' + p.getFullYear() : '');
+}
+function renderCoerenza() {
+  var c = model.cur, h = document.getElementById('td-h');
+  if (h) h.textContent = S().tdeeAuto === false ? 'Fabbisogno fisso' : c && c.complete && !c.fromPrev ? 'Ultimo fabbisogno verificato' : 'Fabbisogno stimato';
+}
+(function coerenza() {
+  var f = document.getElementById('imp-file'), nm = document.getElementById('imp-name');
+  if (f && nm) f.addEventListener('change', function () { nm.textContent = f.files && f.files[0] ? f.files[0].name : ''; });
+})();
 init();
 try {
   var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
@@ -7192,13 +7415,14 @@ body .rq:not(#z):not(#y){background:#2C2C2E!important;color:#AEAEB2!important;bo
 body .segbar:not(#z):not(#y),body .dviews:not(#z):not(#y){background:#1C1C1E!important;border:0!important;box-shadow:none!important;border-radius:12px!important;padding:3px!important}
 body .segbar button:not(#z):not(#y),body .dviews button:not(#z):not(#y){background:transparent!important;color:#AEAEB2!important;border:0!important;box-shadow:none!important;border-radius:9px!important;font-weight:600!important}
 body .segbar button[aria-selected="true"]:not(#z):not(#y),body .dviews button[aria-selected="true"]:not(#z):not(#y){background:#3A3A3C!important;color:#fff!important}
-body .dviews button::before:not(#z):not(#y),body .dviews button::after:not(#z):not(#y){display:none!important}
+body .dviews button:not(#z):not(#y)::before,body .dviews button:not(#z):not(#y)::after{display:none!important}
 /* campi */
 body input:not(#z):not(#y),body select:not(#z):not(#y),body textarea:not(#z):not(#y){background:#2C2C2E!important;border:1px solid transparent!important;border-radius:12px!important;color:#fff!important;box-shadow:none!important}
 body input:focus:not(#z):not(#y),body select:focus:not(#z):not(#y),body textarea:focus:not(#z):not(#y){border-color:#FA114F!important;outline:none}
 /* barra in basso in vetro, sospesa */
 @media (max-width:1023px){
-  body .tabs:not(#z):not(#y){left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;width:auto!important;border-radius:30px!important;padding:6px 4px!important;background:rgba(30,30,32,.72)!important;border:1px solid rgba(255,255,255,.09)!important;backdrop-filter:blur(24px) saturate(180%)!important;-webkit-backdrop-filter:blur(24px) saturate(180%)!important;box-shadow:0 10px 30px rgba(0,0,0,.5)!important}
+  body .nav:not(#z):not(#y){background:transparent!important;border:0!important;box-shadow:none!important;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px))!important;pointer-events:none}
+  body .tabs:not(#z):not(#y){pointer-events:auto;width:100%!important;max-width:none!important;border-radius:30px!important;padding:6px 4px!important;background:rgba(30,30,32,.72)!important;border:1px solid rgba(255,255,255,.09)!important;backdrop-filter:blur(24px) saturate(180%)!important;-webkit-backdrop-filter:blur(24px) saturate(180%)!important;box-shadow:0 10px 30px rgba(0,0,0,.5)!important}
   body:not(#z):not(#y){padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}
 }
 body .tab:not(#z):not(#y){background:transparent!important;color:#8E8E93!important;box-shadow:none!important;transform:none!important}
@@ -7239,5 +7463,356 @@ body .pf-panel h2:not(#z):not(#y){display:flex!important;align-items:center;gap:
 .pf-settings fieldset{border:0}
 @media (max-width:420px){.pf-body .settings-fields,.pf-body>.row{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.pf-chev{transition:none}}
+/* tutto il sito nello stesso stile: niente più sfumature blu notte e lavanda */
+body .summary-metric:not(#z):not(#y),body .explain-card:not(#z):not(#y),body .cu.cu-story:not(#z):not(#y),body .cu-story.cu-feature:not(#z):not(#y),body .rgroup .rule:not(#z):not(#y),body .se-row:not(#z):not(#y),body .context-help:not(#z):not(#y),body details.more>summary:not(#z):not(#y),body details.how>summary:not(#z):not(#y),body details.form-box>summary:not(#z):not(#y),body .model-note>summary:not(#z):not(#y),body .rcard details>summary:not(#z):not(#y),body .r-tech>summary:not(#z):not(#y),body .rc-tog:not(#z):not(#y),body .chart-box:not(#z):not(#y),body .tw:not(#z):not(#y),body .cu-filters button:not(#z):not(#y),body #tab-regole .chip:not(#z):not(#y),body .weigh-value:not(#z):not(#y),body .weigh-explain:not(#z):not(#y),body .weigh-compare:not(#z):not(#y),body .why-evidence:not(#z):not(#y),body details.more>.in:not(#z):not(#y),body .explain-note:not(#z):not(#y),body .cu-source:not(#z):not(#y),body .dp-pop:not(#z):not(#y),body .r-how3 li:not(#z):not(#y){background:#2C2C2E!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important}
+body .rgroup:not(#z):not(#y){background:#1C1C1E!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important}
+body .explain-card li:not(#z):not(#y){background:transparent!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important}
+body .context-help .explain-card:not(#z):not(#y),body details.more>.in .explain-card:not(#z):not(#y){background:#3A3A3C!important}
+body .context-help-top:not(#z):not(#y){background:transparent!important;border:0!important;color:#AEAEB2!important}
+body details>summary:not(#z):not(#y){color:#fff!important}
+body .cu-filters button[aria-pressed="true"]:not(#z):not(#y){background:#3A3A3C!important;color:#fff!important}
+body .cu-filters button b:not(#z):not(#y){background:#3A3A3C!important}
+body .sp:not(#z):not(#y){background:color-mix(in srgb,var(--c) 18%,#1C1C1E)!important;background-image:none!important}
+body th:not(#z):not(#y){background:#2C2C2E!important}
+body .disclosure-cue:not(#z):not(#y){background:#3A3A3C!important;color:#fff!important;border:0!important;box-shadow:none!important}
+body .metric-explain:not(#z):not(#y){background:#3A3A3C!important;color:#fff!important;border:0!important;box-shadow:none!important}
+.df-bg:not(#z):not(#y){background:rgba(0,0,0,.6)!important}
+@media (hover:hover){
+  body details>summary:hover:not(#z):not(#y){background-color:#3A3A3C!important;box-shadow:none!important}
+  body .pf-row>summary:hover:not(#z):not(#y){background-color:#2C2C2E!important}
+  body .tab:not([aria-selected="true"]):hover:not(#z):not(#y){background:#16161A!important;color:#fff!important}
+  body .dviews button:not([aria-selected="true"]):hover:not(#z):not(#y),body .segbar button:not([aria-selected="true"]):hover:not(#z):not(#y){background:#2C2C2E!important;color:#fff!important}
+  .ht-nav:not(:disabled):hover{background:#3A3A3C}
+  .h-av:hover,.pf-av:hover{filter:brightness(1.12)}
+}
+/* righe del profilo: valore e freccia attaccati al bordo destro */
+.pf-row>summary:not(#z):not(#y){padding:12px 14px!important}
+/* split: la prossima seduta ha il colore del suo tipo */
+.sp.next .k:not(#z):not(#y),.sp.next .d:not(#z):not(#y){color:var(--c)!important}
+/* grafico del peso: legenda dello stesso blu delle linee */
+#tab-diario .dsec[data-dsec="peso"] .legend:not(#z):not(#y){--accent:#0A84FF}
+body .dviews [data-dview="peso"]:not(#z):not(#y){--c:#0A84FF!important}
+/* tocchi più comodi */
+body .segbar button:not(#z):not(#y){min-height:40px}
+#split-edit .btn.icon:not(#z):not(#y){width:40px!important;height:40px!important}
+body .linkbtn.small:not(#z):not(#y){position:relative}
+body .linkbtn.small:not(#z):not(#y)::after{content:"";position:absolute;inset:-12px -4px}
+/* profilo su computer: una colonna sola come le Impostazioni di iPhone */
+body .pf-settings .settings-layout:not(#z):not(#y){display:flex!important;flex-direction:column!important;gap:18px!important;grid-template-columns:none!important}
+#set-form .row:has(#s-msg){align-items:center}
+/* secondo giro: gli ultimi pezzi del tema vecchio */
+:root:not(#z):not(#y){--meaning-weight:#0A84FF;--meaning-energy:#FA114F;--meaning-check:#FFD60A;--meaning-goal:#30D158;--meaning-history:#64D2FF}
+#fc-rows .fc-line:not(#z):not(#y){--scenario-t:#0A84FF;background:#2C2C2E!important;border:0!important;border-left:3px solid var(--scenario-t)!important}
+#fc-rows .fc-line:nth-child(2):not(#z):not(#y){--scenario-t:#64D2FF}
+#fc-rows .fc-line:nth-child(3):not(#z):not(#y){--scenario-t:#30D158}
+#fc-rows .fc-line:nth-child(4):not(#z):not(#y){--scenario-t:#FF9F0A}
+#fc-rows .fc-line:nth-child(5):not(#z):not(#y){--scenario-t:#BF5AF2}
+#fc-rows .fc-line small:not(#z):not(#y){color:#AEAEB2!important}
+body .context-chip:not(#z):not(#y){background:#2C2C2E!important;border-color:transparent!important;color:#AEAEB2!important}
+body .weigh-numbers>div:not(#z):not(#y),body .weigh-bar:not(#z):not(#y){background:#2C2C2E!important;border-color:transparent!important}
+body .weigh-why>summary:not(#z):not(#y){background:#2C2C2E!important;background-image:none!important;border-color:transparent!important;box-shadow:none!important}
+body .weigh-why>summary:not(#z):not(#y)::after{background:#3A3A3C!important;color:#fff!important;border-color:transparent!important}
+body .weigh-why-body:not(#z):not(#y){background:transparent!important;border-color:transparent!important}
+body .energy-reading:not(#z):not(#y),body .energy-distinction:not(#z):not(#y){background:#2C2C2E!important;border-color:transparent!important}
+body .cu-index:not(#z):not(#y),body .cu-stat:not(#z):not(#y),body .rgroup .rule .r-where:not(#z):not(#y){background:#3A3A3C!important;border-color:transparent!important}
+body .context-close:not(#z):not(#y),body .context-link:not(#z):not(#y){background:#3A3A3C!important;border-color:transparent!important;color:#fff!important;box-shadow:none!important}
+body .context-help-top>span:not(#z):not(#y){color:#8E8E93!important}
+body .explain-steps li:not(#z):not(#y)::before{background:#3A3A3C!important;color:#fff!important}
+body .rk.on:not(#z):not(#y){background:#2C2C2E!important}
+/* avvisi del giorno: schede staccate con margini interni */
+body #alerts .alert:not(#z):not(#y){padding:12px 14px!important;border-top:0!important;border-radius:14px!important}
+body #alerts .alert+.alert:not(#z):not(#y){margin-top:8px!important}
+/* Curiosità: il filtro scelto si vede bene */
+body .cu-filters button[aria-pressed="true"]:not(#z):not(#y){background:#fff!important;color:#000!important}
+body .cu-filters button[aria-pressed="true"] b:not(#z):not(#y){background:#000!important;color:#fff!important}
+/* split: tinta di riserva per iPhone più vecchi; editor con colonne della misura dei pulsanti */
+body .sp:not(#z):not(#y){background:#26262A!important;background:color-mix(in srgb,var(--c) 18%,#1C1C1E)!important}
+#split-edit .se-row:not(#z):not(#y){grid-template-columns:20px minmax(0,1fr) 40px 40px 40px!important;column-gap:4px!important}
+/* i 5 bottoni di Progressi entrano anche sui telefoni più stretti */
+@media (max-width:389px){body .dviews:not(#z):not(#y){gap:2px!important}body .dviews button:not(#z):not(#y){padding-left:7px!important;padding-right:7px!important}}
+/* "Spiega" sempre sulla riga del titolo */
+body .panel-head .ph-t:not(#z):not(#y){flex:1 1 auto!important;flex-wrap:nowrap!important;justify-content:space-between!important;align-items:center!important;min-width:0}
+body .panel-head .ph-t>h2:not(#z):not(#y){flex:0 1 auto!important;width:auto!important;min-width:0}
+#energy-now .panel-head:not(#z):not(#y){flex-wrap:nowrap!important;align-items:flex-start!important}
+</style>
+<style id="tema-oggi-b">
+/* ===================== Oggi come "Cerchi e vetro" ===================== */
+/* intestazione compatta */
+.top:not(#z):not(#y){flex-wrap:nowrap!important;align-items:flex-start!important;gap:12px!important;padding:6px 0 2px!important;margin:0 0 12px!important}
+.top>div:first-child:not(#z):not(#y){flex:1;min-width:0}
+.h-date{display:block;font:700 .74rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:#8E8E93;margin:0 0 4px}
+#h-greet:not(#z):not(#y),#h-page:not(#z):not(#y){font-size:2.05rem!important;line-height:1.08!important}
+#h-sub:not(#z):not(#y),#h-fresh:not(#z):not(#y),#acct-pill:not(#z):not(#y),#sync-pill:not(#z):not(#y){display:none!important}
+.top-actions:not(#z):not(#y){display:flex!important;margin:4px 0 0!important}
+.h-av{width:40px;height:40px;border-radius:50%;border:0;padding:0;overflow:hidden;background:#FA114F;color:#fff;font:800 1.05rem/1 var(--f-display);display:grid;place-items:center;cursor:pointer;flex:none}
+.h-av img,.pf-av img{width:100%;height:100%;object-fit:cover;display:block}
+.h-av:focus-visible,.pf-av:focus-visible,.ht-row:focus-visible,.ht-nav:focus-visible{outline:2px solid #FA114F;outline-offset:2px}
+.streak:not(#z):not(#y){margin-top:8px!important}
+/* spazi più stretti, meno nero vuoto */
+@media (max-width:1023px){body:not(#z):not(#y){padding-left:max(14px,env(safe-area-inset-left,0px))!important;padding-right:max(14px,env(safe-area-inset-right,0px))!important}}
+main>section.view:not(#z):not(#y),body .dsec:not(#z):not(#y){gap:12px!important}
+#tab-oggi:not(#z):not(#y){gap:12px!important}
+body .panel:not(.pf-settings):not(.tile):not(#z):not(#y){padding:18px!important}
+body .panel+.panel:not(#z):not(#y){margin-top:0}
+/* Oggi: solo cerchi, fabbisogno e peso */
+#tab-oggi>.rings-top:not(#z):not(#y),#tab-oggi>.split-today:not(#z):not(#y),#tab-oggi>.golinks:not(#z):not(#y),#tab-oggi>.cu-teaser:not(#z):not(#y){display:none!important}
+#tab-oggi>.hero-today:not(#z):not(#y){order:-9}
+#tab-oggi>.hero-row:not(#z):not(#y){order:-8;display:block!important}
+#tab-oggi>.need-card:not(#z):not(#y){order:-7}
+/* riquadro dei cerchi */
+.hero-today{display:flex;flex-direction:column;gap:14px;container-type:inline-size}
+.ht-head{display:flex;align-items:center;gap:6px}
+.ht-lbl{font:700 .74rem/1.2 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:#AEAEB2;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ht-pct{margin-left:auto;font:800 1rem/1 var(--f-body);color:#FA114F;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ht-pct.over{color:#FFD60A}
+.ht-nav{position:relative;width:32px;height:32px;border-radius:50%;border:0;background:#2C2C2E;color:#fff;display:grid;place-items:center;font:600 1.1rem/1 var(--f-body);cursor:pointer;flex:none;padding:0}
+.ht-nav::after{content:"";position:absolute;inset:-6px}
+.ht-nav:disabled{opacity:.28;cursor:default}
+.ht-body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+#ht-rings{width:min(160px,41vw);height:min(160px,41vw);display:block}
+.ht-trk{stroke-opacity:.22}
+.ht-ring{transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.ht-legend{display:flex;flex-direction:column;min-width:0}
+.ht-row{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;min-width:0;padding:3px 4px;border:0;background:none;color:#fff;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+.ht-row:hover{background:#2C2C2E}
+.ht-row .n{font-size:.72rem;line-height:1.2;color:#AEAEB2;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ht-row b{font-size:.92rem;line-height:1.2;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.ht-row b small{font-size:.82em;font-weight:500;color:#8E8E93}
+.ht-row b em{font-style:normal;margin-left:4px;color:#fff}
+.ht-row b em.over{color:#FFD60A;font-size:.8em}
+.ht-foot:empty{display:none}
+.ht-foot{margin-top:-6px}
+.hero-today .add-data:not(#z):not(#y){width:100%!important;margin:0!important}
+/* il riquadro più largo (computer, tablet): cerchi più grandi; legenda su due colonne quando c'è posto */
+@container (min-width:400px) and (max-width:495px){#ht-rings{width:190px;height:190px}.ht-body{gap:24px}.ht-row .n{font-size:.78rem}.ht-row b{font-size:1rem}}
+@container (min-width:496px) and (max-width:599px){
+  #ht-rings{width:176px;height:176px}
+  .ht-body{gap:20px}
+  .ht-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ht-row{padding:6px 4px}
+  .ht-row .n{font-size:.78rem}
+  .ht-row b{font-size:1rem}
+}
+@container (min-width:600px){
+  #ht-rings{width:200px;height:200px}
+  .ht-body{gap:28px}
+  .ht-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+  .ht-row{padding:6px 8px}
+  .ht-row .n{font-size:.8rem}
+  .ht-row b{font-size:1.05rem}
+}
+.ht-row .ht-rg{font-size:.7rem;color:#8E8E93;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+/* fabbisogno */
+.need-card .panel-head:not(#z):not(#y){margin:0!important;flex-wrap:nowrap!important}
+.need-card .ph-t:not(#z):not(#y){flex:1 1 auto!important;flex-wrap:nowrap!important;justify-content:space-between!important;align-items:center!important;min-width:0}
+.need-card .ph-t h2:not(#z):not(#y){flex:0 1 auto!important;width:auto!important;min-width:0}
+.nc-why-btn:not(#z):not(#y){flex:none}
+.nc-why-btn[aria-expanded="true"] .disclosure-arrow{transform:rotate(180deg)}
+.nc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.nc-cell{background:#2C2C2E;border-radius:16px;padding:12px 14px;min-width:0}
+.nc-cell small{display:block;font:700 .68rem/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:#AEAEB2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nc-cell b{display:block;font:800 1.65rem/1.1 var(--f-display);margin-top:6px;font-variant-numeric:tabular-nums}
+.nc-cell b span{font-size:.5em;font-weight:600;color:#8E8E93;margin-left:4px}
+.nc-sub{display:block;font-size:.74rem;line-height:1.35;color:#AEAEB2;margin-top:5px}
+.nc-note{margin:10px 2px 0;font-size:.8rem;color:#8E8E93}
+.nc-why{margin-top:12px;padding:12px 14px;border-radius:16px;background:#2C2C2E;font-size:.84rem;line-height:1.45;color:#D1D1D6}
+.nc-why[hidden]{display:none}
+.nc-why p{margin:0 0 8px}
+.nc-why b{color:#fff}
+@media (max-width:380px){.nc-cell small{font-size:.62rem;letter-spacing:.04em}.nc-cell{padding:12px}}
+/* peso: titolo vero, ben visibile; il sottotitolo va a tutta larghezza sotto */
+#tab-oggi .hero-main .hero-top:not(#z):not(#y){display:grid!important;grid-template-columns:32px minmax(0,1fr) auto;column-gap:12px;row-gap:6px;align-items:center!important}
+#tab-oggi .hero-main .hero-top:not(#z):not(#y)::before{content:"";grid-column:1;grid-row:1;width:32px;height:32px;border-radius:9px;background:#0A84FF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='4'/%3E%3Cpath d='M9 10a3 3 0 0 1 6 0'/%3E%3Cpath d='M12 10l1.5-2'/%3E%3C/svg%3E") center/19px no-repeat}
+#h-lbl:not(#z):not(#y){display:contents!important;font:700 1.3rem/1.2 var(--f-display)!important;color:#fff!important;-webkit-text-fill-color:#fff!important;letter-spacing:-.015em!important;text-transform:none!important}
+#h-lbl .hl-t{grid-column:2;grid-row:1;min-width:0}
+#tab-oggi .hero-main .hero-top .rq:not(#z):not(#y){grid-column:3;grid-row:1}
+#h-lbl .hero-sub:not(#z):not(#y){grid-column:1/-1;grid-row:2;display:block;font:500 .8rem/1.4 var(--f-body)!important;color:#8E8E93!important;-webkit-text-fill-color:#8E8E93!important;letter-spacing:0!important;margin:0}
+#h-weight:not(#z):not(#y){color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important}
+#h-stats:not(#z):not(#y){grid-template-rows:auto auto auto;row-gap:0!important}
+#h-stats .hs:not(#z):not(#y){display:grid;grid-row:span 3;grid-template-rows:subgrid;align-content:start;row-gap:3px;background:#2C2C2E!important;border:0!important;border-radius:14px!important;padding:10px!important}
+#h-stats .hs .l:not(#z):not(#y){color:#AEAEB2!important}
+#h-stats .hs .v:not(#z):not(#y){white-space:nowrap}
+#h-stats .hs .v span:not(#z):not(#y){display:block;font-size:.6em!important;margin-top:1px}
+.hero-stats:not(#z):not(#y){border-top:0!important;padding-top:0!important;margin-top:16px!important}
+/* medie dei 7 giorni in Progressi */
+#week-tiles .tiles:not(#z):not(#y){margin-top:12px}
+#week-tiles .tile:not(#z):not(#y){background:#2C2C2E!important;border-radius:16px!important;padding:14px!important}
+/* profilo: foto */
+.pf-av:not(#z):not(#y){position:relative;border:0;padding:0;cursor:pointer;overflow:visible!important;font:800 1.5rem/1 var(--f-display)!important}
+.pf-av img{border-radius:50%}
+.pf-cam{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:#2C2C2E;border:2px solid #1C1C1E;display:grid;place-items:center;color:#fff}
+.pf-cam svg{width:12px;height:12px}
+.pf-who{min-width:0;display:flex;flex-direction:column}
+.pf-photo-acts{display:flex;gap:18px;margin-top:6px}
+.pf-head .pf-photo-msg:not(#z):not(#y){font-size:.8rem;color:#FF453A;margin-top:4px}
+.pf-fresh{display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #2C2C2E;font-size:.8rem;color:#AEAEB2}
+.pf-fresh i{width:8px;height:8px;border-radius:50%;background:#30D158;flex:none;margin-top:5px}
+.pf-fresh b{color:#fff}
+/* telefono: l'intestazione resta sotto l'orologio quando l'app è installata */
+@media (max-width:1023px){.top:not(#z):not(#y){padding-top:calc(6px + env(safe-area-inset-top,0px))!important}}
+/* computer: barra laterale nera, Oggi su due colonne da 1280 in su */
+@media (min-width:1024px){
+  body .nav:not(#z):not(#y){background:#0B0B0D!important;border-right:1px solid #1C1C1E!important}
+  body .tabs:not(#z):not(#y){background:transparent!important;border:0!important;box-shadow:none!important}
+  body .tab:not(#z):not(#y){border-radius:12px!important}
+  body .tab[aria-selected="true"]:not(#z):not(#y){background:#1C1C1E!important}
+  .top:not(#z):not(#y){padding-top:26px!important;margin-bottom:18px!important}
+  #h-greet:not(#z):not(#y),#h-page:not(#z):not(#y){font-size:2.5rem!important}
+  .h-av{width:46px;height:46px}
+  body .panel:not(.pf-settings):not(.tile):not(#z):not(#y){padding:22px!important}
+  #week-tiles .tiles:not(#z):not(#y){grid-template-columns:repeat(4,minmax(0,1fr))!important}
+}
+@media (min-width:1024px) and (max-width:1199px){body #week-tiles .tiles:not(#z):not(#y){grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media (min-width:1280px){
+  #tab-oggi:not([hidden]):not(#z):not(#y){display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px!important;align-items:stretch}
+  #tab-oggi>.hero-today:not(#z):not(#y){grid-column:1;grid-row:1}
+  #tab-oggi>.hero-row:not(#z):not(#y){grid-column:2;grid-row:1;display:flex!important;flex-direction:column}
+  #tab-oggi>.hero-row>.hero-main:not(#z):not(#y){flex:1}
+  #tab-oggi>.need-card:not(#z):not(#y){grid-column:1/-1;grid-row:2}
+  .hero-today .ht-body{flex:1}
+}
+@media (max-width:359px){#ht-rings{width:118px;height:118px}.ht-body{gap:12px}}
+/* telefoni stretti (360 e meno): un po' più di spazio alla legenda */
+@media (max-width:374px){#ht-rings:not(#z):not(#y){width:min(128px,36vw);height:min(128px,36vw)}.ht-body:not(#z):not(#y){gap:12px}.ht-row:not(#z):not(#y){padding:3px 2px}.ht-lbl:not(#z):not(#y){font-size:.68rem;letter-spacing:.04em}}
+@media (max-width:359px){.ht-row b:not(#z):not(#y){font-size:.84rem}.ht-nav[data-htgo="1"]:disabled:not(#z):not(#y){display:none}}
+/* peso su telefono: titolo su una riga, "Spiega" accanto al sottotitolo */
+@media (max-width:430px){
+  #tab-oggi .hero-main .hero-top .rq:not(#z):not(#y){grid-row:2;align-self:start}
+  #h-lbl .hl-t:not(#z):not(#y){grid-column:2/-1;font-size:1.15rem}
+  #h-lbl .hero-sub:not(#z):not(#y){grid-column:1/3}
+  #h-stats .hs:not(#z):not(#y){padding:10px 8px!important}
+  #h-stats .hs .l:not(#z):not(#y){font-size:.72rem;white-space:nowrap}
+}
+#tab-oggi .hero-main #h-why:not(#z):not(#y){margin-top:14px}
+.nc-none{color:#636366}
+.h-av:has(img),.pf-av:has(img){background:#2C2C2E}
+.h-why-btn[aria-expanded="true"] .disclosure-arrow{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.ht-ring{transition:none}}
+</style>
+<style id="tema-rifiniture">
+/* ===================== rifiniture ===================== */
+/* Progressi > Giorno: una riga sola per scegliere il giorno */
+#tab-diario .daybar:not(#z):not(#y){display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important}
+#tab-diario .daybar .dp-wrap:not(#z):not(#y){flex:1 1 auto;min-width:0}
+#tab-diario .dp-l:not(#z):not(#y){display:none!important}
+#tab-diario .dp-btn:not(#z):not(#y){width:100%;min-width:0;white-space:nowrap;overflow:hidden}
+#tab-diario .daybar>.btn.icon:not(#z):not(#y){flex:none!important;width:40px!important;min-width:40px!important}
+#tab-diario #d-today:not(#z):not(#y){flex:none!important;padding-left:12px!important;padding-right:12px!important}
+#tab-diario #d-date-txt:not(#z):not(#y){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tab-diario .daybar:has(#d-today:not([hidden])) .dp-btn svg:not(#z):not(#y){display:none}
+#d-today[hidden]:not(#z):not(#y){display:none!important}
+#tab-diario .dayhead:not(#z):not(#y){display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:10px}
+#tab-diario .dayhead h2:not(#z):not(#y){flex:1 1 auto;min-width:0;margin:0!important}
+#tab-diario .dayhead .add-data:not(#z):not(#y){flex:none;width:auto!important;padding:9px 14px!important;font-size:.85rem!important;margin:0!important}
+/* figura del corpo: stesse proporzioni davanti e dietro */
+#body-front,#body-back{aspect-ratio:1/2}
+/* tabella del riepilogo: entra su computer, sfuma quando si può scorrere */
+@media (min-width:1024px){#summary table.sum th,#summary table.sum td{padding-left:4px;padding-right:4px}}
+@media (min-width:1024px) and (max-width:1439px){#summary table.sum th,#summary table.sum td{padding-left:3px;padding-right:3px;font-size:.8rem}#summary table.sum th small{white-space:normal;display:block;max-width:9ch;margin-left:auto}}
+.tw.tw-more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 32px),transparent)}
+/* barra laterale */
+@media (min-width:1024px){body .nav:not(#z):not(#y)::after{color:#8E8E93!important}#nav-phase:not(#z):not(#y){color:#AEAEB2!important}}
+</style>
+<style id="tema-coerenza">
+/* ===================== coerenza: stessi colori e stessa grafica in tutte le schede ===================== */
+/* niente pallini luminosi davanti ai titoli di Progressi */
+body .dsec[data-dsec] .panel-head h2:not(#z):not(#y)::before,body #sum-head:not(#z):not(#y)::before{display:none!important;content:none!important}
+body #sum-head:not(#z):not(#y){padding-left:0!important}
+body #tiles .tile .l i:not(#z):not(#y){box-shadow:none!important}
+/* numeri grandi: niente alone, colore della misura (calorie rosa, peso blu) */
+body .dsec[data-dsec] .big2>span:first-child:not(#z):not(#y){text-shadow:none!important;color:#fff!important;-webkit-text-fill-color:currentColor!important;background:none!important}
+body .dsec[data-dsec="calorie"] .big2>span:first-child:not(#z):not(#y){color:#FA114F!important}
+body .dsec[data-dsec="peso"] .big2>span:first-child:not(#z):not(#y){color:#0A84FF!important}
+body .summary-metric.tone-weight b:not(#z):not(#y),body .weigh-value b:not(#z):not(#y),#h-stats .hs .v.acc:not(#z):not(#y){color:#0A84FF!important;text-shadow:none!important}
+body .summary-metric.tone-energy b:not(#z):not(#y),body .energy-metric.primary b:not(#z):not(#y){color:#FA114F!important;text-shadow:none!important}
+#need-body .nc-cell:last-child b:not(#z):not(#y){color:#fff!important}
+/* riquadri dei 7 giorni: il numero ha il colore della sua misura, come il pallino e la linea */
+body #tiles .tile .v:not(#z):not(#y){color:var(--c)!important}
+/* calendario e scelta del giorno: verde = nel target, giallo = sopra, come nel grafico delle calorie */
+body .cal .cell.ok:not(#z):not(#y),body .dp-g button.ok:not(#z):not(#y){background:rgba(48,209,88,.18)!important}
+body .cal .cell.over:not(#z):not(#y),body .dp-g button.over:not(#z):not(#y){background:rgba(255,214,10,.16)!important}
+body .cal .cell.sel:not(#z):not(#y){box-shadow:none!important;border-color:#fff!important}
+/* resti del tema vecchio (blu notte, lavanda, pesca) */
+body #fc-rows .fc-line:not(#z):not(#y){background:#2C2C2E!important;border-radius:14px!important}
+body .context-chip:not(#z):not(#y){background:#2C2C2E!important;border:0!important;color:#AEAEB2!important}
+body .context-chip.context-positive:not(#z):not(#y){color:#30D158!important}
+body .weigh-numbers>div:not(#z):not(#y){background:#3A3A3C!important}
+body .weigh-why>summary:not(#z):not(#y),body .weigh-why-body:not(#z):not(#y){background:#2C2C2E!important;background-image:none!important;border:0!important}
+body .weigh-why>summary small:not(#z):not(#y),body .weigh-why>summary span small:not(#z):not(#y){color:#AEAEB2!important}
+body .status-pill:not(#z):not(#y),body .weigh-badge:not(#z):not(#y){background:#3A3A3C!important;border:0!important;color:#fff!important}
+body .weigh-compare.center .weigh-badge:not(#z):not(#y){color:#30D158!important}
+body .weigh-compare.edge .weigh-badge:not(#z):not(#y){color:#FFD60A!important}
+body .weigh-compare.out .weigh-badge:not(#z):not(#y){color:#FF9F0A!important}
+body .weigh-compare:not(#z):not(#y),body .weigh-value:not(#z):not(#y){background:#2C2C2E!important;border:0!important}
+body .weigh-bar:not(#z):not(#y){background:#3A3A3C!important}
+body .weigh-band:not(#z):not(#y){background:rgba(48,209,88,.45)!important}
+body .weigh-mid:not(#z):not(#y){background:#fff!important}
+body .weigh-dot:not(#z):not(#y){background:#0A84FF!important;border-color:#1C1C1E!important;box-shadow:none!important;animation:none!important}
+body .energy-reading:not(#z):not(#y),body .energy-distinction:not(#z):not(#y){background:#2C2C2E!important;border:0!important}
+body .energy-status:not(#z):not(#y){color:#AEAEB2!important}
+body .energy-distinction b:not(#z):not(#y),body .alert .at:not(#z):not(#y),body .reading-label:not(#z):not(#y){color:#fff!important}
+body .dsec[data-dsec] .caption:not(#z):not(#y),body .caption:not(#z):not(#y){border-left:0!important;padding-left:0!important;color:#8E8E93!important}
+body .cu-topic:not(#z):not(#y),body .area-kicker:not(#z):not(#y){color:#8E8E93!important}
+body .area-lead.cu-head:not(#z):not(#y){background:#1C1C1E!important;background-image:none!important;border:0!important;box-shadow:none!important}
+body .area-lead.cu-head:not(#z):not(#y)::before,body .area-lead.cu-head:not(#z):not(#y)::after,body .area-lead.cu-head .area-mark:not(#z):not(#y){display:none!important}
+body #summary tr:not(#z):not(#y){background:transparent!important}
+body .nav-brand b:not(#z):not(#y)::before{background:#FA114F!important;background-image:none!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:none!important}
+/* barra di avanzamento del peso: piatta, nel blu del peso */
+#j-fill:not(#z):not(#y){box-shadow:none!important;background:#0A84FF!important}
+#j-dot:not(#z):not(#y){box-shadow:0 0 0 4px rgba(10,132,255,.3)!important}
+/* Il tuo fabbisogno: stessa intestazione con icona del riquadro del peso */
+.need-card .ph-t h2:not(#z):not(#y){display:flex!important;align-items:center;gap:12px;font:700 1.3rem/1.2 var(--f-display)!important;letter-spacing:-.015em!important}
+.need-card .ph-t h2:not(#z):not(#y)::before{content:"";display:block!important;flex:none;margin:0!important;box-shadow:none!important;vertical-align:0!important;width:32px;height:32px;border-radius:9px;background:#FA114F url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 4 0-3 0-5 0-7z'/%3E%3C/svg%3E") center/19px no-repeat}
+@media (max-width:430px){.need-card .ph-t h2:not(#z):not(#y){font-size:1.15rem!important}}
+@media (max-width:374px){.need-card .ph-t h2:not(#z):not(#y){font-size:1.05rem!important;gap:10px}}
+/* Progressi > Calorie: prima il grafico delle calorie, poi i fabbisogni */
+body .dsec[data-dsec="calorie"]>.panel:has(#k-chart):not(#z):not(#y){order:-1}
+body #energy-now .energy-reading:not(#z):not(#y),body #energy-now .energy-distinction:not(#z):not(#y){display:none!important}
+body #td-chips .energy-compare:not(#z):not(#y),body #td-chips .energy-compare+details.more:not(#z):not(#y){display:none!important}
+@media (max-width:760px){
+  body #td-chips .kvl .r:not(#z):not(#y){display:block!important}
+  body #td-chips .kvl .r .v:not(#z):not(#y){text-align:left!important;margin-top:6px!important;font-size:1.05rem!important}
+}
+body #td-chips .kvl .r .v:not(#z):not(#y){color:#fff!important}
+/* titolo con "Spiega" e nota a destra: la nota va sotto, "Spiega" resta in fondo alla riga del titolo */
+@media (max-width:760px){
+  body .panel-head:has(>.hint):has(>.ph-t .rq):not(#z):not(#y){flex-wrap:wrap!important}
+  body .panel-head:has(>.hint):has(>.ph-t .rq)>.ph-t:not(#z):not(#y){flex:1 1 100%!important}
+  body .panel-head:has(>.hint):has(>.ph-t .rq)>.hint:not(#z):not(#y){margin:4px 0 0!important;text-align:left!important}
+}
+/* Progressi > Settimane: dopo le medie viene il riepilogo; il riassunto del percorso va in fondo */
+#tab-diario .dsec[data-dsec="storico"]>.sumbox:not(#z):not(#y){order:9!important}
+/* Progressi > Giorno su computer: il calendario non si allunga a vuoto */
+@media (min-width:1024px){
+  #tab-diario .dsec[data-dsec="giorno"] .grid2:not(#z):not(#y){align-items:start!important}
+  #tab-diario .dsec[data-dsec="giorno"] .grid2>.stack:not(#z):not(#y){display:contents!important}
+  #tab-diario .dsec[data-dsec="giorno"] .grid2>.stack:first-child>.panel:first-child:not(#z):not(#y){grid-column:1;grid-row:1}
+  #tab-diario .dsec[data-dsec="giorno"] .grid2>.stack:first-child>.panel[data-cat="allen"]:not(#z):not(#y){grid-column:1;grid-row:2}
+  #tab-diario .dsec[data-dsec="giorno"] .grid2>.stack:last-child>.panel:not(#z):not(#y){grid-column:2;grid-row:1/span 2}
+}
+#d-stats:not(#z):not(#y){align-items:start!important}
+/* Allenamenti > Costanza: sotto il calendario solo l'allenamento del giorno (i dati della dieta sono in Progressi > Giorno) */
+#cal-detail .daystats:not(#z):not(#y),#cal-detail .bars:not(#z):not(#y),#cal-detail .cd-sub:not(#z):not(#y),#cal-detail .daynote:not(#z):not(#y){display:none!important}
+/* split su telefono: riquadri più bassi, senza alone */
+@media (max-width:600px){
+  #split-all .sp:not(#z):not(#y){min-height:0!important;padding:10px 12px 11px!important;box-shadow:none!important;border-width:1px!important}
+  #split-all .sp .sp-index:not(#z):not(#y){display:none!important}
+  #split-all .sp .sp-top:not(#z):not(#y){justify-content:flex-start!important;margin:0 0 4px!important}
+  #split-all .sp .k:not(#z):not(#y){font-size:1.45rem!important;line-height:1.1!important;text-shadow:none!important;margin:0!important}
+  #split-all .sp .k .ok:not(#z):not(#y){text-shadow:none!important}
+  #split-all .sp .g:not(#z):not(#y){margin-top:2px!important}
+  #split-all .sp .d:not(#z):not(#y){margin-top:6px!important}
+}
+#split-all .sp .k:not(#z):not(#y),#split-all .sp .k .ok:not(#z):not(#y){text-shadow:none!important}
+/* Profilo > Allenamenti: un pulsante al posto del campo file del sistema */
+#hevy-panel .imp-pick:not(#z):not(#y){position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto}
+#hevy-panel .imp-pick:focus-within:not(#z):not(#y){outline:2px solid #fff;outline-offset:2px}
+#imp-file:not(#z):not(#y){position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer;font-size:0!important}
+#hevy-panel .imp-name:empty:not(#z):not(#y){display:none!important}
+#hevy-panel .imp-name:not(#z):not(#y){flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Profilo su computer: righe non troppo larghe */
+@media (min-width:1024px){
+  body #tab-dati .pf-settings:not(#z):not(#y),body #tab-dati .pf-gt-out:not(#z):not(#y),body #tab-dati .pf-panel:not(#z):not(#y),body #tab-dati #pf-card:not(#z):not(#y){max-width:760px;width:100%}
+}
 </style>
 </body></html>
