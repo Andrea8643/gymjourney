@@ -1978,7 +1978,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="panel-head"><div class="ph-t"><h2>Il tuo fabbisogno</h2><button type="button" class="rq nc-why-btn" id="nc-why-btn" data-why="nc-why" aria-expanded="false" aria-controls="nc-why">Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
         <div id="need-body"></div>
         <div class="nc-why" id="nc-why" hidden>
-          <p><b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia ogni volta che aggiungi calorie, passi, sedute o pesate. I bilanci di oggi usano questo numero.</p>
+          <p><b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia quando aggiungi pesate e sedute; le calorie e i passi di oggi contano da domani, a giornata chiusa. I bilanci di oggi usano questo numero.</p>
           <p><b>Ultimo verificato</b> viene dall'ultima settimana finita con le calorie di tutti i giorni: il sito confronta quanto hai mangiato con come è cambiato il peso. È il valore più affidabile.</p>
           <button type="button" class="linkbtn small" data-gorule="fabbisogno">Come si calcola, passo per passo ›</button>
         </div>
@@ -2357,6 +2357,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <form id="set-form" class="stack">
           <div class="row">
             <label class="f" style="flex:1 1 160px">Fase<select id="s-phase"><option value="cut">Cut</option><option value="mantenimento">Mantenimento</option><option value="surplus">Surplus</option></select></label>
+            <label class="f" style="flex:1 1 260px" id="s-gly-l">Il primo giorno della fase hai cambiato di molto quanto mangi?<select id="s-gly"><option value="1">Sì, ho cambiato molto</option><option value="0">No, mangiavo già così</option></select></label>
             <label class="f" style="flex:1 1 220px">Fabbisogno usato nei calcoli<select id="s-tdee-auto"><option value="1">Calcolato dai miei dati</option><option value="0">Fisso, quello di partenza</option></select></label>
             <button class="btn ghost fit" type="button" id="s-preset">Applica kcal indicative</button>
           </div>
@@ -2442,7 +2443,8 @@ function fmtLong(s) { var d = parseD(s); return DOW[(d.getDay() + 6) % 7] + ' ' 
 function rnd(n, d) {
   d = d == null ? 1 : d; n = Number(n); if (!isFinite(n)) return n;
   var a = Math.abs(n); if (a < 1e-9) return 0;
-  var r = Number(Math.round(Number(a.toPrecision(15) + 'e' + d)) + 'e-' + d);
+  var p = a.toPrecision(15).split('e'), r = Number(Math.round(Number(p[0] + 'e' + ((+p[1] || 0) + d))) + 'e-' + d);
+  if (!isFinite(r)) r = Math.round(a * Math.pow(10, d)) / Math.pow(10, d);
   return r === 0 ? 0 : n < 0 ? -r : r;
 }
 function fmt(n, d) { if (n == null || isNaN(n)) return '—'; d = d == null ? 1 : d; return rnd(n, d).toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d }); }
@@ -2507,8 +2509,12 @@ var OUTLIER_KG = 3;
 function weightsSeries() {
   var all = dayList().filter(function (d) { return state.days.get(d).weight > 0; }).map(function (d) { return { d: d, w: state.days.get(d).weight }; }), bad = [];
   var ok = all.filter(function (p) {
-    var nb = all.filter(function (q) { return q !== p && q.d <= p.d && Math.abs(diffDays(p.d, q.d)) <= 7; }).map(function (q) { return q.w; }).sort(function (a, b) { return a - b; });
-    if (nb.length < 3) return true;
+    var nb = all.filter(function (q) { return q !== p && Math.abs(diffDays(p.d, q.d)) <= 7; }).map(function (q) { return q.w; }).sort(function (a, b) { return a - b; });
+    if (nb.length < 3) {
+      /* poche pesate vicine (i primi giorni): confronto col peso di partenza, con 1 kg di tolleranza in più per l'acqua dei primi giorni */
+      var s0 = S(); if (s0.startWeight > 0 && Math.abs(diffDays(s0.startDate, p.d)) <= 14 && Math.abs(p.w - s0.startWeight) > OUTLIER_KG + 1) { bad.push({ d: p.d, w: p.w, med: s0.startWeight }); return false; }
+      return true;
+    }
     var h = nb.length >> 1, med = nb.length % 2 ? nb[h] : (nb[h - 1] + nb[h]) / 2;
     if (Math.abs(p.w - med) > OUTLIER_KG) { bad.push({ d: p.d, w: p.w, med: med }); return false; }
     return true;
@@ -2670,25 +2676,25 @@ function renderSummary() {
   state.workouts.forEach(function (w) { if (w.date >= start && w.date <= t0) g(keyFn(w.date)).work++; });
   var keys = Array.from(groups.keys()).sort();
   if (!keys.length) { $('#summary').innerHTML = '<div class="empty">Qui compariranno le settimane e i mesi del tuo percorso dal ' + fmtDay(start) + ', appena il diario contiene i primi giorni.</div>'; return; }
-  var rows = [], prevW = null, bad = isOutlier(), tv = state.days.get(t0), t = tv && tv.kcal > 0 ? t0 : addDays(t0, -1);
+  var rows = [], prevW = null, bad = isOutlier(), tv = state.days.get(t0), t = addDays(t0, -1);
   /* il giorno di oggi conta nei «giorni del periodo» solo quando ha già le calorie: di solito la riga si scrive la sera */
   keys.forEach(function (k) {
     var gr = groups.get(k), ds = gr.days;
     var w = mean(ds.filter(function (x) { return x.weight > 0 && !bad[x.d]; }).map(function (x) { return x.weight; }));
-    var kd = ds.filter(function (x) { return x.kcal > 0; });
+    var kd = ds.filter(function (x) { return x.kcal > 0 && x.d < t0; });
     var avgK = mean(kd.map(function (x) { return x.kcal; }));
     var bal = mean(kd.map(function (x) { return x.kcal - tdeeForDate(x.d); }));
-    var st = mean(ds.filter(function (x) { return x.steps > 0; }).map(function (x) { return x.steps; }));
+    var st = mean(ds.filter(function (x) { return x.steps > 0 && x.d < t0; }).map(function (x) { return x.steps; }));
     var label, sub, span;
     if (isWeek) {
       var n = Math.floor(diffDays(weekStart(start), k) / 7) + 1, sun = addDays(k, 6);
       label = 'Settimana ' + n + (sun >= t0 ? ' (in corso)' : '');
       sub = fmtShort(k < start ? start : k) + '–' + fmtShort(sun);
-      span = diffDays(k < start ? start : k, sun < t ? sun : t) + 1;
+      span = Math.max(0, diffDays(k < start ? start : k, sun < t ? sun : t) + 1);
     } else {
       var p = k.split('-'), first = k + '-01', last = k + '-' + pad(new Date(+p[0], +p[1], 0).getDate());
       label = cap(MESI_L[+p[1] - 1]) + ' ' + p[0] + (k === t0.slice(0, 7) ? ' (in corso)' : '');
-      sub = ''; span = diffDays(first < start ? start : first, last < t ? last : t) + 1;
+      sub = ''; span = Math.max(0, diffDays(first < start ? start : first, last < t ? last : t) + 1);
     }
     rows.push({
       label: label, sub: sub, w: w, dw: (w != null && prevW != null) ? w - prevW : null, k: avgK, bal: bal,
@@ -2796,7 +2802,7 @@ function fmtSet(s) {
 }
 function fmtDur(m) { if (!(m > 0)) return ''; return Math.floor(m / 60) + ' h ' + pad(m % 60); }
 function setsOf(ex) { return (ex.sets || []).filter(function (s) { return !s.w; }); }
-function e1rm(kg, reps) { return kg > 0 && reps >= 1 && reps <= 10 ? (reps === 1 ? kg : kg * (1 + reps / 30)) : null; }
+function e1rm(kg, reps) { return kg > 0 && reps >= 1 ? (reps === 1 ? kg : kg * (1 + Math.min(reps, 15) / 30)) : null; }
 function renderProgress(list) {
   var name = state.exSel, raw = [];
   list.slice().reverse().forEach(function (w) {
@@ -2862,6 +2868,8 @@ function renderSettings() {
   syncInput('#s-phase', S().phase);
   syncInput('#s-tdee-auto', S().tdeeAuto === false ? '0' : '1');
   syncInput('#s-name', S().name || '');
+  syncInput('#s-gly', S().glyStart != null ? (S().glyStart ? '1' : '0') : S().phase === 'surplus' ? '0' : '1');
+  $('#s-gly-l').hidden = $('#s-phase').value === 'mantenimento';
   syncInput('#s-sex', S().sex || 'M');
   Object.keys(SF).forEach(function (k) { syncInput(SF[k], S()[k]); });
   $('#dati-count').textContent = state.days.size + ' giorni · ' + state.workouts.size + ' sedute · ' + state.recipes.size + ' ricette';
@@ -3506,19 +3514,19 @@ function renderTiles() {
       return '<div class="panel tile" style="--c:' + T.c + '"><div class="l"><i></i>' + T.l + '</div><div class="v"><span id="tv-' + T.id + '">—</span>' + (T.u ? '<small>' + T.u + '</small>' : '') + '</div><div class="s" id="ts-' + T.id + '"></div><div id="tg-' + T.id + '"></div></div>';
     }).join('');
   }
-  var s = S(), d7 = lastNDays(7), d14 = lastNDays(14), get = function (d, k) { var v = state.days.get(d); return v && v[k] > 0 ? v[k] : null; };
-  var k7 = d7.map(function (d) { return get(d, 'kcal'); }).filter(Boolean), avgK = mean(k7);
+  var s = S(), d7 = lastNDays(7), d14 = lastNDays(14), dc7 = lastNDays(8).slice(0, 7), dc14 = lastNDays(15).slice(0, 14), get = function (d, k) { var v = state.days.get(d); return v && v[k] > 0 ? v[k] : null; };
+  var k7 = dc7.map(function (d) { return get(d, 'kcal'); }).filter(Boolean), avgK = mean(k7);
   countTo($('#tv-kcal'), avgK != null ? Math.round(avgK) : null, 0);
   var tc = function (id, c) { $('#tv-' + id).parentNode.style.color = c || ''; };
   tc('kcal', avgK == null ? '' : kcalStatus(avgK) === 'ok' ? 'var(--good)' : kcalStatus(avgK) === 'over' ? 'var(--warn)' : 'var(--accent-2)');
-  var balK = mean(d7.filter(function (d) { return get(d, 'kcal'); }).map(function (d) { return get(d, 'kcal') - tdeeForDate(d); }));
+  var balK = mean(dc7.filter(function (d) { return get(d, 'kcal'); }).map(function (d) { return get(d, 'kcal') - tdeeForDate(d); }));
   $('#ts-kcal').textContent = avgK != null ? 'Bilancio ' + sgn(balK, 0) + ' al giorno' : 'Nessun dato negli ultimi 7 giorni';
-  $('#tg-kcal').innerHTML = sparkSvg(d14.map(function (d) { return get(d, 'kcal'); }), HEX.kcal);
-  var st7 = d7.map(function (d) { return get(d, 'steps'); }).filter(Boolean), avgS = mean(st7);
+  $('#tg-kcal').innerHTML = sparkSvg(dc14.map(function (d) { return get(d, 'kcal'); }), HEX.kcal);
+  var st7 = dc7.map(function (d) { return get(d, 'steps'); }).filter(Boolean), avgS = mean(st7);
   countTo($('#tv-steps'), avgS != null ? Math.round(avgS) : null, 0);
   tc('steps', avgS == null ? '' : avgS >= s.stepsMin ? 'var(--good)' : 'var(--warn)');
   $('#ts-steps').textContent = 'Obiettivo ' + fmt(s.stepsMin, 0) + ' al giorno';
-  $('#tg-steps').innerHTML = sparkSvg(d14.map(function (d) { return get(d, 'steps'); }), HEX.steps);
+  $('#tg-steps').innerHTML = sparkSvg(dc14.map(function (d) { return get(d, 'steps'); }), HEX.steps);
   var sl = d7.map(function (d) { return get(d, 'sleepH'); }).filter(Boolean), avgSl = mean(sl);
   countTo($('#tv-sleep'), avgSl, 2, fmtH);
   tc('sleep', avgSl == null ? '' : avgSl >= (s.sleepGoal || 8) * 0.95 ? 'var(--good)' : 'var(--warn)');
@@ -3834,7 +3842,7 @@ function workoutLoad(d, W) {
 }
 /* spesa stimata di un giorno: metabolismo + vita quotidiana + digestione dai macro + passi + allenamenti + lavoro */
 function activityAt(d) {
-  var s = S(), v = state.days.get(d) || {}, W = smoothW(d), H = s.heightCm || 167;
+  var s = S(), v = d >= todayStr() ? {} : state.days.get(d) || {}, W = smoothW(d), H = s.heightCm || 167; /* oggi è in corso: calorie e passi parziali non contano */
   var bmr = 10 * W + 6.25 * H - 5 * (s.age || 20) + (s.sex === 'F' ? -161 : 5);
   var rest = bmr * 1.15;
   /* digestione: 25% delle kcal da proteine, 7% da carboidrati, 2% da grassi; le kcal non coperte dai macro scritti (macro mancanti, fibre, alcol) al 10% */
@@ -3859,7 +3867,9 @@ function waterModel(endD) {
   return { X: X, cref: cref };
 }
 function crWater(d) { var s = S(); return s.creatineStart && d >= s.creatineStart ? CR_MAX * (1 - Math.exp(-diffDays(s.creatineStart, d) / CR_TAU)) : 0; }
-function glyWater(d) { var i = diffDays(S().startDate, d); return i < 0 ? WATER0 : WATER0 * Math.exp(-i / WATER0_TAU); }
+function glyOn() { var s = S(); return s.phase !== 'mantenimento' && (s.glyStart != null ? !!s.glyStart : s.phase === 'cut'); }
+function glyFull() { var s = S(); if (!glyOn()) return 0; var a = WATER0 * Math.min(1.25, (s.startWeight > 0 ? s.startWeight : 66) / 66); return s.phase === 'surplus' ? -a : a; }
+function glyWater(d) { var g = glyFull(); if (!g) return 0; var i = diffDays(S().startDate, d); return i < 0 ? g : g * Math.exp(-i / WATER0_TAU); }
 function dataEstimate(sun, wm, act) {
   var s = S(), st = s.startDate, bad = isOutlier(), tis = function (d) { var v = state.days.get(d); return v && v.weight > 0 && !bad[d] ? v.weight - glyWater(d) - (wm.X[d] || 0) - crWater(d) : null; };
   var A = [], B = [];
@@ -3920,7 +3930,7 @@ function computeModel() {
       var prior = Math.round(avg('total')), pSD = Math.round(prior * 0.10);
       /* completa: il diario ha la riga di domenica con le calorie (o domenica è già passata). Solo una settimana completa ha la sua misura dai dati:
          così il numero grande, il bilancio dei suoi giorni e la previsione usano sempre lo stesso valore */
-      var sunV = state.days.get(sun) || {}, complete = sun <= end && days.length === 7 && days.every(function (x) { var dv = state.days.get(x); return dv && dv.kcal > 0; });
+      var sunV = state.days.get(sun) || {}, complete = sun <= end && sun < t && days.length === 7 && days.every(function (x) { var dv = state.days.get(x); return dv && dv.kcal > 0; });
       var de = complete ? dataEstimate(sun, waterModel(sun), act) : null, v = prior, sd = pSD, wD = 0, dataTD = null, dataSD = null, deUse = de, fromPrev = false;
       if (de) lastDe = de; else if (lastDe) { deUse = lastDe; fromPrev = true; }
       if (deUse) { de = deUse;
@@ -4034,18 +4044,20 @@ function simWeights(E, w0, intake, days, from) {
   for (var k = 1; k <= days; k++) { c -= (tdAtW(E, c + q(k - 1)) - intake) / KCAL_KG; out.push(c + q(k)); }
   return out;
 }
-function goalDir() { var s = S(); return s.goalWeight < s.startWeight ? -1 : s.goalWeight > s.startWeight ? 1 : (s.phase === 'bulk' ? 1 : -1); }
+function goalDir() { var s = S(); return s.goalWeight < s.startWeight ? -1 : s.goalWeight > s.startWeight ? 1 : (s.phase === 'surplus' ? 1 : -1); }
 function forecast(td) {
   var s = S(), ws = weightsSeries(), t = todayStr();
   if (ws.length < 3) return null;
   var NW = weightNow(); if (!NW) return null;
   var trend = NW.w, from = NW.at;
-  var kd = dayList().filter(function (d) { return d <= t && state.days.get(d).kcal > 0; });
+  var kd = dayList().filter(function (d) { return d < t && state.days.get(d).kcal > 0; });
   if (kd.length < 5) return null;
   var lastK = kd[kd.length - 1], w0 = addDays(lastK, -13), win = kd.filter(function (d) { return d >= w0; });
   var intake = Math.round(mean(win.map(function (d) { return state.days.get(d).kcal; }))), mid = (s.kcalMin + s.kcalMax) / 2;
   /* la direzione viene dalla fase (obiettivo rispetto al peso di partenza), non da dove sei oggi: così se superi l'obiettivo il sito lo dice */
-  var dir = goalDir(), remaining = s.goalWeight - trend, gone = (trend - s.goalWeight) * dir, done = gone >= -0.1;
+  var dir = goalDir(), remaining = s.goalWeight - trend, gone = (trend - s.goalWeight) * dir, done = gone >= -0.1, maint = s.phase === 'mantenimento';
+  /* mantenimento: sei a posto finché resti entro 1 kg dal peso obiettivo; fuori dalla fascia la direzione è verso l'obiettivo */
+  if (maint) { dir = trend > s.goalWeight ? -1 : 1; gone = (trend - s.goalWeight) * dir; done = Math.abs(trend - s.goalWeight) <= 1; }
   var E = energyAt(td), tdNow = Math.round(tdAtW(E, trend));
   function arrival(kc) {
     if (done) return { done: true, over: Math.max(0, gone) };
@@ -4066,10 +4078,15 @@ function forecast(td) {
     }
     req = dir < 0 ? lo : hi;
   }
+  /* minimo sicuro senza un medico: il più alto fra metabolismo basale e 1.200 kcal (donne) / 1.500 kcal (uomini), come le indicazioni NIH */
+  var bmrNow = 10 * trend + 6.25 * (s.heightCm || 170) - 5 * (s.age || 25) + (s.sex === 'F' ? -161 : 5);
+  var reqFloor = Math.ceil(Math.max(s.sex === 'F' ? 1200 : 1500, bmrNow) / 10) * 10, reqUnsafe = false, reqTooHigh = false, floorArr = null;
+  if (req != null && dir < 0 && req < reqFloor) { reqUnsafe = true; floorArr = arrival(reqFloor); }
+  if (req != null && dir > 0 && req > 7990) reqTooHigh = true;
   return {
     trend: trend, from: from, NW: NW, intake: intake, nDays: win.length, winFrom: win[0], winTo: lastK, rateNow: rateNow, ratePlan: ratePlan, tdNow: tdNow, E: E,
     now: arrival(intake), plan: arrival(mid), cheats: cheats.length, cheatList: cheats.map(function (d) { return { d: d, k: state.days.get(d).kcal, x: Math.max(0, state.days.get(d).kcal - mid) }; }), extra: extra, defPlan: defPlan, costDays: dir < 0 && defPlan > 50 ? Math.round(extra) / Math.round(defPlan) : null,
-    reqIntake: req, left: left, mid: mid, dir: dir, done: done, gone: gone, remaining: remaining, stale: NW.stale > 3
+    reqIntake: req, reqFloor: reqFloor, reqUnsafe: reqUnsafe, reqTooHigh: reqTooHigh, floorArr: floorArr, maint: maint, bmrNow: bmrNow, left: left, mid: mid, dir: dir, done: done, gone: gone, remaining: remaining, stale: NW.stale > 3
   };
 }
 /* giorni di ritardo di una lista di sgarri: kcal mangiate oltre l'obiettivo ÷ deficit al giorno che avresti restando sull'obiettivo */
@@ -4218,7 +4235,7 @@ function renderModel() {
   } else tc.parentNode.hidden=true;
   var f=model.fc, s=S(), big=$('#fc-v'); $('#fc-title').textContent='Quando arrivi a '+fmt(s.goalWeight,1)+' kg';
   if(!f){big.textContent='—';$('#fc-chips').innerHTML='';$('#fc-rows').textContent='Servono almeno tre pesate e cinque giorni con calorie.';return;}
-  big.textContent=f.done?'Obiettivo raggiunto nel modello':(f.now&&f.now.date?fmtDay(f.now.date):'Non raggiunto nello scenario');
+  big.textContent=f.done?(f.maint?'Sei nel tuo peso, entro 1 kg':'Obiettivo raggiunto nel modello'):(f.now&&f.now.date?fmtDay(f.now.date):'Non raggiunto nello scenario');
   var lead = f.now && f.now.date ? diffDays(f.now.date, s.endDate) : null;
   $('#fc-chips').innerHTML='<span class="chip context-chip ' + (lead == null ? 'context-neutral' : lead >= 0 ? 'context-positive' : 'context-caution') + '">' + (lead == null ? 'Data non disponibile' : lead >= 0 ? lead + ' giorni prima della scadenza' : Math.abs(lead) + ' giorni dopo la scadenza') + '</span><span class="chip context-chip context-note">Scenari, non date garantite</span>';
   var arrival = function (a) { return a && a.done ? 'Già raggiunto nel modello' : a && a.date ? fmtDay(a.date) : 'Non raggiunto nella simulazione'; };
@@ -4229,7 +4246,11 @@ function renderModel() {
     + line('Mangiando come adesso', 'media ' + fmt(f.intake,0) + ' kcal su ' + f.nDays + ' giorni registrati, ' + fmtShort(f.winFrom) + '–' + fmtShort(f.winTo) + ', giorni fuori target compresi', arrival(f.now))
     + line('Restando sull’obiettivo impostato', fmt(f.mid,0) + ' kcal al giorno da domani', arrival(f.plan))
     + (f.cheats ? line('Giorni molto sopra l’obiettivo', f.cheats + (f.cheats === 1 ? ' giorno' : ' giorni') + ' oltre ' + fmt(s.kcalMax * 1.3,0) + ' kcal, ' + fmt(f.extra,0) + ' kcal in più in tutto', f.costDays != null ? '≈' + fmt(f.costDays,1) + ' giorni di ritardo' : '—') : '')
-    + line('Per arrivare entro ' + fmtDay(s.endDate), 'calorie medie al giorno, da oggi', f.reqIntake != null ? fmt(f.reqIntake,0) + ' kcal al giorno' : '—') + '</div>';
+    + (f.reqUnsafe
+      ? line('Per arrivare entro ' + fmtDay(s.endDate), (f.reqIntake >= 5 ? 'servirebbero ' + fmt(Math.round(f.reqIntake / 10) * 10,0) + ' kcal al giorno, sotto il minimo sicuro di ' : 'non ci arriveresti nemmeno senza mangiare; il minimo sicuro è ') + fmt(f.reqFloor,0) + ' kcal (' + (f.reqFloor > (s.sex === 'F' ? 1200 : 1500) ? 'il tuo metabolismo basale' : s.sex === 'F' ? 'minimo per una donna' : 'minimo per un uomo') + ')', 'Scadenza non realistica')
+        + line('Mangiando il minimo sicuro', fmt(f.reqFloor,0) + ' kcal al giorno da domani', arrival(f.floorArr))
+      : f.reqTooHigh ? line('Per arrivare entro ' + fmtDay(s.endDate), 'servirebbero più di 8.000 kcal al giorno', 'Scadenza non realistica')
+      : line('Per arrivare entro ' + fmtDay(s.endDate), 'calorie medie al giorno, da oggi', f.reqIntake != null ? fmt(Math.round(f.reqIntake / 10) * 10,0) + ' kcal al giorno' : f.maint && f.done ? 'Resta così' : '—')) + '</div>';
   if (f.cheatList.length) rows += '<div class="fc-extra"><b>Sgarri oltre la soglia configurata</b><div>' + f.cheatList.map(function (x) { return fmtShort(x.d) + ': ' + fmt(x.k,0) + ' kcal (' + sgn(x.x,0) + ' sul target)'; }).join(' · ') + '</div></div>';
   rows += '<p class="caption">L’equivalente di giorni sopra il target non è un ritardo misurato: quei giorni sono già compresi nella media e nella data «mangiando come adesso», quindi non vanno aggiunti di nuovo. Il calcolo usa 7.700 kcal/kg e una spesa che cambia col peso; acqua, attività futura e calorie dei pasti stimati possono spostare le date. Il valore per la scadenza è un risultato matematico, non una prescrizione alimentare.</p>';
   $('#fc-rows').innerHTML=rows;
@@ -4394,8 +4415,7 @@ function bodyStats(range) {
       var p = m.ex[name].pts;
       if (p.length >= 2) {
         var a = p.length >= 4 ? (p[0].v + p[1].v) / 2 : p[0].v, b = p.length >= 4 ? (p[p.length - 1].v + p[p.length - 2].v) / 2 : p[p.length - 1].v;
-        m.ex[name].pct = a > 0 ? (b - a) / a * 100 : 0;
-        trends.push({ pct: m.ex[name].pct, w: p.length });
+        if (a > 0 && b > 0) { m.ex[name].pct = (b - a) / a * 100; trends.push({ pct: m.ex[name].pct, w: p.length }); }
       }
     });
     var tw = trends.reduce(function (a, x) { return a + x.w; }, 0);
@@ -4781,7 +4801,7 @@ function renderTotal() {
   var end = lastDataDate(), box = $('#tot-body'), rows = [], total = 0;
   if (!end || !model.weeks.length) { $('#tot-v').textContent = '—'; $('#tot-chips').innerHTML = ''; $('#tot-text').textContent = 'Servono calorie registrate.'; box.innerHTML = ''; return; }
   for (var d = S().startDate; d <= end; d = addDays(d, 1)) {
-    var v = state.days.get(d); if (!v || !(v.kcal > 0)) continue;
+    var v = state.days.get(d); if (!v || !(v.kcal > 0) || d >= todayStr()) continue;
     var td = tdeeForDate(d), delta = td - v.kcal; total += delta;
     rows.push({ d:d, kcal:v.kcal, td:td, delta:delta });
   }
@@ -5028,7 +5048,7 @@ function rulesData() {
     } });
   add({ id: 'acqua', g: 'energia', t: 'Acqua, glicogeno e creatina', w: 'Peso adesso, ritmo, fabbisogno stimato, avvisi',
     what: "Per misurare il peso «vero» (grasso e tessuti) tolgo dalla bilancia tre tipi di acqua che vanno e vengono. Lo stesso peso pulito lo usano il peso adesso, il ritmo, il fabbisogno stimato e gli avvisi.",
-    how: fx(L('Glicogeno', 'all\'inizio della dieta escono circa ' + C('1,2 kg') + ' di acqua e glicogeno, metà in circa ' + C('3 giorni')),
+    how: fx(L('Glicogeno', glyFull() > 0 ? 'all\'inizio del cut escono circa ' + C(F(glyFull(), 1) + ' kg') + ' di acqua e glicogeno (in proporzione al peso di partenza), metà in circa ' + C('3 giorni') : glyFull() < 0 ? 'all\'inizio della massa i muscoli si ricaricano di circa ' + C(F(-glyFull(), 1) + ' kg') + ' di acqua e glicogeno, metà in circa ' + C('3 giorni') : 'non tolto: ' + (s.phase === 'mantenimento' ? 'in mantenimento le scorte non cambiano' : 'all\'inizio della fase non hai cambiato di molto quanto mangi')),
       L('Creatina', 'dal ' + PF(fmtShort(s.creatineStart || s.startDate)) + ' trattiene fino a ' + C('0,8 kg') + ' di acqua, metà in circa ' + C('8 giorni')),
       L('Carboidrati', 'ogni grammo di ' + CA('carboidrati') + ' sopra la tua mediana trattiene ' + C('1,5 g') + ' di acqua; il giorno dopo ne resta la ' + C('metà')),
       L(O('peso stimato'), P('bilancia') + ' − glicogeno − creatina − carboidrati', true)),
@@ -5037,7 +5057,7 @@ function rulesData() {
       var de = cur && cur.de; if (!de) return '';
       var parts = function (w, g, x, c, tot) { var a = [rnd(w, 2), rnd(g, 2), rnd(x, 2), rnd(c, 2)], r = rnd(a[0] - a[1] - a[2] - a[3], 2), fix = rnd(r - tot, 2); if (fix) a[2] = rnd(a[2] + fix, 2); return a; };
       var A = parts(de.wStart, de.glyStart, de.Xstart, de.crStart, de.Ts), B = parts(de.wEnd, de.glyEnd, de.Xend, de.crEnd, de.Te);
-      var ln = function (a, t2) { return F(a[0], 2) + ' − ' + F(a[1], 2) + ' (glicogeno) ' + (a[2] < 0 ? '+ ' : '− ') + F(Math.abs(a[2]), 2) + ' (carboidrati) − ' + F(a[3], 2) + ' (creatina) = ' + F(t2, 2) + ' kg'; };
+      var ln = function (a, t2) { return F(a[0], 2) + (a[1] < 0 ? ' + ' : ' − ') + F(Math.abs(a[1]), 2) + ' (glicogeno) ' + (a[2] < 0 ? '+ ' : '− ') + F(Math.abs(a[2]), 2) + ' (carboidrati) − ' + F(a[3], 2) + ' (creatina) = ' + F(t2, 2) + ' kg'; };
       return '<p class="small muted">Medie delle prime pesate (dal ' + fmtShort(de.from) + ') e degli ultimi 7 giorni del periodo (fino al ' + fmtShort(addDays(de.to, 3)) + ').</p>'
         + row('peso stimato all\'inizio', ln(A, de.Ts)) + row('peso stimato alla fine', ln(B, de.Te))
         + row('peso stimato perso', F(de.Ts, 2) + ' − ' + F(de.Te, 2) + ' = ' + F(-de.dT, 2) + ' kg');
@@ -5133,8 +5153,8 @@ function rulesData() {
     ex: function () { if (!f) return ''; var cd0 = f.costDays != null && f.extra > 0 ? Math.max(1, Math.round(f.costDays)) : null; return (f.cheatList || []).map(function (c) { return row(fmtDay(c.d), F(c.k, 0) + ' − ' + F(f.mid, 0) + ' = ' + F(c.x, 0) + ' kcal in più'); }).join('') + row('Dal ' + fmtDay(s.startDate), f.cheats && f.costDays != null ? f.cheats + (f.cheats === 1 ? ' sgarro, ' : ' sgarri, ') + F(f.extra, 0) + ' kcal ÷ (' + F(f.tdNow, 0) + ' − ' + F(f.mid, 0) + ' = ' + F(f.defPlan, 0) + ') = ' + F(f.costDays, 2) + ' → ' + cd0 + ' giorni' : 'nessuno sgarro') + (cd0 && f.plan && f.plan.date && !f.plan.done ? row('Senza sgarri', fmtDay(f.plan.date) + ' − ' + cd0 + ' giorni = ' + fmtDay(addDays(f.plan.date, -cd0))) : ''); } });
   add({ id: 'per-scadenza', g: 'previsione', t: 'Calorie per arrivare entro la scadenza', w: 'Progressi › Peso',
     what: "Quante calorie al giorno dovresti mangiare da adesso per arrivare all'obiettivo esattamente alla scadenza.",
-    how: fx(L(O('Calorie al giorno'), 'quelle che, con la stessa simulazione, portano il ' + P('peso') + ' all\'' + PF('obiettivo') + ' esattamente alla ' + PF('scadenza') + ', arrotondate a ' + C('10')), L('Limite', 'sotto ' + C('1.300') + ' kcal ti avviso che sono troppo poche')),
-    why: "1.300 kcal è la soglia minima che uso: sotto, con il tuo peso e quattro allenamenti a settimana, il deficit diventa troppo aggressivo e aumenta il rischio di perdere muscolo. La cerco per tentativi (dimezzando l'intervallo 40 volte), quindi è precisa al centesimo di kcal prima dell'arrotondamento.",
+    how: fx(L(O('Calorie al giorno'), 'quelle che, con la stessa simulazione, portano il ' + P('peso') + ' all\'' + PF('obiettivo') + ' esattamente alla ' + PF('scadenza') + ', arrotondate a ' + C('10')), L('Minimo sicuro', 'il più alto fra il tuo ' + PF('metabolismo basale') + ' e ' + C(s.sex === 'F' ? '1.200' : '1.500') + ' kcal' + (f ? ': oggi ' + C(F(f.reqFloor, 0) + ' kcal') : '') + '; se servirebbe meno, la scadenza non è realistica e ti mostro quando arrivi mangiando il minimo')),
+    why: "Sotto circa 1.200 kcal per una donna e 1.500 per un uomo, e comunque sotto il metabolismo basale, una dieta senza un medico è sconsigliata (indicazioni NIH): aumenta il rischio di perdere muscolo e di non riuscire a mangiare abbastanza proteine e vitamine. Il numero lo cerco per tentativi (dimezzando l'intervallo 40 volte), poi lo arrotondo a 10 kcal.",
     ex: function () { return f && f.reqIntake != null && !f.done ? row('Da ' + F(f.trend, 2) + ' a ' + F(s.goalWeight, 1) + ' kg in ' + f.left + ' giorni', F(f.reqIntake, 2) + ' → ' + F(Math.max(0, Math.round(f.reqIntake / 10) * 10), 0) + ' kcal al giorno') : ''; } });
 
   /* ---------- medie ---------- */
@@ -5839,7 +5859,7 @@ function planHealth(rows, c) {
 }
 function planHevy(head, rows) {
   var ix = function (n) { return head.indexOf(n); };
-  var cT = ix('title'), cS = ix('start_time'), cE = ix('exercise_title'), cK = ix('weight_kg'), cR = ix('reps'), cY = ix('set_type');
+  var cT = ix('title'), cS = ix('start_time'), cE = ix('exercise_title'), cK = ix('weight_kg'), cL = ix('weight_lbs'), cR = ix('reps'), cY = ix('set_type');
   var map = new Map(), bad = 0;
   rows.forEach(function (r) {
     var dt = parseAnyDate(r[cS]); if (!dt) { bad++; return; }
@@ -5847,7 +5867,7 @@ function planHevy(head, rows) {
     if (!map.has(id)) map.set(id, { date: dt.d, title: title, exercises: [], source: 'hevy', _idx: {} });
     var w = map.get(id), name = (r[cE] || '').trim(); if (!name) return;
     if (w._idx[name] == null) { w._idx[name] = w.exercises.length; w.exercises.push({ name: name, sets: [] }); }
-    var kg = mnum(r[cK]) || 0, reps = parseInt(r[cR], 10) || 0;
+    var kg = cK >= 0 ? mnum(r[cK]) || 0 : cL >= 0 ? Math.round((mnum(r[cL]) || 0) * 0.45359237 * 100) / 100 : 0, reps = parseInt(r[cR], 10) || 0;
     var type = cY >= 0 ? String(r[cY] || '').toLowerCase() : '';
     var set = { kg: kg, reps: reps }; if (type.indexOf('warm') >= 0) set.w = 1;
     w.exercises[w._idx[name]].sets.push(set);
@@ -5855,7 +5875,7 @@ function planHevy(head, rows) {
   var items = Array.from(map.entries()).map(function (e) { var v = e[1]; delete v._idx; return { path: 'workouts/' + e[0], data: v }; });
   if (!items.length) return { error: 'Non riesco a leggere le date delle sedute (colonna start_time).' };
   var dates = items.map(function (i) { return i.data.date; }).sort();
-  return { kind: 'Hevy', items: items, text: 'Riconosciuto: export di Hevy.\n' + items.length + ' sedute dal ' + fmtShort(dates[0]) + ' al ' + fmtShort(dates[dates.length - 1]) + '.' + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') + '\nUltima seduta: ' + items[items.length - 1].data.title + '.' };
+  return { kind: 'Hevy', items: items, text: 'Riconosciuto: export di Hevy.\n' + items.length + ' sedute dal ' + fmtShort(dates[0]) + ' al ' + fmtShort(dates[dates.length - 1]) + '.' + (bad ? '\n' + bad + ' righe ignorate (data non leggibile).' : '') + (cK < 0 && cL >= 0 ? '\nI carichi sono in libbre: li converto in kg.' : cK < 0 ? '\nAttenzione: il file non ha la colonna dei carichi, i pesi resteranno a 0.' : '') + '\nUltima seduta: ' + items[items.length - 1].data.title + '.' };
 }
 function planYazio(head, rows) {
   var cD = findCol(head, ['date', 'data', 'giorno', 'datum', 'day']);
@@ -6351,6 +6371,7 @@ function bind() {
     e.target.reset();
   });
 
+  $('#s-phase').addEventListener('change', function () { $('#s-gly-l').hidden = this.value === 'mantenimento'; if (S().glyStart == null) $('#s-gly').value = this.value === 'surplus' ? '0' : '1'; });
   $('#s-preset').addEventListener('click', function () {
     var ph = $('#s-phase').value, t = num($('#s-tdee').value) || TD();
     if (ph === 'mantenimento') { $('#s-kmin').value = t - 50; $('#s-kmax').value = t + 50; }
@@ -6359,7 +6380,7 @@ function bind() {
   });
   $('#set-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var next = Object.assign({}, S(), { phase: $('#s-phase').value, tdeeAuto: $('#s-tdee-auto').value === '1', name: $('#s-name').value.trim(), sex: $('#s-sex').value });
+    var next = Object.assign({}, S(), { phase: $('#s-phase').value, tdeeAuto: $('#s-tdee-auto').value === '1', name: $('#s-name').value.trim(), sex: $('#s-sex').value, glyStart: $('#s-gly').value === '1' });
     Object.keys(SF).forEach(function (k) { var el_ = $(SF[k]); if (el_.type === 'date') { if (el_.value) next[k] = el_.value; } else { var v = num(el_.value.replace(',', '.')); if (v != null) next[k] = v; } });
     state.settings = next; saveDoc('settings/main', next); renderAll();
     $('#s-msg').textContent = 'Obiettivi salvati.';
@@ -6690,9 +6711,9 @@ function curiosita() {
           + bar([['Previsto dal piano', expLost, KG(expLost), HEX.accent], ['Perso davvero', lost, KG(lost), HEX.good]])
           + '<p><b>1. Consumi di più.</b> Il piano si basava su ' + KC(s.tdee) + ' al giorno, il valore di partenza del profilo. I tuoi dati dicono che dal ' + fmtDay(s.startDate) + ' hai consumato in media ' + B(KC(avgNeed)) + (cur ? ' (adesso ' + KC(cur.v) + ')' : '') + '. Mangiando in media ' + KC(avgEat) + ', il deficit vero è stato di ' + B(KC(realDef) + ' al giorno') + ' invece di ' + KC(Math.max(0, planDef)) + ': ' + (planDef > 0 ? 'circa ' + F(realDef / planDef, 1) + ' volte tanto' : 'molto di più') + '.'
           + (job ? ' Il motivo principale è il lavoro, iniziato il ' + fmtDay(s.jobStart) + ', che vale circa ' + KC(job) + ' al giorno' : '') + (w1 && wl2 && w1.steps != null && wl2.steps != null && wl2.steps > w1.steps * 1.3 ? (job ? ', insieme ai passi' : ' Il motivo principale sono i passi') + ': da ' + F(w1.steps, 0) + ' al giorno nella prima settimana a ' + F(wl2.steps, 0) + ' nella settimana ' + wl2.n + '.' : '.') + '</p>'
-          + '<p><b>2. I primi giorni regalano acqua.</b> All\'inizio di una dieta escono circa ' + KG(WATER0, 1) + ' di acqua e glicogeno dai muscoli: la bilancia scende subito, anche se non è grasso.</p>'
+          + (glyFull() > 0 ? '<p><b>2. I primi giorni regalano acqua.</b> All\'inizio di una dieta escono circa ' + KG(glyFull(), 1) + ' di acqua e glicogeno dai muscoli: la bilancia scende subito, anche se non è grasso.</p>' : '')
           + '<p><b>3. La creatina rema contro, ma poco.</b> Trattiene circa ' + KG(crWater(t)) + ' di acqua, che pesano sulla bilancia e ti fanno sembrare un po\' più pesante.</p>'
-          + '<p class="cu-sum">Il conto: ' + F(tissue, 2) + ' kg di grasso e muscolo dal deficit + ' + F(WATER0, 2) + ' kg di acqua dei primi giorni − ' + F(crWater(t), 2) + ' kg di acqua della creatina = ' + B(KG(tissue + WATER0 - crWater(t))) + '. Sulla bilancia ne hai persi ' + KG(lost) + ': la differenza (' + KG(Math.abs(lost - (tissue + WATER0 - crWater(t)))) + ') sta nell\'incertezza di queste stime, cioè acqua, pesate e calorie segnate.</p>' });
+          + '<p class="cu-sum">Il conto: ' + F(tissue, 2) + ' kg di grasso e muscolo dal deficit + ' + F(glyFull(), 2) + ' kg di acqua dei primi giorni − ' + F(crWater(t), 2) + ' kg di acqua della creatina = ' + B(KG(tissue + glyFull() - crWater(t))) + '. Sulla bilancia ne hai persi ' + KG(lost) + ': la differenza (' + KG(Math.abs(lost - (tissue + glyFull() - crWater(t)))) + ') sta nell\'incertezza di queste stime, cioè acqua, pesate e calorie segnate.</p>' });
     }
   } catch (e) {}
 
@@ -7157,7 +7178,7 @@ function renderNeed() {
     + '<div class="nc-cell"><small>Ultimo verificato</small><b style="color:' + HEX.good + '">' + (lv != null ? fmt(lv, 0) + '<span>kcal</span>' : '<span class="nc-none">—</span>') + '</b><span class="nc-sub">' + lastSub + '</span></div>'
     + '</div><p class="nc-note">Il tuo obiettivo è ' + kRange().label + ' kcal al giorno.</p>';
   var p0 = document.querySelector('#nc-why p');
-  if (p0) p0.innerHTML = x.fixed ? '<b>Ad oggi</b> è il valore fisso che hai scelto nel profilo: non cambia con i tuoi dati. I bilanci di oggi usano questo numero.' : '<b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia ogni volta che aggiungi calorie, passi, sedute o pesate. I bilanci di oggi usano questo numero.';
+  if (p0) p0.innerHTML = x.fixed ? '<b>Ad oggi</b> è il valore fisso che hai scelto nel profilo: non cambia con i tuoi dati. I bilanci di oggi usano questo numero.' : '<b>Ad oggi</b> è la stima per la settimana in corso, da lunedì a domenica. Cambia quando aggiungi pesate e sedute; le calorie e i passi di oggi contano da domani, a giornata chiusa. I bilanci di oggi usano questo numero.';
 }
 /* perché manca ancora l'ultimo fabbisogno verificato: stessi requisiti della verifica con la bilancia */
 function lastMissWhy() {
@@ -7329,15 +7350,25 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     });
     f.note.value = d.note || '';
   }
+  /* limiti sensati: un valore fuori è quasi sempre un errore di battitura (unità sbagliata, una cifra in più) */
+  var RANGE = { weight: [30, 300], kcal: [0, 10000], protein: [0, 500], carbs: [0, 1500], fat: [0, 500], steps: [0, 100000], sleepH: [0, 20] };
+  var HINT = { weight: 'in kg, tra 30 e 300', kcal: 'fino a 10.000', protein: 'in grammi, fino a 500', carbs: 'in grammi, fino a 1.500', fat: 'in grammi, fino a 500', steps: 'fino a 100.000', sleepH: 'ore e minuti, es. 7:30, fino a 20 ore' };
   function parse(k, s) {
     s = String(s || '').trim(); if (!s) return null;
+    var v = null, t = s.replace(/[\s\u00a0\u202f]/g, '');
     if (k === 'sleepH') {
-      var m = s.match(/^(\d{1,2})\s*[:h.,]\s*(\d{1,2})\s*$/i);
-      if (m && /[:h]/i.test(s)) return Math.round((+m[1] + +m[2] / 60) * 100) / 100;
+      var m = t.match(/^(\d{1,2})(?::|h|ore)(\d{1,2})?(?:m|min)?$/i);
+      if (m) { if (m[2] && +m[2] > 59) return undefined; v = Math.round((+m[1] + (+m[2] || 0) / 60) * 100) / 100; }
     }
-    var v = parseFloat(s.replace(/\s/g, '').replace(',', '.'));
-    if (isNaN(v) || v < 0) return undefined;
-    return k === 'kcal' || k === 'steps' ? Math.round(v) : v;
+    if (v == null) {
+      /* calorie e passi sono numeri interi: 1.850 o 1,850 = milleottocentocinquanta */
+      if ((k === 'kcal' || k === 'steps') && /^\d{1,3}([.,]\d{3})+$/.test(t)) t = t.replace(/[.,]/g, '');
+      if (!/^\d+([.,]\d+)?$/.test(t)) return undefined;
+      v = parseFloat(t.replace(',', '.'));
+      if (k === 'kcal' || k === 'steps') v = Math.round(v);
+    }
+    if (isNaN(v) || v < RANGE[k][0] || v > RANGE[k][1]) return undefined;
+    return v;
   }
   window.openDayForm = function (date) {
     fill(date || todayStr());
@@ -7352,7 +7383,7 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     e.preventDefault();
     var date = f.date.value; if (!date) return;
     var vals = {}, bad = [];
-    FIELDS.forEach(function (x) { var v = parse(x.k, f[x.k].value); if (v === undefined) bad.push(x.l); else vals[x.k] = v; });
+    FIELDS.forEach(function (x) { var v = parse(x.k, f[x.k].value); if (v === undefined) bad.push(x.l.replace(/ \(.*\)$/, '') + ' (' + HINT[x.k] + ')'); else vals[x.k] = v; });
     if (bad.length) { msg.className = 'small'; msg.style.color = 'var(--bad)'; msg.textContent = 'Controlla: ' + bad.join(', ') + '.'; return; }
     msg.style.color = '';
     saveDay(date, function (d) {
