@@ -2111,7 +2111,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div class="chart-box"><svg id="w-chart" class="chart" role="img" aria-label="Andamento del peso"></svg><div class="tip"></div></div>
         <div class="legend">
           <span><i style="background:var(--accent)"></i>Media di 7 giorni</span>
-          <span><i style="background:#fff;height:3px;border-radius:2px"></i>Tendenza: il tuo peso adesso</span>
+          <span><i style="background:#64D2FF;height:3px;border-radius:2px"></i>Tendenza: il tuo peso adesso</span>
           <span><i style="background:var(--bg);border:1.6px solid var(--accent);border-radius:50%"></i>Pesata</span>
           <span><i style="border-top:2px dashed var(--ink-3);height:0;width:16px;border-radius:0"></i>Piano verso l'obiettivo</span>
           <span><i style="border-top:2.5px dotted var(--accent);height:0;width:16px;border-radius:0"></i>Previsione</span>
@@ -2752,7 +2752,7 @@ function dayWorkHTML(date) {
 }
 function renderDiary() {
   var date = state.sel, d = state.days.get(date) || {};
-  var pdd = parseD(date); $('#d-date-txt').textContent = cap(DOW[(pdd.getDay() + 6) % 7]) + ' ' + pdd.getDate() + ' ' + (date === todayStr() ? MESI_L : MESI)[pdd.getMonth()] + (pdd.getFullYear() !== new Date().getFullYear() ? ' ' + pdd.getFullYear() : '');
+  var pdd = parseD(date); $('#d-date-txt').textContent = cap(DOWL[(pdd.getDay() + 6) % 7]) + ' ' + pdd.getDate() + ' ' + (date === todayStr() ? MESI_L : MESI)[pdd.getMonth()] + (pdd.getFullYear() !== new Date().getFullYear() ? ' ' + pdd.getFullYear() : '');
   $('#d-title').textContent = 'I dati del giorno';
   $('#d-today').hidden = date === todayStr();
   $('#d-src').hidden = d.source !== 'doc';
@@ -7270,7 +7270,7 @@ function markWideTables() {
 /* titolo di un giorno come in Progressi > Giorno: "Mer 14 ottobre" (l'anno solo se non è quello in corso) */
 function dayTitle(date) {
   var p = parseD(date);
-  return cap(DOW[(p.getDay() + 6) % 7]) + ' ' + p.getDate() + ' ' + MESI_L[p.getMonth()] + (p.getFullYear() !== new Date().getFullYear() ? ' ' + p.getFullYear() : '');
+  return cap(DOWL[(p.getDay() + 6) % 7]) + ' ' + p.getDate() + ' ' + MESI_L[p.getMonth()] + (p.getFullYear() !== new Date().getFullYear() ? ' ' + p.getFullYear() : '');
 }
 function renderCoerenza() {
   var c = model.cur, h = document.getElementById('td-h');
@@ -7716,7 +7716,6 @@ body .panel+.panel:not(#z):not(#y){margin-top:0}
 <style id="tema-coerenza">
 /* ===================== coerenza: stessi colori e stessa grafica in tutte le schede ===================== */
 /* niente pallini luminosi davanti ai titoli di Progressi */
-body .dsec[data-dsec] .panel-head h2:not(#z):not(#y)::before,body #sum-head:not(#z):not(#y)::before{display:none!important;content:none!important}
 body #sum-head:not(#z):not(#y){padding-left:0!important}
 body #tiles .tile .l i:not(#z):not(#y){box-shadow:none!important}
 /* numeri grandi: niente alone, colore della misura (calorie rosa, peso blu) */
@@ -7725,7 +7724,6 @@ body .dsec[data-dsec="calorie"] .big2>span:first-child:not(#z):not(#y){color:#FA
 body .dsec[data-dsec="peso"] .big2>span:first-child:not(#z):not(#y){color:#0A84FF!important}
 body .summary-metric.tone-weight b:not(#z):not(#y),body .weigh-value b:not(#z):not(#y),#h-stats .hs .v.acc:not(#z):not(#y){color:#0A84FF!important;text-shadow:none!important}
 body .summary-metric.tone-energy b:not(#z):not(#y),body .energy-metric.primary b:not(#z):not(#y){color:#FA114F!important;text-shadow:none!important}
-#need-body .nc-cell:last-child b:not(#z):not(#y){color:#fff!important}
 /* riquadri dei 7 giorni: il numero ha il colore della sua misura, come il pallino e la linea */
 body #tiles .tile .v:not(#z):not(#y){color:var(--c)!important}
 /* calendario e scelta del giorno: verde = nel target, giallo = sopra, come nel grafico delle calorie */
@@ -7814,5 +7812,55 @@ body #td-chips .kvl .r .v:not(#z):not(#y){color:#fff!important}
 @media (min-width:1024px){
   body #tab-dati .pf-settings:not(#z):not(#y),body #tab-dati .pf-gt-out:not(#z):not(#y),body #tab-dati .pf-panel:not(#z):not(#y),body #tab-dati #pf-card:not(#z):not(#y){max-width:760px;width:100%}
 }
+</style>
+<style id="tema-colori">
+/* ===================== colori: ogni scheda ha il suo colore, senza esagerare ===================== */
+/* colore di ogni sezione di Progressi (e della sua icona) */
+#tab-diario .dsec[data-dsec="giorno"]{--sec:#FF9F0A;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='3'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E")}
+#tab-diario .dsec[data-dsec="peso"]{--sec:#0A84FF;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='4'/%3E%3Cpath d='M9 10a3 3 0 0 1 6 0'/%3E%3Cpath d='M12 10l1.5-2'/%3E%3C/svg%3E")}
+#tab-diario .dsec[data-dsec="calorie"]{--sec:#FA114F;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 3 4 0-3 0-5 0-7z'/%3E%3C/svg%3E")}
+#tab-diario .dsec[data-dsec="storico"]{--sec:#64D2FF;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 20v-8M10 20V5M15 20v-10M20 20v-5'/%3E%3C/svg%3E")}
+#tab-diario .dsec[data-dsec="curiosita"]{--sec:#BF5AF2;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z'/%3E%3C/svg%3E")}
+/* i 5 bottoni: ognuno col suo colore; quello scelto si accende */
+body .dviews button[data-dview="giorno"]:not(#z):not(#y){--tc:#FF9F0A}
+body .dviews button[data-dview="peso"]:not(#z):not(#y){--tc:#0A84FF}
+body .dviews button[data-dview="calorie"]:not(#z):not(#y){--tc:#FA114F}
+body .dviews button[data-dview="storico"]:not(#z):not(#y){--tc:#64D2FF}
+body .dviews button[data-dview="curiosita"]:not(#z):not(#y){--tc:#BF5AF2}
+body .dviews button[data-dview]:not(#z):not(#y){color:#C7C7CC!important;color:color-mix(in srgb,var(--tc) 55%,#D1D1D6)!important}
+body .dviews button[data-dview][aria-selected="true"]:not(#z):not(#y){background:#3A3A3C!important;background:color-mix(in srgb,var(--tc) 26%,#1C1C1E)!important;color:var(--tc)!important;font-weight:700!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc) 45%,transparent)!important}
+body .dviews button[data-dview]:not([aria-selected="true"]):hover:not(#z):not(#y){background:#2C2C2E!important;color:var(--tc)!important}
+/* riquadri: una leggera tinta del colore della sezione in alto */
+#tab-diario .dsec[data-dsec] .panel:not(#z):not(#y){background:#1C1C1E!important;background:linear-gradient(180deg,color-mix(in srgb,var(--sec) 13%,#1C1C1E) 0,#1C1C1E 170px)!important}
+/* titoli: icona colorata della sezione, come in Oggi */
+#tab-diario .dsec[data-dsec] .panel-head h2:not(#z):not(#y),#tab-diario .dsec[data-dsec] .dayhead h2:not(#z):not(#y),body #sum-head:not(#z):not(#y){display:flex!important;align-items:center;gap:10px;padding-left:0!important}
+#tab-diario .dsec[data-dsec] .panel-head h2:not(#z):not(#y)::before,#tab-diario .dsec[data-dsec] .dayhead h2:not(#z):not(#y)::before,body #sum-head:not(#z):not(#y)::before{content:""!important;display:block!important;position:static!important;flex:none;width:28px!important;height:28px!important;margin:0!important;border-radius:8px!important;box-shadow:none!important;background:var(--sec) var(--sec-ic) center/16px no-repeat!important;align-self:flex-start;margin-top:1px!important}
+/* sottotitoli e piccole etichette nel colore della sezione */
+#tab-diario .dsec[data-dsec] .panel-head .hint:not(#z):not(#y),#tab-diario .dsec[data-dsec] .estimate-tag:not(#z):not(#y),#tab-diario .dsec[data-dsec] .weigh-sub:not(#z):not(#y),#tab-diario .dsec[data-dsec] .reading-label:not(#z):not(#y),#tab-diario .dsec[data-dsec] .area-kicker:not(#z):not(#y),#tab-diario .dsec[data-dsec] .cu-topic:not(#z):not(#y){color:var(--sec)!important}
+#tab-diario .dsec[data-dsec] .panel-head+.muted:not(#z):not(#y),#tab-diario .dsec[data-dsec] .panel-head+p:not(#z):not(#y),#tab-diario .dsec[data-dsec] .panel-head+.sub:not(#z):not(#y){color:#C7C7CC!important}
+/* numeri grandi nel colore della sezione (calorie e peso restano rosa e blu) */
+body .dsec[data-dsec] .big2>span:first-child:not(#z):not(#y){color:var(--sec)!important}
+/* Progressi > Giorno: i dati del giorno con i colori delle misure */
+body .ds:not(#z):not(#y){background:#2C2C2E!important;background:color-mix(in srgb,var(--c) 15%,#242426)!important;border:0!important}
+body .ds .v:not(#z):not(#y){color:var(--c)!important}
+body .ds .v small:not(#z):not(#y){color:#AEAEB2!important}
+body .ds .l:not(#z):not(#y){color:#D1D1D6!important}
+/* scheda dei giorni nel calendario: oggi in arancio come la sezione */
+#tab-diario .dsec[data-dsec="giorno"] .cal .cell.today .d:not(#z):not(#y){color:#FF9F0A!important}
+/* grafico del peso: la tendenza è una linea azzurra piena, come dice la legenda */
+body .chart .l-trend:not(#z):not(#y){stroke:#64D2FF!important;stroke-width:3!important;stroke-dasharray:none!important;opacity:1!important}
+/* Oggi: riquadri del peso e del fabbisogno con la loro tinta, entrambi i fabbisogni accesi */
+#tab-oggi .hero-main:not(#z):not(#y){background:#1C1C1E!important;background:linear-gradient(180deg,color-mix(in srgb,#0A84FF 14%,#1C1C1E) 0,#1C1C1E 180px)!important}
+#tab-oggi>.need-card:not(#z):not(#y){background:#1C1C1E!important;background:linear-gradient(180deg,color-mix(in srgb,#FA114F 14%,#1C1C1E) 0,#1C1C1E 180px)!important}
+#need-body .nc-cell:not(#z):not(#y){background:#2C2C2E!important;background:color-mix(in srgb,#FA114F 16%,#26262A)!important}
+#need-body .nc-cell b:not(#z):not(#y){color:#FA114F!important}
+#need-body .nc-cell:last-child b:not(#z):not(#y){color:#FF6482!important}
+#need-body .nc-cell small:not(#z):not(#y){color:#FFB3C1!important}
+#tab-oggi .hero-main #h-stats .hs:not(#z):not(#y){background:#2C2C2E!important;background:color-mix(in srgb,#0A84FF 12%,#26262A)!important}
+/* Curiosità: stessa tinta viola sulle carte */
+#tab-diario .dsec[data-dsec="curiosita"] .area-lead.cu-head:not(#z):not(#y){background:#1C1C1E!important;background:linear-gradient(180deg,color-mix(in srgb,#BF5AF2 18%,#1C1C1E) 0,#1C1C1E 200px)!important}
+#tab-diario .dsec[data-dsec="curiosita"] .cu-story:not(#z):not(#y){background:#1C1C1E!important;background:linear-gradient(180deg,color-mix(in srgb,#BF5AF2 10%,#1C1C1E) 0,#1C1C1E 140px)!important}
+#tab-diario .dsec[data-dsec="curiosita"] .cu-count:not(#z):not(#y){border-color:#BF5AF2!important;color:#E5B8FA!important;background:transparent!important}
+#tab-diario .dsec[data-dsec="curiosita"] .cu-index:not(#z):not(#y){background:#BF5AF2!important;color:#fff!important}
 </style>
 </body></html>
