@@ -2242,13 +2242,13 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <details class="model-note"><summary>Come leggere numeri, stime e previsioni</summary><div class="model-note-body">Consumo, bilancio e date previste sono stime di un solo motore di calcolo: usano le giornate segnate complete, le pesate e il piano attivo in ogni data. I passi che scrivi sono quelli quotidiani, palestra esclusa; il cardio e la camminata in palestra arrivano dalle sedute di Hevy. Ogni stima ha un intervallo: i pasti stimati a occhio lo allargano.</div></details>
 
       <div class="panel energy-now" id="energy-now" data-cat="energia">
-        <div class="panel-head"><div><span class="estimate-tag">Stima</span><h2>Consumo stimato di oggi</h2></div><button type="button" class="rq" data-rule="fabbisogno" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+        <div class="panel-head"><div><span class="estimate-tag">Stima</span><h2>Consumo stimato di oggi</h2></div><button type="button" class="rq" data-rule="consumo" aria-label="Come si calcola" title="Come si calcola">?</button></div>
         <div id="energy-now-body"></div>
       </div>
       <div class="panel tmw" data-cat="peso" id="tmw">
-        <div class="estimate-tag">Previsione e confronto · dal tuo storico</div><div class="panel-head"><div class="ph-t"><h2 id="tmw-title">Stamattina sulla bilancia</h2><button type="button" class="rq" data-rule="domani" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="tmw-date"></span></div>
+        <div class="estimate-tag">Previsione dal tuo storico</div><div class="panel-head"><div class="ph-t"><h2 id="tmw-title">Stamattina sulla bilancia</h2><button type="button" class="rq" data-rule="domani" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="tmw-date"></span></div>
         <div class="daynav tmw-nav" aria-label="Giorno del riquadro, lo stesso della tua giornata"><button type="button" class="btn ghost icon" id="tm-prev" aria-label="Giorno precedente">‹</button><div class="dn-t" id="tm-day"></div><button type="button" class="btn ghost icon" id="tm-next" aria-label="Giorno successivo">›</button></div>
-        <div id="tmw-body"></div><p class="estimate-note">Previsione del modello: non è una misurazione. Le oscillazioni giornaliere e la composizione corporea non si possono determinare con certezza dai soli log.</p>
+        <div id="tmw-body"></div><p class="estimate-note">È una previsione del modello, non una misurazione. Le oscillazioni di un giorno e la composizione corporea non si possono determinare dai soli dati del diario.</p>
       </div>
       <div class="panel sumbox">
         <div class="sem" id="sum-sem" role="img"></div>
@@ -2278,6 +2278,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <button type="button" data-dview="giorno" style="--c:var(--prot)">Giorno</button>
         <button type="button" data-dview="peso" style="--c:var(--accent)">Peso</button>
         <button type="button" data-dview="calorie" style="--c:var(--kcal)">Calorie</button>
+        <button type="button" data-dview="settimana" style="--c:#30D158">Settimana in corso</button>
         <button type="button" data-dview="storico" style="--c:var(--carb)">Settimane</button>
         <button type="button" data-dview="curiosita" style="--c:var(--good)">Curiosità</button>
       </div>
@@ -2337,12 +2338,12 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
           <span class="hint">Dal diario</span>
         </div>
         <div class="chart-box"><svg id="w-chart" class="chart" role="img" aria-label="Andamento del peso"></svg><div class="tip"></div></div>
-        <div class="legend">
-          <span><i style="background:var(--accent)"></i>Media di 7 giorni</span>
-          <span><i style="background:#64D2FF;height:3px;border-radius:2px"></i>Tendenza: il tuo peso adesso</span>
-          <span><i style="background:var(--bg);border:1.6px solid var(--accent);border-radius:50%"></i>Pesata</span>
-          <span><i style="border-top:2px dashed var(--ink-3);height:0;width:16px;border-radius:0"></i>Piano verso l'obiettivo</span>
-          <span><i style="border-top:2.5px dotted var(--accent);height:0;width:16px;border-radius:0"></i>Previsione</span>
+        <div class="legend w-legend">
+          <span><i class="lg-avg"></i>Media 7 giorni</span>
+          <span><i class="lg-dot"></i>Pesate</span>
+          <span><i class="lg-plan"></i>Piano</span>
+          <span><i class="lg-proj"></i>Previsione</span>
+          <span><i class="lg-goal"></i>Obiettivo</span>
         </div>
         <div class="caption" id="w-readout" aria-live="polite"></div>
       </div>
@@ -2361,7 +2362,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <p class="muted small" id="proj-text"></p>
         <div class="tw" style="margin-top:12px"><table class="ttab ptab" id="proj-table"></table></div>
         <p class="caption" id="proj-note"></p>
-        <details class="more"><summary>Come lo calcolo</summary><div class="in" id="proj-more"></div></details>
+        <details class="more" data-ibfold><summary>Come lo calcolo</summary><div class="in" id="proj-more"></div></details>
       </div>
 
       </div>
@@ -2373,7 +2374,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
           <div class="big2"><span id="td-v">—</span><small>kcal al giorno</small><span class="td-arr" id="td-arr" hidden aria-hidden="true" title="La settimana da cui viene questo numero è scritta qui sotto"><svg viewBox="0 0 24 24"><path d="M12 4v15M5.5 12.5 12 19l6.5-6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
           <div id="td-chips"></div>
           <div class="chart-box" style="margin-top:10px" hidden><svg id="td-chart" class="chart" role="img" aria-label="Andamento del consumo stimato"></svg><div class="tip"></div></div>
-          <details class="more"><summary>Come l'ho calcolato</summary><div class="in"><p class="muted small" id="td-text"></p><div id="td-how"></div></div></details>
+          <details class="more" data-ibfold><summary>Come l'ho calcolato</summary><div class="in"><p class="muted small" id="td-text"></p><div id="td-how"></div></div></details>
         </div>
       </div>
       <div class="panel" data-cat="energia" id="tot-panel">
@@ -2400,6 +2401,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       </div>
 
       </div>
+      <div class="dsec" data-dsec="settimana" hidden></div>
       <div class="dsec" data-dsec="storico" hidden>
       <div class="area-lead" style="--area:#7de2e7;--area2:#5199dd"><span class="area-kicker">PROGRESSI / STORICO</span><strong>Ogni settimana lascia una traccia.</strong><p>Confronta i periodi e scopri quali dati hanno davvero contribuito alle medie.</p><span class="area-mark" aria-hidden="true">▥</span></div>
       <div class="panel" data-cat="storico">
@@ -2411,7 +2413,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
           </div>
         </div>
         <div class="tw" id="summary"></div>
-        <details class="more"><summary>Cosa vogliono dire le colonne</summary><div class="sum-legend in" id="summary-legend"></div></details>
+        <details class="more" data-ibfold><summary>Cosa vogliono dire le colonne</summary><div class="sum-legend in" id="summary-legend"></div></details>
       </div>
 
       <div class="panel" data-cat="storico">
@@ -2588,7 +2590,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="panel stack" id="hevy-panel">
         <h2>Importa da Hevy</h2>
         <div class="row" style="align-items:center"><label class="btn fit imp-pick">Scegli il file di Hevy<input id="imp-file" type="file" accept=".csv,text/csv,.txt"></label><span class="muted small imp-name" id="imp-name"></span></div>
-        <details class="more"><summary>Come esportare il file da Hevy</summary><div class="in"><p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p></div></details>
+        <details class="more" data-ibfold><summary>Come esportare il file da Hevy</summary><div class="in"><p class="muted" style="margin:0">Nell'app Hevy vai su <b>Profilo → Impostazioni (⚙️) → Esporta e importa dati → Esporta allenamenti</b> e salva il file. Poi sceglilo qui. Puoi caricare ogni volta l'export completo: le sedute già presenti non si duplicano.</p></div></details>
         <pre class="prev" id="imp-prev" hidden></pre>
         <div id="imp-amb" class="stack" hidden></div>
         <label class="f" id="imp-steps-l" hidden><span>Che cosa contano i passi di questo file?</span><select id="imp-steps"><option value="totali_giornata">Tutti i passi della giornata, palestra compresa (di solito telefono e contapassi)</option><option value="quotidiani_esclusa_palestra">Solo i passi quotidiani, palestra esclusa</option><option value="semantica_sconosciuta">Non lo so</option></select><small class="muted">Il campo passi dell'app conta solo i passi quotidiani, palestra esclusa. Un file con tutti i passi della giornata non viene trasformato togliendo passi inventati: resta «palestra compresa» e, nei giorni con cardio in palestra, il consumo mostra un intervallo invece di contare due volte gli stessi passi. Puoi cambiarlo per un periodo in Profilo › Passi.</small></label>
@@ -4722,65 +4724,6 @@ function hover(svg, vb, items, guide, yTop, yBot) {
   svg.onpointermove = at; svg.onpointerdown = at; svg.onpointerleave = out;
 }
 
-function lineChart(svg, cfg) {
-  var W = chartW(svg), narrow = W < 520;
-  var sig = JSON.stringify([W, cfg.x0, cfg.x1, cfg.ymin, cfg.ymax, cfg.path, cfg.dots, (cfg.lines || []).map(function (l) { return [l.a, l.b]; }), cfg.hex, cfg.proj, cfg.events]);
-  if (svg.dataset.sig === sig) return;
-  svg.dataset.sig = sig;
-  var vb = { w: W, h: cfg.h ? (narrow ? Math.min(cfg.h, 230) : cfg.h) : (narrow ? 230 : 280) }, m = { l: 40, r: 14, t: 18, b: 30 }, hex = cfg.hex || HEX.accent;
-  svg.setAttribute('viewBox', '0 0 ' + vb.w + ' ' + vb.h);
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
-  var hasLine = cfg.path && cfg.path.length > 1, first = hasLine && !svg.dataset.drawn && !RM;
-  if (hasLine) svg.dataset.drawn = '1';
-  var gid = svg.id + '-g'; gradDef(svg, gid, hex, .32);
-  var x0 = cfg.x0, x1 = cfg.x1, span = Math.max(1, diffDays(x0, x1));
-  var xs = function (d) { return m.l + diffDays(x0, d) / span * (vb.w - m.l - m.r); };
-  var ticks = niceTicks(cfg.ymin, cfg.ymax, 4), lo = ticks[0], hi = ticks[ticks.length - 1];
-  var ys = function (v) { return m.t + (1 - (v - lo) / (hi - lo)) * (vb.h - m.t - m.b); };
-  ticks.forEach(function (t) {
-    svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: vb.w - m.r, y1: ys(t), y2: ys(t) }));
-    svg.appendChild(el('text', { x: m.l - 8, y: ys(t) + 4, 'text-anchor': 'end' }, fmt(t, cfg.dec || 0)));
-  });
-  var step = (span > 150 ? 30 : span > 60 ? 14 : span > 24 ? 7 : 3) * (narrow ? 2 : 1);
-  for (var i = 0; i <= span - step / 2; i += step) {
-    var dd = addDays(x0, i);
-    svg.appendChild(el('text', { x: xs(dd), y: vb.h - 8, 'text-anchor': i === 0 ? 'start' : 'middle' }, fmtShort(dd)));
-  }
-  (cfg.lines || []).forEach(function (l) {
-    svg.appendChild(el('line', { class: l.cls, x1: xs(l.a.d), y1: ys(l.a.v), x2: xs(l.b.d), y2: ys(l.b.v) }));
-    if (l.label) svg.appendChild(el('text', { x: xs(l.b.d) - 2, y: ys(l.b.v) + (l.above ? -8 : 18), 'text-anchor': 'end' }, l.label));
-  });
-  (cfg.events || []).forEach(function (ev, i) {
-    var ex = xs(ev.d); if (ex < m.l || ex > vb.w - m.r) return;
-    svg.appendChild(el('line', { class: 'l-event', x1: ex, x2: ex, y1: m.t, y2: vb.h - m.b }));
-    svg.appendChild(el('text', { x: ex + 6, y: m.t + 10 + (i % 3) * 13, style: 'fill:' + HEX.prot }, ev.label));
-  });
-  if (cfg.proj) {
-    var pa = [xs(cfg.proj.a.d), ys(cfg.proj.a.v)], pb = [xs(cfg.proj.b.d), ys(cfg.proj.b.v)];
-    svg.appendChild(el('path', { d: 'M' + pa[0].toFixed(1) + ' ' + pa[1].toFixed(1) + ' L' + pb[0].toFixed(1) + ' ' + pb[1].toFixed(1), class: 'l-proj' + (first ? ' fade' : ''), stroke: hex }));
-    svg.appendChild(el('circle', { class: 'proj-end', cx: pb[0], cy: pb[1], r: 5, stroke: hex }));
-    if (cfg.proj.label) svg.appendChild(el('text', { x: pb[0] - 10, y: pb[1] + 20, 'text-anchor': 'end', style: 'fill:' + hex }, cfg.proj.label));
-  }
-  if (hasLine) {
-    var pts = cfg.path.map(function (p) { return [xs(p.d), ys(p.v)]; }), d = smoothPath(pts), lp = pts[pts.length - 1];
-    svg.appendChild(el('path', { d: d + ' L' + lp[0].toFixed(1) + ' ' + (vb.h - m.b) + ' L' + pts[0][0].toFixed(1) + ' ' + (vb.h - m.b) + ' Z', fill: 'url(#' + gid + ')', class: first ? 'fade' : '' }));
-    svg.appendChild(el('path', { d: d, class: 'l-main' + (first ? ' draw' : ''), stroke: hex, pathLength: 1 }));
-  }
-  var dots = cfg.dots || [];
-  dots.forEach(function (p, k) {
-    if (k === dots.length - 1) return;
-    if (dots.length > 70 && k % 2) return;
-    svg.appendChild(el('circle', { class: 'dot' + (first ? ' fade' : ''), cx: xs(p.d), cy: ys(p.v), r: 2.8, stroke: hex }));
-  });
-  if (dots.length) {
-    var L = dots[dots.length - 1];
-    if (!RM) svg.appendChild(el('circle', { class: 'halo', cx: xs(L.d), cy: ys(L.v), r: 6, fill: hex }));
-    svg.appendChild(el('circle', { class: 'dot-last', cx: xs(L.d), cy: ys(L.v), r: 6, fill: hex }));
-  }
-  var guide = el('line', { class: 'guide' });
-  svg.appendChild(guide);
-  hover(svg, vb, cfg.hoverItems(xs, ys), guide, m.t, vb.h - m.b);
-}
 
 
 /* ---------- intestazione ed eroe ---------- */
@@ -5628,16 +5571,39 @@ function confLabel(E) { var c = E && E.confidence; return c ? lb('conf', c.level
 function kc(v) { return v == null || isNaN(v) ? '—' : fmt(v, 0) + ' kcal'; }
 function gr(v) { return v == null || isNaN(v) ? '—' : fmt(v, 0) + ' g'; }
 function chipS(t, cls) { return '<span class="p2-chip' + (cls ? ' ' + cls : '') + '">' + t + '</span>'; }
-function p2row(n, title, value, sub, extra, cls) {
-  return '<div class="p2-row' + (cls ? ' ' + cls : '') + '"><span class="p2-n">' + n + '</span><div class="p2-body"><div class="p2-top"><b class="p2-t">' + title + '</b><span class="p2-v">' + value + '</span></div>' + (sub ? '<div class="p2-sub">' + sub + '</div>' : '') + (extra || '') + '</div></div>';
+/* un riquadro con un solo numero in vista; la spiegazione è dietro la «i» (ib-note resta nella pagina, nascosta) */
+function p2tile(title, value, note, o) {
+  o = o || {};
+  /* una spiegazione fatta di pezzi separati da « · » si legge meglio come elenco */
+  if (note && note.indexOf(' · ') > 0 && !/<(div|p|ul)\b/.test(note)) note = '<ul class="ib-list">' + note.split(' · ').map(function (x) { return '<li>' + x.charAt(0).toUpperCase() + x.slice(1) + '</li>'; }).join('') + '</ul>';
+  var ib = note ? ibBtn(o.t || title) : o.rule ? ibBtn(o.t || title) : '';
+  if (ib && o.rule) ib = ib.replace('<button ', '<button data-rule="' + esc(o.rule) + '" ');
+  return '<div class="p2-tile' + (o.cls ? ' ' + o.cls : '') + '" data-ibs data-ibt="' + esc(o.t || title) + '"><div class="p2-tt"><span>' + title + '</span>' + ib + '</div><b class="p2-tv">' + value + '</b>' + (o.vis || '') + (note ? '<div class="ib-note">' + note + '</div>' : '') + '</div>';
 }
 function noPlanHTML() {
   if (state.Eerr) return '<div class="p2-empty"><b>Il calcolo non è riuscito.</b><p>' + esc(String(state.Eerr && state.Eerr.message || state.Eerr)) + '. I tuoi dati non sono cambiati: apri il Profilo per controllare il piano.</p></div>';
   return '<div class="p2-empty"><b>Nessun piano attivo.</b><p>Il diario funziona anche senza: per avere obiettivi e stime crea il piano nel Profilo, con il percorso che preferisci.</p><button type="button" class="btn fit" data-goplan>Crea il piano</button></div>';
 }
 function macroLine(m, locked) {
-  var L = locked || [], one = function (k, n) { return n + ' ' + (m && m[k] != null ? fmt(m[k], m[k] % 1 ? 1 : 0) : '—') + ' g' + (L.indexOf(k) >= 0 ? ' 🔒' : ''); };
+  var one = function (k, n) { return n + ' ' + (m && m[k] != null ? fmt(m[k], m[k] % 1 ? 1 : 0) : '—') + ' g'; };
   return one('p', 'P') + ' · ' + one('c', 'C') + ' · ' + one('f', 'G');
+}
+function macroHTML(m) {
+  var one = function (k, n, c) { return '<span class="p2-mac" style="--mc:' + c + '"><i>' + n + '</i><span>' + (m && m[k] != null ? fmt(m[k], m[k] % 1 ? 1 : 0) : '—') + '<small>g</small></span></span>'; };
+  return '<span class="p2-macs">' + one('p', 'Proteine', HEX.prot) + one('c', 'Carboidrati', HEX.carb) + one('f', 'Grassi', HEX.fat) + '</span>';
+}
+/* consumo stimato medio della settimana (lunedì–domenica) appena finita, con i dati di quei giorni */
+function lastWeekNeed() {
+  var E = state.E; if (!E || !E.week || !E.dayOf) return null;
+  var from = addDays(E.week.from, -7), xs = [], lo = 0, hi = 0, nr = 0, full = 0;
+  for (var i = 0; i < 7; i++) {
+    var x = E.dayOf(addDays(from, i)); if (!x || x.C == null) continue;
+    xs.push(x.C); if (x.usable) full++;
+    if (x.A && x.A.ok && x.A.A > 0 && x.A.lo != null && x.A.hi != null) { var f = x.B / x.A.A; lo += x.C - x.B + f * x.A.lo; hi += x.C - x.B + f * x.A.hi; nr++; }
+  }
+  if (!xs.length) return null;
+  var n = xs.length;
+  return { from: from, to: addDays(from, 6), v: xs.reduce(function (a, b) { return a + b; }, 0) / n, n: n, full: full, lo: nr === n ? lo / n : null, hi: nr === n ? hi / n : null };
 }
 function renderNeed() {
   var box = $('#need-body'); if (!box) return;
@@ -5653,75 +5619,94 @@ function renderNeed() {
   var dayMode = v && v.days && v.days.mode === 'allenamento_riposo' ? ' · obiettivo diverso fra giorni di allenamento e di riposo' : '';
   var wbud = E.week && E.week.budget, wkConf = wbud && wbud.status === 'conflitto' ? '<div class="p2-warn" id="need-week-conflict">' + esc(wbud.text || wbud.msg) + '</div>' : '';
   var frOther = (fr.errors || []).filter(function (e) { return !(wkConf && e.code === 'settimana_conflitto'); });
-  rows.push(p2row(1, 'Obiettivo calorico di oggi', T ? kc(T.v) : '—', tSub + dayMode, wkConf + (frOther.length && T ? '<div class="p2-warn">La versione attiva resta valida, ma oggi la stessa configurazione non sarebbe fattibile: ' + esc(frOther.map(function (e) { return e.msg; }).join('; ')) + '</div>' : ''), (conflict && !T) || wkConf ? 'bad' : ''));
+  var tWarn = wkConf + (frOther.length && T ? '<div class="p2-warn">La versione attiva resta valida, ma oggi la stessa configurazione non sarebbe fattibile: ' + esc(frOther.map(function (e) { return e.msg; }).join('; ')) + '</div>' : '');
+  var tNote = T ? '<p>È quanto mangiare oggi secondo il tuo piano. Non è il consumo: quello è una stima di quanto spendi.</p>' + (dayMode ? '<p>' + cap(dayMode.replace(' · ', '')) + '.</p>' : '') + '<p>Come è impostato il piano e da quando vale lo trovi nel Profilo.</p><button type="button" class="linkbtn small" data-pfopen="piano">Apri il piano attivo ›</button>' : '';
+  rows.push(p2tile('Obiettivo calorico di oggi', T ? kc(T.v) : '—', tNote, { rule: 'obiettivo-kcal', vis: (!T ? '<div class="p2-warn">' + tSub + '</div>' : '') + tWarn, cls: (conflict && !T) || wkConf ? 'bad' : '' }));
   /* 2. macro */
-  rows.push(p2row(2, 'Macro', M ? macroLine(M, M.locked) : '—', M ? lb('macros', M.mode) + (M.locked.length && M.mode !== 'manuale' ? ' · fissati: ' + M.locked.map(function (k) { return { p: 'proteine', c: 'carboidrati', f: 'grassi' }[k]; }).join(', ') : '') + (M.mode !== 'manuale' ? ' · preferenza ' + lb('pref', M.pref).toLowerCase() + ' · ' + esc(M.policy || '') : '') + (M.weightRef ? ' · peso di riferimento ' + fmt(M.weightRef.v, 1) + ' kg (' + lb('wref', M.weightRef.mode).toLowerCase() + ')' : '') : 'Non disponibili senza un obiettivo calorico'));
+  rows.push(p2tile('Macro', M ? macroHTML(M) : '—', M ? (M.mode !== 'manuale' ? lb('macros', M.mode) : 'Grammi del giorno secondo il piano') + (M.locked.length && M.mode !== 'manuale' ? ' · fissati: ' + M.locked.map(function (k) { return { p: 'proteine', c: 'carboidrati', f: 'grassi' }[k]; }).join(', ') : '') + (M.mode !== 'manuale' ? ' · preferenza ' + lb('pref', M.pref).toLowerCase() + ' · ' + esc(M.policy || '') : '') + (M.weightRef ? ' · peso di riferimento ' + fmt(M.weightRef.v, 1) + ' kg (' + lb('wref', M.weightRef.mode).toLowerCase() + ')' : '') : 'Non disponibili senza un obiettivo calorico', { cls: 'wide', rule: 'macro' }));
   /* 3. consumo stimato */
   var A = C && C.A, parts = A && A.ok ? A.orig : null;
   var cSub = C ? (C.lo != null && C.hi != null ? 'intervallo ' + fmt(C.lo, 0) + '–' + fmt(C.hi, 0) + ' · ' : '') + 'giornata in corso, prevista con ' + (parts ? 'passi: ' + esc(parts.steps || '—') + '; palestra: ' + esc((A.gym && A.gym.orig) || '—') : 'il consumo manuale') + ' · digestione calcolata sull\'obiettivo di oggi' : (E.base && !E.base.ok ? esc(E.base.why) : 'Non stimabile');
-  rows.push(p2row(3, 'Consumo stimato di oggi', C ? kc(C.v) : '—', cSub + (E.verifiedOn ? ' · ultimo confronto col diario: ' + fmtDay(E.verifiedOn.d) : '')));
+  rows.push(p2tile('Consumo stimato di oggi', C ? kc(C.v) : '—', cSub + (E.verifiedOn ? ' · ultimo confronto col diario: ' + fmtDay(E.verifiedOn.d) : ''), { rule: 'consumo', t: 'Perché oggi consumi circa ' + (C ? kc(C.v) : '—') }));
+  /* il consumo medio della settimana appena finita, ricostruito giorno per giorno con i dati di quei giorni */
+  var LW = lastWeekNeed();
+  rows.push(p2tile('Consumo medio della settimana scorsa', LW ? kc(LW.v) + '<small class="p2-per">al giorno, dal ' + fmtShort(LW.from) + ' al ' + fmtShort(LW.to) + '</small>' : '—', LW ? 'Media del consumo stimato dal ' + fmtDay(LW.from) + ' al ' + fmtDay(LW.to) + ', ricostruito giorno per giorno con passi, sedute e lavoro di quei giorni' + (LW.lo != null ? ' (intervallo ' + fmt(LW.lo, 0) + '–' + fmt(LW.hi, 0) + ' kcal)' : '') + '. ' + (LW.n < 7 ? 'Giorni stimabili: ' + LW.n + ' su 7. ' : '') + (LW.full ? LW.full + (LW.full === 1 ? ' giornata ha' : ' giornate hanno') + ' le calorie complete; per le altre la digestione è calcolata sull\'obiettivo. ' : 'Nessuna giornata con le calorie complete: la digestione è calcolata sull\'obiettivo. ') + 'È una stima, non una misura: il piano usa il consumo di riferimento (' + (B ? kc(B.R) : '—') + ').' : 'Servono i dati della settimana scorsa e un profilo completo.', { rule: 'consumo' }));
   /* 4. deficit / equilibrio / surplus atteso rispetto al piano */
   var bTxt = '—', bSub = '';
   if (B) {
     var ex = B.expected, word = Math.abs(ex) < 50 ? 'Equilibrio' : ex > 0 ? 'Deficit atteso' : 'Surplus atteso';
-    bTxt = word + (Math.abs(ex) < 50 ? '' : ' ' + kc(Math.abs(ex)));
+    bTxt = Math.abs(ex) < 50 ? word : '<em>' + word + '</em>' + kc(Math.abs(ex));
     bSub = (B.provider === 'consumo_manuale' ? 'Consumo manuale del piano ' : 'Consumo di riferimento del piano ') + fmt(B.R, 0) + ' − obiettivo ' + fmt(B.T, 0) + ' kcal. ' + (B.provider === 'consumo_manuale' ? 'È il valore che hai indicato.' : 'È la media della tua settimana tipo: il consumo di oggi (riga 3) può essere più alto o più basso.');
   }
   var resid = Rs ? '<div class="p2-res"><span>Residuo dopo quanto hai registrato oggi</span><b>' + (Rs.v >= 0 ? kc(Rs.v) : 'oltre di ' + kc(-Rs.v)) + '</b><small>' + (Rs.intake != null ? fmt(Rs.intake, 0) + ' kcal registrate (' + lb('fstate', Rs.state).toLowerCase() + ')' : 'nessuna caloria registrata oggi') + ' · calcolato sull\'obiettivo alimentare, non sul consumo</small></div>' : '';
-  rows.push(p2row(4, 'Rispetto al piano', bTxt, bSub, resid));
+  rows.push(p2tile('Rispetto al piano', bTxt, bSub + resid, { rule: 'deficit-sett' }));
   /* 5. stato dei dati e fiducia */
   var q = E.states.qualita, cf = E.confidence || {};
-  rows.push(p2row(5, 'Stato dei dati e fiducia', lb('conf', cf.level), lb('qualita', q) + ' · ' + esc(cf.why || '') + (E.calibration && E.calibration.reasons && E.calibration.reasons.length && q !== 'calibrato' && String(cf.why || '').indexOf(E.calibration.reasons[0]) < 0 ? ' · ' + esc(E.calibration.reasons[0]) : '')));
+  rows.push(p2tile('Stato dei dati e fiducia', lb('conf', cf.level), '<b>' + lb('qualita', q) + '</b>' + ' · ' + esc(cf.why || '') + (E.calibration && E.calibration.reasons && E.calibration.reasons.length && q !== 'calibrato' && String(cf.why || '').indexOf(E.calibration.reasons[0]) < 0 ? ' · ' + esc(E.calibration.reasons[0]) : ''), { rule: 'margine' }));
   /* 6. peso */
   var tr = E.weight && E.weight.trend;
-  rows.push(p2row(6, 'Peso', tr && !tr.none ? 'tendenza ' + fmt(tr.v, 1) + ' kg' : '—', tr && !tr.none ? 'ultima pesata ' + fmt(tr.last.w, 1) + ' kg il ' + fmtDay(tr.last.d) + ' · ' + (tr.method === 'retta' ? 'retta robusta su ' + tr.n + ' pesate dal ' + fmtDay(tr.from) + (tr.slope != null ? ', ' + sgn(tr.slope * 7, 1) + ' kg a settimana' : '') : tr.method === 'mediana7' ? (tr.n === 1 ? 'una sola pesata negli ultimi 7 giorni' : 'mediana di ' + tr.n + ' pesate degli ultimi 7 giorni') : 'una sola pesata recente') + (tr.datato ? ' · dato vecchio: fiducia bassa' : '') + (v && v.goal && v.goal.phase === 'surplus' ? ' · Prestazioni registrate: ' + esc(E.performance ? E.performance.text : '—') : '') : 'Nessuna pesata nel diario'));
+  rows.push(p2tile('Peso, tendenza', tr && !tr.none ? fmt(tr.v, 1) + ' kg' : '—', tr && !tr.none ? 'Tendenza ' + fmt(tr.v, 1) + ' kg · ultima pesata ' + fmt(tr.last.w, 1) + ' kg il ' + fmtDay(tr.last.d) + ' · ' + (tr.method === 'retta' ? 'retta robusta su ' + tr.n + ' pesate dal ' + fmtDay(tr.from) + (tr.slope != null ? ', ' + sgn(tr.slope * 7, 1) + ' kg a settimana' : '') : tr.method === 'mediana7' ? (tr.n === 1 ? 'una sola pesata negli ultimi 7 giorni' : 'mediana di ' + tr.n + ' pesate degli ultimi 7 giorni') : 'una sola pesata recente') + (tr.datato ? ' · dato vecchio: fiducia bassa' : '') + (v && v.goal && v.goal.phase === 'surplus' ? ' · Prestazioni registrate: ' + esc(E.performance ? E.performance.text : '—') : '') : 'Nessuna pesata nel diario', { t: 'Peso, tendenza', rule: 'tendenza' }));
   /* 7. revisione: esito, cosa cambia, da quando, perché, dati, bloccati, prossima rivalutazione */
-  var rv = E.review || {}, rev = E.revision || {}, rx = '';
+  var rv = E.review || {}, rev = E.revision || {}, rx = '', rvis = '';
   var dataTxt = rv.data ? 'Dati: dal ' + fmtDay(rv.data.period.from) + ' al ' + fmtDay(rv.data.period.to) + (rv.data.completeness ? ', giornate complete ' + Math.round(rv.data.completeness.frac * 100) + '%' : '') + (rv.data.slope != null ? ', tendenza ' + sgn(rv.data.slope * 7, 1) + ' kg a settimana' : '') + '.' : '';
   if ((rv.n === 5 || (rv.n === 6 && rv.goalReached)) && rev.candidate) {
     var z = rev.candidate.resolved || {};
-    rx = '<div class="p2-prop"><b>' + (rev.kind === 'da_applicare' ? 'Aggiornamento applicato' : 'Proposta') + (rev.goalReached ? ' di mantenimento' : '') + ' dal ' + fmtDay(rev.date) + '</b><p>Calorie ' + kc(z.kcal) + ', macro ' + macroLine(z, rv.locked) + '. Motivo: ' + esc(rev.why) + '. ' + dataTxt + (rv.locked && rv.locked.length ? ' Restano bloccati: ' + rv.locked.join(', ').replace('p', 'proteine').replace('c', 'carboidrati').replace('f', 'grassi') + '.' : '') + '</p>'
-      + (rev.kind === 'proposta' && !proposalDismissed(E) ? '<div class="row"><button type="button" class="btn fit small" data-rev-apply>Applica dal ' + fmtShort(rev.date) + '</button><button type="button" class="btn ghost fit small" data-rev-skip>Non ora</button></div>' : proposalDismissed(E) ? '<p class="muted small">Non applicata: resta il piano attuale.</p>' : '') + '</div>';
+    rx = '<div class="p2-prop"><b>' + (rev.kind === 'da_applicare' ? 'Aggiornamento applicato' : 'Proposta') + (rev.goalReached ? ' di mantenimento' : '') + ' dal ' + fmtDay(rev.date) + '</b><p>Calorie ' + kc(z.kcal) + ', macro ' + macroLine(z, rv.locked) + '. Motivo: ' + esc(rev.why) + '. ' + dataTxt + (rv.locked && rv.locked.length ? ' Restano bloccati: ' + rv.locked.join(', ').replace('p', 'proteine').replace('c', 'carboidrati').replace('f', 'grassi') + '.' : '') + '</p></div>';
+    rvis = '<div class="p2-act"><span>' + (rev.kind === 'da_applicare' ? 'Applicato' : 'Proposta') + ' dal ' + fmtShort(rev.date) + ': ' + kc(z.kcal) + '</span>'
+      + (rev.kind === 'proposta' && !proposalDismissed(E) ? '<div class="row"><button type="button" class="btn fit small" data-rev-apply>Applica dal ' + fmtShort(rev.date) + '</button><button type="button" class="btn ghost fit small" data-rev-skip>Non ora</button></div>' : proposalDismissed(E) ? '<small>Non applicata: resta il piano attuale.</small>' : '') + '</div>';
   } else if (rv.alternatives && rv.alternatives.length) rx = '<ul class="p2-alt">' + rv.alternatives.map(function (a) { return '<li>' + esc(a.msg) + '</li>'; }).join('') + '</ul>';
   /* giornate migrate o importate «da confermare» nel periodo: sono il motivo più comune del diario incompleto, e si sistemano in un tocco */
   var tcN = typeof toConfirm === 'function' ? toConfirm().filter(function (d) { return d >= addDays(todayStr(), -GJM.K.WIN); }).length : 0;
-  if (tcN && E.calibration && E.calibration.status === 'diario_incompleto') rx += '<div class="p2-note">' + tcN + (tcN === 1 ? ' giornata degli ultimi ' : ' giornate degli ultimi ') + GJM.K.WIN + ' giorni ' + (tcN === 1 ? 'ha' : 'hanno') + ' le calorie «da confermare» (dati della versione precedente o importati). Se le hai segnate per intero, confermale: entreranno nel calcolo. <button type="button" class="linkbtn small" data-goto-confirm>Conferma le giornate</button></div>';
+  if (tcN && E.calibration && E.calibration.status === 'diario_incompleto') {
+    rx += '<p>' + tcN + (tcN === 1 ? ' giornata degli ultimi ' : ' giornate degli ultimi ') + GJM.K.WIN + ' giorni ' + (tcN === 1 ? 'ha' : 'hanno') + ' le calorie «da confermare» (dati della versione precedente o importati). Se le hai segnate per intero, confermale: entreranno nel calcolo.</p>';
+    rvis += '<div class="p2-note p2-act"><span>' + tcN + (tcN === 1 ? ' giornata' : ' giornate') + ' da confermare</span><button type="button" class="linkbtn small" data-goto-confirm>Conferma le giornate</button></div>';
+  }
   var next = rv.next || (rev && rev.next);
-  rows.push(p2row(7, 'Revisione del piano', esc(rv.title || '—'), esc(rv.text || '') + (rv.why ? ' Perché: ' + esc(rv.why) + '.' : '') + (rv.n !== 5 && dataTxt ? ' ' + dataTxt : '') + (next ? ' Prossima rivalutazione: ' + fmtDay(next) + '.' : ''), rx, rv.n === 6 || rv.n === 7 ? 'warn' : rv.n === 8 ? 'bad' : ''));
-  box.innerHTML = '<div class="p2-list">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-note">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
+  rows.push(p2tile('Revisione del piano', esc(rv.title || '—'), '<p>' + esc(rv.text || '') + (rv.why ? ' Perché: ' + esc(rv.why) + '.' : '') + (rv.n !== 5 && dataTxt ? ' ' + dataTxt : '') + (next ? ' Prossima rivalutazione: ' + fmtDay(next) + '.' : '') + '</p>' + rx, { vis: rvis, rule: 'esiti', cls: 'wide' + (rv.n === 6 || rv.n === 7 ? ' warn' : rv.n === 8 ? ' bad' : '') }));
+  /* ordine sullo schermo: due riquadri per riga, macro e revisione a tutta larghezza */
+  /* ordine voluto: consumo di oggi, consumo medio della settimana scorsa, obiettivo; poi deficit, macro, fiducia, peso, revisione */
+  rows = [rows[2], rows[3], rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
+  box.innerHTML = '<div class="p2-tiles">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
   var why = $('#nc-why');
   if (why) why.innerHTML = '<p><b>Obiettivo</b> e <b>consumo</b> sono due numeri diversi: l\'obiettivo è quanto mangiare secondo il piano, il consumo è una stima di quanto spendi. Il residuo si calcola sull\'obiettivo.</p><p>Il consumo di oggi è previsto (la giornata non è finita); i giorni passati sono ricostruiti con i loro dati. Il piano non cambia mentre inserisci i pasti: cambia solo con una revisione, con una data e un motivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
 }
-/* ---------- la settimana in corso ---------- */
+/* ---------- la settimana in corso (Progressi > Settimana in corso) ---------- */
 function weekCardEl() {
-  var c = $('#week-card');
+  var c = $('#week-card'), host = $('.dsec[data-dsec="settimana"]');
   if (!c) {
     c = document.createElement('div'); c.className = 'panel p2-week'; c.id = 'week-card'; c.setAttribute('data-cat', 'energia');
     c.innerHTML = '<div class="panel-head"><div class="ph-t"><h2>La settimana in corso</h2><button type="button" class="rq" data-rule="settimana" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="wk-range"></span></div><div id="wk-body"></div>';
-    var need = $('#need-card'); if (need && need.parentNode) need.parentNode.insertBefore(c, need.nextSibling);
   }
+  if (host && c.parentNode !== host) host.appendChild(c);
   return c;
 }
 function renderWeekCard() {
   var c = weekCardEl(), box = $('#wk-body', c), E = state.E; if (!box) return;
-  if (!E || !E.week) { box.innerHTML = '<p class="muted small">Serve un piano attivo.</p>'; $('#wk-range').textContent = ''; return; }
-  var W = E.week, t = todayStr();
+  if (!E || !E.week) { box.innerHTML = '<p class="p2-empty">Serve un piano attivo.</p>'; $('#wk-range').textContent = ''; return; }
+  var W = E.week, k = W.counts;
   $('#wk-range').textContent = fmtShort(W.from) + ' – ' + fmtShort(W.to);
   var st = function (x) { return x.kind === 'futuro' ? 'previsto' : x.kind === 'oggi' ? 'in corso' : x.usable ? 'completo' : x.intake != null ? lb('fstate', x.state).toLowerCase() : 'senza calorie'; };
-  var rows = W.days.map(function (x) {
-    var pd = parseD(x.d);
-    return '<tr class="wk-' + x.kind + '"><td>' + DOWL[(pd.getDay() + 6) % 7].slice(0, 3) + ' ' + pd.getDate() + '</td><td>' + st(x) + '</td><td>' + (x.target != null ? fmt(x.target, 0) : '—') + '</td><td>' + (x.intake != null && x.kind !== 'futuro' ? fmt(x.intake, 0) : '—') + '</td><td title="' + esc(x.Corig) + '">' + (x.C != null ? fmt(x.C, 0) : '—') + '<small>' + (x.kind === 'trascorso' ? 'ricostruito' : 'previsto') + '</small></td></tr>';
+  var top = 1; W.days.forEach(function (x) { top = Math.max(top, x.target || 0, x.kind !== 'futuro' && x.intake || 0); }); top *= 1.12;
+  var days = W.days.map(function (x) {
+    var pd = parseD(x.d), eat = x.intake != null && x.kind !== 'futuro' ? x.intake : null;
+    var tone = eat == null ? 'none' : x.target != null && eat > x.target + 50 ? 'over' : x.target != null && eat >= x.target - 50 ? 'ok' : 'under';
+    return '<div class="wk-day wk-' + x.kind + ' t-' + tone + '"><span class="wk-dn">' + DOWL[(pd.getDay() + 6) % 7].slice(0, 3) + '<b>' + pd.getDate() + '</b></span>'
+      + '<div class="wk-mid"><div class="wk-bar">' + (eat != null ? '<i style="width:' + (eat / top * 100).toFixed(1) + '%"></i>' : '') + (x.target != null ? '<em style="left:' + (x.target / top * 100).toFixed(1) + '%"></em>' : '') + '</div>'
+      + '<small><span class="wk-st">' + st(x) + '</span>' + (x.C != null ? ' · consumo ' + fmt(x.C, 0) : '') + '</small></div>'
+      + '<span class="wk-num"><b>' + (eat != null ? fmt(eat, 0) : '—') + '</b><small>/ ' + (x.target != null ? fmt(x.target, 0) : '—') + '</small></span></div>';
   }).join('');
-  var k = W.counts;
-  box.innerHTML = '<div class="p2-wk-top">'
-    + '<div><small>Obiettivo settimanale</small><b>' + (W.target != null ? kc(W.target) : '—') + '</b></div>'
-    + '<div><small>Registrato finora</small><b>' + kc(W.logged) + '</b></div>'
-    + '<div><small>Budget residuo</small><b>' + (W.residual != null ? kc(W.residual) : '—') + '</b></div>'
-    + '<div><small>Consumo previsto, 7 giorni</small><b>' + (W.consumption != null ? kc(W.consumption) : '—') + '</b><span>media ' + (W.mean7 != null ? kc(W.mean7) : '—') + ' al giorno</span></div></div>'
-    + '<div class="tw"><table class="p2-wk"><thead><tr><th>Giorno</th><th>Dati</th><th>Obiettivo</th><th>Mangiate</th><th>Consumo</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
-    + '<p class="muted small">Giorni passati: ' + k.completi + ' completi, ' + k.parziali + ' parziali o da confermare, ' + k.vuoti + ' senza calorie; ' + k.futuri + ' giorni ancora da venire, stimati da abitudini e calendario. '
+  var pct = W.target > 0 ? Math.max(0, Math.min(1, W.logged / W.target)) : 0;
+  box.innerHTML = '<div class="wk-hero"><div class="wk-hero-top"><div><small>Budget residuo</small><b>' + (W.residual != null ? kc(W.residual) : '—') + '</b></div><span class="wk-pct">' + Math.round(pct * 100) + '%</span></div>'
+    + '<div class="wk-prog"><i style="width:' + (pct * 100).toFixed(1) + '%"></i></div><div class="wk-hero-foot"><span>Registrato ' + kc(W.logged) + '</span><span>su ' + (W.target != null ? kc(W.target) : '—') + '</span></div></div>'
+    + '<div class="wk-tiles"><div class="wk-t t-goal"><small>Obiettivo settimanale</small><b>' + (W.target != null ? kc(W.target) : '—') + '</b></div>'
+    + '<div class="wk-t t-eat"><small>Registrato finora</small><b>' + kc(W.logged) + '</b></div>'
+    + '<div class="wk-t t-need"><small>Consumo previsto, 7 giorni</small><b>' + (W.consumption != null ? kc(W.consumption) : '—') + '</b><span>media ' + (W.mean7 != null ? kc(W.mean7) : '—') + ' al giorno</span></div>'
+    + '<div class="wk-t t-days"><small>Giorni passati completi</small><b>' + k.completi + ' su ' + (k.completi + k.parziali + k.vuoti) + '</b><span>' + k.futuri + (k.futuri === 1 ? ' giorno ancora da venire' : ' giorni ancora da venire') + '</span></div></div>'
+    + '<div class="wk-days">' + days + '</div>'
+    + '<div class="wk-key"><span class="t-ok">nell\'obiettivo</span><span class="t-over">sopra</span><span class="t-under">sotto</span><span class="t-mark">obiettivo del giorno</span></div>'
+    + '<p class="muted small ib-note">Giorni passati: ' + k.completi + ' completi, ' + k.parziali + ' parziali o da confermare, ' + k.vuoti + ' senza calorie; ' + k.futuri + ' giorni ancora da venire, stimati da abitudini e calendario. '
     + (W.nReconstructed ? 'Media dei soli giorni ricostruiti con dati completi: ' + kc(W.meanReconstructed) + ' (' + W.nReconstructed + (W.nReconstructed === 1 ? ' giorno' : ' giorni') + '): non è il consumo della settimana. ' : '')
-    + 'Un giorno sopra l\'obiettivo riduce solo aritmeticamente il residuo: il piano non toglie calorie ai giorni dopo.</p>';
+    + 'Ogni barra sono le calorie registrate quel giorno; la tacca è l\'obiettivo del giorno. Il consumo dei giorni passati è ricostruito con i loro dati, quello dei giorni che vengono è previsto. Un giorno sopra l\'obiettivo riduce solo aritmeticamente il residuo: il piano non toglie calorie ai giorni dopo.</p>';
 }
 /* ---------- peso: tendenza del motore, senza sottrarre acqua ---------- */
 function renderHero() {
@@ -5784,18 +5769,31 @@ function renderTomorrow() {
   $('#tmw-date').textContent = fmtDay(R);
   var meas = state.days.get(R), mw = meas && meas.weight > 0 ? +meas.weight : null;
   if (!tm || tm.none) { box.innerHTML = '<p class="muted">Per questa mattina l\'intervallo non è disponibile: ' + esc(tm && tm.why || 'servono pesate recenti') + '. Un dato assente non viene trattato come zero.</p>'; return; }
-  var html = '<div class="weigh-sub">Intervallo atteso, calcolato con i dati fino al ' + fmtDay(asOf) + '</div><div class="weigh-top"><div class="weigh-value"><small>Centro</small><b>' + fmt(tm.c, 1) + ' kg</b><span>Tendenza prolungata di un giorno</span></div><div class="weigh-value"><small>Intervallo tipico</small><b>' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + '</b><span>±' + fmt(tm.spread, 1) + ' kg: dispersione delle tue pesate attorno alla retta</span></div></div>';
-  html += '<div class="weigh-explain"><b>Che cos\'è</b>La tendenza delle ultime due settimane, spostata di un giorno, con la dispersione tipica delle tue pesate (almeno ±0,3 kg). Non è una probabilità e non usa le calorie del giorno: sale, liquidi, intestino e orario non sono noti. È separata dalle previsioni d\'arrivo, che usano il bilancio energetico.</div>';
-  if (snap && snap.tomorrow) html += '<p class="muted small">Fotografia salvata il ' + fmtDay(asOf) + ': ' + fmt(snap.tomorrow.lo, 1) + '–' + fmt(snap.tomorrow.hi, 1) + ' kg (centro ' + fmt(snap.tomorrow.c, 1) + '). ' + (Math.abs(snap.tomorrow.c - tm.c) > 0.05 ? 'Il ricalcolo di oggi è diverso perché nel frattempo sono cambiati dei dati di quei giorni.' : 'Coincide con il ricalcolo.') + '</p>';
-  html += '<div class="weigh-sub">Confronto con la bilancia</div>';
-  if (mw == null) html += '<div class="weigh-compare"><b>Pesata non ancora registrata</b><p>Quando inserisci il peso di questa mattina, qui compare il confronto con l\'intervallo.</p></div>';
+  var past = R < t, mwTxt = mw != null ? fmt(mw, 1) : null;
+  var html = '<div class="bs-hero"><small>' + (past ? 'Peso previsto quella mattina' : 'Il peso previsto per stamattina') + '</small><div class="bs-big"><b>' + fmt(tm.c, 1) + '</b><span>kg</span></div>'
+    + '<p class="bs-range">Oscillazione normale: <b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + ' kg</b></p></div>';
+  /* scala: un asse con i valori della previsione e, se c'è, la pesata */
+  var lo = Math.min(tm.lo, mw != null ? mw : tm.lo), hi = Math.max(tm.hi, mw != null ? mw : tm.hi), pad = Math.max(0.25, (hi - lo) * 0.18);
+  lo -= pad; hi += pad;
+  var P = function (x) { return ((x - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
+  var inside = mw != null && mw >= tm.lo && mw <= tm.hi, diff = mw != null ? mw - tm.c : null;
+  var tone = mw == null ? 'none' : inside ? 'ok' : 'out';
+  html += '<div class="bs-scale bs-' + tone + '" role="img" aria-label="Previsto ' + fmt(tm.c, 1) + ' kg, oscillazione normale ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg' + (mw != null ? ', la tua pesata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
+    + (mw != null ? '<div class="bs-pin" style="left:' + P(mw) + '"><span>Tu · ' + mwTxt + '</span><i></i></div>' : '<div class="bs-pin bs-pin-wait" style="left:' + P(tm.c) + '"><span>Pesata non ancora inserita</span></div>')
+    + '<div class="bs-track"><span class="bs-band" style="left:' + P(tm.lo) + ';width:calc(' + P(tm.hi) + ' - ' + P(tm.lo) + ')"></span><span class="bs-mid" style="left:' + P(tm.c) + '"></span>' + (mw != null ? '<span class="bs-me" style="left:' + P(mw) + '"></span>' : '') + '</div>'
+    + '<div class="bs-ticks"><span style="left:' + P(tm.lo) + '"><b>' + fmt(tm.lo, 1) + '</b>min</span><span class="bs-tc" style="left:' + P(tm.c) + '"><b>' + fmt(tm.c, 1) + '</b>previsto</span><span style="left:' + P(tm.hi) + '"><b>' + fmt(tm.hi, 1) + '</b>max</span></div></div>'
+    + '<div class="bs-key"><span class="k-band">oscillazione normale</span><span class="k-mid">previsto</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
+  if (mw == null) html += '<div class="bs-wait"><p>' + (past ? 'Quel giorno non c\'è una pesata nel diario.' : 'Pesati e inserisci il peso di stamattina: qui vedi subito dove cadi rispetto alla previsione.') + '</p>' + (past ? '' : '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>') + '</div>';
   else {
-    var diff = mw - tm.c, inside = mw >= tm.lo && mw <= tm.hi, span = Math.max(tm.spread * 1.8, Math.abs(diff) * 1.2, 0.6), pct = function (x) { return Math.max(2, Math.min(98, 50 + (x - tm.c) / (2 * span) * 100)); };
-    html += '<div class="weigh-compare ' + (inside ? 'edge' : 'out') + '"><div class="weigh-compare-head"><b>Intervallo e bilancia</b><span class="weigh-badge">' + (inside ? 'Dentro l\'intervallo' : 'Fuori dall\'intervallo') + '</span></div>'
-      + '<div class="weigh-numbers"><div><small>Centro</small><b>' + fmt(tm.c, 1) + '</b></div><div><small>Bilancia</small><b>' + fmt(mw, 1) + '</b></div><div><small>Differenza</small><b>' + sgn(diff, 1) + '</b></div></div>'
-      + '<div class="weigh-bar" role="img" aria-label="Intervallo ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg; bilancia ' + fmt(mw, 1) + ' kg"><span class="weigh-band" style="left:' + pct(tm.lo) + '%;width:' + (pct(tm.hi) - pct(tm.lo)) + '%"></span><span class="weigh-mid"></span><span class="weigh-dot" style="left:' + pct(mw) + '%"></span></div>'
-      + '<p>La bilancia è ' + fmt(Math.abs(diff), 1) + ' kg ' + (diff >= 0 ? 'sopra' : 'sotto') + ' il centro' + (inside ? ' e dentro l\'intervallo tipico.' : ' e fuori dall\'intervallo tipico: guarda le prossime pesate prima di trarre conclusioni.') + ' Uno scarto di una mattina non misura grasso o muscolo.</p></div>';
+    var word = inside ? 'Nella norma' : diff > 0 ? 'Sopra il previsto' : 'Sotto il previsto';
+    html += '<div class="bs-res bs-' + tone + '"><div class="bs-res-h"><b>Confronto con la bilancia</b><span class="bs-badge">' + word + '</span></div>'
+      + '<div class="bs-nums"><div><small>Previsto</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Scarto</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
+      + '<p class="bs-say">' + (Math.abs(diff) < 0.05 ? 'Esattamente come previsto.' : fmt(Math.abs(diff), 1) + ' kg ' + (diff > 0 ? 'sopra' : 'sotto') + ' il previsto, ' + (inside ? 'dentro l\'oscillazione normale.' : 'fuori dall\'oscillazione normale: guarda le prossime pesate.')) + '</p></div>';
   }
+  /* spiegazioni: dietro la «i» del riquadro */
+  html += '<div class="weigh-explain"><b>Che cos\'è il peso previsto</b>È la tendenza delle tue pesate delle ultime due settimane, prolungata fino a questa mattina, calcolata con i dati fino al ' + fmtDay(asOf) + '. Non usa le calorie del giorno: sale, liquidi, intestino e orario non sono noti.</div>'
+    + '<div class="weigh-explain"><b>Che cos\'è l\'oscillazione normale</b>±' + fmt(tm.spread, 1) + ' kg attorno al previsto: è quanto le tue pesate si allontanano di solito dalla loro tendenza (almeno ±0,3 kg). Non è una probabilità. Uno scarto di una mattina non misura grasso o muscolo.</div>';
+  if (snap && snap.tomorrow) html += '<p class="muted small">Fotografia salvata il ' + fmtDay(asOf) + ': ' + fmt(snap.tomorrow.lo, 1) + '–' + fmt(snap.tomorrow.hi, 1) + ' kg (previsto ' + fmt(snap.tomorrow.c, 1) + '). ' + (Math.abs(snap.tomorrow.c - tm.c) > 0.05 ? 'Il ricalcolo di oggi è diverso perché nel frattempo sono cambiati dei dati di quei giorni.' : 'Coincide con il ricalcolo.') + '</p>';
   box.innerHTML = html;
 }
 /* ---------- il percorso in breve (Progressi > Settimane) ---------- */
@@ -5871,15 +5869,16 @@ function renderCurrentEnergy() {
     + '<tr><td>+ digestione (10% delle calorie)</td><td>' + fmt(GJM.K.TEF * (C.assumeIntake || 0), 0) + '</td><td>sull\'obiettivo di oggi (' + kc(C.assumeIntake) + ')</td></tr>'
     + '<tr class="p2-tot"><td>Consumo stimato di oggi</td><td>' + fmt(C.v, 0) + '</td><td>' + (C.lo != null ? fmt(C.lo, 0) + '–' + fmt(C.hi, 0) : '') + '</td></tr>'
     + '</tbody></table></div>' : '<p class="muted small">' + (E.cfg.mode === 'manuale_fisso' ? 'Consumo manuale fisso: ' + kc(E.cfg.manual) + '. ' + (E.cfg.useProfile ? '' : 'Senza profilo completo non posso scomporlo.') : esc(E.base && E.base.why || 'Componenti non disponibili')) + '</p>';
-  box.innerHTML = '<div class="energy-status"><span class="status-pill">' + lb('origine', E.states.origine) + '</span><span>Fiducia ' + confLabel(E).toLowerCase() + ' · ' + lb('qualita', E.states.qualita).toLowerCase() + '</span></div>' + tab
-    + '<div class="energy-distinction"><b>Consumo, consumo di riferimento e obiettivo sono tre cose diverse</b><p>Il <b>consumo stimato di oggi</b> segue l\'attività prevista per oggi. Il <b>consumo di riferimento</b> (' + (E.base && E.base.ok ? kc(E.base.R) : '—') + ') è la media della settimana tipo, usata dal piano per il deficit o il surplus. L\'<b>obiettivo</b> (' + (E.today.target ? kc(E.today.target.v) : '—') + ') è quanto mangiare: superarlo non vuol dire superare il consumo.</p></div>'
+  box.innerHTML = '<div class="en-big"><b>' + (C ? fmt(C.v, 0) : '—') + '</b><span>kcal</span></div><div class="en-pills"><span class="en-pill">' + lb('origine', E.states.origine) + '</span><span class="en-pill">Fiducia ' + confLabel(E).toLowerCase() + '</span></div>'
+    + '<div class="ib-note" data-ibl="Da che cosa è fatto">' + (C && C.lo != null ? '<p>Intervallo probabile: ' + fmt(C.lo, 0) + '–' + fmt(C.hi, 0) + ' kcal. ' + lb('qualita', E.states.qualita) + '.</p>' : '') + tab + '</div>'
+    + '<div class="energy-distinction ib-note"><b>Consumo, consumo di riferimento e obiettivo sono tre cose diverse</b><p>Il <b>consumo stimato di oggi</b> segue l\'attività prevista per oggi. Il <b>consumo di riferimento</b> (' + (E.base && E.base.ok ? kc(E.base.R) : '—') + ') è la media della settimana tipo, usata dal piano per il deficit o il surplus. L\'<b>obiettivo</b> (' + (E.today.target ? kc(E.today.target.v) : '—') + ') è quanto mangiare: superarlo non vuol dire superare il consumo.</p></div>'
     + calibrationHTML(E);
 }
 function calibrationHTML(E) {
   var c = E.calibration, kh = E.kHistory || { list: [] }, h = '';
   if (E.cfg.mode === 'manuale_fisso') {
     h = '<p class="muted small">Consumo manuale fisso: non viene calibrato.' + (E.compare ? ' Confronto secondario con la stima dal diario: ' + (E.compare.status === 'calibrato' ? kc(E.compare.C) + ' (solo informativo, non cambia il piano)' : lb('qualita', E.compare.status).toLowerCase()) : '') + '</p>';
-    return '<details class="more"><summary>Confronto con il diario</summary><div class="in">' + h + '</div></details>';
+    return '<details class="more" data-ibfold><summary>Confronto con il diario</summary><div class="in">' + h + '</div></details>';
   }
   if (c) {
     h += '<p><b>Ultimo controllo (' + fmtDay(c.asOf) + '):</b> ' + lb('qualita', c.status) + '. ' + esc((c.reasons || []).join('; ')) + '</p>';
@@ -5888,7 +5887,7 @@ function calibrationHTML(E) {
   }
   if (kh.list.length) h += '<div class="tw"><table class="p2-parts"><thead><tr><th>Revisione</th><th>Esito</th><th>Fattore</th><th>Motivo</th></tr></thead><tbody>' + kh.list.slice().reverse().map(function (x) { return '<tr><td>' + fmtShort(x.d) + '</td><td>' + (x.applied ? 'aggiornato ' + sgn(x.step, 0) + ' kcal' : lb('qualita', x.status)) + '</td><td>' + fmt(x.kBefore, 3) + ' → ' + fmt(x.kAfter, 3) + '</td><td>' + esc(x.why || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
   if (kh.next) h += '<p class="muted small">Prossima revisione del consumo: ' + fmtDay(kh.next) + '.</p>';
-  return '<details class="more"><summary>Confronto con il diario e revisioni</summary><div class="in">' + (h || '<p class="muted small">Nessun controllo ancora.</p>') + '</div></details>';
+  return '<details class="more" data-ibfold><summary>Confronto con il diario e revisioni</summary><div class="in">' + (h || '<p class="muted small">Nessun controllo ancora.</p>') + '</div></details>';
 }
 function energyContext(date) { var x = dayInfoOf(date); return { date: date, td: x && x.C != null ? Math.round(x.C) : null, x: x, fixed: S().tdeeAuto === false }; }
 function energyMethodHTML(date) {
@@ -5951,32 +5950,34 @@ function gymDayText(date) {
   var x = dayInfoOf(date), g = x && x.A && x.A.gym, v = state.days.get(date) || {};
   if (date > todayStr()) return 'Giorno futuro';
   if (v.riposo === true) return 'Riposo confermato';
-  if (g && g.orig && /coperto/.test(g.orig)) return 'Nessuna seduta in Hevy';
-  return 'Nessuna seduta importata';
+  if (g && g.orig && /coperto/.test(g.orig)) return 'Nessuna seduta';
+  return 'Nessuna seduta';
 }
 function dayStatsHTML(date) {
   var d = state.days.get(date) || {}, has = d.kcal > 0 || d.weight > 0 || d.steps > 0, x = dayInfoOf(date);
-  var st = function (l, v, u, c, sub) { return '<div class="ds" style="--c:' + c + '"><div class="l"><i></i>' + l + '</div><div class="v">' + v + (u && v !== '—' ? '<small>' + u + '</small>' : '') + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>'; };
+  var st = function (l, v, u, c, sub) { var txt = /[a-z]{3}/i.test(String(v).replace(/<[^>]+>/g, '')); return '<div class="ds' + (txt ? ' ds-txt' : '') + '" style="--c:' + c + '"><div class="l"><i></i>' + l + '</div><div class="v">' + v + (u && v !== '—' ? '<small>' + u + '</small>' : '') + '</div>' + '<div class="s">' + (sub || '&nbsp;') + '</div></div>'; };
   var w0 = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }), g0 = w0.length ? wGroup(w0[0]) : null;
   var wTile = st('Allenamento', w0.length ? (w0.length > 1 ? w0.length + ' sedute' : esc(g0)) : gymDayText(date), '', g0 ? GROUP[g0].c : '#6F7793');
   if (!has) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Il diario non contiene ancora calorie, peso e passi per questo giorno. Toccando «Modifica i dati» li aggiungi quando vuoi.</div>';
   var ks = GJM.fieldState(d, 'kcal', date === todayStr()), b = balOf(date), T = dayTarget(date);
   var kSub = lb('fstate', ks) + (T.kcal ? ' · obiettivo ' + fmt(T.kcal, 0) : '');
-  var bSub = b ? 'su ' + fmt(b.C, 0) + ' di consumo stimato' : x && x.C != null ? (ks === 'completo' ? '' : 'giornata non dichiarata completa: niente bilancio') : 'consumo non stimabile';
+  var bSub = b ? 'su ' + fmt(b.C, 0) + ' di consumo stimato' : x && x.C != null ? (ks === 'completo' ? '' : 'giornata non completa') : 'consumo non stimabile';
   var sSem = d.steps > 0 ? lb('stepsSem', GJM.steps.sem(d, date, planDoc() || {})) : '';
   return st('Peso', d.weight > 0 ? fmt(d.weight, 1) : '—', 'kg', HEX.accent, d.weight > 0 ? wInfo(d) : '')
     + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : '—', 'kcal', HEX.kcal, d.kcal > 0 ? kSub : '')
     + st('Bilancio stimato', b ? sgn(b.v, 0) : '—', 'kcal', b && b.v > 0 ? HEX.warn : HEX.good, bSub)
     + st('Passi', d.steps > 0 ? fmt(d.steps, 0) : '—', '', HEX.steps, sSem)
-    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'h', HEX.sleep)
+    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'h', HEX.sleep, d.sleepH > 0 && S().sleepGoal > 0 ? 'obiettivo ' + fmtH(S().sleepGoal) + ' h' : '')
     + wTile;
 }
 function dayWorkHTML(date) {
   var ws = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }).sort(function (x, y) { return (x.start || '') < (y.start || '') ? -1 : 1; });
   var x = dayInfoOf(date), se = x && x.A && x.A.gym ? x.A.gym.sessions : [];
   if (!ws.length) {
-    var why = date > todayStr() ? 'Giorno futuro.' : (state.days.get(date) || {}).riposo === true ? 'Riposo confermato da te.' : x && x.A && x.A.gym && /coperto/.test(x.A.gym.orig || '') ? 'Nessuna seduta in Hevy per questo giorno (periodo coperto dall\'ultimo import).' : 'Nessuna seduta importata: questo non vuol dire riposo. Per i calcoli uso ' + esc((x && x.A && x.A.gym && x.A.gym.orig) || 'le abitudini dichiarate') + '.';
-    return '<div class="empty">' + why + '</div>';
+    var fut = date > todayStr(), rest = (state.days.get(date) || {}).riposo === true, cov = x && x.A && x.A.gym && /coperto/.test(x.A.gym.orig || '');
+    var head = fut ? 'Giorno futuro' : rest ? 'Riposo confermato' : 'Nessuna seduta registrata';
+    var why = fut || rest ? '' : cov ? 'Il file di Hevy copre questo giorno e non contiene sedute.' : 'Nessuna seduta importata da Hevy: non vuol dire riposo. Per stimare il consumo uso ' + esc((x && x.A && x.A.gym && x.A.gym.orig) || 'le abitudini dichiarate') + '.';
+    return '<div class="empty wd-empty">' + head + '</div>' + (why ? '<p class="muted small">' + why + '</p>' : '');
   }
   return ws.map(function (w, i) {
     var G = GROUP[wGroup(w)], vol = 0, nS = 0, e = se.filter(function (s) { return s.title === w.title; })[0] || se[i];
@@ -6035,39 +6036,115 @@ function barsFor(date, stepsToo) {
 /* ---------- peso ---------- */
 function renderWeightChart() {
   var s = S(), ws = weightsSeries(), avg = movAvg(ws), E = state.E, tr = E && E.weight ? E.weight.trend : null, f = E && E.forecast, t = todayStr();
-  var x0 = s.startDate || (ws[0] && ws[0].d) || t, x1 = s.endDate || t;
-  if (ws.length) { if (ws[0].d < x0) x0 = ws[0].d; if (ws[ws.length - 1].d > x1) x1 = ws[ws.length - 1].d; }
-  var proj = null;
-  var arrLine = null;
-  if (f && f.plan && f.plan.central && s.goalWeight > 0) {
-    var pEnd = f.plan.to || addDays(f.from, GJM.K.HORIZON);
-    proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: f.plan.central, v: s.goalWeight } };
-    /* l'arrivo è un tratto sull'obiettivo, dalla data più vicina alla più lontana, non un punto */
-    if (f.plan.from) arrLine = { cls: 'l-arr', a: { d: f.plan.from, v: s.goalWeight }, b: { d: pEnd, v: s.goalWeight }, label: 'arrivo ' + arrText(f.plan, true), above: true };
-    if (pEnd > x1) x1 = addDays(pEnd, 3);
+  var svg = $('#w-chart'); if (!svg) return;
+  /* periodo: 4 settimane, fase in corso (predefinito), tutto */
+  if (!state.wRange) { try { state.wRange = localStorage.getItem('ml-wrange') || 'fase'; } catch (e) { state.wRange = 'fase'; } }
+  var panel = svg.closest('.panel'), seg = $('#w-rng');
+  if (!seg && panel) {
+    seg = document.createElement('div'); seg.id = 'w-rng'; seg.className = 'seg w-rng'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Periodo del grafico');
+    seg.innerHTML = '<button type="button" data-wr="4w">4 settimane</button><button type="button" data-wr="fase">Fase in corso</button><button type="button" data-wr="tutto">Tutto</button>';
+    svg.parentNode.parentNode.insertBefore(seg, svg.parentNode);
+    seg.addEventListener('click', function (e) { var b = e.target.closest('[data-wr]'); if (!b) return; state.wRange = b.dataset.wr; try { localStorage.setItem('ml-wrange', state.wRange); } catch (er) {} svg.dataset.sig = ''; renderWeightChart(); });
   }
-  if (diffDays(x0, x1) < 7) x1 = addDays(x0, 7);
-  var vals = ws.map(function (p) { return p.w; }); if (s.startWeight > 0) vals.push(s.startWeight); if (s.goalWeight > 0) vals.push(s.goalWeight);
-  if (!vals.length) vals = [70];
+  if (seg) $$('[data-wr]', seg).forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.wr === state.wRange ? 'true' : 'false'); });
+  var v = activeVersion(), g = v && v.goal || {}, phase0 = g.startDate || s.startDate || (v && v.from) || (ws[0] && ws[0].d) || t;
+  var gw = s.goalWeight > 0 ? s.goalWeight : null, showFc = state.wRange !== '4w';
+  var x0 = state.wRange === '4w' ? addDays(t, -27) : state.wRange === 'fase' ? phase0 : ((ws[0] && ws[0].d) || phase0), x1 = t;
+  if (x0 > t) x0 = addDays(t, -27);
+  var arr = null, proj = null;
+  if (showFc && f && f.plan && f.plan.central && gw) {
+    var pEnd = f.plan.to || addDays(f.from, GJM.K.HORIZON);
+    proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: f.plan.central, v: gw } };
+    if (f.plan.from) arr = { a: f.plan.from, b: pEnd };
+    if (pEnd > x1) x1 = addDays(pEnd, 4);
+  }
+  if (showFc && s.endDate && s.endDate > x1 && diffDays(t, s.endDate) < 200) x1 = addDays(s.endDate, 3);
+  if (diffDays(x0, x1) < 10) x0 = addDays(x1, -10);
+  var inR = function (d) { return d >= x0 && d <= x1; };
+  var wv = ws.filter(function (p) { return inR(p.d); }), av = avg.filter(function (p) { return inR(p.d); });
   var avgMap = {}; avg.forEach(function (p) { avgMap[p.d] = p.v; });
-  var lines = [];
-  if (s.startWeight > 0 && s.goalWeight > 0 && s.endDate) lines.push({ cls: 'l-target', a: { d: s.startDate, v: s.startWeight }, b: { d: s.endDate, v: s.goalWeight }, label: 'piano ' + fmt(s.goalWeight, 1) + ' kg' });
-  if (arrLine) lines.push(arrLine);
-  if (tr && !tr.none && tr.method === 'retta') lines.push({ cls: 'l-trend', a: { d: tr.from, v: tr.v - tr.slope * diffDays(tr.from, t) }, b: { d: t, v: tr.v } });
-  lineChart($('#w-chart'), {
-    x0: x0, x1: x1, ymin: Math.min.apply(null, vals) - 0.6, ymax: Math.max.apply(null, vals) + 0.6, dec: 1, hex: HEX.accent,
-    lines: lines, proj: proj, events: planEvents(x0, x1),
-    path: avg.map(function (p) { return { d: p.d, v: Math.round(p.v * 100) / 100 }; }),
-    dots: ws.map(function (p) { return { d: p.d, v: p.w }; }),
-    hoverItems: function (xs, ys) { return ws.map(function (p) { return { x: xs(p.d), y: ys(p.w), text: cap(fmtLong(p.d)) + ' · Pesata ' + fmt(p.w) + ' kg · Media di 7 giorni ' + fmt(avgMap[p.d], 1) + ' kg' }; }); }
+  var vals = wv.map(function (p) { return p.w; }).concat(av.map(function (p) { return p.v; }));
+  if (proj) vals.push(gw, proj.a.v);
+  var plan = s.startWeight > 0 && gw && s.endDate && s.startDate ? { a: { d: s.startDate, v: s.startWeight }, b: { d: s.endDate, v: gw } } : null;
+  var planAt = function (d) { return plan ? plan.a.v + (plan.b.v - plan.a.v) * diffDays(plan.a.d, d) / Math.max(1, diffDays(plan.a.d, plan.b.d)) : null; };
+  if (plan) [x0 > plan.a.d ? x0 : plan.a.d, x1 < plan.b.d ? x1 : plan.b.d].forEach(function (d) { if (d >= plan.a.d && d <= plan.b.d) vals.push(planAt(d)); });
+  if (!vals.length) vals = [s.startWeight || 70];
+  var ymin = Math.min.apply(null, vals), ymax = Math.max.apply(null, vals);
+  var W = chartW(svg), narrow = W < 520;
+  var sig = JSON.stringify([W, state.wRange, x0, x1, ymin, ymax, wv.length, av.length && av[av.length - 1], proj, arr, gw, plan]);
+  var evs = planEvents(x0, x1);
+  /* gli eventi del percorso: nel grafico solo una tacca sull'asse; cosa sono è scritto dietro la «i» */
+  var wl = $('#w-evl'); if (!wl) { wl = document.createElement('p'); wl.id = 'w-evl'; wl.className = 'caption w-evl2'; var rd = $('#w-readout'); if (rd) rd.parentNode.insertBefore(wl, rd); }
+  wl.innerHTML = evs.length ? '<b>Eventi del percorso nel periodo</b> (le tacche sotto l\'asse delle date): ' + evs.map(function (e) { return esc(e.label) + ' il ' + fmtShort(e.d); }).join(', ') + '. Rendono il peso meno leggibile per qualche settimana, ma non lo correggono.' : '';
+  $('#w-readout').textContent = ws.length ? 'Tocca o passa sul grafico per leggere ogni giorno: pesata e media di 7 giorni. La linea piena è la media di 7 giorni, i puntini sono le pesate; la linea tratteggiata è il piano verso l\'obiettivo e quella a puntini la previsione con le calorie del piano, fino all\'intervallo d\'arrivo.' : 'Ancora nessuna pesata.';
+  if (svg.dataset.sig === sig) return;
+  svg.dataset.sig = sig;
+  var vb = { w: W, h: narrow ? 290 : 320 }, m = { l: narrow ? 36 : 42, r: narrow ? 12 : 16, t: 22, b: evs.length ? 34 : 26 };
+  var hex = HEX.accent;
+  svg.setAttribute('viewBox', '0 0 ' + vb.w + ' ' + vb.h);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  svg.classList.add('wchart');
+  var gid = 'w-chart-g'; gradDef(svg, gid, hex, .28);
+  var span = Math.max(1, diffDays(x0, x1)), pw = vb.w - m.l - m.r, ph = vb.h - m.t - m.b;
+  var xs = function (d) { return m.l + diffDays(x0, d) / span * pw; };
+  var pad = Math.max(0.3, (ymax - ymin) * 0.08), ticks = niceTicks(ymin - pad, ymax + pad, narrow ? 4 : 5), lo = ticks[0], hi = ticks[ticks.length - 1];
+  var ys = function (v) { return m.t + (1 - (v - lo) / (hi - lo)) * ph; };
+  var dec = ticks.length > 1 && Math.abs(ticks[1] - ticks[0]) < 1 ? 1 : 0;
+  var clip = el('clipPath', { id: 'w-clip' }); clip.appendChild(el('rect', { x: m.l, y: m.t - 8, width: pw, height: ph + 8 })); svg.appendChild(clip);
+  ticks.forEach(function (k) {
+    svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: vb.w - m.r, y1: ys(k), y2: ys(k) }));
+    svg.appendChild(el('text', { class: 'w-yt', x: m.l - 7, y: ys(k) + 4, 'text-anchor': 'end' }, fmt(k, dec)));
   });
-  $('#w-readout').textContent = ws.length ? 'Tocca o passa sul grafico per leggere ogni giorno. Le linee verticali sono eventi del percorso (creatina, cambi di fase, lavoro): rendono il peso meno leggibile, non lo correggono.' : 'Ancora nessuna pesata.';
+  /* date: al massimo 4 sul telefono, 6 sul computer */
+  var nT = narrow ? 3 : 5, stepD = Math.max(1, Math.round(span / nT));
+  for (var i = 0; i <= nT; i++) {
+    var dd = addDays(x0, Math.min(span, i * stepD)); if (i && diffDays(addDays(x0, (i - 1) * stepD), dd) < stepD * 0.6) continue;
+    svg.appendChild(el('text', { class: 'w-xt', x: Math.min(vb.w - m.r, Math.max(m.l, xs(dd))), y: vb.h - 6, 'text-anchor': i === 0 ? 'start' : i === nT ? 'end' : 'middle' }, fmtShort(dd)));
+  }
+  var G = el('g', { 'clip-path': 'url(#w-clip)' }); svg.appendChild(G);
+  /* oggi: una linea leggera che separa i dati dalla previsione */
+  if (t > x0 && t < x1 && proj) { G.appendChild(el('rect', { class: 'w-future', x: xs(t), y: m.t, width: Math.max(0, xs(x1) - xs(t)), height: ph })); G.appendChild(el('line', { class: 'w-today', x1: xs(t), x2: xs(t), y1: m.t, y2: m.t + ph })); }
+  /* obiettivo */
+  if (gw && gw >= lo && gw <= hi) {
+    G.appendChild(el('line', { class: 'w-goal', x1: m.l, x2: vb.w - m.r, y1: ys(gw), y2: ys(gw) }));
+    if (arr) G.appendChild(el('line', { class: 'w-arr', x1: xs(arr.a), x2: xs(arr.b), y1: ys(gw), y2: ys(gw) }));
+  }
+  if (plan) G.appendChild(el('line', { class: 'w-plan', x1: xs(plan.a.d), y1: ys(plan.a.v), x2: xs(plan.b.d), y2: ys(plan.b.v) }));
+  /* pesate: puntini piccoli e tenui; sopra la media di 7 giorni, la linea da leggere */
+  wv.forEach(function (p, k) { if (k === wv.length - 1 && p.d === t) return; G.appendChild(el('circle', { class: 'w-dot', cx: xs(p.d), cy: ys(p.w), r: narrow ? 2.1 : 2.6 })); });
+  if (av.length > 1) {
+    var pts = av.map(function (p) { return [xs(p.d), ys(p.v)]; }), d = smoothPath(pts), lp = pts[pts.length - 1];
+    G.appendChild(el('path', { d: d + ' L' + lp[0].toFixed(1) + ' ' + (m.t + ph) + ' L' + pts[0][0].toFixed(1) + ' ' + (m.t + ph) + ' Z', fill: 'url(#' + gid + ')' }));
+    G.appendChild(el('path', { d: d, class: 'w-avg', stroke: hex }));
+  }
+  if (!narrow && tr && !tr.none && tr.method === 'retta') G.appendChild(el('line', { class: 'w-trend', x1: xs(tr.from), y1: ys(tr.v - tr.slope * diffDays(tr.from, t)), x2: xs(t), y2: ys(tr.v) }));
+  if (proj) {
+    G.appendChild(el('path', { class: 'w-proj', d: 'M' + xs(proj.a.d).toFixed(1) + ' ' + ys(proj.a.v).toFixed(1) + ' L' + xs(proj.b.d).toFixed(1) + ' ' + ys(proj.b.v).toFixed(1), stroke: hex }));
+    G.appendChild(el('circle', { class: 'w-pend', cx: xs(proj.b.d), cy: ys(proj.b.v), r: 4.5 }));
+  }
+  /* etichette fuori dal ritaglio: obiettivo a destra, peso di adesso sul punto */
+  var tag = function (x, y, txt, cls, anchor) {
+    var w = txt.length * 6.3 + 14, xx = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
+    xx = Math.max(m.l + 2, Math.min(vb.w - m.r - w, xx));
+    var g2 = el('g', { class: 'w-tag ' + cls }); g2.appendChild(el('rect', { x: xx, y: y - 10, width: w, height: 19, rx: 9.5 })); g2.appendChild(el('text', { x: xx + w / 2, y: y + 3.6, 'text-anchor': 'middle' }, txt)); svg.appendChild(g2); return { x: xx, w: w, y: y };
+  };
+  var now = tr && !tr.none ? { d: t, v: tr.v } : av.length ? { d: av[av.length - 1].d, v: av[av.length - 1].v } : null;
+  if (now && inR(now.d)) {
+    var nx = xs(now.d), ny = ys(now.v);
+    svg.appendChild(el('circle', { class: 'w-now', cx: nx, cy: ny, r: 6, fill: hex }));
+    var up = ny - m.t > 30, tg = tag(nx - 8, up ? ny - 18 : ny + 20, fmt(now.v, 1) + ' kg', 'w-tag-now', 'end');
+  }
+  if (gw && gw >= lo && gw <= hi) tag(vb.w - m.r - 2, ys(gw) + (ys(gw) > m.t + ph - 14 ? -13 : 13), 'obiettivo ' + fmt(gw, 1), 'w-tag-goal', 'end');
+  /* eventi: tacche numerate sotto l'asse, senza linee verticali che coprono il peso */
+  evs.forEach(function (ev) { var ex = xs(ev.d); if (ex < m.l || ex > vb.w - m.r) return; svg.appendChild(el('path', { class: 'w-ev', d: 'M' + ex.toFixed(1) + ' ' + (m.t + ph + 3) + ' l4 7 h-8 z' })); });
+  var guide = el('line', { class: 'guide' }); svg.appendChild(guide);
+  hover(svg, vb, wv.map(function (p) { return { x: xs(p.d), y: ys(p.w), text: cap(fmtLong(p.d)) + ' · Pesata ' + fmt(p.w) + ' kg · Media di 7 giorni ' + fmt(avgMap[p.d], 1) + ' kg' }; }), guide, m.t, m.t + ph);
 }
 function planEvents(x0, x1) {
   var out = [], p = planDoc() || {};
   (p.events || []).forEach(function (e) { if (e.from >= x0 && e.from <= x1) out.push({ d: e.from, label: (e.label || e.kind).slice(0, 18) }); });
   (p.supplements || []).forEach(function (sp) { (sp.events || []).forEach(function (e) { if (e.date >= x0 && e.date <= x1) out.push({ d: e.date, label: (sp.name || 'integratore') + ': ' + e.type }); }); });
-  return out.slice(-6);
+  return out.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; }).slice(-6);
 }
 function renderForecast() {
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
@@ -6081,11 +6158,11 @@ function renderForecast() {
   $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Intervallo da consumo (±' + fmt((f.plan && f.plan.kSDrel || 0) * 100, 0) + '%) e livello di partenza (±' + fmt(f.w0Se, 1) + ' kg), non una probabilità</span>' + (f.plan && f.plan.rho ? '<span class="chip context-chip context-neutral">Con 5.000 kcal/kg: ' + (f.plan.rho[5000] ? fmtShort(f.plan.rho[5000]) : 'oltre 12 sett.') + ' · con 9.400: ' + (f.plan.rho[9400] ? fmtShort(f.plan.rho[9400]) : 'oltre 12 sett.') + '</span>' : '');
   var rows = '<div class="fc-grid">'
     + line('Con le calorie del piano', (E.today.target ? fmt(E.today.target.v, 0) + ' kcal al giorno' : '—') + ', partendo dalla tendenza di ' + fmt(f.w0, 1) + ' kg', rng(f.plan))
-    + line('Con le calorie registrate', f.logged ? 'media di ' + fmt(f.logged.I, 0) + ' kcal su ' + f.logged.n + ' giornate complete delle ultime 2 settimane, comprese le più abbondanti' : esc(f.loggedWhy || ''), f.logged ? rng(f.logged) : '—')
+    + line('Con le calorie registrate', f.logged ? 'media di ' + fmt(f.logged.I, 0) + ' kcal al giorno, ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—')
     + (f.required ? (f.required.conflict
-      ? line('Per arrivare entro il ' + fmtDay(f.required.date), 'non compatibile con i limiti del piano automatico: ' + esc(f.required.why), 'in conflitto')
-      : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie costanti da oggi con la stessa simulazione' + (f.required.beyondHorizon ? ' (oltre 12 settimane: solo indicativo)' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
-    + '</div><p class="caption">Ogni giorno: peso − (consumo − calorie) ÷ 7.700, con il consumo che cambia col peso e la digestione calcolata sulle calorie dello scenario. I giorni sopra l\'obiettivo sono già dentro la media registrata: non aggiungo «giorni di ritardo». Oltre 12 settimane la previsione non è disponibile. Non quantificati: giorni diversi dallo scenario, errori del diario, acqua dopo un cambio di routine.</p>';
+      ? line('Per arrivare entro il ' + fmtDay(f.required.date), 'non compatibile con i limiti del piano', 'fuori dai limiti')
+      : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
+    + '</div><p class="caption">' + (f.logged ? '<b>Calorie registrate:</b> media di ' + fmt(f.logged.I, 0) + ' kcal su ' + f.logged.n + ' giornate complete delle ultime 2 settimane, comprese le più abbondanti. ' : f.loggedWhy ? '<b>Calorie registrate:</b> ' + esc(f.loggedWhy) + '. ' : '') + (f.required && !f.required.conflict ? '<b>Per la data:</b> calorie costanti da oggi con la stessa simulazione' + (f.required.beyondHorizon ? ', oltre 12 settimane quindi solo indicativo' : '') + '. ' : '') + '</p><p class="caption"><b>Come lo calcolo:</b> ogni giorno peso − (consumo − calorie) ÷ 7.700, con il consumo che cambia col peso e la digestione calcolata sulle calorie dello scenario. I giorni sopra l\'obiettivo sono già dentro la media registrata: non aggiungo «giorni di ritardo». Oltre 12 settimane la previsione non è disponibile. Non quantificati: giorni diversi dallo scenario, errori del diario, acqua dopo un cambio di routine.</p>';
   if (f.required && f.required.conflict) rows += '<p class="p2-warn" id="fc-conflict">Per quella data non mostro un numero di calorie: ' + esc(f.required.why) + '. Puoi ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data al ' + fmtDay(a.date) + ' o dopo' : a.msg); }).join('; ') + '. Non ti propongo restrizioni più forti per far tornare la scadenza.</p>';
   $('#fc-rows').innerHTML = rows;
 }
@@ -6157,7 +6234,7 @@ function renderTotal() {
   countTo($('#tot-v'), rows.length ? amount : null, 0); $('#tot-u').textContent = rows.length ? 'kcal ' + (total <= 0 ? 'di deficit' : 'di surplus') + ' in ' + rows.length + ' giornate complete' : 'kcal';
   $('#tot-chips').innerHTML = rows.length ? '<span class="chip context-chip context-note">Equivalente teorico: ' + fmt(amount / KCAL_KG, 1) + ' kg a 7.700 kcal/kg; non misura il grasso</span>' : '';
   $('#tot-text').textContent = 'Somma di calorie registrate meno consumo stimato di ogni giorno, solo per le giornate dichiarate complete.' + (skipped ? ' ' + skipped + ' giornate con calorie parziali o da confermare non sono contate.' : '') + ' Se il diario sottostima sempre le calorie, il consumo stimato è più basso dello stesso errore: il bilancio resta comunque un\'ipotesi.';
-  box.innerHTML = rows.length ? '<details class="more"><summary>Controlla il calcolo giorno per giorno</summary><div class="in"><div class="tw"><table><thead><tr><th>Data</th><th>Mangiate</th><th>Consumo stimato</th><th>Bilancio</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + fmtShort(r.d) + '</td><td>' + fmt(r.kcal, 0) + '</td><td>' + fmt(r.td, 0) + '</td><td>' + sgn(r.delta, 0) + '</td></tr>'; }).join('') + '</tbody></table></div></div></details>' : '';
+  box.innerHTML = rows.length ? '<details class="more" data-ibfold><summary>Controlla il calcolo giorno per giorno</summary><div class="in"><div class="tw"><table><thead><tr><th>Data</th><th>Mangiate</th><th>Consumo stimato</th><th>Bilancio</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + fmtShort(r.d) + '</td><td>' + fmt(r.kcal, 0) + '</td><td>' + fmt(r.td, 0) + '</td><td>' + sgn(r.delta, 0) + '</td></tr>'; }).join('') + '</tbody></table></div></div></details>' : '';
 }
 /* ---------- settimane ---------- */
 function renderSummary() {
@@ -6607,32 +6684,39 @@ function pedField(el) {
 }
 
 /* ---------- piano attivo e cronologia ---------- */
+function pvRow(k, v, sub) { return '<div class="pv-r"><span class="pv-k">' + k + '</span><span class="pv-v">' + v + '</span>' + (sub ? '<small class="pv-s">' + sub + '</small>' : '') + '</div>'; }
 function planNowHTML() {
   var E = state.E, v = activeVersion();
   if (!v) return '<p class="muted">Nessun piano attivo. Con «Crea il piano» scegli uno dei quattro percorsi.</p>';
   var z = E && E.plan ? E.plan.active : v.resolved, fr = E && E.plan ? E.plan.fresh : null, g = v.goal || {};
-  var rows = [
-    kvr('Percorso', '', esc((PATHS[v.path] || {}).t || 'Piano migrato dalla versione precedente')),
-    kvr('In vigore dal', esc(v.reason || ''), fmtDay(v.from)),
-    kvr('Fase', g.goalWeight ? 'obiettivo ' + fmt(g.goalWeight, 1) + ' kg ± ' + fmt(g.band || GJM.K.BAND, 1) : '', esc(lb('fase', g.phase)) + (g.phase !== 'mantenimento' ? ' · ' + esc(lb('pace', g.paceMode || 'standard')).toLowerCase() : '')),
-    kvr('Consumo', esc(MODE_TXT[(v.tdee || {}).mode] || ''), esc(lb('tdee', (v.tdee || {}).mode)) + (v.tdee && v.tdee.manual && v.tdee.manual.v ? ' · ' + kc(v.tdee.manual.v) : '')),
-    kvr('Calorie', esc(lb('kcal', (v.kcal || {}).mode)) + ((v.kcal || {}).mode !== 'manuale' ? ', ' + lb('update', v.kcal.update).toLowerCase() : ''), z ? kc(z.kcal) : '—'),
-    kvr('Macro', esc(lb('macros', (v.macros || {}).mode)) + ((v.macros || {}).mode !== 'manuale' ? ', ' + lb('pref', v.macros.pref).toLowerCase() : ''), z ? gr(z.p) + ' · ' + gr(z.c) + ' · ' + gr(z.f) : '—')
-  ];
-  var h = '<div class="kvl">' + rows.join('') + '</div>';
+  var mac = function (k, n, c) { return '<span class="pv-mac" style="--mc:' + c + '"><i>' + n + '</i><b>' + (z && z[k] != null ? fmt(z[k], 0) : '—') + '<small>g</small></b></span>'; };
+  var h = '<div class="pv-hero"><div class="pv-kc"><small>Calorie al giorno</small><b>' + (z ? fmt(z.kcal, 0) : '—') + '<span>kcal</span></b></div><div class="pv-macs">' + mac('p', 'Proteine', HEX.prot) + mac('c', 'Carboidrati', HEX.carb) + mac('f', 'Grassi', HEX.fat) + '</div></div>';
+  h += '<div class="pv-list">'
+    + pvRow('Percorso', esc((PATHS[v.path] || {}).t || 'Piano migrato dalla versione precedente'))
+    + pvRow('In vigore dal', fmtDay(v.from), esc(v.reason || ''))
+    + pvRow('Fase', esc(lb('fase', g.phase)) + (g.phase !== 'mantenimento' ? ' · ' + esc(lb('pace', g.paceMode || 'standard')).toLowerCase() : ''), g.goalWeight ? 'obiettivo ' + fmt(g.goalWeight, 1) + ' kg ± ' + fmt(g.band || GJM.K.BAND, 1) + (g.endDate ? ' entro il ' + fmtDay(g.endDate) : '') : '')
+    + pvRow('Consumo', esc(lb('tdee', (v.tdee || {}).mode)) + (v.tdee && v.tdee.manual && v.tdee.manual.v ? ' · ' + kc(v.tdee.manual.v) : ''), esc(MODE_TXT[(v.tdee || {}).mode] || ''))
+    + pvRow('Calorie', esc(lb('kcal', (v.kcal || {}).mode)) + ((v.kcal || {}).mode !== 'manuale' ? ', ' + lb('update', v.kcal.update).toLowerCase() : ''))
+    + pvRow('Macro', (v.macros || {}).mode === 'manuale' ? 'Scelti da te' : esc(lb('macros', (v.macros || {}).mode)) + ', ' + lb('pref', v.macros.pref).toLowerCase())
+    + '</div>';
   if (E && E.plan && E.plan.reconstructed) h += '<p class="p2-note">Valori ricostruiti alla data di inizio della versione (la versione non li aveva salvati).</p>';
   if (fr && fr.errors && fr.errors.length) h += '<p class="p2-warn">Con i dati di oggi: ' + esc(fr.errors.map(function (e) { return e.msg; }).join('; ')) + '. Il piano attivo resta quello salvato.</p>';
   return h;
 }
+/* elenco a schede (al posto delle tabelle, che sul telefono uscivano dal riquadro) */
+function plItem(o) { return '<div class="pl-it' + (o.cur ? ' cur' : '') + '"><div class="pl-top"><span class="pl-t">' + o.t + '</span>' + (o.badge ? '<span class="pl-b">' + o.badge + '</span>' : '') + '</div>' + (o.v ? '<div class="pl-v">' + o.v + '</div>' : '') + (o.s ? '<small class="pl-s">' + o.s + '</small>' : '') + (o.act ? '<div class="pl-act">' + o.act + '</div>' : '') + '</div>'; }
 function historyHTML() {
   var vs = planVersions().slice().sort(function (a, b) { return a.from < b.from ? 1 : a.from > b.from ? -1 : (a.created || '') < (b.created || '') ? 1 : -1; }), act = activeVersion(), t = todayStr();
   if (!vs.length) return '<p class="muted">Ancora nessuna versione.</p>';
-  return '<div class="tw"><table class="p2-parts"><thead><tr><th>Dal</th><th>Origine</th><th>Calorie</th><th>P · C · G</th><th>Stato</th><th></th></tr></thead><tbody>' + vs.map(function (v) {
+  var ORI = { migrazione: 'Migrazione', profilo: 'Modifica', revisione_automatica: 'Revisione automatica', proposta_accettata: 'Proposta accettata', ripristino: 'Ripristino', primo_accesso: 'Primo accesso', obiettivo_raggiunto: 'Obiettivo raggiunto' };
+  return '<div class="pl-list">' + vs.map(function (v) {
     var z = v.resolved || {}, man = v.kcal && v.kcal.mode === 'manuale' && v.kcal.manual ? v.kcal.manual.v : null;
     var st = v.status !== 'attiva' ? 'annullata' : v === act ? 'attiva oggi' : v.from > t ? 'programmata' : 'precedente';
-    return '<tr' + (v === act ? ' class="p2-cur"' : '') + '><td>' + fmtShort(v.from) + '</td><td>' + esc(({ migrazione: 'migrazione', profilo: 'modifica', revisione_automatica: 'revisione automatica', proposta_accettata: 'proposta accettata', ripristino: 'ripristino', primo_accesso: 'primo accesso', obiettivo_raggiunto: 'obiettivo raggiunto' })[v.origin] || v.origin || '—') + (v.reason ? '<small>' + esc(v.reason) + '</small>' : '') + '<small class="faint">' + (z.method ? 'calcolata con ' + esc(z.method) : 'versione del metodo non registrata') + '</small></td><td>' + (man || z.kcal ? fmt(man || z.kcal, 0) : 'ricostruite') + '</td><td>' + (z.p != null ? fmt(z.p, 0) + ' · ' + fmt(z.c, 0) + ' · ' + fmt(z.f, 0) : '—') + '</td><td>' + st + '</td><td>'
-      + (v.status === 'attiva' && v.from > t ? '<button type="button" class="linkbtn small" data-pa="ver-cancel" data-id="' + esc(v.id) + '">Annulla</button>' : v.status === 'attiva' && v !== act ? '<button type="button" class="linkbtn small" data-pa="ver-restore" data-id="' + esc(v.id) + '">Ripristina</button>' : '') + '</td></tr>';
-  }).join('') + '</tbody></table></div><p class="muted small">«Ripristina» apre l\'editor con le impostazioni di quella versione: diventano una nuova versione solo quando salvi.</p>';
+    return plItem({ cur: v === act, t: 'Dal ' + fmtDay(v.from) + ' · ' + esc(ORI[v.origin] || v.origin || '—'), badge: st,
+      v: (man || z.kcal ? fmt(man || z.kcal, 0) + ' kcal' : 'calorie ricostruite') + (z.p != null ? ' · P ' + fmt(z.p, 0) + ' · C ' + fmt(z.c, 0) + ' · G ' + fmt(z.f, 0) + ' g' : ''),
+      s: (v.reason ? esc(cap(v.reason)) + '. ' : '') + (z.method ? 'Calcolata con ' + esc(z.method) + '.' : ''),
+      act: v.status === 'attiva' && v.from > t ? '<button type="button" class="linkbtn small" data-pa="ver-cancel" data-id="' + esc(v.id) + '">Annulla</button>' : v.status === 'attiva' && v !== act ? '<button type="button" class="linkbtn small" data-pa="ver-restore" data-id="' + esc(v.id) + '">Ripristina</button>' : '' });
+  }).join('') + '</div><p class="muted small">«Ripristina» apre l\'editor con le impostazioni di quella versione: diventano una nuova versione solo quando salvi.</p>';
 }
 
 /* ---------- profilo ---------- */
@@ -6641,16 +6725,16 @@ function profHTML() {
   var wU = (p.entered && p.entered.weightUnit) || 'kg', hU = (p.entered && p.entered.heightUnit) || 'cm';
   return '<form id="prof-form" class="stack"><div class="settings-fields">'
     + '<label class="f">Nome<input name="name" type="text" autocomplete="given-name" value="' + esc(p.name || S().name || '') + '"></label>'
-    + '<label class="f">Sesso (per la formula del riposo)<select name="sex"><option value=""' + (!p.sex ? ' selected' : '') + '>Non indicato</option><option value="M"' + (p.sex === 'M' ? ' selected' : '') + '>Maschile</option><option value="F"' + (p.sex === 'F' ? ' selected' : '') + '>Femminile</option></select><small class="muted">senza questo dato la stima dal profilo non è disponibile: niente valori inventati</small></label>'
+    + '<label class="f">Sesso<select name="sex"><option value=""' + (!p.sex ? ' selected' : '') + '>Non indicato</option><option value="M"' + (p.sex === 'M' ? ' selected' : '') + '>Maschile</option><option value="F"' + (p.sex === 'F' ? ' selected' : '') + '>Femminile</option></select><small class="muted">serve alla formula del riposo: senza, la stima dal profilo non è disponibile</small></label>'
     + '<label class="f">Età<input name="age" type="number" min="10" max="110" step="1" inputmode="numeric" value="' + esc(p.age == null ? '' : p.age) + '"></label>'
     + '<label class="f">Altezza<input name="h" type="number" step="0.5" inputmode="decimal" value="' + esc(p.heightCm == null ? '' : hU === 'in' ? rnd(p.heightCm / 2.54, 1) : p.heightCm) + '"></label>'
     + '<label class="f">Unità dell\'altezza<select name="hU"><option value="cm"' + (hU === 'cm' ? ' selected' : '') + '>cm</option><option value="in"' + (hU === 'in' ? ' selected' : '') + '>pollici</option></select></label>'
     + '<label class="f">Peso di partenza<input name="w" type="number" step="0.1" inputmode="decimal" value="' + esc(p.weight == null ? '' : wU === 'lb' ? rnd(p.weight / GJM.units.KG_PER_LB, 1) : p.weight) + '"><small class="muted">usato solo finché non ci sono pesate</small></label>'
     + '<label class="f">Unità del peso<select name="wU"><option value="kg"' + (wU === 'kg' ? ' selected' : '') + '>kg</option><option value="lb"' + (wU === 'lb' ? ' selected' : '') + '>libbre</option></select></label>'
-    + '<label class="f">Etichette degli alimenti<select name="labelConv"><option value="ue"' + (p.labelConv !== 'usa' ? ' selected' : '') + '>UE: i carboidrati non comprendono le fibre</option><option value="usa"' + (p.labelConv === 'usa' ? ' selected' : '') + '>USA: i carboidrati totali comprendono le fibre</option></select><small class="muted">serve solo a confrontare calorie e macro quando scrivi fibre o polioli</small></label>'
+    + '<label class="f">Etichette alimenti<select name="labelConv"><option value="ue"' + (p.labelConv !== 'usa' ? ' selected' : '') + '>UE: i carboidrati non comprendono le fibre</option><option value="usa"' + (p.labelConv === 'usa' ? ' selected' : '') + '>USA: i carboidrati totali comprendono le fibre</option></select><small class="muted">serve solo a confrontare calorie e macro quando scrivi fibre o polioli</small></label>'
     + '</div><details class="more"><summary>Dispendio a riposo misurato (facoltativo)</summary><div class="in"><div class="settings-fields">'
     + '<label class="f">kcal a riposo<input name="rmr" type="number" step="10" inputmode="numeric" value="' + esc(rm.v || '') + '"></label>'
-    + '<label class="f">Peso al momento dell\'esame (kg)<input name="rmrW" type="number" step="0.1" value="' + esc(rm.w || '') + '"></label>'
+    + '<label class="f">Peso all\'esame (kg)<input name="rmrW" type="number" step="0.1" value="' + esc(rm.w || '') + '"></label>'
     + '<label class="f">Data dell\'esame<input name="rmrD" type="date" value="' + esc(rm.date || '') + '"></label>'
     + '</div><p class="muted small">Sostituisce la formula solo per il riposo, non per il consumo totale.</p></div></details>'
     + '<fieldset class="ped-sec"><legend>Situazioni in cui il piano automatico non si applica</legend><p class="muted small">Servono solo a decidere se proporre calorie e macro automatici. Se una è vera, restano diario, grafici, registrazioni e un piano manuale o indicato da un professionista.</p>'
@@ -6685,19 +6769,19 @@ function profSave(f) {
 function listSave(key, list, why) { var p = clone(state.piano || { schema: 2, versions: [] }); p[key] = list; savePlan(p, why); }
 function jobsHTML() {
   var js = ((planDoc() || {}).jobs || []).slice().sort(function (a, b) { return a.from < b.from ? -1 : 1; });
-  var h = js.length ? '<div class="tw"><table class="p2-parts"><thead><tr><th>Dal</th><th>Tipo</th><th>Ore</th><th></th></tr></thead><tbody>' + js.map(function (j, i) {
-    return '<tr><td>' + fmtShort(j.from) + '</td><td>' + esc((GJM.JOB[j.type] || {}).nome || j.type) + (j.origin ? '<small>' + esc(j.origin) + '</small>' : '') + '</td><td>' + (j.days && j.days.length ? fmt(j.hours, 1) + ' h nei giorni ' + j.days.map(function (d) { return WD[d]; }).join(', ') : fmt(j.hoursWeek || 0, 0) + ' h a settimana') + '</td><td><button type="button" class="linkbtn small" data-pa="job-del" data-from="' + j.from + '" data-type="' + esc(j.type) + '">Togli</button></td></tr>';
-  }).join('') + '</tbody></table></div>' : '<p class="muted">Nessun lavoro indicato: nel calcolo il lavoro non aggiunge energia.</p>';
+  var h = js.length ? '<div class="pl-list">' + js.map(function (j) {
+    return plItem({ t: 'Dal ' + fmtDay(j.from), v: esc((GJM.JOB[j.type] || {}).nome || j.type) + ' · ' + (j.days && j.days.length ? fmt(j.hours, 1) + ' h nei giorni ' + j.days.map(function (d) { return WD[d]; }).join(', ') : fmt(j.hoursWeek || 0, 0) + ' h a settimana'), s: j.origin ? esc(cap(j.origin)) : '', act: '<button type="button" class="linkbtn small" data-pa="job-del" data-from="' + j.from + '" data-type="' + esc(j.type) + '">Togli</button>' });
+  }).join('') + '</div>' : '<p class="pl-empty">Nessun lavoro indicato: nel calcolo il lavoro non aggiunge energia.</p>';
   return h + '<p class="muted small">Il cammino durante il lavoro è già nei passi: qui conta solo la postura o lo sforzo senza passi. Per un cambio di lavoro aggiungi una nuova riga con la data: quella vecchia resta per i giorni prima.</p>'
-    + '<div class="settings-fields" id="job-new"><label class="f">Dal<input name="from" type="date" value="' + todayStr() + '"></label><label class="f">Tipo<select name="type">' + Object.keys(GJM.JOB).map(function (k) { return '<option value="' + k + '">' + esc(GJM.JOB[k].nome) + '</option>'; }).join('') + '</select></label><label class="f">Ore a settimana<input name="hw" type="number" min="0" max="80" step="1"></label><label class="f">oppure ore al giorno nei giorni scelti<input name="hd" type="number" min="0" max="16" step="0.5"></label></div><div class="ped-days">' + WD.map(function (d, i) { return '<label class="ped-chk"><input type="checkbox" name="jd' + i + '"> ' + d + '</label>'; }).join('') + '</div><div class="row"><button type="button" class="btn ghost fit small" data-pa="job-add">Aggiungi</button><span class="muted small" id="job-msg"></span></div>';
+    + '<h3 class="pl-h">Aggiungi un periodo di lavoro</h3><div class="settings-fields" id="job-new"><label class="f">Dal<input name="from" type="date" value="' + todayStr() + '"></label><label class="f">Tipo<select name="type">' + Object.keys(GJM.JOB).map(function (k) { return '<option value="' + k + '">' + esc(GJM.JOB[k].nome) + '</option>'; }).join('') + '</select></label><label class="f">Ore a settimana<input name="hw" type="number" min="0" max="80" step="1"></label><label class="f">Oppure ore al giorno<input name="hd" type="number" min="0" max="16" step="0.5"></label></div><div class="ped-days">' + WD.map(function (d, i) { return '<label class="ped-chk"><input type="checkbox" name="jd' + i + '"> ' + d + '</label>'; }).join('') + '</div><div class="row"><button type="button" class="btn ghost fit small" data-pa="job-add">Aggiungi</button><span class="muted small" id="job-msg"></span></div>';
 }
 function eventsHTML() {
   var es = ((planDoc() || {}).events || []).slice().sort(function (a, b) { return a.from < b.from ? -1 : 1; });
-  var h = es.length ? '<div class="tw"><table class="p2-parts"><thead><tr><th>Dal</th><th>Al</th><th>Evento</th><th></th></tr></thead><tbody>' + es.map(function (e) {
-    return '<tr><td>' + fmtShort(e.from) + '</td><td>' + (e.to ? fmtShort(e.to) : '—') + '</td><td>' + esc(EV_KIND[e.kind] || e.kind) + (e.label ? '<small>' + esc(e.label) + '</small>' : '') + '</td><td><button type="button" class="linkbtn small" data-pa="ev-del" data-id="' + esc(e.id || e.from + e.kind) + '">Togli</button></td></tr>';
-  }).join('') + '</tbody></table></div>' : '<p class="muted">Nessun evento.</p>';
+  var h = es.length ? '<div class="pl-list">' + es.map(function (e) {
+    return plItem({ t: (e.to ? 'Dal ' + fmtDay(e.from) + ' al ' + fmtDay(e.to) : 'Dal ' + fmtDay(e.from)), v: esc(cap(EV_KIND[e.kind] || e.kind)), s: e.label ? esc(e.label) : '', act: '<button type="button" class="linkbtn small" data-pa="ev-del" data-id="' + esc(e.id || e.from + e.kind) + '">Togli</button>' });
+  }).join('') + '</div>' : '<p class="pl-empty">Nessun evento.</p>';
   return h + '<p class="muted small">Un cambiamento strutturale (lavoro, turni, attività, infortunio, ripresa, dieta, modo di registrare) fa ripartire la calibrazione dai dati dopo l\'evento. Ferie, viaggio e malattia sono eccezioni brevi: quei giorni pesano meno, senza azzerare nulla.</p>'
-    + '<div class="settings-fields" id="ev-new"><label class="f">Tipo<select name="kind">' + opts(EV_KIND, 'lavoro') + '</select></label><label class="f">Dal<input name="from" type="date" value="' + todayStr() + '"></label><label class="f">Al (per le eccezioni)<input name="to" type="date"></label><label class="f">Descrizione<input name="label" type="text" maxlength="60"></label></div><div class="row"><button type="button" class="btn ghost fit small" data-pa="ev-add">Aggiungi</button><span class="muted small" id="ev-msg"></span></div>';
+    + '<h3 class="pl-h">Aggiungi un evento</h3><div class="settings-fields" id="ev-new"><label class="f">Tipo<select name="kind">' + opts(EV_KIND, 'lavoro') + '</select></label><label class="f">Dal<input name="from" type="date" value="' + todayStr() + '"></label><label class="f">Al<input name="to" type="date"><small class="muted">solo per ferie, viaggi e malattia</small></label><label class="f">Descrizione<input name="label" type="text" maxlength="60"></label></div><div class="row"><button type="button" class="btn ghost fit small" data-pa="ev-add">Aggiungi</button><span class="muted small" id="ev-msg"></span></div>';
 }
 function suppHTML() {
   var ss = (planDoc() || {}).supplements || [];
@@ -6787,7 +6871,7 @@ function buildProfile() {
   var groups = {};
   PF_ROWS.forEach(function (r) {
     if (!groups[r.g]) { var g = document.createElement('div'); g.className = 'pf-group'; g.innerHTML = '<div class="pf-gt">' + esc(r.g) + '</div><div class="pf-list"></div>'; box.appendChild(g); groups[r.g] = g.lastChild; }
-    var d = document.createElement('details'); d.className = 'pf-row'; d.id = 'pf-' + r.id;
+    var d = document.createElement('details'); d.className = 'pf-row'; d.id = 'pf-' + r.id; d.setAttribute('data-ibs', ''); d.dataset.ibt = r.t;
     d.innerHTML = '<summary>' + pfIcon(r.ic, r.c) + '<span class="pf-t">' + esc(r.t) + '</span><span class="pf-v" id="pfv-' + r.id + '"></span><span class="pf-chev" aria-hidden="true">›</span></summary><div class="pf-body"></div>';
     d.addEventListener('toggle', function () { if (d.open) pfBody(r); });
     groups[r.g].appendChild(d);
@@ -7374,6 +7458,198 @@ function inlineExplanationHTML(id) {
   var ex = ''; try { ex = r.ex ? r.ex() : ''; } catch (e) { ex = ''; }
   var tone = /peso|tendenza|media7|ritmo|acqua/.test(id) ? 'weight' : /kcal|consumo|fabbisogno|deficit|bilancio|calibr|macro|settimana/.test(id) ? 'energy' : /av-|semaforo|esiti/.test(id) ? 'check' : /arrivo|prospetto|domani|scadenza/.test(id) ? 'goal' : 'history';
   return explainBlock('', tone, r.t, '', r.pl && r.pl.s || r.what, [r.what !== (r.pl && r.pl.s || r.what) ? r.what : null, r.why].filter(Boolean), 'Formula, fonti e calcolo con i tuoi numeri sono nella voce completa.') + (ex ? '<div class="r-sec rex">' + ex + '</div>' : '') + '<button type="button" class="context-link" data-gorule="' + esc(id) + '">Apri la voce in Come funziona ↗</button>';
+}
+
+/* ===================== spiegazioni dietro la «i»: in vista restano i numeri, i testi si aprono a richiesta ===================== */
+/* Un testo che spiega (nota, didascalia, «come lo calcolo») diventa .ib-note: resta nella pagina, nascosto, e la «i»
+   rotonda del suo riquadro lo sposta in un foglio che sale dal basso. Alla chiusura torna al suo posto, con i suoi
+   pulsanti e i suoi id: nessun testo viene tolto o riscritto. Il riquadro di una nota è il più vicino [data-ibs]. */
+var IB = { busy: false, moved: [], btn: null, timer: 0 };
+var IB_NOTE = ['p.muted.small', 'p.caption', 'div.caption', '.estimate-note', '.weigh-explain', '.hero-sub', '.p2-note:not(.p2-act)',
+  '.context-chip.context-note', '.context-chip.context-neutral', '.split-intro > span', '#fc-conflict', 'details[data-ibfold]',
+  'details.model-note', 'details.day-energy-help', '#sum-more', '.panel > p.muted', '.in > p.muted', '.ds .s', '.k > small', '.p2-three'].join(',');
+var IB_SKIP = '#ib-sheet, #tab-regole, #pf-modifica, #pf-tu, #unsaved-panel, #dati-count, #body-period, .dsec[data-dsec="curiosita"], form, dialog, .modal, .dp-pop, #intro, [data-ib-keep], .pf-who, .pf-fresh, .empty, .p2-empty, .cu';
+var IB_SCOPE = '[data-ibs], .panel, .hero-main, .tile';
+/* nelle righe del Profilo la «i» sta nella riga stessa, accanto al valore */
+function ibPfPlace() { $$('.pf-row[data-ibs] > .pf-body .ib[data-ib-auto], .pf-row[data-ibs] > .ib[data-ib-auto]').forEach(function (b) { var s = b.closest('.pf-row'), v = s && s.querySelector(':scope > summary .pf-v'); if (v) { b.classList.remove('ib-abs'); v.parentNode.insertBefore(b, v); } }); }
+function ibBtn(label) { return '<button type="button" class="ib" aria-label="Spiegazione: ' + esc(label) + '" title="Spiegazione">i</button>'; }
+function ibScope(el) { return el && el.closest(IB_SCOPE); }
+function ibTitle(scope) {
+  if (scope.dataset.ibt) return scope.dataset.ibt;
+  var h = scope.querySelector('h2, h3, .hl-t, .p2-tt span'); return h ? h.textContent.trim() : 'Spiegazione';
+}
+/* etichetta di una nota che sta dentro un riquadrino (per esempio «Fiducia»), così nel foglio si sa a cosa si riferisce */
+function ibLabel(n) {
+  var box = n.parentElement && n.parentElement.closest('.k, .fc-line, .summary-metric, .hs, .weigh-value, .ds');
+  if (!box) return '';
+  var l = box.querySelector('strong, b, .l, h3, span'); if (!l || l.contains(n) || n.contains(l)) return '';
+  return l.textContent.trim().slice(0, 60);
+}
+function ibHead(scope) {
+  return scope.querySelector(':scope > .panel-head .ph-t, :scope > .panel-head, :scope > .ph-t, :scope > div > .ph-t, :scope > .dayhead, :scope > h2, :scope > h3, :scope > .p2-tt')
+    || scope.querySelector('.panel-head .ph-t, .panel-head, .ph-t, .dayhead');
+}
+function ibNotes(scope) {
+  return $$('.ib-note', scope).filter(function (n) { return ibScope(n) === scope && !n.closest('#ib-sheet') && !(n.parentElement && n.parentElement.closest('.ib-note')) && (n.tagName === 'DETAILS' || n.textContent.trim()); });
+}
+function ibScan() {
+  if (IB.busy) return;
+  /* «Spiega» delle schede (.rq) e «Spiega» dei riquadrini del riepilogo diventano la stessa «i» */
+  $$('.rq').forEach(function (b) {
+    if (b.closest('#tab-regole')) return;
+    if (b.textContent !== 'i') { b.textContent = 'i'; b.classList.add('ib'); b.setAttribute('aria-label', 'Spiegazione'); b.setAttribute('title', 'Spiegazione'); }
+    var lk = b.getAttribute('aria-controls'), el = lk ? document.getElementById(lk) : null;
+    if (el && /-why$/.test(lk) && !el.classList.contains('ib-note')) { el.classList.add('ib-note'); el.hidden = false; }
+  });
+  $$('.metric-explain').forEach(function (b) { if (b.textContent !== 'i') { b.textContent = 'i'; b.classList.add('ib'); } });
+  $$(IB_NOTE).forEach(function (n) {
+    if (n.classList.contains('ib-note') || n.closest(IB_SKIP) || !n.closest('main') || (n.parentElement && n.parentElement.closest('.ib-note'))) return;
+    if (!ibScope(n)) return; /* fuori da un riquadro non avrebbe una «i» dove aprirsi: resta com'è */
+    var tx = n.textContent.trim();
+    if (n.tagName !== 'DETAILS' && !tx) return;
+    if ((n.matches('.k > small') || n.matches('.ds .s')) && tx.length < 60) return;
+    n.classList.add('ib-note'); var l = ibLabel(n); if (l) n.dataset.ibl = l;
+  });
+  /* ogni riquadro con note ha la sua «i» accanto al titolo */
+  var scopes = [];
+  $$('.ib-note').forEach(function (n) { var s = ibScope(n); if (s && scopes.indexOf(s) < 0 && !n.closest('#ib-sheet')) scopes.push(s); });
+  scopes.forEach(function (s) {
+    var has = ibNotes(s).length > 0, own = $$('.ib', s).filter(function (b) { return ibScope(b) === s; });
+    if (!own.length && has) {
+      var h = ibHead(s), w = document.createElement('span'); w.innerHTML = ibBtn(ibTitle(s)); var b = w.firstChild; b.dataset.ibAuto = '1';
+      var t2 = h && !h.classList.contains('ph-t') ? h.querySelector('h2, h3') : null;
+      /* accanto al titolo: nelle intestazioni a riga (flex) la «i» si attacca al titolo e spinge il resto a destra */
+      if (t2 && ibScope(t2) === s) { var fl = /flex|grid/.test(getComputedStyle(t2.parentNode).display); t2.insertAdjacentElement('afterend', b); if (fl) b.classList.add('ib-push'); else t2.classList.add('ib-h2'); }
+      else if (h && ibScope(h) === s) h.appendChild(b); else { b.classList.add('ib-abs'); s.classList.add('ib-host'); s.appendChild(b); }
+    }
+  });
+  $$('.ib[data-ib-auto]').forEach(function (b) { var s = ibScope(b), on = !!s && ibNotes(s).length > 0; if (b.hidden === on) b.hidden = !on; });
+  ibPfPlace();
+}
+function ibSheet() {
+  var sh = $('#ib-sheet'); if (sh) return sh;
+  sh = document.createElement('div'); sh.id = 'ib-sheet'; sh.className = 'ib-sheet'; sh.hidden = true;
+  sh.innerHTML = '<div class="ib-back" data-ib-close></div><div class="ib-card" role="dialog" aria-modal="true" aria-labelledby="ib-title"><div class="ib-grab" aria-hidden="true"></div><div class="ib-head"><span class="ib-dot" aria-hidden="true">i</span><h3 id="ib-title"></h3><button type="button" class="ib-x" data-ib-close aria-label="Chiudi la spiegazione">×</button></div><div class="ib-body"></div></div>';
+  document.body.appendChild(sh); return sh;
+}
+function ibOpen(scope, btn) {
+  if (!scope) return;
+  ibClose(true);
+  var sh = ibSheet(), body = $('.ib-body', sh); IB.busy = true; body.innerHTML = '';
+  ibNotes(scope).forEach(function (n) {
+    var ph = document.createComment('ib'), sec = document.createElement('div'); n.parentNode.insertBefore(ph, n);
+    sec.className = 'ib-sec'; if (n.dataset.ibl) sec.innerHTML = '<h4>' + esc(n.dataset.ibl) + '</h4>';
+    var o = n.tagName === 'DETAILS' ? n.open : null; if (o === false) n.open = true;
+    sec.appendChild(n); body.appendChild(sec); IB.moved.push([n, ph, o]);
+  });
+  /* la regola completa del riquadro, come prima sotto «Spiega» */
+  var rule = btn && btn.dataset && btn.dataset.rule;
+  if (rule && rule !== 'semaforo' && !(btn.getAttribute('aria-controls') || '').match(/-why$/) && typeof inlineExplanationHTML === 'function') {
+    var x = document.createElement('div'); x.className = 'ib-sec ib-rule'; try { x.innerHTML = inlineExplanationHTML(rule); } catch (e) { x.innerHTML = ''; }
+    if (x.textContent.trim()) body.appendChild(x);
+  }
+  if (rule && !body.querySelector('[data-gorule]')) body.insertAdjacentHTML('beforeend', '<button type="button" class="linkbtn small ib-more" data-gorule="' + esc(rule) + '">Come si calcola, passo per passo ›</button>');
+  if (!body.children.length) body.innerHTML = '<p class="muted">Per questo riquadro non c\'è altro da spiegare.</p>';
+  $('#ib-title', sh).textContent = ibTitle(scope);
+  IB.btn = btn || null; if (btn) btn.setAttribute('aria-expanded', 'true');
+  sh.hidden = false; document.documentElement.classList.add('ib-on');
+  void sh.offsetWidth; sh.classList.add('on'); body.scrollTop = 0;
+  try { $('.ib-x', sh).focus({ preventScroll: true }); } catch (e) {}
+  IB.busy = false;
+  return body;
+}
+function ibClose(now) {
+  var sh = $('#ib-sheet'); if (!sh || sh.hidden) return;
+  IB.busy = true;
+  IB.moved.forEach(function (m) { if (m[2] === false) m[0].open = false; if (m[1].parentNode) { m[1].parentNode.insertBefore(m[0], m[1]); m[1].remove(); } else m[0].remove(); });
+  IB.moved = []; IB.busy = false;
+  sh.classList.remove('on'); document.documentElement.classList.remove('ib-on');
+  var b = IB.btn; IB.btn = null; if (b) { b.setAttribute('aria-expanded', 'false'); if (!now && document.contains(b)) try { b.focus({ preventScroll: true }); } catch (e) {} }
+  if (now || RM) sh.hidden = true; else setTimeout(function () { if (!sh.classList.contains('on')) sh.hidden = true; }, 260);
+}
+/* prima dei gestori di prima: la «i» apre il foglio invece della spiegazione dentro la scheda */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('.ib, .rq, .metric-explain');
+  if (b && !b.closest('#tab-regole') && !b.closest('#ib-sheet')) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (b.getAttribute('aria-expanded') === 'true' && IB.btn === b) { ibClose(); return; }
+    ibScan(); var body = ibOpen(ibScope(b), b);
+    var sh = b.dataset.summaryHelp; if (sh && body) { var t = body.querySelector('#explain-' + sh); if (t) setTimeout(function () { t.scrollIntoView({ block: 'start' }); }, 30); }
+    return;
+  }
+  if (e.target.closest('[data-ib-close]')) { ibClose(); return; }
+  if (e.target.closest('#ib-sheet [data-gorule], #ib-sheet [data-goview], #ib-sheet [data-goplan], #ib-sheet [data-goto-confirm], #ib-sheet a[href], .tabbar button, nav button')) setTimeout(function () { ibClose(true); }, 0);
+}, true);
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('#ib-sheet') && !$('#ib-sheet').hidden) { e.stopPropagation(); ibClose(); } }, true);
+(function () {
+  var go = function () { IB.timer = 0; ibScan(); };
+  var mo = new MutationObserver(function () { if (!IB.busy && !IB.timer) IB.timer = requestAnimationFrame(go); });
+  var start = function () { var m = document.querySelector('main') || document.body; mo.observe(m, { childList: true, subtree: true }); ibScan(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+/* ---------- grafici a linee: sul telefono niente scritte sovrapposte ---------- */
+function lineChart(svg, cfg) {
+  var W = chartW(svg), narrow = W < 520;
+  var sig = JSON.stringify([W, cfg.x0, cfg.x1, cfg.ymin, cfg.ymax, cfg.path, cfg.dots, (cfg.lines || []).map(function (l) { return [l.a, l.b]; }), cfg.hex, cfg.proj, cfg.events]);
+  if (svg.dataset.sig === sig) return;
+  svg.dataset.sig = sig;
+  var vb = { w: W, h: cfg.h ? (narrow ? Math.min(cfg.h, 230) : cfg.h) : (narrow ? 250 : 280) }, m = { l: 40, r: 14, t: narrow && cfg.events && cfg.events.length ? 26 : 18, b: 30 }, hex = cfg.hex || HEX.accent;
+  svg.setAttribute('viewBox', '0 0 ' + vb.w + ' ' + vb.h);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  var hasLine = cfg.path && cfg.path.length > 1, first = hasLine && !svg.dataset.drawn && !RM;
+  if (hasLine) svg.dataset.drawn = '1';
+  var gid = svg.id + '-g'; gradDef(svg, gid, hex, .32);
+  var x0 = cfg.x0, x1 = cfg.x1, span = Math.max(1, diffDays(x0, x1));
+  var xs = function (d) { return m.l + diffDays(x0, d) / span * (vb.w - m.l - m.r); };
+  var ticks = niceTicks(cfg.ymin, cfg.ymax, 4), lo = ticks[0], hi = ticks[ticks.length - 1];
+  var ys = function (v) { return m.t + (1 - (v - lo) / (hi - lo)) * (vb.h - m.t - m.b); };
+  ticks.forEach(function (t) {
+    svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: vb.w - m.r, y1: ys(t), y2: ys(t) }));
+    svg.appendChild(el('text', { x: m.l - 8, y: ys(t) + 4, 'text-anchor': 'end' }, fmt(t, cfg.dec || 0)));
+  });
+  var step = (span > 150 ? 30 : span > 60 ? 14 : span > 24 ? 7 : 3) * (narrow ? 2 : 1);
+  for (var i = 0; i <= span - step / 2; i += step) {
+    var dd = addDays(x0, i);
+    svg.appendChild(el('text', { x: xs(dd), y: vb.h - 8, 'text-anchor': i === 0 ? 'start' : 'middle' }, fmtShort(dd)));
+  }
+  (cfg.lines || []).forEach(function (l) {
+    svg.appendChild(el('line', { class: l.cls, x1: xs(l.a.d), y1: ys(l.a.v), x2: xs(l.b.d), y2: ys(l.b.v) }));
+    if (l.label && !narrow) svg.appendChild(el('text', { x: xs(l.b.d) - 2, y: ys(l.b.v) + (l.above ? -8 : 18), 'text-anchor': 'end' }, l.label));
+  });
+  (cfg.events || []).forEach(function (ev, i) {
+    var ex = xs(ev.d); if (ex < m.l || ex > vb.w - m.r) return;
+    svg.appendChild(el('line', { class: 'l-event', x1: ex, x2: ex, y1: m.t, y2: vb.h - m.b }));
+    /* sul telefono le scritte degli eventi si sovrappongono: un numero in cima, la legenda sotto il grafico */
+    if (narrow) { svg.appendChild(el('circle', { class: 'ev-dot', cx: ex, cy: m.t - 7, r: 6.5, style: 'fill:' + HEX.prot })); svg.appendChild(el('text', { class: 'ev-n', x: ex, y: m.t - 3.5, 'text-anchor': 'middle' }, String(i + 1))); }
+    else svg.appendChild(el('text', { x: ex + 6, y: m.t + 10 + (i % 3) * 13, style: 'fill:' + HEX.prot }, ev.label));
+  });
+  if (cfg.proj) {
+    var pa = [xs(cfg.proj.a.d), ys(cfg.proj.a.v)], pb = [xs(cfg.proj.b.d), ys(cfg.proj.b.v)];
+    svg.appendChild(el('path', { d: 'M' + pa[0].toFixed(1) + ' ' + pa[1].toFixed(1) + ' L' + pb[0].toFixed(1) + ' ' + pb[1].toFixed(1), class: 'l-proj' + (first ? ' fade' : ''), stroke: hex }));
+    svg.appendChild(el('circle', { class: 'proj-end', cx: pb[0], cy: pb[1], r: 5, stroke: hex }));
+    if (cfg.proj.label && !narrow) svg.appendChild(el('text', { x: pb[0] - 10, y: pb[1] + 20, 'text-anchor': 'end', style: 'fill:' + hex }, cfg.proj.label));
+  }
+  if (hasLine) {
+    var pts = cfg.path.map(function (p) { return [xs(p.d), ys(p.v)]; }), d = smoothPath(pts), lp = pts[pts.length - 1];
+    svg.appendChild(el('path', { d: d + ' L' + lp[0].toFixed(1) + ' ' + (vb.h - m.b) + ' L' + pts[0][0].toFixed(1) + ' ' + (vb.h - m.b) + ' Z', fill: 'url(#' + gid + ')', class: first ? 'fade' : '' }));
+    svg.appendChild(el('path', { d: d, class: 'l-main' + (first ? ' draw' : ''), stroke: hex, pathLength: 1 }));
+  }
+  var dots = cfg.dots || [];
+  dots.forEach(function (p, k) {
+    if (k === dots.length - 1) return;
+    if (dots.length > (narrow ? 45 : 70) && k % 2) return;
+    /* sul telefono le pesate sono puntini pieni e piccoli: anelli fitti sembrano uno scarabocchio */
+    if (narrow) svg.appendChild(el('circle', { class: 'dot dot-s' + (first ? ' fade' : ''), cx: xs(p.d), cy: ys(p.v), r: 2, fill: hex }));
+    else svg.appendChild(el('circle', { class: 'dot' + (first ? ' fade' : ''), cx: xs(p.d), cy: ys(p.v), r: 2.8, stroke: hex }));
+  });
+  if (dots.length) {
+    var L = dots[dots.length - 1];
+    if (!RM) svg.appendChild(el('circle', { class: 'halo', cx: xs(L.d), cy: ys(L.v), r: 6, fill: hex }));
+    svg.appendChild(el('circle', { class: 'dot-last', cx: xs(L.d), cy: ys(L.v), r: 6, fill: hex }));
+  }
+  var guide = el('line', { class: 'guide' });
+  svg.appendChild(guide);
+  hover(svg, vb, cfg.hoverItems(xs, ys), guide, m.t, vb.h - m.b);
 }
 
 /* ===== analisi corporea ===== */
@@ -9508,8 +9784,11 @@ window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: fun
   dsec('giorno').appendChild(grid.querySelector('[data-cat="avvisi"]')); grid.remove();
   afterLead(dsec('calorie'), document.getElementById('energy-now'));
   afterLead(dsec('storico'), oggi.querySelector(':scope > .sumbox'));
-  dsec('peso').appendChild(document.getElementById('tmw'));
-  dsec('peso').appendChild(oggi.querySelector(':scope > .model-note'));
+  var pz = dsec('peso'), chartP = document.getElementById('w-chart').closest('.panel');
+  afterLead(pz, document.getElementById('tmw'));
+  pz.appendChild(chartP);
+  /* «Come leggere numeri, stime e previsioni» va dietro la «i» del grafico */
+  chartP.appendChild(oggi.querySelector(':scope > .model-note'));
 })();
 /* ---------- stile "Cerchi e vetro": profilo a gruppi e serie di settimane ---------- */
 var PF_IC = {
@@ -10464,5 +10743,278 @@ body .chart .l-trend:not(#z):not(#y){stroke:#64D2FF!important;stroke-width:3!imp
 .p2-three dt { color: var(--ink-3, #8a8fa3); font-size: .82rem; }
 .p2-three dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .p2-three dd small { display: block; font-weight: 400; color: var(--ink-3, #8a8fa3); font-size: .74rem; }
+/* ===================== spiegazioni dietro la «i» ===================== */
+.ib-note{display:none!important}
+#ib-sheet .ib-note{display:block!important}
+#ib-sheet details.ib-note>summary{pointer-events:none}
+#ib-sheet details.ib-note>summary .disclosure-cue{display:none!important}
+body button.ib:not(#z):not(#y):not(#x){box-sizing:border-box;width:26px!important;height:26px!important;min-width:26px!important;min-height:0!important;padding:0!important;margin:0 0 0 8px!important;border-radius:50%!important;display:inline-grid!important;place-items:center;flex:0 0 auto;font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif!important;letter-spacing:0!important;color:#fff!important;background:rgba(255,255,255,.1)!important;border:1.5px solid rgba(255,255,255,.35)!important;box-shadow:none!important;text-transform:none!important;vertical-align:middle;cursor:pointer}
+body button.ib:not(#z):not(#y):not(#x):hover{background:rgba(255,255,255,.2)!important}
+body button.ib:not(#z):not(#y):not(#x)[hidden]{display:none!important}
+body button.ib:not(#z):not(#y):not(#x) svg{display:none!important}
+.ib-host{position:relative}
+body .ib-h2:not(#z):not(#y){display:inline-block!important;vertical-align:middle;max-width:calc(100% - 40px)}
+body button.ib.ib-push:not(#z):not(#y):not(#x){margin-right:auto!important}
+.ib-list{margin:0;padding-left:18px}.ib-list li{margin:0 0 4px}
+body button.ib.ib-abs:not(#z):not(#y):not(#x){position:absolute;top:10px;right:10px;margin:0!important;z-index:2}
+.ib-sheet{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center}
+.ib-sheet[hidden]{display:none}
+.ib-back{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;transition:opacity .25s ease}
+.ib-sheet.on .ib-back{opacity:1}
+.ib-card{position:relative;box-sizing:border-box;width:min(640px,100%);max-height:84vh;display:flex;flex-direction:column;background:#1C1C1E;border-radius:22px 22px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.55);transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.2,1);padding-bottom:env(safe-area-inset-bottom)}
+.ib-sheet.on .ib-card{transform:none}
+@media (min-width:700px){.ib-sheet{align-items:center}.ib-card{border-radius:22px;max-height:80vh}.ib-grab{display:none}}
+@media (prefers-reduced-motion:reduce){.ib-back,.ib-card{transition:none}}
+.ib-grab{width:38px;height:5px;border-radius:3px;background:#48484A;margin:8px auto 0;flex:0 0 auto}
+.ib-head{display:flex;align-items:center;gap:10px;padding:12px 16px 12px;border-bottom:1px solid #2C2C2E;flex:0 0 auto}
+.ib-dot{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0A84FF;color:#fff;font:700 .82rem/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;flex:0 0 auto}
+.ib-head h3{flex:1;min-width:0;margin:0;font-size:1.05rem;line-height:1.3;color:#fff}
+.ib-x{width:32px;height:32px;border-radius:50%;background:#2C2C2E;color:#fff;border:0;font-size:1.35rem;line-height:1;cursor:pointer;flex:0 0 auto}
+.ib-body{overflow:auto;padding:14px 16px 24px;display:grid;gap:10px;align-content:start;color:#D1D1D6;font-size:.92rem;line-height:1.55;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;min-height:0}
+.ib-sec{background:#2C2C2E;border-radius:14px;padding:12px 14px;min-width:0}
+.ib-sec h4{margin:0 0 4px;font-size:.74rem;color:#8E8E93;text-transform:uppercase;letter-spacing:.05em}
+.ib-body p{margin:0 0 6px}.ib-body p:last-child{margin-bottom:0}
+.ib-body .muted,.ib-body .caption,.ib-body small{color:#C7C7CC!important;font-size:.9rem!important}
+.ib-body .context-chip{display:block!important;background:none!important;padding:0!important;border:0!important;white-space:normal!important}
+.ib-body details{background:none!important;border:0!important;padding:0!important;margin:0!important}
+.ib-body details>summary{font-weight:700;color:#fff;margin-bottom:6px;list-style:none}
+.ib-body details>summary::-webkit-details-marker{display:none}
+.ib-body .hero-sub{display:block!important;font-size:.92rem!important;color:#D1D1D6!important}
+.ib-body .tw{overflow-x:auto}
+.ib-more{justify-self:start;margin-top:2px}
+html.ib-on,html.ib-on body{overflow:hidden}
+/* ===================== Oggi: «Il tuo piano di oggi» in rosso, un numero per riquadro ===================== */
+body #tab-oggi #need-card.panel:not(#z):not(#y){background:linear-gradient(165deg,color-mix(in srgb,#FA114F 17%,#1C1C1E) 0,#1C1C1E 78%)!important;border:1px solid color-mix(in srgb,#FA114F 26%,transparent)!important}
+.p2-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.p2-tile{display:flex;flex-direction:column;gap:6px;min-width:0;padding:11px 12px 12px;border-radius:14px;background:#2C2C2E;background:color-mix(in srgb,#FA114F 13%,#26262A)}
+.p2-tile.wide{grid-column:1/-1}
+.p2-tt{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0}
+.p2-tt>span{color:#C7C7CC;color:color-mix(in srgb,#FA114F 22%,#C7C7CC);font-size:.78rem;font-weight:600;line-height:1.3;min-width:0}
+body .p2-tt button.ib:not(#z):not(#y):not(#x){width:22px!important;height:22px!important;min-width:22px!important;font-size:.72rem!important;margin:-1px -2px 0 4px!important;border-color:color-mix(in srgb,#FA114F 45%,rgba(255,255,255,.35))!important;background:color-mix(in srgb,#FA114F 18%,transparent)!important}
+.p2-tv{font-size:1.28rem;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;line-height:1.15;overflow-wrap:anywhere}
+.p2-tv small{font-size:.68rem;color:#AEAEB2;font-weight:500;margin-left:4px}
+.p2-tv small.p2-per{display:block;margin:3px 0 0}
+.p2-tv em{display:block;font-style:normal;font-size:.74rem;font-weight:600;color:#FF6B8B;margin-bottom:2px}
+.p2-tile.wide .p2-tv{font-size:1.08rem}
+.p2-tile.bad{background:color-mix(in srgb,#FF453A 24%,#26262A)}
+.p2-tile.warn{background:color-mix(in srgb,#FF9F0A 18%,#26262A)}
+.p2-tile .p2-warn{margin:2px 0 0}
+.p2-macs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.p2-mac{display:flex;flex-direction:column;font-size:1.2rem;line-height:1.15;min-width:0}
+.p2-mac i{font-style:normal;font-size:.72rem;font-weight:600;color:var(--mc);margin-bottom:2px}
+.p2-mac small{display:inline;font-size:.7rem;color:#8E8E93;margin-left:2px;font-weight:500}
+.p2-act{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin:2px 0 0!important;font-size:.84rem;color:#E5E5EA}
+.p2-act .row{display:flex;gap:8px;margin:0}
+.p2-act small{color:#AEAEB2}
+/* ===================== Progressi › Settimana in corso ===================== */
+body .dviews button[data-dview="settimana"]:not(#z):not(#y){--tc:#30D158}
+#tab-diario .dsec[data-dsec="settimana"]{--sec:#30D158;--scope:#30D158;--sec-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='3'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4M7 14.5h2M11 14.5h2M15 14.5h2'/%3E%3C/svg%3E")}
+@media (max-width:560px){body #tab-diario .dviews:not(#z):not(#y){display:grid!important;grid-template-columns:1.4fr 1fr 1fr!important;gap:3px!important}body #tab-diario .dviews button:not(#z):not(#y){padding:9px 4px!important;white-space:nowrap;font-size:.84rem!important;min-width:0}}
+.wk-hero{padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,color-mix(in srgb,#30D158 34%,#1C1C1E),color-mix(in srgb,#64D2FF 20%,#1C1C1E));margin-top:6px}
+.wk-hero-top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.wk-hero small{color:#D7F7E0;font-size:.8rem;font-weight:600}
+.wk-hero b{display:block;font-size:2rem;line-height:1.1;color:#fff;font-variant-numeric:tabular-nums}
+.wk-pct{font-size:1.15rem;font-weight:800;color:#fff;background:rgba(0,0,0,.22);padding:3px 10px;border-radius:999px}
+.wk-prog{height:10px;border-radius:6px;background:rgba(0,0,0,.28);margin:12px 0 6px;overflow:hidden}
+.wk-prog i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#30D158,#FFD60A)}
+.wk-hero-foot{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:#E5E5EA}
+.wk-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.wk-t{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:#2C2C2E;background:color-mix(in srgb,var(--wc) 16%,#232326);min-width:0}
+.wk-t small{color:#C7C7CC;color:color-mix(in srgb,var(--wc) 50%,#C7C7CC);font-size:.76rem;font-weight:600}
+.wk-t b{color:#fff;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.wk-t span{font-size:.74rem;color:#AEAEB2}
+.wk-t.t-goal{--wc:#FA114F}.wk-t.t-eat{--wc:#FF9F0A}.wk-t.t-need{--wc:#64D2FF}.wk-t.t-days{--wc:#30D158}
+.wk-days{display:grid;gap:6px}
+.wk-day{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:#232326}
+.wk-day.wk-oggi{background:color-mix(in srgb,#30D158 16%,#232326);box-shadow:inset 0 0 0 1px color-mix(in srgb,#30D158 55%,transparent)}
+.wk-day.wk-futuro{opacity:.6}
+.wk-dn{display:flex;flex-direction:column;align-items:center;font-size:.66rem;color:#8E8E93;text-transform:uppercase;letter-spacing:.04em}
+.wk-dn b{font-size:1.05rem;color:#fff;letter-spacing:0}
+.wk-mid{min-width:0}
+.wk-bar{position:relative;height:8px;border-radius:5px;background:#3A3A3C}
+.wk-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--bc,#8E8E93)}
+.wk-bar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#fff;border-radius:1px}
+.t-ok{--bc:#30D158}.t-over{--bc:#FFD60A}.t-under{--bc:#8E8E93}.t-none{--bc:#48484A}
+.wk-mid small{display:block;margin-top:5px;font-size:.72rem;color:#8E8E93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wk-st{color:#D1D1D6}
+.wk-day.t-over .wk-st{color:#FFE266}.wk-day.t-ok .wk-st{color:#7EE8A0}
+.wk-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wk-num b{display:block;color:#fff;font-size:.95rem}
+.wk-num small{font-size:.72rem;color:#8E8E93}
+.wk-key{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:.75rem;color:#AEAEB2}
+.wk-key span::before{content:'';display:inline-block;width:12px;height:6px;border-radius:3px;background:var(--bc);margin-right:6px;vertical-align:middle}
+.wk-key .t-mark::before{width:2px;height:11px;border-radius:1px;background:#fff}
+/* ===================== grafico del peso sul telefono ===================== */
+body .chart .dot-s:not(#z){stroke:none!important;fill:#E5F1FF!important;opacity:.55}
+.chart .ev-n{fill:#000!important;font-size:9px!important;font-weight:700}
+.w-evl{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:.78rem;color:#D1D1D6}
+.w-evl:empty{display:none}
+.w-evl i{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;color:#000;font-style:normal;font-weight:700;font-size:.64rem;margin-right:6px;vertical-align:-3px}
 </style>
+<style id="tema-giro3">
+/* ===================== giro 3: ordine, simmetria e spiegazioni dietro la «i» ===================== */
+/* ---------- Progressi › Peso › Stamattina sulla bilancia ---------- */
+.bs-hero{margin-top:10px;padding:18px 18px 16px;border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,#0A84FF 34%,#1C1C1E),color-mix(in srgb,#64D2FF 14%,#1C1C1E));border:1px solid color-mix(in srgb,#0A84FF 45%,transparent)}
+.bs-hero small{display:block;color:#CFE4FF;font-size:.82rem;font-weight:600}
+.bs-big{display:flex;align-items:baseline;gap:6px;margin:6px 0 4px}
+.bs-big b{font:800 3.3rem/1 var(--f-display);color:#fff;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.bs-big span{font-size:1.15rem;color:#CFE4FF;font-weight:700}
+.bs-range{margin:4px 0 0;color:#D6E6FF;font-size:.9rem}.bs-range b{color:#fff;font-weight:700;white-space:nowrap}
+.bs-scale{margin-top:12px;padding:16px 0 12px;border-radius:20px;background:#232326;border:1px solid #2f2f33}
+.bs-axis{position:relative;margin:0 30px;padding-top:40px}
+.bs-pin{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.bs-pin span{padding:5px 10px;border-radius:999px;background:#FFD60A;color:#1C1C1E;font-size:.78rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bs-ok .bs-pin span{background:#30D158}
+.bs-pin i{width:2px;height:10px;background:currentColor;color:#FFD60A}.bs-ok .bs-pin i{color:#30D158}
+.bs-pin-wait span{background:#3A3A3C;color:#D1D1D6;font-weight:600}
+.bs-track{position:relative;height:14px;border-radius:7px;background:#3A3A3C}
+.bs-band{position:absolute;top:0;bottom:0;border-radius:7px;background:linear-gradient(90deg,#0A84FF70,#0A84FF,#0A84FF70)}
+.bs-mid{position:absolute;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:#fff}
+.bs-me{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#FFD60A;border:4px solid #232326;box-sizing:border-box}
+.bs-ok .bs-me{background:#30D158}
+.bs-ticks{position:relative;height:40px;margin-top:10px}
+.bs-ticks span{position:absolute;top:0;transform:translateX(-50%);text-align:center;font-size:.7rem;color:#8E8E93;line-height:1.25;white-space:nowrap}
+.bs-ticks b{display:block;color:#E5E5EA;font-size:.92rem;font-variant-numeric:tabular-nums}
+.bs-ticks .bs-tc b{color:#fff;font-size:1rem}.bs-ticks .bs-tc{color:#CFE4FF}
+.bs-key{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin:4px 12px 0;font-size:.72rem;color:#AEAEB2}
+.bs-key span::before{content:'';display:inline-block;vertical-align:middle;margin-right:6px}
+.bs-key .k-band::before{width:16px;height:8px;border-radius:4px;background:#0A84FF}
+.bs-key .k-mid::before{width:3px;height:12px;border-radius:2px;background:#fff}
+.bs-key .k-me::before{width:10px;height:10px;border-radius:50%;background:#FFD60A}
+.bs-ok .bs-key .k-me::before{background:#30D158}
+.bs-res{margin-top:12px;padding:14px;border-radius:20px;background:#232326;border:1px solid #3A3A3C}
+.bs-res.bs-ok{border-color:#30D15866;background:color-mix(in srgb,#30D158 9%,#1f1f22)}
+.bs-res.bs-out{border-color:#FFD60A66;background:color-mix(in srgb,#FFD60A 7%,#1f1f22)}
+.bs-res-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.bs-res-h>b{color:#fff;font-size:.98rem}
+.bs-badge{padding:4px 11px;border-radius:999px;font-size:.75rem;font-weight:800;background:#30D15833;color:#7EE8A0}
+.bs-out .bs-badge{background:#FFD60A33;color:#FFE266}
+.bs-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.bs-nums>div{padding:10px 11px;border-radius:14px;background:#2C2C2E;min-width:0}
+.bs-nums small{display:block;font-size:.72rem;color:#AEAEB2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bs-nums b{display:block;margin-top:2px;font-size:1.25rem;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bs-nums b i{font-style:normal;font-size:.7rem;color:#8E8E93;margin-left:3px;font-weight:600}
+.bs-nums .bs-n-me{background:color-mix(in srgb,#0A84FF 24%,#2C2C2E)}
+.bs-say{margin:10px 0 0!important;color:#D1D1D6;font-size:.88rem;line-height:1.5}
+.bs-wait{margin-top:12px;padding:14px;border-radius:18px;border:1px dashed #48484A;color:#D1D1D6;font-size:.9rem;line-height:1.5}
+.bs-wait p{margin:0 0 10px}.bs-wait p:last-child{margin:0}
+#tmw .tmw-nav{margin-top:6px}
+/* ---------- Progressi › Peso › grafico ---------- */
+.w-rng{margin:2px 0 12px;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.w-rng button{white-space:nowrap}
+.dsec[data-dsec] .chart-box:has(#w-chart){padding:8px 4px 4px}
+svg.wchart text{font-size:11px;fill:#8E8E93;font-variant-numeric:tabular-nums}
+svg.wchart .grid{stroke:rgba(255,255,255,.07);stroke-dasharray:none}
+svg.wchart .w-dot{fill:#8EC5FF;opacity:.42}
+svg.wchart .w-avg{fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+svg.wchart .w-plan{stroke:#C7C7CC;stroke-width:1.5;stroke-dasharray:6 6;opacity:.55}
+svg.wchart .w-goal{stroke:#30D158;stroke-width:1.3;stroke-dasharray:2 5;opacity:.85}
+svg.wchart .w-arr{stroke:#30D158;stroke-width:9;stroke-linecap:round;opacity:.3}
+svg.wchart .w-proj{fill:none;stroke-width:2.6;stroke-dasharray:1 6;stroke-linecap:round}
+svg.wchart .w-pend{fill:#1C1C1E;stroke:#30D158;stroke-width:2.5}
+svg.wchart .w-now{stroke:#1C1C1E;stroke-width:3}
+svg.wchart .w-trend{stroke:#fff;stroke-width:2;opacity:.6}
+svg.wchart .w-future{fill:rgba(255,255,255,.03)}
+svg.wchart .w-today{stroke:rgba(255,255,255,.2);stroke-dasharray:3 4}
+svg.wchart .w-tag rect{fill:#0A84FF}
+svg.wchart .w-tag text{fill:#fff;font-size:11px;font-weight:700}
+svg.wchart .w-tag-goal rect{fill:#13301c;stroke:#30D15899}
+svg.wchart .w-tag-goal text{fill:#7EE8A0}
+svg.wchart .w-ev{fill:#A6FF00;opacity:.85}
+.w-legend{display:flex!important;flex-wrap:wrap;gap:6px 14px!important;margin-top:10px!important;font-size:.76rem!important}
+.w-legend span{display:inline-flex;align-items:center;gap:6px;color:#D1D1D6}
+.w-legend i{display:inline-block;flex:none}
+.w-legend .lg-avg{width:16px;height:3px;border-radius:2px;background:#0A84FF}
+.w-legend .lg-dot{width:6px;height:6px;border-radius:50%;background:#8EC5FF;opacity:.7}
+.w-legend .lg-plan{width:16px;border-top:2px dashed #C7C7CC;opacity:.7}
+.w-legend .lg-proj{width:16px;border-top:3px dotted #0A84FF}
+.w-legend .lg-goal{width:14px;height:6px;border-radius:3px;background:#30D15866}
+/* ---------- Progressi › Calorie › Consumo stimato di oggi ---------- */
+.en-big{display:flex;align-items:baseline;gap:6px;margin-top:4px}
+.en-big b{font:800 2.7rem/1 var(--f-display);color:#fff;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.en-big span{font-size:1rem;color:#FFC2D0;font-weight:700}
+.en-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.en-pill{padding:5px 11px;border-radius:999px;background:color-mix(in srgb,#FA114F 18%,#2C2C2E);color:#FFD6E0;font-size:.76rem;font-weight:600}
+/* ---------- Progressi › Giorno: sei riquadri della stessa misura ---------- */
+body #d-stats.daystats:not(#z):not(#y){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:1fr!important;gap:10px!important}
+@media (min-width:700px){body #d-stats.daystats:not(#z):not(#y){grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+body #d-stats .ds:not(#z):not(#y){display:flex;flex-direction:column;min-height:118px;height:100%;box-sizing:border-box;margin:0!important}
+body #d-stats .ds .v:not(#z):not(#y){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body #d-stats .ds.ds-txt .v:not(#z):not(#y){font-size:1.12rem!important;white-space:normal;line-height:1.2}
+body #d-stats .ds .s:not(#z):not(#y){margin-top:auto;padding-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+body #d-stats .ds .s.ib-note:not(#z):not(#y){display:none!important}
+.wd-empty:not(#z){padding:14px 16px!important;border-radius:14px;background:#2C2C2E;color:#fff!important;font-weight:600;text-align:left}
+/* ---------- Progressi › Settimana in corso: più colore ---------- */
+body #week-card.panel:not(#z):not(#y){background:radial-gradient(circle at 100% 0,color-mix(in srgb,#64D2FF 16%,transparent),transparent 45%),linear-gradient(165deg,color-mix(in srgb,#30D158 18%,#1C1C1E),#1C1C1E 72%)!important;border:1px solid color-mix(in srgb,#30D158 30%,transparent)!important}
+.wk-day{border-left:4px solid var(--bc);background:color-mix(in srgb,var(--bc) 8%,#232326)}
+.wk-day.t-none{border-left-color:#3A3A3C}
+.wk-day .wk-dn b{color:#fff}
+.wk-day.wk-oggi .wk-dn{color:#7EE8A0}
+/* ---------- Profilo: gruppi distanziati, righe con la «i», schede curate ---------- */
+body #plan-box .pf-group:not(#z):not(#y){margin-top:26px}
+body #plan-box .pf-group:first-child:not(#z):not(#y){margin-top:6px}
+body #plan-box .pf-gt:not(#z):not(#y){margin:0 0 10px 16px}
+body #tab-dati .pf-gt-out:not(#z):not(#y){margin:26px 0 10px 16px}
+body #tab-dati .pf-row>summary:not(#z):not(#y):not(#x){display:flex!important;align-items:center;gap:12px}
+body #tab-dati .pf-row>summary .pf-t:not(#z):not(#y){flex:1 1 auto}
+body #tab-dati .pf-row>summary .pf-v:not(#z):not(#y){flex:0 1 auto;text-align:right}
+body #tab-dati .pf-row>summary button.ib:not(#z):not(#y):not(#x){margin:0!important;position:static!important}
+body #tab-dati .pf-body:not(#z):not(#y){padding:6px 16px 18px!important}
+.pf-body>p:not(.p2-note):not(.p2-warn):not(.pl-empty){color:#D1D1D6;line-height:1.55}
+.pv-hero{display:grid;gap:12px;padding:16px;border-radius:20px;background:linear-gradient(135deg,color-mix(in srgb,#FA114F 28%,#1C1C1E),#232326);border:1px solid color-mix(in srgb,#FA114F 38%,transparent)}
+.pv-kc small{display:block;color:#FFC2D0;font-size:.78rem;font-weight:600}
+.pv-kc b{display:flex;align-items:baseline;gap:6px;font:800 2.3rem/1.05 var(--f-display);color:#fff;letter-spacing:-.02em}
+.pv-kc b span{font-size:.95rem;color:#FFC2D0;font-weight:700}
+.pv-macs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pv-mac{padding:9px 11px;border-radius:14px;background:rgba(0,0,0,.28);min-width:0}
+.pv-mac i{display:block;font-style:normal;font-size:.7rem;font-weight:700;color:var(--mc)}
+.pv-mac b{color:#fff;font-size:1.15rem;font-variant-numeric:tabular-nums}.pv-mac b small{font-size:.7rem;color:#AEAEB2;margin-left:2px}
+.pv-list{margin-top:12px;border-radius:18px;background:#232326;border:1px solid #2f2f33;overflow:hidden}
+.pv-r{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:3px 12px;padding:13px 15px;border-top:1px solid #2f2f33;align-items:baseline}
+.pv-r:first-child{border-top:0}
+.pv-k{color:#AEAEB2;font-size:.85rem}
+.pv-v{color:#fff;font-weight:600;text-align:right;font-size:.92rem;overflow-wrap:anywhere}
+.pv-s{grid-column:1/-1;color:#8E8E93;font-size:.76rem;line-height:1.45}
+.pl-list{display:grid;gap:8px;margin:4px 0 14px}
+.pl-it{padding:13px 15px;border-radius:18px;background:#232326;border:1px solid #2f2f33;min-width:0}
+.pl-it.cur{border-color:#0A84FF80;background:color-mix(in srgb,#0A84FF 12%,#232326)}
+.pl-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.pl-t{font-weight:700;color:#fff;font-size:.92rem;min-width:0}
+.pl-b{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#3A3A3C;color:#E5E5EA;white-space:nowrap}
+.pl-it.cur .pl-b{background:#0A84FF;color:#fff}
+.pl-v{margin-top:5px;color:#E5E5EA;font-size:.9rem;overflow-wrap:anywhere}
+.pl-s{display:block;margin-top:4px;color:#8E8E93;font-size:.76rem;line-height:1.45}
+.pl-act{margin-top:8px}
+.pl-h{font:700 .95rem/1.3 var(--f-display);color:#fff;margin:18px 0 10px}
+.pl-empty{padding:14px 15px;border-radius:16px;background:#232326;border:1px solid #2f2f33;color:#AEAEB2;margin:4px 0 14px}
+/* moduli: etichette, campi e note allineati riga per riga */
+body .settings-fields:not(#z):not(#y){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:12px!important;row-gap:14px!important;align-items:start}
+@media (min-width:760px){body .pf-body .settings-fields:not(#z):not(#y){grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media (max-width:380px){body .settings-fields:not(#z):not(#y){grid-template-columns:1fr!important}}
+body .settings-fields>label.f:not(#z):not(#y){display:grid!important;grid-template-rows:subgrid;grid-row:span 3;row-gap:6px!important;align-content:start;margin:0!important;font-size:.82rem;color:#D1D1D6;font-weight:600}
+body .settings-fields>label.f>input:not([type=checkbox]):not(#z),body .settings-fields>label.f>select:not(#z){margin:0!important;width:100%;box-sizing:border-box;align-self:end}
+body .settings-fields>label.f>small:not(#z){font-weight:400;line-height:1.4;font-size:.74rem}
+body .settings-fields>:not(label.f):not(#z){grid-column:1/-1}
+.pf-body input:not([type=checkbox]),.pf-body select,.pf-body textarea{border-radius:12px!important}
+.pf-body details.more{border-radius:16px}
+.pf-body .ped-sec{border-radius:18px!important;background:#232326!important;border:1px solid #2f2f33!important}
+.pf-body .p2-sup{border-radius:18px;background:#232326;border:1px solid #2f2f33;padding:13px 15px}
+.pf-body .p2-evl{list-style:none;padding:0}
+.pf-body .p2-evl li{padding:8px 12px;border-radius:12px;background:#232326;margin-top:6px}
+</style>
+<script id="giro3">
+/* «i» del piano di oggi → la riga giusta del Profilo */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-pfopen]'); if (!b || !window.GJ) return;
+  e.preventDefault();
+  var id = b.dataset.pfopen;
+  window.GJ.show('dati');
+  setTimeout(function () {
+    var d = document.getElementById('pf-' + id); if (!d) return;
+    if (!d.open) d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 320);
+});
+</script>
+<style id="tema-giro3b">#tmw #tmw-date{display:none!important}</style>
 </body></html>
