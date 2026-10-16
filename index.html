@@ -9050,8 +9050,9 @@ function introText() {
   var h = new Date().getHours();
   $('#in-kick').textContent = (back ? 'Bentornato' : 'Benvenuto') + (s.name ? ', ' + s.name : '');
   $('#in-title').innerHTML = 'nel tuo percorso di <em>' + phaseWord() + '</em>';
-  var tot = diffDays(s.startDate, s.endDate) + 1, n = diffDays(s.startDate, t) + 1;
-  $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg entro il ' + fmtDay(s.endDate);
+  var okD = function (x) { return typeof x === 'string' && /^\d{4}-\d\d-\d\d$/.test(x); };
+  var tot = okD(s.startDate) && okD(s.endDate) ? diffDays(s.startDate, s.endDate) + 1 : 0, n = okD(s.startDate) ? diffDays(s.startDate, t) + 1 : 0;
+  $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + (s.goalWeight > 0 ? 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg' + (okD(s.endDate) ? ' entro il ' + fmtDay(s.endDate) : '') : '');
 }
 function introStats() {
   var box = $('#in-stats'); if (!box || intro.gone) return;
@@ -9075,7 +9076,7 @@ function introData() {
   if (intro.gone || intro.data) return; intro.data = true;
   var wait = Math.max(0, 1300 - (performance.now() - intro.t0));
   setTimeout(function () {
-    introText(); introStats();
+    try { introText(); introStats(); } catch (e) { introExit(); return; }
     setTimeout(function () { var g = $('#in-go'); if (g) g.classList.add('on'); }, 450);
     clearTimeout(intro.timer); intro.timer = setTimeout(introExit, 1400);
   }, wait);
@@ -9152,6 +9153,7 @@ function introStart() {
   el.addEventListener('click', function (e) { if (intro.data || e.target.closest('.in-skip')) introExit(); });
   document.addEventListener('keydown', function k(e) { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { document.removeEventListener('keydown', k); introExit(); } });
   intro.timer = setTimeout(function () { introData(); }, 3100);
+  setTimeout(function () { if (document.documentElement.classList.contains('intro-on')) { introExit(); document.documentElement.classList.remove('intro-on'); var e2 = $('#intro'); if (e2) e2.remove(); } }, 8000);
 }
 /* comparsa dei riquadri mentre scorri */
 var revIO = null, revBatch = 0, revT = 0;
@@ -9705,7 +9707,7 @@ try {
   var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
   if (showIntro) { document.documentElement.classList.add('intro-on'); $('#intro').classList.add('intro-active'); introStart(); }
   else { intro.gone = true; $('#intro').remove(); }
-} catch (e) { intro.gone = true; if ($('#intro')) $('#intro').remove(); }
+} catch (e) { intro.gone = true; document.documentElement.classList.remove('intro-on'); if ($('#intro')) $('#intro').remove(); }
 requestAnimationFrame(moveInd);
 var rzT = 0;
 window.addEventListener('resize', function () { moveInd(); clearTimeout(rzT); rzT = setTimeout(renderAll, 180); });
