@@ -5771,7 +5771,7 @@ function weeklyDeficitBanner(W) {
   var badge = has && e.target > 0.5 ? Math.round(progress * 100) + '%' : e.n + '/7';
   return '<div class="wk-hero wk-deficit" role="group" aria-label="Bilancio calorico settimanale stimato"><div class="wk-hero-top"><div><small>' + title + ' · stimato</small><b>' + (has ? kc(Math.abs(e.accumulated)) : '—') + '</b></div><span class="wk-pct">' + badge + '</span></div>'
     + '<div class="wk-prog"><i style="width:' + (progress * 100).toFixed(1) + '%"></i></div><div class="wk-hero-foot"><span>' + targetLabel + '</span><span>' + e.n + '/7 giorni completi</span></div>'
-    + '<p class="wk-deficit-note">' + (has ? (e.includesToday ? 'Include oggi, confermato completo; il consumo di oggi è previsto. ' : 'Solo giornate complete, fino a ieri. ') : 'Conferma almeno una giornata completa con consumo stimabile. ') + 'Le giornate parziali o senza dati non contano come deficit. Il target è la somma di consumo previsto con le calorie del piano − calorie del piano, da lunedì a domenica. I surplus riducono il deficit accumulato.</p></div>';
+    + '</div>';
 }
 function renderWeekCard() {
   var c = weekCardEl(), box = $('#wk-body', c), E = state.E; if (!box) return;
@@ -10930,7 +10930,7 @@ body .dviews button[data-dview="settimana"]:not(#z):not(#y){--tc:#30D158}
 .wk-prog{height:10px;border-radius:6px;background:rgba(0,0,0,.28);margin:12px 0 6px;overflow:hidden}
 .wk-prog i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#30D158,#FFD60A)}
 .wk-hero-foot{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:#E5E5EA}
-.wk-deficit{margin:0 0 12px}.wk-deficit-note{font-size:.75rem;line-height:1.5;color:#E5E5EA;margin:10px 0 0}.wk-deficit .wk-hero-foot{flex-wrap:wrap}.wk-deficit .wk-hero-top>div{min-width:0}
+.wk-deficit{margin:0 0 12px}.wk-deficit .wk-hero-foot{flex-wrap:wrap}.wk-deficit .wk-hero-top>div{min-width:0}
 .wk-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 12px}
 .wk-t{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:#2C2C2E;background:color-mix(in srgb,var(--wc) 16%,#232326);min-width:0}
 .wk-t small{color:#C7C7CC;color:color-mix(in srgb,var(--wc) 50%,#C7C7CC);font-size:.76rem;font-weight:600}
