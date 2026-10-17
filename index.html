@@ -4190,6 +4190,18 @@ function engine(D, asOf, opts) {
     budget: z ? (function () { var b = dayTargets(ctx, v, ws, z); return { status: b.status, msg: b.msg || null, text: b.text || null, alternatives: b.alternatives || null, sum: b.sum, gap: b.gap != null ? b.gap : 0, total: 7 * z.kcal, days: b.days.map(function (x) { return { d: x.d, v: x.v, locked: x.locked }; }) }; })() : null,
     counts: { completi: week.filter(function (x) { return x.kind === 'trascorso' && x.usable; }).length, parziali: week.filter(function (x) { return x.kind === 'trascorso' && !x.usable && x.intake != null; }).length, vuoti: week.filter(function (x) { return x.kind === 'trascorso' && x.intake == null; }).length, futuri: week.filter(function (x) { return x.kind === 'futuro'; }).length }
   };
+  /* Bilancio settimanale: target allo stesso introito del piano; accumulo solo su diari completi.
+     Oggi confermato è incluso, ma il suo consumo resta una previsione di giornata intera.
+     La somma è algebrica: i surplus riducono il deficit, senza tagliarli a zero. */
+  var energyDays = week.filter(function (x) { return x.kind !== 'futuro' && x.usable && x.intake != null && x.B != null; });
+  var targetKnown = week.every(function (x) { return x.B != null && x.target != null; });
+  var closedToday = energyDays.some(function (x) { return x.kind === 'oggi'; });
+  out.week.energyBalance = {
+    target: targetKnown ? week.reduce(function (s, x) { return s + x.B - (1 - K.TEF) * x.target; }, 0) : null,
+    accumulated: energyDays.length ? energyDays.reduce(function (s, x) { return s + x.B - (1 - K.TEF) * x.intake; }, 0) : null,
+    n: energyDays.length, includesToday: closedToday,
+    dates: energyDays.map(function (x) { return x.d; })
+  };
   /* oggi */
   var tdy = week[dWd(asOf)];
   var tr = trendAt(ctx, asOf), tm = tomorrowScale(ctx, asOf), wi = weighIns(ctx, asOf);
@@ -5750,6 +5762,17 @@ function weekCardEl() {
   if (host && c.parentNode !== host) host.appendChild(c);
   return c;
 }
+function weeklyDeficitBanner(W) {
+  var e = W.energyBalance; if (!e) return '';
+  var has = e.accumulated != null, surplus = has && e.accumulated < -0.5;
+  var title = surplus ? 'Surplus calorico settimanale accumulato' : 'Deficit calorico settimanale accumulato';
+  var targetLabel = e.target == null ? 'Target settimanale non disponibile' : (e.target < -0.5 ? 'Target surplus settimanale ' : e.target > 0.5 ? 'Target deficit settimanale ' : 'Target bilancio settimanale ') + kc(Math.abs(e.target));
+  var progress = has && e.target > 0.5 ? Math.max(0, Math.min(1, e.accumulated / e.target)) : 0;
+  var badge = has && e.target > 0.5 ? Math.round(progress * 100) + '%' : e.n + '/7';
+  return '<div class="wk-hero wk-deficit" role="group" aria-label="Bilancio calorico settimanale stimato"><div class="wk-hero-top"><div><small>' + title + ' · stimato</small><b>' + (has ? kc(Math.abs(e.accumulated)) : '—') + '</b></div><span class="wk-pct">' + badge + '</span></div>'
+    + '<div class="wk-prog"><i style="width:' + (progress * 100).toFixed(1) + '%"></i></div><div class="wk-hero-foot"><span>' + targetLabel + '</span><span>' + e.n + '/7 giorni completi</span></div>'
+    + '<p class="wk-deficit-note">' + (has ? (e.includesToday ? 'Include oggi, confermato completo; il consumo di oggi è previsto. ' : 'Solo giornate complete, fino a ieri. ') : 'Conferma almeno una giornata completa con consumo stimabile. ') + 'Le giornate parziali o senza dati non contano come deficit. Il target è la somma di consumo previsto con le calorie del piano − calorie del piano, da lunedì a domenica. I surplus riducono il deficit accumulato.</p></div>';
+}
 function renderWeekCard() {
   var c = weekCardEl(), box = $('#wk-body', c), E = state.E; if (!box) return;
   if (!E || !E.week) { box.innerHTML = '<p class="p2-empty">Serve un piano attivo.</p>'; $('#wk-range').textContent = ''; return; }
@@ -5772,6 +5795,7 @@ function renderWeekCard() {
     + '<div class="wk-t t-eat"><small>Registrato finora</small><b>' + kc(W.logged) + '</b></div>'
     + '<div class="wk-t t-need"><small>Consumo previsto, 7 giorni</small><b>' + (W.consumption != null ? kc(W.consumption) : '—') + '</b><span>media ' + (W.mean7 != null ? kc(W.mean7) : '—') + ' al giorno</span></div>'
     + '<div class="wk-t t-days"><small>Giorni passati completi</small><b>' + k.completi + ' su ' + (k.completi + k.parziali + k.vuoti) + '</b><span>' + wkRest(k) + '</span></div></div>'
+    + weeklyDeficitBanner(W)
     + '<div class="wk-days">' + days + '</div>'
     + '<div class="wk-key"><span class="t-ok">nell\'obiettivo</span><span class="t-over">sopra</span><span class="t-under">sotto</span><span class="t-mark">obiettivo del giorno</span></div>'
     + '<p class="muted small ib-note">Giorni passati: ' + k.completi + ' completi, ' + k.parziali + ' parziali o da confermare, ' + k.vuoti + ' senza calorie; ' + k.futuri + (k.completi + k.parziali + k.vuoti + k.futuri < 7 ? ' giorni ancora da venire più oggi, ancora in corso: sono stimati da abitudini e calendario. ' : ' giorni ancora da venire, stimati da abitudini e calendario. ')
@@ -10906,6 +10930,7 @@ body .dviews button[data-dview="settimana"]:not(#z):not(#y){--tc:#30D158}
 .wk-prog{height:10px;border-radius:6px;background:rgba(0,0,0,.28);margin:12px 0 6px;overflow:hidden}
 .wk-prog i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#30D158,#FFD60A)}
 .wk-hero-foot{display:flex;justify-content:space-between;gap:10px;font-size:.8rem;color:#E5E5EA}
+.wk-deficit{margin:0 0 12px}.wk-deficit-note{font-size:.75rem;line-height:1.5;color:#E5E5EA;margin:10px 0 0}.wk-deficit .wk-hero-foot{flex-wrap:wrap}.wk-deficit .wk-hero-top>div{min-width:0}
 .wk-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 12px}
 .wk-t{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:#2C2C2E;background:color-mix(in srgb,var(--wc) 16%,#232326);min-width:0}
 .wk-t small{color:#C7C7CC;color:color-mix(in srgb,var(--wc) 50%,#C7C7CC);font-size:.76rem;font-weight:600}
