@@ -5725,10 +5725,10 @@ function renderWeekCard() {
     + '<div class="wk-tiles"><div class="wk-t t-goal"><small>Obiettivo settimanale</small><b>' + (W.target != null ? kc(W.target) : '—') + '</b></div>'
     + '<div class="wk-t t-eat"><small>Registrato finora</small><b>' + kc(W.logged) + '</b></div>'
     + '<div class="wk-t t-need"><small>Consumo previsto, 7 giorni</small><b>' + (W.consumption != null ? kc(W.consumption) : '—') + '</b><span>media ' + (W.mean7 != null ? kc(W.mean7) : '—') + ' al giorno</span></div>'
-    + '<div class="wk-t t-days"><small>Giorni passati completi</small><b>' + k.completi + ' su ' + (k.completi + k.parziali + k.vuoti) + '</b><span>' + k.futuri + (k.futuri === 1 ? ' giorno ancora da venire' : ' giorni ancora da venire') + '</span></div></div>'
+    + '<div class="wk-t t-days"><small>Giorni passati completi</small><b>' + k.completi + ' su ' + (k.completi + k.parziali + k.vuoti) + '</b><span>' + wkRest(k) + '</span></div></div>'
     + '<div class="wk-days">' + days + '</div>'
     + '<div class="wk-key"><span class="t-ok">nell\'obiettivo</span><span class="t-over">sopra</span><span class="t-under">sotto</span><span class="t-mark">obiettivo del giorno</span></div>'
-    + '<p class="muted small ib-note">Giorni passati: ' + k.completi + ' completi, ' + k.parziali + ' parziali o da confermare, ' + k.vuoti + ' senza calorie; ' + k.futuri + ' giorni ancora da venire, stimati da abitudini e calendario. '
+    + '<p class="muted small ib-note">Giorni passati: ' + k.completi + ' completi, ' + k.parziali + ' parziali o da confermare, ' + k.vuoti + ' senza calorie; ' + k.futuri + (k.completi + k.parziali + k.vuoti + k.futuri < 7 ? ' giorni ancora da venire più oggi, ancora in corso: sono stimati da abitudini e calendario. ' : ' giorni ancora da venire, stimati da abitudini e calendario. ')
     + (W.nReconstructed ? 'Media dei soli giorni ricostruiti con dati completi: ' + kc(W.meanReconstructed) + ' (' + W.nReconstructed + (W.nReconstructed === 1 ? ' giorno' : ' giorni') + '): non è il consumo della settimana. ' : '')
     + 'Ogni barra sono le calorie registrate quel giorno; la tacca è l\'obiettivo del giorno. Il consumo dei giorni passati è ricostruito con i loro dati, quello dei giorni che vengono è previsto. Un giorno sopra l\'obiettivo riduce solo aritmeticamente il residuo: il piano non toglie calorie ai giorni dopo.</p>';
 }
@@ -5787,7 +5787,7 @@ function phaseDayText() {
 /* ---------- «bilancia di domani»: intervallo descrittivo, separato dalle previsioni d'arrivo ---------- */
 function renderTomorrow() {
   var t = todayStr(), R = ringDay(), box = $('#tmw-body'); $('#tmw').hidden = false; tmNav(R, t);
-  var asOf = addDays(R, -1), E = state.E, tm = null, snap = state.prev.get(asOf);
+  var asOf = addDays(R, -1), E = state.E, tm = null;
   try { tm = R === addDays(t, 1) ? E.weight.tomorrow : GJM.tomorrowScale(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tm = null; }
   $('#tmw-title').textContent = R === t ? 'Stamattina sulla bilancia' : 'Bilancia del ' + fmtDay(R);
   $('#tmw-date').textContent = fmtDay(R);
@@ -5814,11 +5814,18 @@ function renderTomorrow() {
       + '<div class="bs-nums"><div><small>Previsto</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Scarto</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
       + '<p class="bs-say">' + (Math.abs(diff) < 0.05 ? 'Esattamente come previsto.' : fmt(Math.abs(diff), 1) + ' kg ' + (diff > 0 ? 'sopra' : 'sotto') + ' il previsto, ' + (inside ? 'dentro l\'oscillazione normale.' : 'fuori dall\'oscillazione normale: guarda le prossime pesate.')) + '</p></div>';
   }
-  /* spiegazioni: dietro la «i» del riquadro */
-  html += '<div class="weigh-explain"><b>Che cos\'è il peso previsto</b>È la tendenza delle tue pesate delle ultime due settimane, prolungata fino a questa mattina, calcolata con i dati fino al ' + fmtDay(asOf) + '. Non usa le calorie del giorno: sale, liquidi, intestino e orario non sono noti.</div>'
+  /* spiegazioni: dietro la «i» del riquadro; prima la frase che conta */
+  html += '<div class="weigh-explain"><b>In breve</b>' + (past ? 'Quella mattina' : 'Oggi') + ' ci aspettavamo circa ' + fmt(tm.c, 1) + ' kg: tutto fra ' + fmt(tm.lo, 1) + ' e ' + fmt(tm.hi, 1) + ' kg è normale, perché il peso di un giorno oscilla per acqua, sale e intestino.</div>'
+    + '<div class="weigh-explain"><b>Che cos\'è il peso previsto</b>È la tendenza delle tue pesate delle ultime due settimane, prolungata fino a questa mattina, calcolata con i dati fino al ' + fmtDay(asOf) + '. Non usa le calorie del giorno: sale, liquidi, intestino e orario non sono noti.</div>'
     + '<div class="weigh-explain"><b>Che cos\'è l\'oscillazione normale</b>±' + fmt(tm.spread, 1) + ' kg attorno al previsto: è quanto le tue pesate si allontanano di solito dalla loro tendenza (almeno ±0,3 kg). Non è una probabilità. Uno scarto di una mattina non misura grasso o muscolo.</div>';
-  if (snap && snap.tomorrow) html += '<p class="muted small">Fotografia salvata il ' + fmtDay(asOf) + ': ' + fmt(snap.tomorrow.lo, 1) + '–' + fmt(snap.tomorrow.hi, 1) + ' kg (previsto ' + fmt(snap.tomorrow.c, 1) + '). ' + (Math.abs(snap.tomorrow.c - tm.c) > 0.05 ? 'Il ricalcolo di oggi è diverso perché nel frattempo sono cambiati dei dati di quei giorni.' : 'Coincide con il ricalcolo.') + '</p>';
   box.innerHTML = html;
+}
+/* settimana in corso: oggi non è né passato né futuro, lo dico esplicitamente (la settimana finisce sempre di domenica) */
+function wkRest(k) {
+  var today = k.completi + k.parziali + k.vuoti + k.futuri < 7, parts = [];
+  if (today) parts.push('oggi in corso');
+  if (k.futuri === 1) parts.push('domenica da venire'); else if (k.futuri > 1) parts.push(k.futuri + ' giorni da venire');
+  return parts.length ? parts.join(' · ') : 'settimana conclusa';
 }
 /* ---------- il percorso in breve (Progressi > Settimane) ---------- */
 /* arrivo: la data esatta della simulazione; la finestra del fabbisogno ±10% è a parte (sensText) */
