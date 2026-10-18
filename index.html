@@ -1705,6 +1705,71 @@ var api={KEYS:KEYS,add:add,value:value,makeDay:makeDay,complete:complete,aggrega
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.GJFriendData=api;
 })(typeof window!=='undefined'?window:this);
 
+(function(root){
+'use strict';
+var V={version:'1.0.0'}, DAY=86400000;
+function add(d,n){return new Date(Date.parse(d+'T00:00:00Z')+n*DAY).toISOString().slice(0,10);}
+function monday(d){return add(d,-((new Date(d+'T00:00:00Z').getUTCDay()+6)%7));}
+function mean(a){return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null;}
+function finite(x){return typeof x==='number'&&isFinite(x);}
+function reference(D,M,d,E,knownBy){
+  var ctx=E&&E.ctx||M.prepare(D,d,{knownBy:!!knownBy}),v=M.versionAt(ctx.versions,d);if(!v)return null;
+  var cfg=M.tdeeCfg(ctx,v);if(!cfg.ok)return null;
+  var hm=cfg.useProfile?M.habitMean(ctx,d,{useProfile:true}):null;
+  var kh=cfg.adaptive?M.kHistory(ctx,d,cfg):null,k=kh?kh.k:cfg.k0;
+  var R=cfg.mode==='manuale_fisso'?cfg.manual:hm?k*hm.A/(1-M.K.TEF):cfg.manual?k*cfg.manual:null;
+  if(E&&E.base&&E.base.ok){R=E.base.R;k=E.base.k;}
+  if(!(R>0))return null;
+  var sd=cfg.adaptive&&kh&&kh.lastCal?kh.lastCal.kSD:cfg.sd0;
+  if(E&&E.base)sd=E.base.kSD;
+  var sdFactor=cfg.mode==='manuale_fisso'?null:finite(sd)?Math.abs(sd/k)*R:null;
+  var sdActivity=hm?Math.abs(k)*(hm.hi-hm.lo)/4/(1-M.K.TEF):0;
+  var combined=sdFactor==null?null:Math.sqrt(sdFactor*sdFactor+sdActivity*sdActivity);
+  var job=null;(ctx.jobs||[]).forEach(function(j){if(j.from<=d)job=j;});
+  var steps=hm?mean(hm.days.map(function(x){return x.steps;})):null;
+  var training=cfg.useProfile?M.observedTraining(ctx,ctx.weightAt(d),d):null;
+  var habits=ctx.habitsAt(d),unknown=[];
+  if(hm&&hm.days.some(function(x){return x.stepsUnknown;}))unknown.push('Passi abituali non disponibili: il motore usa un riferimento generico, non passi registrati.');
+  if(hm&&hm.days.some(function(x){return x.gym&&x.gym.unknown;}))unknown.push('Frequenza o durata degli allenamenti non disponibili: la palestra non è confermata come riposo.');
+  return{date:d,R:R,weekly:R*7,k:k,sd:sd,lo:combined==null?null:Math.max(0,R-2*combined),hi:combined==null?null:R+2*combined,
+    prior:cfg.mode==='manuale_fisso'?null:hm?cfg.k0*hm.A/(1-M.K.TEF):cfg.manual,hmA:hm&&hm.A,perKg:hm?k*hm.perKg:0,priorPerKg:hm?cfg.k0*hm.perKg:0,
+    calibrated:!!(kh&&kh.lastCal),verified:kh&&kh.lastCal?kh.lastCal.d:null,manual:cfg.mode==='manuale_fisso',
+    routine:{job:job,steps:steps,trainPerWeek:training?training.perWeek:habits.trainPerWeek,trainObserved:!!training,trainMin:training?null:habits.trainMin,trainCoverage:training?training.orig:null},unknown:unknown};
+}
+function validation(D,M,asOf){
+  var rows=[];
+  for(var q=0;q<3;q++){
+    var end=add(asOf,-q*14),from=add(end,-14),r=reference(D,M,from,null,true);
+    if(!r||r.manual||!r.calibrated)continue;
+    var ca=M.prepare(D,from,{knownBy:true}),cb=M.prepare(D,end),a=M.trendAt(ca,from),b=M.trendAt(cb,end);
+    if(a.none||b.none||a.datato||b.datato||a.n<4||b.n<4)continue;
+    var I=[],ok=true;for(var j=0;j<14;j++){var it=M.intakeOf((D.days||{})[add(from,j)]||{},false);if(!it.usable||!finite(it.kcal)){ok=false;break;}I.push(it.kcal);}if(!ok)continue;
+    var predict=function(R,perKg){return M.simulate({w0:a.v,B0:(1-M.K.TEF)*R,perKg:perKg,I:function(i){return I[i];},days:14}).slice(-1)[0];};
+    var p=predict(r.R,r.perKg),z=r.prior>0?predict(r.prior,r.priorPerKg):null;
+    rows.push({from:from,to:end,predicted:p,actual:b.v,error:p-b.v,baseline:z,baselineError:z==null?null:z-b.v});
+  }
+  return{n:rows.length,horizon:14,rows:rows,mae:mean(rows.map(function(x){return Math.abs(x.error);})),baselineMae:mean(rows.filter(function(x){return x.baselineError!=null;}).map(function(x){return Math.abs(x.baselineError);})),
+    note:'Controllo retrospettivo: calibrazione e peso iniziale usano solo dati fino alla partenza; le calorie successive servono alla simulazione. Confronto con la tendenza finale, non con una singola pesata. Non misura il dispendio reale; eventuali correzioni tardive del diario non sono ricostruibili come dati originariamente noti.'};
+}
+function build(D,E,M){
+  var o={available:false,history:[],validation:{n:0,rows:[]}};if(!E||!E.asOf||!E.base||!E.base.ok||!E.dayOf)return o;
+  var asOf=E.asOf,r=reference(D,M,asOf,E);if(!r)return o;
+  o.available=true;o.reference=r;o.from=monday(asOf);o.to=add(o.from,6);o.today=E.dayOf(asOf);o.confidence=E.confidence;o.week=E.week;
+  var earliest=(D.plan&&D.plan.versions||[]).map(function(v){return v.from;}).sort()[0]||asOf;
+  for(var w=1;w<=6;w++){
+    var f=add(o.from,-7*w),t=add(f,6);if(t<earliest)continue;var rr=reference(D,M,t,{ctx:E.ctx}),xs=[];
+    for(var i=0;i<7;i++){var x=E.dayOf(add(f,i));if(x&&finite(x.C))xs.push(x);}
+    if(!rr||!xs.length)continue;
+    o.history.push({from:f,to:t,reference:rr,consumption:xs.length===7?xs.reduce(function(s,x){return s+x.C;},0):null,coverage:xs.length,complete:xs.filter(function(x){return x.usable;}).length});
+  }
+  var prev=o.history[0];if(prev){o.change={total:r.R-prev.reference.R,routine:null,calibration:null};if(finite(r.hmA)&&finite(prev.reference.hmA)&&!r.manual&&!prev.reference.manual){o.change.routine=prev.reference.k*(r.hmA-prev.reference.hmA)/(1-M.K.TEF);o.change.calibration=(r.k-prev.reference.k)*r.hmA/(1-M.K.TEF);}}
+  o.validation=validation(D,M,asOf);return o;
+}
+V.build=build;V.reference=reference;V.validation=validation;V.add=add;
+if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergySummary=V;
+})(typeof window!=='undefined'?window:this);
+
+
 /* Account e database: Firebase (piano gratuito Spark). Ogni persona entra con email e password
    e legge o scrive solo users/{suo id}/...; le regole di Firestore impediscono di vedere i dati degli altri.
    Per spendere poche letture tengo una copia dei dati in questo browser e chiedo al server solo ciò che è cambiato. */
@@ -2664,7 +2729,7 @@ if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.GJFr
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.1.0' };
+var M = { V: '2.1.1' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -4133,15 +4198,15 @@ function dayInfo(ctx, cfg0, d, kAt, targetOf, cfgAt) {
      consumo (per esempio un nuovo valore manuale) non riscrive il bilancio dei giorni passati */
   var cfg = cfgAt ? cfgAt(d) : cfg0, kOf = cfg === cfg0 ? kAt : function (x) { return cfg.adaptive ? kHistory(ctx, x, cfg).k : 1; };
   var it = intakeOf(day, kind === 'oggi'), tg = targetOf(d);
-  var A = cfg.useProfile ? dayActivity(ctx, d, { mode: kind === 'trascorso' ? 'osservato' : 'previsto' }) : null;
+  var A = cfg.useProfile ? dayActivity(ctx, d, { mode: kind === 'trascorso' || (kind === 'oggi' && it.usable) ? 'osservato' : 'previsto' }) : null;
   var k = kOf(d), B;
   var hmD = cfg.dayAdjust && A && A.ok ? habitMean(ctx, d, { useProfile: true }) : null;
   if (cfg.mode === 'manuale_fisso') B = (1 - K.TEF) * cfg.manual + (hmD ? A.A - hmD.A : 0);
   else B = A && A.ok ? k * A.A : cfg.manual ? k * (1 - K.TEF) * cfg.manual : null;
-  var Iused = kind === 'trascorso' && it.usable ? it.kcal : tg;
+  var Iused = (kind === 'trascorso' || kind === 'oggi') && it.usable ? it.kcal : tg;
   var C = B != null && Iused != null ? B + K.TEF * Iused : null;
   var o = { d: d, kind: kind, intake: isNum(+day.kcal) && day.kcal !== '' && day.kcal != null ? +day.kcal : null, state: it.state, usable: it.usable, target: tg, C: C, B: B, A: A,
-    Corig: kind === 'trascorso' ? (it.usable ? 'ricostruito con i dati del giorno' : 'ricostruito, calorie del giorno incomplete') : kind === 'oggi' ? 'previsto: giornata in corso' : 'previsto da abitudini e calendario' };
+    Corig: kind === 'trascorso' ? (it.usable ? 'ricostruito con i dati del giorno' : 'ricostruito, calorie del giorno incomplete') : kind === 'oggi' ? (it.usable ? 'ricostruito con i dati confermati di oggi' : 'previsto: giornata in corso') : 'previsto da abitudini e calendario' };
   var hd = d < ctx.asOf ? d : ctx.asOf;
   var hist = cfg.adaptive ? (ctx.memo['kh:' + ctx.asOf + ':' + cfg.key] || kHistory(ctx, hd, cfg)) : null, accepted = null;
   if (hist) hist.list.forEach(function (x) { if (x.d <= hd && x.evidence && x.kSD != null) accepted = x; });
@@ -4241,8 +4306,8 @@ function engine(D, asOf, opts) {
   out.today = {
     target: z ? { v: tdy.target != null ? tdy.target : z.kcal, origin: res.Torigin || (v.kcal && v.kcal.mode === 'manuale' ? 'manuale' : 'automatico'), mode: v.kcal && v.kcal.mode, update: v.kcal && v.kcal.update, from: v.from } : null,
     macros: z ? { p: z.p, c: z.c, f: z.f, locked: lockedOf(v), pref: v.macros && v.macros.pref, policy: v.macros && policyOf(v.macros).nome, mode: v.macros && v.macros.mode, weightRef: z.weightRef } : null,
-    consumption: tdy.C != null ? { v: tdy.C, lo: daySD != null ? Math.max(0, tdy.C - 2 * daySD) : (tdy.A && tdy.A.ok ? kAt(asOf) * tdy.A.lo + K.TEF * (tdy.target || 0) : null), hi: daySD != null ? tdy.C + 2 * daySD : (tdy.A && tdy.A.ok ? kAt(asOf) * tdy.A.hi + K.TEF * (tdy.target || 0) : null), A: tdy.A, k: kAt(asOf), assumeIntake: tdy.target } : null,
-    balance: z && base.ok ? { R: base.R, provider: base.provider, label: base.label, T: tdy.target != null ? tdy.target : z.kcal, expected: tdy.C != null ? tdy.C - (tdy.target != null ? tdy.target : z.kcal) : null } : null,
+    consumption: tdy.C != null ? { v: tdy.C, lo: daySD != null ? Math.max(0, tdy.C - 2 * daySD) : (tdy.A && tdy.A.ok ? kAt(asOf) * tdy.A.lo + K.TEF * (tdy.target || 0) : null), hi: daySD != null ? tdy.C + 2 * daySD : (tdy.A && tdy.A.ok ? kAt(asOf) * tdy.A.hi + K.TEF * (tdy.target || 0) : null), A: tdy.A, k: kAt(asOf), assumeIntake: tdy.usable ? tdy.intake : tdy.target, closed: tdy.usable } : null,
+    balance: z && base.ok ? { R: base.R, provider: base.provider, label: base.label, T: tdy.target != null ? tdy.target : z.kcal, expected: tdy.B != null ? tdy.B - (1 - K.TEF) * (tdy.target != null ? tdy.target : z.kcal) : null } : null,
     residual: tdy.target != null ? { v: tdy.target - (tdy.intake || 0), intake: tdy.intake, state: tdy.state } : null
   };
   /* stati e messaggi (sezione 21) */
@@ -4298,13 +4363,17 @@ function confidenceOf(cal, base, tr, origine, cfg, vo) {
   if (!cfg.ok) return { level: 'non_disponibile', why: cfg.why };
   if (cfg.mode === 'manuale_fisso') return { level: 'dichiarato', why: 'consumo inserito da te e tenuto fisso: l\'app non lo verifica' };
   var why = [], sdk = base && base.ok ? base.kSD : cfg.sd0;
-  var level = sdk <= 0.05 ? 'più alta' : sdk <= 0.08 ? 'media' : 'bassa';
+  var factorRelativeSD = sdk != null ? sdk / Math.max(0.01, Math.abs(base && base.k || 1)) : null;
+  var activitySD = base && base.ok && base.hm ? Math.abs(base.k) * (base.hm.hi - base.hm.lo) / 4 / (1 - K.TEF) : 0;
+  var activityRelativeSD = base && base.R > 0 ? activitySD / base.R : 0;
+  var relativeSD = factorRelativeSD != null ? Math.sqrt(factorRelativeSD * factorRelativeSD + activityRelativeSD * activityRelativeSD) : null;
+  var level = relativeSD != null && relativeSD <= 0.05 ? 'più alta' : relativeSD != null && relativeSD <= 0.08 ? 'media' : 'bassa';
   if (origine === 'calibrato_sul_diario') why.push((vo && vo.applied ? 'consumo aggiornato con diario e pesate' : 'stima confrontata con diario e pesate') + ' (ultimo controllo utilizzabile: ' + dIt(vo.d) + ')');
   else why.push(cfg.mode === 'manuale_da_calibrare' ? 'consumo manuale non ancora confrontato con il diario' : 'stima iniziale dal profilo: per molte persone l\'errore della sola formula del riposo supera il 10%');
   if (cal && cal.status !== 'calibrato') { why.push('oggi: ' + (cal.reasons[0] || cal.status)); if (level === 'più alta') level = 'media'; }
   if (base && base.transfer) why.push(base.transfer.why);
   if (tr && tr.datato) { level = 'bassa'; why.push('ultima pesata di ' + tr.age + ' giorni fa'); }
-  return { level: level, kSD: sdk, why: why.join('; ') };
+  return { level: level, kSD: sdk, factorRelativeSD: factorRelativeSD, activityRelativeSD: activityRelativeSD, relativeSD: relativeSD, maintenanceSD: base && base.ok && relativeSD != null ? base.R * relativeSD : null, why: why.join('; ') };
 }
 
 /* revisione atomica: calorie e macro insieme, validati prima; se non fattibile resta la versione attiva */
@@ -5753,6 +5822,71 @@ var LBL = {
   fstate: { mancante: 'Mancante', parziale: 'Parziale', completo: 'Completo', zero_confermato: 'Zero confermato', da_confermare: 'Da confermare' }
 };
 function lb(group, k) { return (LBL[group] && LBL[group][k]) || k || '—'; }
+/* Explanations read the engine result; they never change its estimate or confidence. */
+function confidenceDetail(E) {
+  var cf = E && E.confidence || {}, cal = E && E.calibration, base = E && E.base || {}, level = cf.level || 'non_disponibile';
+  var labels = { bassa: 'Bassa', media: 'Media', 'più alta': 'Più alta', dichiarato: 'Dichiarato da te', non_disponibile: 'Non disponibile' };
+  var o = { level: level, label: labels[level] || level, summary: '', reasons: [], data: [], technical: [] };
+  var num = function (v, n) { return Number(v).toLocaleString('it-IT', { minimumFractionDigits: n || 0, maximumFractionDigits: n || 0 }); };
+  var date = function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || '') ? s.slice(8) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : s || 'non disponibile'; };
+  var add = function (s) { if (s && o.reasons.indexOf(s) < 0) o.reasons.push(s); };
+  if (!E || level === 'non_disponibile') {
+    o.summary = 'La fiducia nel fabbisogno non è ancora valutabile.';
+    add(cf.why || 'Completa il profilo e imposta un piano per ottenere una prima stima.'); return o;
+  }
+  if (level === 'dichiarato') {
+    o.summary = 'Il fabbisogno è un valore manuale: questa modalità non lo verifica con pesate e calorie.';
+    add('Il numero resta quello scelto da te; non è una valutazione positiva o negativa del diario.'); return o;
+  }
+  var calibrated = cal && cal.status === 'calibrato', u = cal && cal.uncertainty;
+  o.summary = level === 'bassa' ? (calibrated ? 'Il diario è utilizzabile, ma il consumo ricostruito conserva abbastanza incertezza da restare nel livello Bassa.' : 'La stima del fabbisogno ha ancora pochi riscontri utilizzabili oppure riscontri non abbastanza stabili.') : level === 'media' ? 'Lo storico restringe l’incertezza del fabbisogno, ma rimangono differenze fra le ricostruzioni e limiti dei dati.' : 'Secondo i controlli interni, lo storico sostiene una stima del fabbisogno più stabile. Non è una misura esatta delle calorie bruciate.';
+  var w = cal && cal.window, c = cal && cal.completeness;
+  if (w) o.data.push((calibrated ? 'Calibrazione attuale' : 'Finestra esaminata') + ': ' + date(w.from) + '–' + date(w.to) + (w.nW != null ? ', ' + w.nW + ' pesate accettate' : '') + (w.nDays != null ? ', ' + w.nDays + ' giorni fra le pesate' : '') + '.');
+  if (c && c.nDays > 0) o.data.push('Alimentazione: ' + c.nComplete + ' giornate complete su ' + c.nDays + ' (' + num(c.frac * 100) + '%)' + (c.nComplete === c.nDays ? '. In questa finestra non mancano giornate alimentari complete.' : '; le giornate mancanti rendono la ricostruzione meno certa.'));
+  var vo = E.verifiedOn;
+  if (vo && vo.d) o.data.push('Ultimo controllo utilizzabile del fabbisogno: ' + date(vo.d) + '.');
+  if (cal && cal.since) add('Non viene usato automaticamente tutto il diario: la finestra riparte dopo «' + cal.since.label + '» (' + date(cal.since.d) + '). I dati precedenti restano salvati.');
+  if (cal && !calibrated) {
+    (cal.reasons || []).forEach(add);
+    if (!(cal.reasons || []).length) add('La calibrazione attuale non è utilizzabile: ' + (cal.status || 'dati insufficienti') + '.');
+    add(vo && vo.d ? 'Il fabbisogno conserva l’ultimo controllo utilizzabile; il tentativo attuale non dimostra maggiore precisione.' : 'Il fabbisogno dipende ancora dalla stima iniziale, che non è una misura personale.');
+  }
+  if (calibrated && u) {
+    var estimates = [cal.C].concat((cal.windows || []).map(function (x) { return x.meanC; })).filter(function (v) { return typeof v === 'number' && isFinite(v); });
+    if (estimates.length > 1 && u.windows > 0) add('Periodi diversi danno consumi medi ricostruiti diversi: da circa ' + num(Math.min.apply(null, estimates)) + ' a ' + num(Math.max.apply(null, estimates)) + ' kcal al giorno. Sono ricostruzioni su periodi differenti, non i limiti del consumo di oggi. Il modello tiene conto di questa discordanza.');
+    var names = {
+      statistical: 'Le pesate oscillano rispetto al percorso spiegato da calorie e attività. Questa variabilità limita quanto si può identificare il consumo.',
+      density: 'Lo stesso cambiamento di peso non identifica esattamente l’energia persa: il calcolo viene confrontato anche usando 5.000 e 9.400 kcal/kg.',
+      diary: 'Anche le giornate complete conservano possibili errori nelle calorie. Il modello include un margine convenzionale, senza affermare che tu abbia registrato male.',
+      floor: 'Rimane un margine minimo previsto dal modello: una serie di pesate regolare non dimostra da sola un consumo esatto.'
+    };
+    Object.keys(names).filter(function (k) { return u[k] > 0; }).sort(function (a, b) { return u[b] - u[a]; }).slice(0, 2).forEach(function (k) { add(names[k]); });
+    Object.keys(u).forEach(function (k) { if (u[k] > 0) o.technical.push(({ statistical: 'Variabilità delle pesate', diary: 'Margine alimentare convenzionale', density: 'Sensibilità kcal/kg', windows: 'Differenze fra periodi', floor: 'Margine minimo del modello' }[k] || k) + ': ' + num(u[k]) + ' kcal/giorno di contributo all’incertezza del consumo medio ricostruito.'); });
+  }
+  if (base.transfer) add(base.transfer.why);
+  var tr = E.weight && E.weight.trend || E.trend;
+  if (tr && tr.datato) add('L’ultima pesata risale a ' + tr.age + ' giorni fa: la fiducia viene mantenuta Bassa finché non arrivano pesate recenti.');
+  if (vo && vo.d && E.asOf && /^\d{4}-\d{2}-\d{2}$/.test(vo.d)) {
+    var age = Math.round((Date.parse(E.asOf + 'T00:00:00Z') - Date.parse(vo.d + 'T00:00:00Z')) / 86400000);
+    if (age > 7) add('Sono passati ' + age + ' giorni dall’ultimo controllo utilizzabile: il modello aumenta l’incertezza invece di considerare il solo tempo trascorso una nuova prova.');
+  }
+  if (!o.reasons.length) add(cf.why || 'Il livello dipende dall’incertezza interna del fattore personale ricavato da profilo, attività, calorie e pesate.');
+  if (cf.activityRelativeSD > 0) { add('Anche l’attività abituale conserva incertezza: il calendario di lavoro è quello inserito, ma il suo costo energetico e l’intensità degli allenamenti non sono misurati individualmente. Questo margine contribuisce al livello di fiducia.'); o.technical.push('Componente attività abituale: circa ' + num(cf.activityRelativeSD * base.R) + ' kcal/giorno di incertezza sul mantenimento medio.'); }
+  if (typeof cf.relativeSD === 'number' && isFinite(cf.relativeSD)) o.technical.push('Indice relativo d’incertezza sul mantenimento: ' + num(cf.relativeSD, 3) + '. Combina calibrazione e attività abituale in rapporto al mantenimento stimato. Soglie convenzionali: Bassa sopra 0,080; Media fino a 0,080; Più alta fino a 0,050. Questi numeri non sono percentuali di accuratezza dimostrata.');
+  else if (typeof cf.kSD === 'number' && isFinite(cf.kSD)) o.technical.push('Indice interno conservato: ' + num(cf.kSD, 3) + '. Non è una percentuale di accuratezza.');
+  o.technical.push('I contributi sono combinati nel modello, non sommati direttamente. I livelli sono criteri del programma, non una validazione del tuo consumo reale.');
+  return o;
+}
+function confidenceExplanationHTML(E) {
+  var d = confidenceDetail(E);
+  return '<section class="confidence-explanation"><h4>Perché la tua fiducia è ' + esc(d.label.toLowerCase()) + '</h4><p>' + esc(d.summary) + '</p>'
+    + '<p>La fiducia riguarda la <b>stima del fabbisogno</b>: non significa che mangi poco o che tutto il diario sia sbagliato. È un’indicazione di quanto il modello riesce a restringere l’incertezza del consumo.</p>'
+    + (d.data.length ? '<h4>Quali dati sta usando</h4><ul>' + d.data.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>' : '')
+    + '<h4>Che cosa determina il livello</h4><ul>' + d.reasons.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul>'
+    + (d.technical.length ? '<details><summary>I numeri del controllo</summary><ul>' + d.technical.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></details>' : '')
+    + '<p>Non esiste un numero di giorni che garantisca il passaggio al livello successivo. Il livello può salire o scendere con nuovi dati; “Più alta” non significa 100% affidabile.</p></section>';
+}
+
 function confLabel(E) { var c = E && E.confidence; return c ? lb('conf', c.level) : '—'; }
 
 /* ===================== Oggi: piano del giorno (7 voci), settimana in corso, peso, bilancia di domani ===================== */
@@ -5796,7 +5930,7 @@ function lastWeekNeed() {
 }
 function renderNeed() {
   var box = $('#need-body'); if (!box) return;
-  var h = $('#need-card h2'); if (h) h.textContent = 'Il tuo piano di oggi';
+  var h = $('#need-card h2'); if (h) h.textContent = 'Mantenimento e piano di oggi';
   var E = state.E, t = todayStr();
   if (!E || E.status === 'nessun_piano') { box.innerHTML = noPlanHTML(); return; }
   var v = activeVersion(), td = E.today || {}, T = td.target, M = td.macros, C = td.consumption, B = td.balance, Rs = td.residual, fr = E.plan.fresh || {}, rows = [];
@@ -5825,13 +5959,13 @@ function renderNeed() {
   if (B) {
     var ex = B.expected, word = Math.abs(ex) < 50 ? 'Equilibrio' : ex > 0 ? 'Deficit atteso' : 'Surplus atteso';
     bTxt = Math.abs(ex) < 50 ? word : '<em>' + word + '</em>' + kc(Math.abs(ex));
-    bSub = 'Consumo previsto di oggi ' + (C ? fmt(C.v, 0) : '—') + ' − obiettivo ' + fmt(B.T, 0) + ' kcal, con la digestione calcolata sulle calorie previste. Il mantenimento della settimana tipo è ' + fmt(B.R, 0) + ' kcal al giorno.';
+    bSub = 'Consumo stimato con le calorie del piano ' + fmt(B.expected + B.T, 0) + ' − obiettivo ' + fmt(B.T, 0) + ' kcal. Il bilancio reale del diario usa invece le calorie effettivamente confermate. Il mantenimento medio della routine è ' + fmt(B.R, 0) + ' kcal al giorno.';
   }
   var resid = Rs ? '<div class="p2-res"><span>Residuo dopo quanto hai registrato oggi</span><b>' + (Rs.v >= 0 ? kc(Rs.v) : 'oltre di ' + kc(-Rs.v)) + '</b><small>' + (Rs.intake != null ? fmt(Rs.intake, 0) + ' kcal registrate (' + lb('fstate', Rs.state).toLowerCase() + ')' : 'nessuna caloria registrata oggi') + ' · calcolato sull\'obiettivo alimentare, non sul consumo</small></div>' : '';
   rows.push(p2tile('Rispetto al piano', bTxt, bSub + resid, { rule: 'deficit-sett' }));
   /* 5. stato dei dati e fiducia */
   var q = E.states.qualita, cf = E.confidence || {};
-  rows.push(p2tile('Stato dei dati e fiducia', lb('conf', cf.level), '<b>' + lb('qualita', q) + '</b>' + ' · ' + esc(cf.why || '') + (E.calibration && E.calibration.reasons && E.calibration.reasons.length && q !== 'calibrato' && String(cf.why || '').indexOf(E.calibration.reasons[0]) < 0 ? ' · ' + esc(E.calibration.reasons[0]) : ''), { rule: 'margine' }));
+  rows.push(p2tile('Fiducia nella stima del fabbisogno', lb('conf', cf.level), esc(confidenceDetail(E).summary), { rule: 'margine' }));
   /* 6. peso */
   var tr = E.weight && E.weight.trend;
   rows.push(p2tile('Peso, tendenza', tr && !tr.none ? fmt(tr.v, 1) + ' kg' : '—', tr && !tr.none ? 'Tendenza ' + fmt(tr.v, 1) + ' kg · ultima pesata ' + fmt(tr.last.w, 1) + ' kg il ' + fmtDay(tr.last.d) + ' · ' + (tr.method === 'retta' ? 'retta robusta su ' + tr.n + ' pesate dal ' + fmtDay(tr.from) + (tr.slope != null ? ', ' + sgn(tr.slope * 7, 1) + ' kg a settimana' : '') : tr.method === 'mediana7' ? (tr.n === 1 ? 'una sola pesata negli ultimi 7 giorni' : 'mediana di ' + tr.n + ' pesate degli ultimi 7 giorni') : 'una sola pesata recente') + (tr.datato ? ' · dato vecchio: fiducia bassa' : '') + (v && v.goal && v.goal.phase === 'surplus' ? ' · Prestazioni registrate: ' + esc(E.performance ? E.performance.text : '—') : '') : 'Nessuna pesata nel diario', { t: 'Peso, tendenza', rule: 'tendenza' }));
@@ -5854,8 +5988,8 @@ function renderNeed() {
   rows.push(p2tile('Revisione del piano', esc(rv.title || '—'), '<p>' + esc(rv.text || '') + (rv.why ? ' Perché: ' + esc(rv.why) + '.' : '') + (rv.n !== 5 && dataTxt ? ' ' + dataTxt : '') + (next ? ' Prossima rivalutazione: ' + fmtDay(next) + '.' : '') + '</p>' + rx, { vis: rvis, rule: 'esiti', cls: 'wide' + (rv.n === 6 || rv.n === 7 ? ' warn' : rv.n === 8 ? ' bad' : '') }));
   /* ordine sullo schermo: due riquadri per riga, macro e revisione a tutta larghezza */
   /* ordine voluto: consumo di oggi, consumo medio della settimana scorsa, obiettivo; poi deficit, macro, fiducia, peso, revisione */
-  rows = [rows[2], rows[3], rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
-  box.innerHTML = '<div class="p2-tiles">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
+  rows = [rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
+  box.innerHTML = maintenanceHeroHTML(energyView()) + dailyEnergyHTML(energyView()) + '<div class="p2-tiles">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
   var why = $('#nc-why');
   if (why) why.innerHTML = '<p><b>Obiettivo</b> e <b>consumo</b> sono due numeri diversi: l\'obiettivo è quanto mangiare secondo il piano, il consumo è una stima di quanto spendi. Il residuo si calcola sull\'obiettivo.</p><p>Il consumo di oggi è previsto (la giornata non è finita); i giorni passati sono ricostruiti con i loro dati. Il piano non cambia mentre inserisci i pasti: cambia solo con una revisione, con una data e un motivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
 }
@@ -6082,7 +6216,7 @@ function renderCurrentEnergy() {
     + part('Altre attività', P.other, A.orig.other)
     + '<tr class="p2-tot"><td>Attività stimata (senza digestione)</td><td>' + fmt(A.A, 0) + '</td><td>intervallo ' + fmt(A.lo, 0) + '–' + fmt(A.hi, 0) + '</td></tr>'
     + '<tr><td>× fattore di calibrazione</td><td>' + fmt(k, 3) + '</td><td>' + (E.verifiedOn && E.verifiedOn.applied ? 'aggiornato col diario' : 'valore di partenza') + '</td></tr>'
-    + '<tr><td>+ digestione (10% delle calorie)</td><td>' + fmt(GJM.K.TEF * (C.assumeIntake || 0), 0) + '</td><td>sull\'obiettivo di oggi (' + kc(C.assumeIntake) + ')</td></tr>'
+    + '<tr><td>+ digestione (10% delle calorie)</td><td>' + fmt(GJM.K.TEF * (C.assumeIntake || 0), 0) + '</td><td>' + (C.closed ? 'sulle calorie confermate di oggi (' : 'sull\'obiettivo di oggi (') + kc(C.assumeIntake) + ')</td></tr>'
     + '<tr class="p2-tot"><td>Consumo stimato di oggi</td><td>' + fmt(C.v, 0) + '</td><td>' + (C.lo != null ? fmt(C.lo, 0) + '–' + fmt(C.hi, 0) : '') + '</td></tr>'
     + '</tbody></table></div>' : '<p class="muted small">' + (E.cfg.mode === 'manuale_fisso' ? 'Consumo manuale fisso: ' + kc(E.cfg.manual) + '. ' + (E.cfg.useProfile ? '' : 'Senza profilo completo non posso scomporlo.') : esc(E.base && E.base.why || 'Componenti non disponibili')) + '</p>';
   box.innerHTML = '<div class="en-big"><b>' + (C ? fmt(C.v, 0) : '—') + '</b><span>kcal</span></div><div class="en-pills"><span class="en-pill">' + lb('origine', E.states.origine) + '</span><span class="en-pill">Fiducia ' + confLabel(E).toLowerCase() + '</span></div>'
@@ -6449,7 +6583,9 @@ function renderProjection() {
 /* ---------- calorie ---------- */
 function renderTdee() {
   var E = state.E, h = $('#td-h');
-  if (h) h.textContent = E && E.base && E.base.ok ? E.base.label + ' di riferimento' : 'Consumo di riferimento';
+  if (h) h.textContent = 'Dettagli del mantenimento attuale';
+  var legacyPanel = h && h.closest('.panel'), legacyGrid = legacyPanel && legacyPanel.parentElement;
+  if (legacyGrid && !legacyGrid.closest('.energy-reference-extra')) { var wrap = document.createElement('details'); wrap.className = 'energy-reference-extra'; wrap.innerHTML = '<summary>Riferimenti teorici e ricostruzioni storiche</summary>'; legacyGrid.parentElement.insertBefore(wrap, legacyGrid); wrap.appendChild(legacyGrid); }
   countTo($('#td-v'), E && E.base && E.base.ok ? Math.round(E.base.R) : null, 0);
   $('#td-arr').hidden = true;
   var chips = '';
@@ -6458,7 +6594,7 @@ function renderTdee() {
     chips += kvr('Fiducia', esc(E.confidence && E.confidence.why || ''), confLabel(E));
     if (E.initial) chips += kvr('Stima iniziale dal profilo', 'riposo, attività di base, passi, palestra, lavoro e altre attività abituali', kc(E.initial.R) + ' (' + fmt(E.initial.lo, 0) + '–' + fmt(E.initial.hi, 0) + ')');
     if (E.calibration && E.calibration.C != null) chips += kvr('Mantenimento ricostruito dal diario', lb('qualita', E.calibration.status) + ', attività media del periodo ' + fmtShort(E.calibration.window.from) + '–' + fmtShort(E.calibration.window.to), kc(E.calibration.maintenance));
-    if (E.kHistory && E.kHistory.next) chips += kvr('Prossima revisione', 'con diario e pesate delle ultime 4 settimane, se i dati sono completi', fmtDay(E.kHistory.next));
+    if (E.kHistory && E.kHistory.next) chips += kvr('Prossimo controllo', 'con diario e pesate confrontabili, fino a 42 giorni', fmtDay(E.kHistory.next));
   }
   $('#td-chips').innerHTML = chips ? '<div class="kvl">' + chips + '</div>' : '';
   $('#td-text').textContent = !E ? 'Serve un piano attivo.' : 'È la media della settimana tipo (abitudini dichiarate e calendario), usata per il deficit o il surplus del piano. I giorni singoli hanno il loro consumo, ricostruito o previsto.';
@@ -6475,7 +6611,7 @@ function renderKcalChart() {
   var on = !!state.kAllWk, segs = [];
   var rl = row && row.querySelector('span'); if (rl && !rl.dataset.v2) { rl.dataset.v2 = '1'; rl.firstChild.textContent = 'Consumo stimato di ogni giorno'; }
   $('#k-allwk').setAttribute('aria-checked', on ? 'true' : 'false');
-  $('#k-allwk-s').textContent = on ? 'Acceso: un tratto per ogni giorno (ricostruito)' : 'Spento: vedi solo il consumo di riferimento';
+  $('#k-allwk-s').textContent = on ? 'Acceso: un tratto per ogni giorno (ricostruito)' : 'Spento: vedi il mantenimento medio attuale';
   if (on) dates.forEach(function (d, i) { var c = tdeeForDate(d); if (c != null && d < t) segs.push({ n: i, i0: i, i1: i, v: Math.round(c), prov: false }); });
   var R = TD(), KR = kRange(), max = Math.max(R || 0, KR.hi || 0) * 1.1 || 2500;
   dates.forEach(function (d) { var v = state.days.get(d); if (v && v.kcal > max) max = v.kcal; });
@@ -6485,7 +6621,7 @@ function renderKcalChart() {
   $('#k-leg-goal').textContent = 'Obiettivo ' + KR.label;
   barChart($('#k-chart'), { dates: dates, ymax: max, min: KR.lo || 0, max: KR.hi || 0, weeks: segs, targets: KR.none ? [] : KR.fixed ? [KR.T] : [KR.lo, KR.hi], val: function (d) { var v = state.days.get(d); return v ? v.kcal || 0 : 0; } });
   $('#k-leg-wk').hidden = !on;
-  $('#k-leg-td').textContent = 'Consumo di riferimento (' + (R ? fmt(R, 0) : '—') + ')';
+  $('#k-leg-td').textContent = 'Mantenimento medio attuale (' + (R ? fmt(R, 0) : '—') + ')';
   $('#k-readout').textContent = (KR.none ? 'Nessun obiettivo attivo.' : KR.fixed ? 'La linea verde è l\'obiettivo di oggi (' + KR.label + ' kcal); i colori dei giorni usano l\'obiettivo attivo quel giorno, con 50 kcal di tolleranza.' : 'La fascia verde è l\'intervallo del piano: ' + KR.label + ' kcal.') + ' La linea tratteggiata è il consumo di riferimento del piano. Sopra l\'obiettivo e sopra il consumo sono confronti diversi.';
 }
 /* bilancio stimato cumulativo: solo giornate complete, consumo ricostruito di ciascun giorno */
@@ -7518,7 +7654,7 @@ function rulesData() {
     why: 'Separare le componenti rende visibile la provenienza di ogni numero. Il fattore personale corregge l\'insieme: con questi dati non si può dire quale componente sbaglia.',
     pl: { s: 'Quanto stimo che tu consumi in un giorno, sommando riposo, attività di base, passi, palestra, lavoro e altre attività.', n: function () { var c = E && E.today && E.today.consumption; return c ? { l: 'Consumo stimato di oggi', v: F(c.v, 0) + ' kcal', sub: c.lo != null ? 'intervallo ' + F(c.lo, 0) + '–' + F(c.hi, 0) : '' } : null; } },
     ex: function () { if (!A || !A.ok) return row('Componenti', A && A.why || '—'); var p = A.parts; return row('Riposo', F(p.rmr, 0)) + row('Base', F(p.base, 0)) + row('Passi', F(p.steps, 0) + ' (' + esc(A.orig.steps) + ')') + row('Palestra', F(p.gym, 0) + ' (' + esc(A.gym.orig || '') + ')') + row('Lavoro', F(p.job, 0)) + row('Altre', F(p.other, 0)) + row('Fattore personale', F(E.today.consumption.k, 3)); } });
-  add({ id: 'fabbisogno', g: 'energia', t: 'Consumo di riferimento del piano', w: 'Oggi, Progressi › Calorie, Profilo',
+  add({ id: 'fabbisogno', g: 'energia', t: 'Il tuo mantenimento medio attuale', w: 'Oggi, Progressi › Calorie, Profilo',
     what: 'Il consumo usato dal piano per calcolare deficit o surplus: la media della settimana tipo, moltiplicata per il fattore personale. La settimana tipo usa quello che registri quando c\'è (mediana dei passi delle ultime 4 settimane, sedute di Hevy se coprono almeno 21 degli ultimi 28 giorni), altrimenti le abitudini dichiarate. Da dove viene lo decidi nel Profilo: manuale fisso, manuale da calibrare, oppure stima dal profilo poi adattiva.',
     how: fx(L('Manuale fisso', 'il valore che inserisci; una stima adattiva compare solo come confronto, se la chiedi'), L('Manuale da calibrare', 'il tuo valore è il punto di partenza, poi si calibra sul diario'), L('Dal profilo', 'stima iniziale, poi calibrata sul diario'), L(O('Riferimento'), 'fattore × attività media della settimana tipo ÷ (1 − ' + C(pct(K.TEF)) + ')')),
     why: 'Un consumo manuale fisso non viene aggirato da una stima nascosta: per usare la stima devi cambiare modalità. Se cammini o ti alleni molto più (o meno) di quanto avevi dichiarato, la previsione di attività lo segue subito, perché è un dato osservato; il fattore personale invece viene rivalutato con il bilancio integrato; dati rumorosi ricevono meno peso. Dopo un cambiamento strutturale (nuovo lavoro, turni, infortunio, ripresa, dieta diversa) il fattore calcolato prima resta, ma conta meno: la sua incertezza torna quella dell\'inizio finché non ci sono dati nuovi. Un\'eccezione breve (ferie, viaggio, malattia) non lo cambia.',
@@ -7562,7 +7698,7 @@ function rulesData() {
     how: fx(L(O('Totale'), 'somma di (' + KC('calorie') + ' − ' + KC('consumo stimato del giorno') + ')'), L('Esclusi', 'giornate parziali, da confermare, senza calorie')),
     why: 'Non misura il grasso perso o preso.' });
   add({ id: 'margine', g: 'energia', t: 'Incertezza e fiducia', w: 'Oggi, Calorie, Previsioni',
-    what: 'Ogni stima ha un intervallo: il consumo di ' + C('±' + pct(K.PRIOR_SD)) + ' all\'inizio, poi quello della calibrazione. La fiducia (bassa, media, più alta) dipende da completezza del diario, pesate recenti, transizioni.',
+    what: 'La fiducia riguarda la stima del fabbisogno, non un giudizio su tutto il diario. I livelli sono Bassa, Media e Più alta: dipendono dai riscontri utilizzabili e dall’incertezza calcolata, non dal solo tempo trascorso. Nessun livello garantisce una precisione individuale.',
     how: fx(L('Intervallo del consumo di oggi', 'due volte l’incertezza combinata di calibrazione e attività; indicativo, senza copertura probabilistica garantita'), L('Intervallo delle date', 'scenari con consumo più alto e più basso'), L('Non è', 'una probabilità')),
     why: 'Un intervallo onesto è più utile di un numero preciso ma sbagliato.' });
   add({ id: 'kcalkg', g: 'energia', t: 'Calorie per kg', w: 'Previsioni, Bilancio',
@@ -7722,6 +7858,7 @@ var GLOSS = [
 function inlineExplanationHTML(id) {
   var r = null; try { r = rulesData().filter(function (x) { return x.id === id; })[0]; } catch (e) { r = null; }
   if (id === 'semaforo') return summaryExplanationHTML();
+  if (id === 'margine') return confidenceExplanationHTML(state.E) + '<button type="button" class="context-link" data-gorule="margine">Apri la voce in Come funziona ↗</button>';
   if (!r) return '<p>La spiegazione di questo dato non è ancora disponibile.</p>';
   var ex = ''; try { ex = r.ex ? r.ex() : ''; } catch (e) { ex = ''; }
   var tone = /peso|tendenza|media7|ritmo|acqua/.test(id) ? 'weight' : /kcal|consumo|fabbisogno|deficit|bilancio|calibr|macro|settimana/.test(id) ? 'energy' : /av-|semaforo|esiti/.test(id) ? 'check' : /arrivo|prospetto|domani|scadenza/.test(id) ? 'goal' : 'history';
@@ -8387,6 +8524,7 @@ function ruleHTML(r, open, terms, gname) {
   var ex = safe(r.ex), num = null; try { num = pl.n ? pl.n() : null; } catch (e) { num = null; }
   var plainEx = safe(pl.e), viz = safe(pl.v), short = pl.s || r.what;
   var body = '<p class="r-short">' + H(short) + '</p>'
+    + (r.id === 'margine' ? confidenceExplanationHTML(state.E) : '')
     + (num ? '<div class="r-num"><small>' + num.l + '</small><b>' + num.v + '</b>' + (num.sub ? '<span>' + num.sub + '</span>' : '') + '</div>' : '')
     + (viz ? '<div class="r-vizbox">' + viz + '</div>' : '')
     + (pl.p && pl.p.length ? '<div class="r-sec"><h4>Il ragionamento, passo per passo</h4><ol class="r-steps">' + pl.p.map(function (x) { return '<li>' + H(x) + '</li>'; }).join('') + '</ol></div>' : '')
@@ -10155,6 +10293,52 @@ function bindFriends() {
   if((location.hash||'')==='#amici')show('amici');
 }
 
+var energyViewCache = { E: null, value: null };
+function energyView() {
+  if (energyViewCache.E !== state.E) { energyViewCache.E = state.E; energyViewCache.value = GJEnergySummary.build(engineD(), state.E, GJM); }
+  return energyViewCache.value || { available: false, history: [] };
+}
+function routineEnergyHTML(r) {
+  var j=r.routine.job, a=[], R=r.routine;
+  if(j&&j.days&&j.days.length)a.push('<span><b>Lavoro</b>'+j.days.length+' giorni × '+fmt(j.hours,1)+' h · '+esc(j.days.map(function(x){return WD[x];}).join(', '))+'</span>');
+  else if(j&&j.hoursWeek>0)a.push('<span><b>Lavoro</b>'+fmt(j.hoursWeek,0)+' h/settimana · giorni non specificati</span>');
+  else a.push('<span><b>Lavoro</b>Nessun contributo lavorativo impostato</span>');
+  a.push('<span><b>Allenamento</b>'+(R.trainPerWeek!=null?fmt(R.trainPerWeek,R.trainPerWeek%1?1:0)+' sedute/settimana · '+(R.trainObserved?'dallo storico Hevy':'dal profilo'):'Frequenza da completare')+'</span>');
+  a.push('<span><b>Passi abituali</b>'+(r.unknown.some(function(x){return x.indexOf('Passi abituali')===0;})?'Da completare':R.steps!=null?fmt(R.steps,0)+' al giorno':'Da completare')+'</span>');
+  return '<div class="maintenance-routine">'+a.join('')+'</div>';
+}
+function dailyEnergyHTML(view) {
+  var x=view.today;if(!x||x.C==null)return '<p class="muted small">Consumo di oggi non stimabile con i dati disponibili.</p>';
+  var a=x.A||{},p=a.parts||{},closed=x.usable,src=a.orig||{};
+  return '<div class="daily-energy"><div><span>'+(closed?'Oggi · dati confermati':'Oggi · previsione')+'</span><b>'+kc(x.C)+'</b><small>Consumo totale del giorno, distinto dal mantenimento medio.</small></div><div class="daily-energy-facts"><span><b>Lavoro di oggi</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo oggi':'Non disponibile'))+'</span><span><b>Palestra di oggi</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
+}
+function maintenanceHeroHTML(view) {
+  if(!view.available)return '<div class="maintenance-hero"><h3>Il tuo mantenimento attuale</h3><p>Completa profilo e piano per ottenere la prima stima. I dati mancanti non sono attività confermate.</p></div>';
+  var r=view.reference,change=view.change,E=state.E;
+  var changeText=change?'Rispetto al riferimento di fine settimana scorsa: '+(change.total>=0?'+':'−')+fmt(Math.abs(change.total),0)+' kcal/giorno.':'Primo riferimento disponibile: non c’è ancora una settimana precedente confrontabile.';
+  if(change&&change.routine!=null)changeText+=' Routine e peso di riferimento: '+sgn(change.routine,0)+'; aggiornamento della calibrazione: '+sgn(change.calibration,0)+' kcal/giorno. È una scomposizione del modello, non una misura delle cause fisiologiche.';
+  return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato attuale"><div class="maintenance-top"><span>SETTIMANA '+fmtShort(view.from)+' – '+fmtShort(view.to)+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Il tuo mantenimento attuale</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media della tua routine attuale</small></span></div><p>Questo è il riferimento stimato per mantenere il peso, con il lavoro e l’attività della tua settimana tipo.</p><div class="maintenance-bottom"><span><small>Equivalente su 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel(E))+'</b></span></div>'+routineEnergyHTML(r)
+    +(r.unknown.length?'<div class="maintenance-missing"><b>Stima da completare</b><p>'+r.unknown.map(esc).join(' ')+'</p></div>':'')
+    +'<details class="maintenance-details"><summary>Da dove arriva e perché cambia</summary><p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali di oggi non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<p>Il consumo di oggi può essere diverso: segue il lavoro, l’allenamento e la digestione del giorno. Mangiare di più non moltiplica l’intero metabolismo.</p><button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
+}
+function energyWeeksHTML(view) {
+  var W=view.week;
+  var current=W?'<div class="current-energy-week"><h3>Consumo della settimana in corso</h3><p>Totale stimato: <b>'+kc(W.consumption)+'</b> · '+fmtShort(view.from)+'–'+fmtShort(view.to)+'. '+W.days.filter(function(x){return x.kind!=='futuro'&&x.usable;}).length+' giorni con calorie confermate, '+W.days.filter(function(x){return x.kind==='futuro';}).length+' giorni futuri. Non è un secondo obiettivo alimentare.</p><details><summary>Vedi i sette giorni</summary><div class="energy-week-days">'+W.days.map(function(x){return '<span><b>'+fmtShort(x.d)+'</b><strong>'+(x.C!=null?kc(x.C):'—')+'</strong><small>'+(x.kind==='futuro'?'Previsto':x.kind==='oggi'?(x.usable?'Confermato':'In corso'):x.usable?'Ricostruito':'Dati incompleti')+'</small></span>';}).join('')+'</div></details></div>':'';
+  var history=!view.history.length?'<p>Ancora nessuna settimana precedente disponibile.</p>':'<div class="tw"><table class="energy-history"><thead><tr><th>Settimana</th><th>Mantenimento medio stimato allora</th><th>Diario completo</th><th>Variazione e motivo</th></tr></thead><tbody>'+view.history.map(function(x,i){var older=view.history[i+1],delta=older?x.reference.R-older.reference.R:null,why=!older?'Primo confronto':x.reference.calibrated!==older.reference.calibrated?'Nuova calibrazione personale':Math.abs(delta)<5?'Riferimento stabile':x.reference.manual!==older.reference.manual?'Modalità del consumo cambiata':Math.abs(x.reference.k-older.reference.k)>.001?'Calibrazione aggiornata; routine e peso possono contribuire':'Routine e peso di riferimento';return '<tr><td>'+fmtShort(x.from)+'–'+fmtShort(x.to)+'</td><td><b>'+kc(x.reference.R)+'/giorno</b><br><small>'+(x.reference.manual?'Manuale':x.reference.calibrated?'Calibrato':'Stima iniziale')+'</small></td><td>'+x.complete+'/7 giorni</td><td>'+(delta!=null?sgn(delta,0)+' kcal/giorno · ':'')+why+'</td></tr>';}).join('')+'</tbody></table></div>';
+  var totals=view.history.map(function(x){return '<li>'+fmtShort(x.from)+'–'+fmtShort(x.to)+': consumo ricostruito '+(x.consumption!=null?kc(x.consumption):'non completo')+'; riferimento di mantenimento equivalente '+kc(x.reference.weekly)+'/settimana.</li>';}).join('');
+  return current+'<section class="energy-history-wrap"><h3>Le settimane precedenti</h3>'+history+'<details><summary>Consumi ricostruiti e significato del confronto</summary><p>I riferimenti sono ricalcolati con il diario attualmente disponibile, usando per ciascuna data solo pesate e attività fino a quel giorno. Non sono copie immutabili di ciò che vedevi allora: correggere lo storico può aggiornarli.</p><ul>'+totals+'</ul><p>La differenza può dipendere da peso, passi, allenamenti, calendario lavorativo o nuova calibrazione. Le spiegazioni non attribuiscono automaticamente una variazione al metabolismo.</p></details></section>';
+}
+function energyValidationHTML(view) {
+  var v=view.validation||{n:0};
+  return '<details class="energy-validation"><summary>Verifica su periodi successivi: '+(v.n?v.n+' confronti disponibili':'non ancora disponibile')+'</summary>'+(v.n?'<p>Errore medio sul peso di tendenza a 14 giorni: <b>'+fmt(v.mae,2)+' kg</b> con la stima adattiva'+(v.baselineMae!=null?'; <b>'+fmt(v.baselineMae,2)+' kg</b> con il riferimento iniziale':'')+'. '+(v.baselineMae!=null?(v.mae<v.baselineMae?'In questi confronti la stima adattiva ha un errore minore.':'In questi confronti non risulta un miglioramento della stima adattiva.'):'')+'</p><ul>'+v.rows.map(function(x){return '<li>'+fmtShort(x.from)+'–'+fmtShort(x.to)+': tendenza prevista '+fmt(x.predicted,2)+' kg, osservata '+fmt(x.actual,2)+' kg.</li>';}).join('')+'</ul><p>'+esc(v.note)+'</p>':'<p>Servono periodi di 14 giorni successivi a una calibrazione utilizzabile, con calorie complete e pesate sufficienti alle due estremità. Nessun punteggio viene inventato per il primo utilizzo.</p>')+'<p>Questo controllo usa il peso registrato, non una misura delle calorie bruciate. Non cambia da solo il piano o il livello di fiducia.</p></details>';
+}
+var originalCurrentEnergy=renderCurrentEnergy;
+renderCurrentEnergy=function(){
+  originalCurrentEnergy();var box=$('#energy-now-body');if(!box)return;var technical=box.innerHTML,view=energyView();
+  $('#energy-now h2').textContent='Mantenimento e consumi della settimana';
+  box.innerHTML=maintenanceHeroHTML(view)+dailyEnergyHTML(view)+energyWeeksHTML(view)+energyValidationHTML(view)+'<details class="energy-technical"><summary>Formule, stima iniziale e calcoli intermedi</summary>'+technical+'</details>';
+};
+
 bind();
 bindFriends();
 bindDatePicker();
@@ -11488,5 +11672,15 @@ document.addEventListener('click', function (e) {
 #friend-comparison{background:#222832;border:1px solid #3A4858;border-radius:21px;padding:20px}.friends-comparison-head{display:flex;justify-content:space-between;align-items:center;gap:14px}.friends-comparison-head h3{margin:0 0 7px;font-size:1.2rem}.friends-comparison-head>div>span{font-size:.77rem;color:#91AFC7}.friends-table-wrap{overflow:auto}.friends-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}.friends-table th,.friends-table td{text-align:left;padding:15px 12px;border-bottom:1px solid #3A4552;vertical-align:middle;overflow-wrap:anywhere}.friends-table thead th{color:#ACBBCD;font-size:.77rem}.friends-table thead th:nth-child(2){color:#64D2FF}.friends-table thead th:nth-child(3){color:#30D5A3}.friends-table tbody th{font-size:.82rem;color:#CBD7E3;width:26%}.friends-table td>b{display:block;font-size:1.17rem;color:#EDF5FA;font-variant-numeric:tabular-nums}.friends-table td>small{display:block;font-size:.68rem;color:#95AABE;line-height:1.5;margin-top:6px}.friends-table td>b.friend-muted{color:#7F95A9;font-size:.78rem;font-weight:500}.friends-macro{display:inline-flex;gap:4px;align-items:baseline;margin-right:9px}.friends-macro small{color:#8AA6BF;font-size:.67rem}.friends-macro b{font-size:.78rem;color:#E5EFF8}
 @media(max-width:760px){.friends-top-grid{grid-template-columns:1fr}.friends-intro h2{font-size:1.35rem}.friends-comparison-head{align-items:flex-start;flex-direction:column}.friends-pref-grid{grid-template-columns:1fr}#friend-comparison{padding:14px}.friends-table th,.friends-table td{padding:13px 6px}.friends-table td>b{font-size:.95rem}.friends-person-row{align-items:flex-start;flex-wrap:wrap}}
 @media(max-width:1023px){.tabs .tab{min-width:0;padding-inline:4px;flex:1}.tabs .tab>span{font-size:.66rem}.tabs{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+
+.confidence-explanation{padding:16px;border:1px solid rgba(100,180,230,.22);border-radius:16px;background:rgba(80,150,190,.07);line-height:1.6}.confidence-explanation h4{margin:14px 0 7px;font-size:.9rem;color:#fff}.confidence-explanation h4:first-child{margin-top:0}.confidence-explanation p{margin:0 0 12px}.confidence-explanation ul{margin:6px 0 14px;padding-left:20px}.confidence-explanation li{margin-bottom:8px}.confidence-explanation details{margin:14px 0;padding:12px;border-radius:12px;background:rgba(255,255,255,.04)}.confidence-explanation summary{cursor:pointer;font-weight:650}
+/* Spacing separates the section title and flame icon from the maintenance card. */
+#need-body{padding-top:24px}
+#energy-now-body>.maintenance-hero{margin-top:8px}
+.maintenance-hero{margin:0 0 20px;padding:24px;border:1px solid rgba(250,17,79,.20);border-radius:20px;background:linear-gradient(145deg,rgba(250,17,79,.09),rgba(250,17,79,.015) 75%),#241e22}
+.maintenance-top{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#ff9bb3;font-size:.73rem;font-weight:700;letter-spacing:.04em}.maintenance-hero h3{margin:14px 0 12px;font-size:1.3rem;color:#fff}.maintenance-value{display:flex;gap:16px;align-items:center}.maintenance-value>b{font-size:clamp(2.5rem,5vw,4rem);line-height:1.05;letter-spacing:-.035em;color:#fff;font-variant-numeric:tabular-nums}.maintenance-value>span{color:#f0dce3;line-height:1.5}.maintenance-value small{font-size:.75rem;color:#b8a4ad}.maintenance-hero>p{margin:14px 0;color:#d1bec6;font-size:.85rem;line-height:1.6}.maintenance-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 0;border-top:1px solid #ffffff18;border-bottom:1px solid #ffffff18}.maintenance-bottom>span{display:flex;flex-direction:column;gap:6px}.maintenance-bottom small{font-size:.73rem;color:#bfa8b2}.maintenance-bottom b{font-size:1rem;color:#fff}.maintenance-routine{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 0 8px;color:#cbb9c1;font-size:.76rem;line-height:1.6}.maintenance-routine b{display:block;color:#f6e8ee;margin-bottom:4px}.maintenance-details{margin-top:12px;font-size:.8rem;line-height:1.65}.maintenance-details summary{color:#f4b7c8;font-weight:650;cursor:pointer}.maintenance-details p{margin:12px 0}.maintenance-missing{padding:12px;background:#b7801820;border:1px solid #d6a44755;border-radius:12px;font-size:.8rem;margin-top:12px}.maintenance-missing p{margin:6px 0}.daily-energy{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px;border:1px solid #ffffff12;border-radius:18px;background:#ffffff05;margin:16px 0}.daily-energy>div:first-child{display:flex;flex-direction:column;gap:8px}.daily-energy>div>span{font-size:.78rem;color:#c5afb9}.daily-energy>div>b{font-size:1.85rem;color:#fff;line-height:1.2}.daily-energy small{font-size:.75rem;color:#929da7;line-height:1.5}.daily-energy-facts{display:flex;flex-direction:column;gap:10px}.daily-energy-facts b{display:block;font-size:.72rem;color:#eddee4;margin-bottom:3px}.current-energy-week,.energy-history-wrap{margin-top:22px}.current-energy-week h3,.energy-history-wrap h3{margin:0 0 10px;font-size:1.05rem}.current-energy-week p,.energy-history-wrap p,.energy-validation p{font-size:.82rem;line-height:1.65;color:#bfb5bb}.current-energy-week summary,.energy-history-wrap summary,.energy-validation>summary,.energy-technical>summary,.energy-reference-extra>summary{cursor:pointer;color:#cec1c8;font-size:.8rem;font-weight:650;padding:10px 0}.energy-week-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:10px 0}.energy-week-days>span{display:flex;flex-direction:column;gap:7px;padding:10px 7px;background:#ffffff06;border-radius:10px;text-align:center}.energy-week-days b,.energy-week-days small{font-size:.65rem;color:#9eacb7}.energy-week-days strong{font-size:.75rem}.energy-history{width:100%;font-size:.8rem}.energy-history th{font-size:.7rem;color:#9daebc}.energy-history td,.energy-history th{padding:12px 9px;text-align:left;border-bottom:1px solid #ffffff0c}.energy-history-wrap details,.energy-validation,.energy-technical{margin-top:14px;border-top:1px solid #ffffff12;padding-top:8px}.energy-validation ul,.energy-history-wrap ul{padding-left:20px;font-size:.8rem;color:#aebcc7;line-height:1.65}.energy-reference-extra{margin:16px 0}.energy-reference-extra>.grid2{margin-top:10px}
+@media(max-width:650px){.maintenance-hero{padding:18px}.maintenance-bottom{grid-template-columns:1fr 1fr}.maintenance-bottom>span:last-child{grid-column:1/-1}.maintenance-routine{grid-template-columns:1fr;gap:9px}.maintenance-routine b{display:inline;margin-right:8px}.daily-energy{grid-template-columns:1fr;padding:16px;gap:16px}.daily-energy-facts{padding-top:12px;border-top:1px solid #ffffff12}.energy-week-days{grid-template-columns:repeat(4,minmax(0,1fr))}.energy-history td,.energy-history th{padding:10px 6px;font-size:.72rem}}
+
+@media(max-width:650px){#need-body{padding-top:20px}}
 </style>
 </body></html>
