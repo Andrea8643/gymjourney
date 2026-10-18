@@ -2276,7 +2276,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <span class="ind" aria-hidden="true"></span>
       <button class="tab" role="tab" data-tab="oggi" data-group="oggi" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg><span>Oggi</span></button>
       <button class="tab" role="tab" data-tab="diario" data-group="diario" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/></svg><span>Progressi</span></button>
-      <button class="tab" role="tab" data-tab="allenamenti" data-group="allenamenti corpo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg><span>Allenamenti</span></button>
+      <button class="tab" role="tab" aria-label="Allenamenti" data-tab="allenamenti" data-group="allenamenti corpo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg><span class="nav-label-wide">Allenamenti</span><span class="nav-label-compact" aria-hidden="true">Palestra</span></button>
       <button class="tab" role="tab" data-tab="ricette" data-group="ricette" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c0-1.5 1-2 1-3.5M13 8c0-1.5 1-2 1-3.5"/></svg><span>Ricette</span></button>
       <button class="tab" role="tab" data-tab="amici" data-group="amici" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg><span>Amici</span></button>
       <button class="tab" role="tab" data-tab="dati" data-group="dati regole" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><span>Profilo</span></button>
@@ -2524,9 +2524,9 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       </div>
           </div>
       <div class="dsec" data-dsec="curiosita" hidden>
-        <div class="area-lead cu-head" style="--area:#ffb68e;--area2:#e472a7"><span class="area-kicker">PROGRESSI / CURIOSITÀ</span><strong>La storia nascosta nei tuoi numeri.</strong><p>Domande nate dai tuoi log, risposte verificabili. Apri una carta per vedere il dato e il ragionamento.</p><span class="area-mark" aria-hidden="true">✦</span><span class="cu-count" id="curio-count"></span></div>
-        <div id="curio-filters" class="cu-filters" role="group" aria-label="Filtra le curiosità"></div>
-        <div id="curio-list" class="cu-list"></div>
+        <div class="area-lead cu-head" style="--area:#ffb68e;--area2:#e472a7"><span class="area-kicker">PROGRESSI / CURIOSITÀ</span><strong>Il tuo percorso ha sempre qualcosa da raccontare.</strong><p>Nuovi episodi, cambiamenti e traguardi dai tuoi dati. Ogni storia mostra come è nata.</p><span class="area-mark" aria-hidden="true">✦</span><span class="cu-count" id="curio-count"></span></div>
+        <div id="curio-status" role="status" data-ib-keep></div><div class="cu-toolbar"><div class="cu-views" role="group" aria-label="Scegli quali curiosità leggere"><button type="button" data-curio-view="highlights" aria-pressed="true">In evidenza</button><button type="button" data-curio-view="archive" aria-pressed="false">Il tuo archivio</button><button type="button" data-curio-view="learn" aria-pressed="false">Da sapere</button></div><label class="f cu-search"><span>Cerca nelle curiosità</span><input type="search" id="curio-search" placeholder="Cerca una storia, una data, un esercizio…" autocomplete="off"></label></div><div id="curio-filters" class="cu-filters" role="group" aria-label="Filtra le curiosità"></div><p id="curio-context" data-ib-keep></p>
+        <div id="curio-list" class="cu-list"></div><div class="cu-more-wrap"><button type="button" class="btn ghost fit" id="curio-more" hidden>Mostra altre storie</button></div>
       </div>
     </section>
 
@@ -2535,8 +2535,8 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div class="segbar" role="tablist" aria-label="Allenamenti"><button type="button" data-sub="allenamenti">Sedute</button><button type="button" data-sub="corpo">Corpo</button></div>
       <div class="area-lead" style="--area:#8ab9ff;--area2:#6d7fff"><span class="area-kicker">ALLENAMENTO / SEDUTE</span><strong>Ogni seduta lascia un segno.</strong><p>Lo split racconta cosa hai fatto, cosa viene dopo e come evolve la tua costanza.</p><span class="area-mark" aria-hidden="true">◈</span></div>
       <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-all"></div></div>
-      <div class="panel" data-cat="allen">
-        <div class="panel-head"><div class="ph-t"><h2>Costanza</h2><button type="button" class="rq" data-rule="costanza" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+      <div class="panel workout-calendar" data-cat="allen">
+        <div class="panel-head"><div class="ph-t"><h2>Calendario delle sedute</h2><button type="button" class="rq" data-rule="costanza" aria-label="Come si calcola" title="Come si calcola">?</button></div>
           <div class="calctl"><span class="calctl-l">Mostra:</span><div class="seg" role="group" aria-label="Periodo della costanza"><button type="button" data-calmode="30">Ultimi 30 giorni</button><button type="button" data-calmode="mese">Mese in corso</button></div></div>
         </div>
         <div class="calnav" id="cal-nav"></div>
@@ -2547,7 +2547,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         </div>
         <div class="caldetail" id="cal-detail" aria-live="polite"></div>
       </div>
-      <div class="panel" data-cat="allen">
+      <div class="panel workout-progression" data-cat="allen">
         <div class="panel-head">
           <h2>Progressione</h2>
           <label class="f" style="flex:0 1 300px">Esercizio<select id="x-select"></select></label>
@@ -2581,16 +2581,16 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
     <!-- CORPO -->
     <section id="tab-corpo" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Allenamenti"><button type="button" data-sub="allenamenti">Sedute</button><button type="button" data-sub="corpo">Corpo</button></div>
-      <div class="area-lead" style="--area:#dc9cf5;--area2:#a46fee"><span class="area-kicker">ALLENAMENTO / CORPO</span><strong>Il lavoro dietro i numeri.</strong><p>Una mappa delle serie registrate per esplorare il tuo allenamento muscolo per muscolo.</p><span class="area-mark" aria-hidden="true">◎</span></div>
-      <div class="panel" data-cat="corpo">
+      <div class="area-lead" style="--area:#dc9cf5;--area2:#a46fee"><span class="area-kicker">ALLENAMENTO / CORPO</span><strong>Il tuo allenamento, muscolo per muscolo.</strong><p>Esplora la mappa, scegli un muscolo e scopri dove hai concentrato il lavoro.</p><span class="area-mark" aria-hidden="true">◎</span></div>
+      <div class="panel body-map-panel" data-cat="corpo">
         <div class="panel-head">
-          <div class="ph-t"><h2>Analisi corporea</h2><button type="button" class="rq" data-rule="muscoli" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+          <div class="ph-t"><h2><span class="body-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.3"/><path d="M8.5 21 9 15 7 10l5-1 5 1-2 5 .5 6M9 15h6M4 15l3-5m13 5-3-5M12 9v6"/></svg></span>Mappa muscolare</h2><button type="button" class="rq" data-rule="muscoli" aria-label="Come si calcola" title="Come si calcola">?</button></div>
           <div class="bctrl">
-            <div class="seg" role="group" aria-label="Periodo"><button type="button" data-brange="4w">4 settimane</button><button type="button" data-brange="cut">Da inizio fase</button><button type="button" data-brange="all">Tutto</button></div>
-            <div class="seg" role="group" aria-label="Vista"><button type="button" data-bview="heat">Mappa di calore</button><button type="button" data-bview="plain">Muscoli</button></div>
+            <div class="body-control-group"><span class="body-control-label">Periodo da analizzare</span><div class="seg" role="group" aria-label="Periodo"><button type="button" data-brange="4w">4 settimane</button><button type="button" data-brange="cut">Da inizio fase</button><button type="button" data-brange="all">Tutto</button></div></div>
+            <div class="body-control-group"><span class="body-control-label">Visualizzazione</span><div class="seg" role="group" aria-label="Vista"><button type="button" data-bview="heat">Mappa di calore</button><button type="button" data-bview="plain">Muscoli</button></div></div>
           </div>
         </div>
-        <p class="muted small" id="body-period"></p>
+        <div class="body-period-strip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/></svg><p class="muted small" id="body-period"></p></div>
         <div class="body-grid">
           <div class="figs">
             <figure><svg id="body-front" viewBox="0 0 100 200" role="group" aria-label="Muscoli visti davanti"></svg><figcaption>Davanti</figcaption></figure>
@@ -2601,10 +2601,10 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <div class="caldetail bdetail" id="body-detail" aria-live="polite"></div>
         </div>
       </div>
-      <div class="panel" data-cat="corpo">
+      <div class="panel body-balance-panel" data-cat="corpo">
         <div class="panel-head"><h2>Equilibrio tra i muscoli</h2><span class="hint">Serie a settimana nel periodo scelto</span></div>
-        <div class="bratios" id="body-ratios"></div>
-        <div class="brank" id="body-rank"></div>
+        <div class="bratios" id="body-ratios" data-ib-keep></div>
+        <div class="body-rank-heading"><h3>Il lavoro sui tuoi muscoli</h3><span>Tocca un muscolo per esplorarlo</span></div><div class="brank" id="body-rank"></div>
         <p class="caption">Ogni serie conta 1 per il muscolo principale dell'esercizio e meno (0,5 o 0,25) per i muscoli che aiutano. Esempio: la panca inclinata conta 1 per i pettorali e 0,5 per tricipiti e spalle. Gli esercizi di cardio, come la macchina delle scale, non contano.</p>
         <p class="caption" id="body-unknown" hidden></p>
       </div>
@@ -2659,7 +2659,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div id="rules-list"></div>
     </section>
 
-    <section id="tab-amici" class="view" hidden><div class="friends-intro"><div><h2>Il percorso è più bello in compagnia</h2><p>Aggiungi chi conosci e confronta solo ciò che scegliete di condividere.</p></div></div><div id="friends-status" role="status" aria-live="polite"></div><div id="friends-body"></div></section>
+    <section id="tab-amici" class="view" hidden><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Il percorso è più bello insieme.</h2><p>Connettiti ai tuoi amici, condividi i tuoi progressi e accompagnatevi un giorno alla volta. Scegli tu quali dati mostrare.</p></div><div class="friends-orbit" aria-hidden="true"><svg viewBox="0 0 240 160" fill="none"><circle class="friend-halo" cx="120" cy="80" r="71" stroke="#70DCC1" stroke-opacity=".28"/><circle cx="120" cy="80" r="53" stroke="#70DCC1" stroke-opacity=".12"/><path class="friend-link" d="M67 87C94 113 146 113 173 87" stroke="#67DEC0" stroke-width="2"/><g class="friend-person-a"><rect x="27" y="44" width="70" height="77" rx="24" fill="#244A40" stroke="#73DBC0" stroke-opacity=".65"/><circle cx="62" cy="70" r="11" fill="#90E8CD"/><path d="M43 102C43 82 81 82 81 102" stroke="#90E8CD" stroke-width="5" stroke-linecap="round"/></g><g class="friend-person-b"><rect x="143" y="44" width="70" height="77" rx="24" fill="#263D49" stroke="#82CDE3" stroke-opacity=".65"/><circle cx="178" cy="70" r="11" fill="#A0DEEC"/><path d="M159 102C159 82 197 82 197 102" stroke="#A0DEEC" stroke-width="5" stroke-linecap="round"/></g><g class="friend-spark"><circle cx="120" cy="62" r="16" fill="#285B4A" stroke="#97EDCF" stroke-opacity=".45"/><path d="m114 62 4 4 8-8" stroke="#B4F9DA" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="118" cy="134" r="3" fill="#72DCC2" fill-opacity=".7"/><circle cx="105" cy="25" r="2" fill="#9FE5D7" fill-opacity=".6"/></svg></div></div><div id="friends-status" role="status" aria-live="polite"></div><div id="friends-body"></div></section>
     <section id="tab-dati" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
       <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
@@ -5472,7 +5472,7 @@ function renderWorkouts() {
   list.forEach(function (w) { (w.exercises || []).forEach(function (ex) { if (setsOf(ex, w.date).length) counts[ex.name] = (counts[ex.name] || 0) + 1; }); });
   var names = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b, 'it'); });
   var sel = $('#x-select');
-  sel.innerHTML = names.length ? names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + ' (' + counts[n] + ')</option>'; }).join('') : '<option value="">Nessun esercizio</option>';
+  sel.innerHTML = names.length ? names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('') : '<option value="">Nessun esercizio</option>';
   if (!state.exSel || names.indexOf(state.exSel) < 0) state.exSel = names[0] || '';
   sel.value = state.exSel;
   renderProgress(list);
@@ -9973,129 +9973,137 @@ function fxStart() {
   var pk = 0; window.addEventListener('scroll', function () { if (pk) return; pk = requestAnimationFrame(function () { pk = 0; fxPick(); }); }, { passive: true });
 }
 
-/* ===================== curiosità: le cose inaspettate del percorso, calcolate dai tuoi dati ===================== */
-function dayRange0(a, b) { var o = []; for (var d = a; d <= b; d = addDays(d, 1)) o.push(d); return o; }
-function renderCurio() {
-  var box = $('#curio-list'), teaser = $('#curio-teaser'); if (!box) return;
-  var s = S(), t = todayStr(), end = lastDataDate() || t, ds = dayList().filter(function (d) { return d >= s.startDate && d <= end; });
-  var logged = ds.filter(function (d) { return (state.days.get(d) || {}).kcal > 0; });
-  var weights = weightsSeries().filter(function (p) { return p.d >= s.startDate && p.d <= end; });
-  var stepDays = ds.filter(function (d) { return (state.days.get(d) || {}).steps > 0; });
-  var sleepDays = ds.filter(function (d) { return (state.days.get(d) || {}).sleepH > 0; });
-  var workouts = Array.from(state.workouts.values()).filter(function (w) { return w.date >= s.startDate && w.date <= t; });
-  var stories = [];
-  function story(id, cat, color, eyebrow, title, stat, lead, body, source) {
-    stories.push({ id:id, cat:cat, c:color, eyebrow:eyebrow, title:title, stat:stat, lead:lead, body:body, source:source });
+/* Personal stories derived locally from the diary. */
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.GJCuriosity=factory();})(typeof window!=='undefined'?window:this,function(){
+'use strict';
+var DAY=86400000,COL={Bilancia:'#B8A5FF',Energia:'#FFB183',Abitudini:'#74DCC5',Allenamenti:'#9EBEFF','Da sapere':'#C49BFF'};
+function validDate(d){if(typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;var n=Date.parse(d+'T00:00:00Z');return Number.isFinite(n)&&new Date(n).toISOString().slice(0,10)===d;}
+function add(d,n){return new Date(Date.parse(d+'T00:00:00Z')+n*DAY).toISOString().slice(0,10);}
+function diff(a,b){return Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/DAY);}
+function wd(d){return (new Date(d+'T00:00:00Z').getUTCDay()+6)%7;}
+function week(d){return add(d,-wd(d));}
+function num(v){return typeof v==='number'&&Number.isFinite(v);}
+function avg(a){return a.length?a.reduce(function(s,v){return s+v;},0)/a.length:null;}
+function med(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),n=b.length;return n%2?b[(n-1)/2]:(b[n/2-1]+b[n/2])/2;}
+function f(v,n){return num(v)?v.toLocaleString('it-IT',{minimumFractionDigits:n||0,maximumFractionDigits:n||0}):'—';}
+function signed(v,n){return (v>0?'+':'')+f(v,n);}
+function date(d){var a=d.split('-'),m=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];return +a[2]+' '+m[+a[1]-1]+' '+a[0];}
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36);}
+function clean(s){return String(s||'').trim().replace(/\s+/g,' ');}
+function norm(s){return clean(s).toLocaleLowerCase('it-IT');}
+function complete(d,k){return d.states&&(d.states[k]==='completo'||d.states[k]==='zero_confermato');}
+function values(days,k,max){return days.filter(function(d){return complete(d,k)&&num(d[k])&&d[k]>=0&&(max==null||d[k]<=max);}).map(function(d){return {d:d.date,v:d[k]};});}
+function milestoneScale(max,min){var out=[];for(var n=min;n<=max&&Number.isFinite(n);n*=10){[1,2,5].forEach(function(m){if(n*m<=max)out.push(n*m);});}return out;}
+function guides(){return [
+ {id:'guida-media',title:'Una media può cambiare anche quando oggi non hai registrato nulla',lead:'Quando la finestra avanza, entra un giorno nuovo e ne esce uno vecchio.',stat:'La finestra conta',paragraphs:['Una media degli ultimi 14 giorni usa solo le osservazioni presenti in quelle date. Anche togliere dal confronto una vecchia giornata può cambiarla.','Per questo ogni curiosità personale indica periodo e numero di osservazioni. Le giornate mancanti non vengono sostituite con zero.']},
+ {id:'guida-confronti',title:'Due cose che cambiano insieme non spiegano automaticamente il perché',lead:'Un confronto nel diario descrive ciò che hai registrato; non dimostra una causa.',stat:'Osservazione ≠ causa',paragraphs:['Passi, allenamenti, cibo, sonno e pesate possono cambiare contemporaneamente. Dal solo diario non si possono isolare tutti gli altri fattori.','Le curiosità raccontano confronti ed episodi osservati. Non sono diagnosi e non modificano le previsioni o il fabbisogno.']},
+ {id:'guida-record',title:'Un record nel diario racconta la storia dei dati che hai importato',lead:'Una vecchia seduta importata oggi può cambiare quale sia il tuo record.',stat:'Il tuo archivio evolve',paragraphs:['Il confronto riguarda le registrazioni disponibili. Se importi un file più completo o correggi una giornata, l’app ricalcola anche le curiosità del passato.','La data della storia è quella dell’episodio, non quella in cui è stato importato: una vecchia seduta non diventa una novità di oggi.']},
+ {id:'guida-peso',title:'La differenza tra due pesate non è una misura del grasso',lead:'Questa sezione può confrontare i pesi registrati, non separare le componenti del peso.',stat:'Due pesate, un confronto',paragraphs:['Le storie della bilancia usano le pesate accettate dal modello e mostrano esattamente quali date confrontano.','Non trasformano una variazione da un giorno all’altro in grasso perso o guadagnato, né prevedono quanto peserai il mattino dopo.']}
+ ].map(function(x){return Object.assign({cat:'Da sapere',kind:'guide',c:COL['Da sapere'],eyebrow:'COME LEGGERE I DATI',facts:[],source:'Metodo di lettura e funzionamento dell’app.',date:null,family:x.id,score:0,caveat:''},x);});}
+function build(input){
+ var ctx=input||{},today=ctx.today;if(!validDate(today))throw Error('A valid local calendar date is required');
+ var byDay={};(ctx.days||[]).forEach(function(d){if(d&&validDate(d.date)&&d.date<=today)byDay[d.date]=d;});
+ var days=Object.keys(byDay).sort().map(function(d){return byDay[d];});
+ var weights=(ctx.weights||[]).filter(function(p){return p&&validDate(p.d)&&p.d<=today&&num(p.w)&&p.w>0;});
+ var weightMap={};weights.forEach(function(p){weightMap[p.d]=p;});weights=Object.keys(weightMap).sort().map(function(d){return weightMap[d];});
+ var seenW={};var workouts=(ctx.workouts||[]).filter(function(w){if(!w||!validDate(w.date)||w.date>today)return false;if(w.id){if(seenW[w.id])return false;seenW[w.id]=1;}return true;}).slice().sort(function(a,b){return a.date.localeCompare(b.date)||clean(a.id).localeCompare(clean(b.id));});
+ var kcal=values(days,'kcal',20000),steps=values(days,'steps',200000),sleep=values(days,'sleepH',24),protein=values(days,'protein',1000);
+ sleep=sleep.filter(function(x){return x.v>0;});
+ var stories=[],ids={};
+ function story(o){if(ids[o.id])return;ids[o.id]=1;stories.push(Object.assign({kind:'personal',c:COL[o.cat],eyebrow:'DAL TUO DIARIO',facts:[],paragraphs:[],caveat:'',source:'Registrazioni personali del diario.',score:50},o));}
+ function fact(l,v){return {label:l,value:String(v)};}
+ var dates=Array.from(new Set(days.filter(function(d){return ['kcal','steps','sleepH','protein','carbs','fat','weight'].some(function(k){return num(d[k])&&(d[k]>0||complete(d,k));});}).map(function(d){return d.date;}).concat(workouts.map(function(w){return w.date;}),weights.map(function(w){return w.d;})))).sort();
+ if(dates.length){story({id:'inizio-'+dates[0],family:'inizio',cat:'Abitudini',date:dates[0],score:15,title:'Il tuo percorso nel diario parte dal '+date(dates[0]),stat:f(dates.length)+' giorni con dati',lead:'Questa è la prima data presente nelle registrazioni disponibili.',facts:[fact('Prima registrazione',date(dates[0])),fact('Ultima registrazione',date(dates[dates.length-1])),fact('Giorni con almeno un dato',f(dates.length))],paragraphs:['Le date con pesate, alimentazione, passi, sonno o sedute compongono il tuo percorso. Un giorno con più dati viene contato una volta sola.'],caveat:'È l’inizio dell’archivio disponibile, che può precedere la fase attuale. Non dimostra quando hai iniziato ad allenarti.',source:'Date dei dati registrati e delle sedute importate.'});}
+ // Milestones are dated events; crossing more thresholds on one day creates one story.
+ function milestones(list,getValue,thresholds,prefix,cat,unit,title,source){var sum=0,at=0;list.forEach(function(x){sum+=getValue(x);var crossed=null;while(at<thresholds.length&&sum>=thresholds[at])crossed=thresholds[at++];if(crossed!=null)story({id:prefix+'-'+x.d,family:prefix,cat:cat,date:x.d,score:85,eyebrow:'UN TRAGUARDO NEL DIARIO',title:title(crossed),stat:f(crossed)+' '+unit,lead:'La soglia è stata raggiunta con le registrazioni disponibili fino al '+date(x.d)+'.',facts:[fact('Soglia raggiunta',f(crossed)+' '+unit),fact('Totale registrato fino a quel giorno',f(sum)+' '+unit)],paragraphs:['La storia resta legata al giorno in cui la somma delle registrazioni ha superato questa soglia. Nuove registrazioni possono far emergere altri traguardi.'],caveat:'Non aggiungo valori per i giorni mancanti. Correzioni e importazioni possono cambiare la data del traguardo.',source:source});});}
+ milestones(steps,function(x){return x.v;},milestoneScale(steps.reduce(function(s,x){return s+x.v;},0),10000),'traguardo-passi','Abitudini','passi',function(n){return 'Hai messo insieme '+f(n)+' passi registrati';},'Somma dei passi delle giornate confermate complete, incluso lo zero confermato.');
+ milestones(workouts.map(function(w){return {d:w.date};}),function(){return 1;},[5,10,25,50,100,200,500,1000,2000,5000],'traguardo-sedute','Allenamenti','sedute',function(n){return 'Nel tuo archivio ci sono '+f(n)+' sedute';},'Numero delle sedute importate; più sedute nello stesso giorno restano distinte.');
+ milestones(kcal,function(){return 1;},[7,14,30,60,90,180,365,730,1000,2000,5000],'traguardo-diario','Abitudini','giornate complete',function(n){return f(n)+' giornate complete: il diario prende forma';},'Conteggio delle giornate con calorie confermate complete; nessun requisito sul numero di calorie.');
+ // New highs require earlier comparable observations; ties are not new records.
+ function records(list,key,cat,unit,minDelta,relative){var best=null;list.forEach(function(x,i){if(best&&i>=5&&x.v>best.v&&x.v-best.v>=Math.max(minDelta,best.v*relative)){var previous=best;story({id:'record-'+key+'-'+x.d,family:'record-'+key,cat:cat,date:x.d,score:82,eyebrow:'UN NUOVO MASSIMO REGISTRATO',title:key==='passi'?'Il '+date(x.d)+' hai registrato il tuo nuovo massimo di passi':'Il '+date(x.d)+' la giornata più abbondante entra nella tua storia',stat:f(x.v)+' '+unit,lead:key==='passi'?'È il valore più alto tra le giornate complete disponibili fino a quella data.':'È un massimo del diario, senza un giudizio sulla giornata.',facts:[fact('Nuovo massimo registrato',f(x.v)+' '+unit),fact('Massimo precedente',f(previous.v)+' '+unit),fact('Data del massimo precedente',date(previous.d))],paragraphs:['Il confronto usa solo le osservazioni disponibili fino a quel giorno. Valori identici al massimo precedente non generano un altro record.'],caveat:key==='passi'?'Non trasformo i passi in calorie e non deduco se fossero al lavoro o nel tempo libero.':'Calorie del pasto e consumo non sono misure perfette. La storia non quantifica grasso guadagnato e non propone compensazioni.',source:'Giornate confermate complete; almeno 5 osservazioni precedenti.'});}if(!best||x.v>best.v)best=x;});}
+ records(steps,'passi','Abitudini','passi',500,.05);records(kcal,'calorie','Energia','kcal',100,.05);
+ // Recaps are attached to closed calendar weeks and accumulate in the archive.
+ var weeks={};days.forEach(function(d){var k=week(d.date);(weeks[k]=weeks[k]||[]).push(d);});workouts.forEach(function(w){var k=week(w.date);if(!weeks[k])weeks[k]=[];});
+ var prevEnergy=null,prevWeight=null;
+ Object.keys(weeks).sort().forEach(function(ws){var we=add(ws,6);if(we>=today)return;var rows=weeks[ws],ks=values(rows,'kcal',20000),ww=weights.filter(function(p){return p.d>=ws&&p.d<=we;});
+  if(ks.length>=5){var a=avg(ks.map(function(x){return x.v;})),peak=ks.reduce(function(b,x){return x.v>b.v?x:b;}),previous=prevEnergy&&diff(prevEnergy.ws,ws)===7?prevEnergy:null,d=previous?a-previous.mean:null;
+   var unusual=peak.v>=a*1.35&&peak.v-a>=300,changed=d!=null&&Math.abs(d)>=Math.max(100,previous.mean*.05);
+   story({id:'settimana-energia-'+ws,family:'settimana-energia',cat:'Energia',date:we,score:changed?78:unusual?73:42,eyebrow:'UNA SETTIMANA DEL TUO PERCORSO',title:changed?'Nella settimana del '+date(ws)+' la tua media è '+(d>0?'salita':'scesa'):unusual?'Il giorno più abbondante non racconta tutta la settimana del '+date(ws):'La settimana del '+date(ws)+' raccontata dalle calorie registrate',stat:f(a)+' kcal al giorno',lead:changed?signed(d)+' kcal al giorno rispetto alla settimana precedente, sulle giornate complete disponibili.':ks.length+' giornate complete su 7, comprese quelle più abbondanti.',facts:[fact('Periodo',date(ws)+' – '+date(we)),fact('Giornate complete',ks.length+' / 7'),fact('Media osservata',f(a)+' kcal al giorno'),fact('Giorno con più calorie',date(peak.d)+' · '+f(peak.v)+' kcal')].concat(previous?[fact('Media della settimana precedente',f(previous.mean)+' kcal su '+previous.n+' giorni')]:[]),paragraphs:['La media comprende tutte le giornate dichiarate complete nel periodo. I giorni parziali, da confermare e mancanti sono esclusi dal calcolo, senza sostituirli con zero.'],caveat:'Questo riepilogo descrive l’alimentazione registrata: non è una nuova stima del mantenimento né un bilancio energetico.',source:'Calorie confermate complete; almeno 5 giornate per ciascuna settimana confrontata.'});prevEnergy={ws:ws,mean:a,n:ks.length};
   }
-  var cWeight = '#b9a9ff', cEnergy = '#ffaf7e', cHabits = '#79d9d8', cGym = '#88baff';
-
-  if (weights.length >= 2) {
-    var first = weights[0], last = weights[weights.length - 1], change = last.w - first.w;
-    story('bilancia-percorso','Bilancia',cWeight,'IL QUADRO GENERALE','Che cosa è cambiato davvero sulla bilancia?',sgn(change,1)+' kg',
-      'È la differenza tra la prima e l’ultima pesata registrata.',
-      '<p>Il ' + fmtDay(first.d) + ' la bilancia segnava <b>' + fmt(first.w,1) + ' kg</b>; il ' + fmtDay(last.d) + ' segnava <b>' + fmt(last.w,1) + ' kg</b>. Il confronto copre ' + diffDays(first.d,last.d) + ' giorni.</p><p>È peso totale sulla bilancia: comprende anche acqua e contenuto intestinale. Per leggere la direzione del percorso, confrontalo con la linea di tendenza in Progressi.</p>',
-      'Fonte: pesate del diario; semplice differenza fra due osservazioni.');
-    var maxJump = null;
-    for (var wi=1; wi<weights.length; wi++) if (diffDays(weights[wi-1].d,weights[wi].d) === 1) {
-      var delta = weights[wi].w - weights[wi-1].w;
-      if (!maxJump || Math.abs(delta) > Math.abs(maxJump.delta)) maxJump = {a:weights[wi-1], b:weights[wi], delta:delta};
-    }
-    if (maxJump) story('salto-bilancia','Bilancia','#ef98bb','LA SORPRESA','Qual è stato il salto più grande in una sola notte?',sgn(maxJump.delta,1)+' kg',
-      'Un singolo giorno può muovere la bilancia molto più della tendenza.',
-      '<p>Tra il ' + fmtDay(maxJump.a.d) + ' e il ' + fmtDay(maxJump.b.d) + ' la pesata è passata da <b>' + fmt(maxJump.a.w,1) + '</b> a <b>' + fmt(maxJump.b.w,1) + ' kg</b>.</p><p>Il diario non misura quanta parte sia acqua, cibo ancora presente o tessuto. Per questo il sito evita di tradurre lo scarto in “grasso preso” o “grasso perso”: guarda le pesate successive e la tendenza.</p>',
-      'Fonte: coppie di pesate in giorni consecutivi.');
-    var a7 = mean(weights.filter(function (p) { return p.d > addDays(last.d, -7); }).map(function (p) { return p.w; }));
-    if (a7 != null) {
-      var off = last.w - a7;
-      story('una-pesata-non-basta','Bilancia',cWeight,'DUE MODI DI GUARDARE','L’ultima pesata racconta la stessa storia della media?',fmt(Math.abs(off),2)+' kg',
-        'È la distanza fra l’ultima pesata e la media mobile di sette giorni.',
-        '<p>Ultima pesata: <b>' + fmt(last.w,1) + ' kg</b>. Media delle pesate disponibili negli ultimi sette giorni: <b>' + fmt(a7,2) + ' kg</b>. La pesata è ' + (off >= 0 ? 'sopra' : 'sotto') + ' la media di <b>' + fmt(Math.abs(off),2) + ' kg</b>.</p><p>La media attenua le oscillazioni quotidiane ma guarda indietro. La tendenza mostrata nel sito cerca invece di stimare il valore attuale: sono tre strumenti diversi, non tre pesi misurati diversi.</p>',
-        'Fonte: ultima pesata e media mobile delle pesate osservate.');
-    }
-  }
-  if (logged.length) {
-    var topK = logged.map(function (d) { return {d:d,k:state.days.get(d).kcal}; }).sort(function (a,b) {return b.k-a.k;})[0];
-    story('giorno-piu-ricco','Energia','#ff8d84','IL PICCO','Qual è stata la giornata con più calorie registrate?',fmt(topK.k,0)+' kcal',
-      'Il valore più alto presente nel diario, non un giudizio sulla giornata.',
-      '<p>Il <b>' + fmtDay(topK.d) + '</b> hai registrato <b>' + fmt(topK.k,0) + ' kcal</b>. ' + (balOf(topK.d) ? 'Il consumo stimato di quel giorno è <b>' + fmt(balOf(topK.d).C,0) + ' kcal</b>: bilancio stimato <b>' + sgn(balOf(topK.d).v,0) + ' kcal</b>.' : 'La giornata non è segnata completa: non calcolo il bilancio.') + '</p><p>Consumo e alcuni pasti fuori casa sono stimati: questa differenza non equivale a grasso guadagnato in quel giorno. Un giorno sopra l\'obiettivo non crea un debito da recuperare nei giorni dopo.</p>',
-      'Fonte: massimo delle calorie registrate e stima settimanale del consumo.');
-    var recentFrom = addDays(end,-13), recent = logged.filter(function (d) { var x = dayInfoOf(d); return d >= recentFrom && x && x.usable; });
-    if (recent.length >= 5) {
-      var avg = mean(recent.map(function (d) {return state.days.get(d).kcal;}));
-      story('media-con-tutto','Energia','#ffc17d','NESSUN GIORNO SPARISCE','La media delle ultime due settimane include anche i giorni più abbondanti?',fmt(avg,0)+' kcal al giorno',
-        'Sì: ogni giornata completa entra nella media, anche le più abbondanti.',
-        '<p>Dal <b>' + fmtDay(recentFrom) + '</b> al <b>' + fmtDay(end) + '</b> ci sono <b>' + recent.length + ' giornate complete</b>. La loro media è <b>' + fmt(avg,0) + ' kcal al giorno</b>, con dentro anche i giorni più abbondanti: nessun giorno viene tolto o etichettato.</p>',
-        'Fonte: calorie delle giornate segnate complete negli ultimi 14 giorni di calendario.');
-    }
-    var above = logged.filter(function (d) {return kcalStatus(state.days.get(d).kcal, d) === 'over';});
-    story('giorni-sopra-target','Energia','#f9bd7c','IL TARGET NON È IL CONSUMO','Quanti giorni sono stati sopra l’obiettivo impostato?',above.length+' su '+logged.length,
-      '“Sopra il target” e “sopra il consumo stimato” sono confronti diversi.',
-      '<p>Su <b>' + logged.length + ' giorni</b> con calorie registrate, <b>' + above.length + '</b> superano l’obiettivo valido quel giorno (con la tolleranza del calendario, ±' + TOL_VIEW + ' kcal). Questo non dice quanti giorni fossero in surplus: per quello servirebbe confrontare ogni giorno con un consumo che il sito può solo stimare.</p><p>Le giornate senza calorie scritte non sono contate come zero.</p>',
-      'Fonte: confronto delle calorie registrate con il target del profilo.');
-    var calD = Math.max(1, diffDays(s.startDate, end < t ? end : addDays(t, -1)) + 1), loggedP = logged.filter(function (d) { return d < t; });
-    story('diario-completo','Abitudini',cHabits,'QUALITÀ DEI DATI','Quanto del percorso ha davvero calorie registrate?',loggedP.length+' / '+calD,
-      'La copertura del diario cambia quanto sono solide le medie.',
-      '<p>Dal ' + fmtDay(s.startDate) + ' a ieri ci sono <b>' + calD + ' giorni</b>: <b>' + loggedP.length + '</b> hanno le calorie (' + fmt(loggedP.length / calD * 100, 0) + '%). Una giornata priva del campo calorie resta mancante: non diventa digiuno né zero kcal.</p><p>Più giorni completi rendono più leggibili le medie; la precisione dei singoli pasti stimati resta un limite separato.</p>',
-      'Fonte: presenza del campo calorie nelle righe del diario.');
-  }
-  if (stepDays.length >= 3) {
-    var totalSteps = stepDays.reduce(function (n,d) {return n+state.days.get(d).steps;},0);
-    var peak = stepDays.map(function (d) {return {d:d,n:state.days.get(d).steps};}).sort(function(a,b){return b.n-a.n;})[0];
-    story('passi-accumulati','Abitudini',cHabits,'PICCOLI NUMERI SOMMATI','Quanti passi si sono accumulati nel percorso?',fmt(totalSteps,0),
-      'Sono i passi registrati, senza inventare quelli dei giorni mancanti.',
-      '<p>In <b>' + stepDays.length + ' giornate</b> con passi disponibili hai registrato <b>' + fmt(totalSteps,0) + ' passi</b>, in media <b>' + fmt(totalSteps/stepDays.length,0) + '</b> per giornata osservata.</p><p>Il cardio in palestra registrato su Hevy non è sommato qui: è contato nelle sedute.</p>',
-      'Fonte: somma e media dei passi presenti nel diario.');
-    story('giorno-passi','Abitudini','#83e8c6','IL GIORNO RECORD','Qual è stato il giorno con più passi?',fmt(peak.n,0)+' passi',
-      'Un record concreto nel diario, non una stima di calorie bruciate.',
-      '<p>Il <b>' + fmtDay(peak.d) + '</b> hai registrato <b>' + fmt(peak.n,0) + ' passi</b>, contro una media di <b>' + fmt(totalSteps/stepDays.length,0) + '</b> nei giorni con passi disponibili.</p><p>Il log non separa i passi sul lavoro da quelli della vita quotidiana, quindi non attribuisco il record a una causa precisa.</p>',
-      'Fonte: massimo e media dei passi registrati.');
-  }
-  if (sleepDays.length >= 3) {
-    var hrs = sleepDays.map(function(d){return state.days.get(d).sleepH;});
-    var shortSleep = sleepDays.map(function(d){return {d:d,h:state.days.get(d).sleepH};}).sort(function(a,b){return a.h-b.h;})[0];
-    story('sonno-nel-diario','Abitudini','#a5a3f2','LE NOTTI CONTANO','Che cosa dice il diario sulle tue notti?',fmtH(mean(hrs))+' ore',
-      'Media delle notti per cui il sonno è stato registrato.',
-      '<p>Hai registrato <b>' + sleepDays.length + ' notti</b>; la media è <b>' + fmtH(mean(hrs)) + '</b>. La notte più breve nel diario è quella del <b>' + fmtDay(shortSleep.d) + '</b>: <b>' + fmtH(shortSleep.h) + '</b>.</p><p>Questo è un riepilogo descrittivo. Il sito non attribuisce a una notte specifica un cambiamento preciso del peso del mattino.</p>',
-      'Fonte: campo Sonno delle giornate con valore presente.');
-  }
-  if (workouts.length) {
-    var last28 = Array.from(state.workouts.values()).filter(function(w){return w.date>=addDays(t,-27)&&w.date<=t;});
-    var dates = Array.from(new Set(workouts.map(function(w){return w.date;})));
-    story('sedute-percorso','Allenamenti',cGym,'LA COSTANZA','Quante volte hai messo piede in palestra nel percorso?',workouts.length+' sedute',
-      'Sedute importate da Hevy, anche quando cadono nello stesso giorno.',
-      '<p>Dal ' + fmtDay(s.startDate) + ' risultano <b>' + workouts.length + ' sedute</b> distribuite su <b>' + dates.length + ' giorni</b>. Negli ultimi 28 giorni di calendario ne risultano <b>' + last28.length + '</b>.</p><p>Il conteggio descrive la presenza delle sedute nel file: non misura intensità, qualità o recupero.</p>',
-      'Fonte: date e sedute lette da Hevy.');
-    var titles = {}, bestTitle = null;
-    workouts.forEach(function(w){var title=String(w.title||'Seduta senza titolo').trim();titles[title]=(titles[title]||0)+1;if(!bestTitle||titles[title]>bestTitle.n)bestTitle={title:title,n:titles[title]};});
-    if (bestTitle) story('seduta-ricorrente','Allenamenti','#a8c6ff','IL FILO CONDUTTORE','Quale seduta compare più spesso nel diario?',bestTitle.n+' volte',
-      '<b>' + esc(bestTitle.title) + '</b> è il titolo più ricorrente.',
-      '<p>Tra le ' + workouts.length + ' sedute del percorso, il titolo <b>' + esc(bestTitle.title) + '</b> compare <b>' + bestTitle.n + ' volte</b>. Titoli simili ma scritti in modo diverso restano distinti: è un conteggio del documento, non una classificazione automatica dei muscoli.</p>',
-      'Fonte: titoli delle sedute in Hevy.');
-  }
-
-  var filter = state.curFilter || 'Tutte', cats = ['Tutte','Bilancia','Energia','Abitudini','Allenamenti'];
-  var filters = $('#curio-filters');
-  if (filters) filters.innerHTML = cats.map(function(cat){var n=cat==='Tutte'?stories.length:stories.filter(function(x){return x.cat===cat;}).length;return '<button type="button" data-curio-filter="'+cat+'" aria-pressed="'+(cat===filter?'true':'false')+'"><span>'+cat+'</span><b>'+n+'</b></button>';}).join('');
-  var chosen = filter==='Tutte'?stories:stories.filter(function(x){return x.cat===filter;});
-  box.innerHTML = chosen.length ? chosen.map(function (x,i) {
-    return '<details class="cu cu-story'+(i===0&&filter==='Tutte'?' cu-feature':'')+'" id="cu-'+x.id+'" style="--c:'+x.c+';--delay:'+Math.min(i,8)*55+'ms"'+(state.curOpen&&state.curOpen[x.id]?' open':'')+'><summary><span class="cu-index">'+String(i+1).padStart(2,'0')+'</span><span class="cu-copy"><span class="cu-topic">'+x.cat+' / '+x.eyebrow+'</span><strong class="cu-q">'+x.title+'</strong><span class="cu-a">'+x.lead+'</span></span><span class="cu-open" aria-hidden="true">Scopri</span></summary><div class="cu-b"><div class="cu-stat">'+x.stat+'</div>'+x.body+'<div class="cu-source">'+x.source+'</div></div></details>';
-  }).join('') : '<div class="empty">In questa categoria non ci sono ancora dati sufficienti. Le storie compaiono quando il diario si arricchisce.</div>';
-  var count = $('#curio-count'); if (count) count.textContent = stories.length+' storie dai tuoi dati';
-  if (teaser) {
-    var featured = stories.find(function(x){return x.id==='salto-bilancia';}) || stories[0];
-    teaser.hidden = !featured;
-    if (featured) {teaser.style.setProperty('--c',featured.c);teaser.innerHTML='<span class="cu-t-l">UN DETTAGLIO DA SCOPRIRE</span><strong>'+featured.title+'</strong><p>'+featured.lead+'</p><button type="button" class="linkbtn" data-curio="'+featured.id+'">Apri la storia →</button>';}
-  }
+  if(ww.length>=3){var m=avg(ww.map(function(p){return p.w;})),pw=prevWeight&&diff(prevWeight.ws,ws)===7?prevWeight:null;if(pw){var ch=m-pw.mean;story({id:'settimana-peso-'+ws,family:'settimana-peso',cat:'Bilancia',date:we,score:63,eyebrow:'DUE SETTIMANE A CONFRONTO',title:Math.abs(ch)<.2?'Le pesate medie delle settimane del '+date(pw.ws)+' e del '+date(ws)+' sono vicine':'Nella settimana del '+date(ws)+' la media delle pesate è '+(ch>0?'più alta':'più bassa'),stat:signed(ch,2)+' kg tra le medie',lead:'Il confronto riguarda le pesate disponibili nelle due settimane, non la composizione corporea.',facts:[fact('Prima settimana',date(pw.ws)+' · '+f(pw.mean,2)+' kg · '+pw.n+' pesate'),fact('Seconda settimana',date(ws)+' · '+f(m,2)+' kg · '+ww.length+' pesate')],paragraphs:['Ogni media usa soltanto le pesate presenti e accettate dal modello nella settimana indicata. Non interpolo le date mancanti.'],caveat:'La soglia di 0,2 kg serve solo a scegliere il titolo “vicine”; non è una soglia clinica o una misura di precisione.',source:'Medie aritmetiche delle pesate accettate; almeno 3 in ciascuna settimana consecutiva.'});}prevWeight={ws:ws,mean:m,n:ww.length};}
+  var wl=workouts.filter(function(w){return w.date>=ws&&w.date<=we;});if(wl.length){var unique=new Set(wl.map(function(w){return w.date;})).size,known=wl.filter(function(w){return num(w.durMin)&&w.durMin>0&&w.durMin<=600;}),minutes=known.reduce(function(s,w){return s+w.durMin;},0);story({id:'settimana-palestra-'+ws,family:'settimana-palestra',cat:'Allenamenti',date:we,score:55,eyebrow:'UNA SETTIMANA IN PALESTRA',title:'La settimana del '+date(ws)+': '+wl.length+' sedute su '+unique+' giorni',stat:wl.length+' sedute registrate',lead:known.length?f(minutes)+' minuti nelle '+known.length+' sedute con durata disponibile.':'Le date delle sedute raccontano la distribuzione degli allenamenti.',facts:[fact('Periodo',date(ws)+' – '+date(we)),fact('Giorni con sedute',unique+' / 7'),fact('Durate registrate',known.length+' / '+wl.length)].concat(known.length?[fact('Durata totale disponibile',f(minutes)+' min')]:[]),paragraphs:['Due sedute nella stessa data contano come due allenamenti, ma come un solo giorno di presenza nel diario.'],caveat:'L’assenza di una seduta importata non dimostra riposo. Questi conteggi non valutano qualità o recupero.',source:'Date e durate delle sedute importate da Hevy.'});}
+ });
+ // Two fixed adjacent 14-day windows, with coverage and material differences.
+ function windowChange(list,key,cat,unit,dec,minimum,relative){var a=list.filter(function(x){return x.d>=add(today,-27)&&x.d<=add(today,-14);}),b=list.filter(function(x){return x.d>=add(today,-13)&&x.d<=today;});if(a.length<10||b.length<10)return;var ma=avg(a.map(function(x){return x.v;})),mb=avg(b.map(function(x){return x.v;})),delta=mb-ma;if(Math.abs(delta)<Math.max(minimum,ma*relative))return;var label={passi:'passi',sonno:'sonno',proteine:'proteine',calorie:'calorie'}[key];story({id:'cambio-'+key+'-'+week(today),family:'cambio-'+key,highlightGroup:'cambio-recente',cat:cat,date:b[b.length-1].d,score:91,eyebrow:'UN CAMBIAMENTO RECENTE',title:'Nelle ultime due settimane '+(key==='sonno'?'il sonno che registri':key==='passi'?'la media dei tuoi passi':'la media delle '+label+' registrate')+' è '+(delta>0?'aumentat'+(key==='sonno'?'o':'a'):'diminuit'+(key==='sonno'?'o':'a')),stat:signed(delta,dec)+' '+unit,lead:'Il confronto usa due periodi consecutivi di 14 giorni, con almeno 10 registrazioni complete in ognuno.',facts:[fact('Periodo precedente',date(add(today,-27))+' – '+date(add(today,-14))),fact('Media precedente',f(ma,dec)+' '+unit+' · '+a.length+' osservazioni'),fact('Periodo recente',date(add(today,-13))+' – '+date(today)),fact('Media recente',f(mb,dec)+' '+unit+' · '+b.length+' osservazioni')],paragraphs:['I periodi hanno la stessa lunghezza di calendario. Le medie usano solo i valori effettivamente registrati e confermati completi.'],caveat:'Una differenza nel diario non identifica la causa e non è una prescrizione. Le soglie di comparsa servono a evitare storie su differenze minime.',source:'Due finestre adiacenti di 14 giorni, aggiornate con le nuove registrazioni.'});}
+ windowChange(steps,'passi','Abitudini','passi al giorno',0,1000,.15);windowChange(sleep,'sonno','Abitudini','ore per notte',1,.5,.08);windowChange(protein,'proteine','Energia','g al giorno',0,15,.15);windowChange(kcal,'calorie','Energia','kcal al giorno',0,150,.08);
+ // Day-of-week patterns require multiple observations of all seven weekdays.
+ var recentSteps=steps.filter(function(x){return x.d>=add(today,-55);}),buckets=[[],[],[],[],[],[],[]];recentSteps.forEach(function(x){buckets[wd(x.d)].push(x.v);});
+ if(buckets.every(function(a){return a.length>=3;})){var wm=buckets.map(med),hi=wm.indexOf(Math.max.apply(null,wm)),lo=wm.indexOf(Math.min.apply(null,wm)),names=['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];if(wm[hi]-wm[lo]>=Math.max(1500,wm[lo]*.25))story({id:'ritmo-passi-'+week(today),family:'ritmo-passi',cat:'Abitudini',date:recentSteps[recentSteps.length-1].d,score:87,eyebrow:'IL TUO RITMO SETTIMANALE',title:'Nel tuo diario, di '+names[hi]+' registri più passi che di '+names[lo],stat:f(wm[hi]-wm[lo])+' passi tra le mediane',lead:'È il confronto fra i due giorni della settimana con la mediana più alta e più bassa nelle ultime 8 settimane.',facts:[fact(names[hi],f(wm[hi])+' passi · '+buckets[hi].length+' giornate'),fact(names[lo],f(wm[lo])+' passi · '+buckets[lo].length+' giornate'),fact('Giornate confrontabili',recentSteps.length)],paragraphs:['La mediana è il valore centrale delle registrazioni. Ogni giorno della settimana ha almeno 3 osservazioni complete.'],caveat:'Non deduco turni di lavoro o giornate di riposo dai nomi dei giorni. Il confronto non spiega il motivo della differenza.',source:'Passi confermati completi negli ultimi 56 giorni.'});}
+ // Overnight episodes use consecutive accepted weigh-ins; missing dates are never bridged.
+ var moves=[];for(var i=1;i<weights.length;i++){if(diff(weights[i-1].d,weights[i].d)!==1)continue;var delta=weights[i].w-weights[i-1].w;var baseline=moves.slice(-20).map(function(m){return Math.abs(m.delta);});var threshold=Math.max(.6,3*(med(baseline)||0));if(baseline.length>=5&&Math.abs(delta)>=threshold){var before=weights[i-1],jump=weights[i],back=null;for(var j=i+1;j<weights.length&&diff(jump.d,weights[j].d)<=4;j++){if(Math.abs(weights[j].w-before.w)<=.2){back=weights[j];break;}}if(back)story({id:'bilancia-ritorno-'+jump.d,family:'bilancia-episodio',cat:'Bilancia',date:back.d,score:105,eyebrow:'UN EPISODIO DEL TUO PERCORSO',title:'Dopo il salto del '+date(jump.d)+', la bilancia è tornata vicina al valore precedente',stat:signed(delta,1)+' kg, poi '+f(back.w,1)+' kg',lead:'Tre pesate mostrano un cambiamento rapido seguito da un ritorno vicino alla partenza.',facts:[fact('Prima del salto',date(before.d)+' · '+f(before.w,1)+' kg'),fact('Il salto',date(jump.d)+' · '+f(jump.w,1)+' kg'),fact('La pesata successiva vicina',date(back.d)+' · '+f(back.w,1)+' kg')],paragraphs:['Questo episodio emerge confrontando date e valori delle pesate, senza attribuirlo a un alimento, un allenamento o a grasso guadagnato o perso.'],caveat:'La storia è descrittiva: non identifica il motivo e non prevede una futura oscillazione. I pesi segnalati dal modello e non accettati sono esclusi.',source:'Pesate accettate; salto tra giorni consecutivi e ritorno entro 4 giorni. Soglie editoriali, non cliniche.'});else story({id:'bilancia-salto-'+jump.d,family:'bilancia-episodio',cat:'Bilancia',date:jump.d,score:69,eyebrow:'UNA VARIAZIONE DA OSSERVARE',title:'Tra il '+date(before.d)+' e il '+date(jump.d)+' la bilancia si è mossa di '+signed(delta,1)+' kg',stat:signed(delta,1)+' kg in due pesate',lead:'È una variazione ampia rispetto ai cambiamenti precedenti nel tuo diario.',facts:[fact('Prima pesata',date(before.d)+' · '+f(before.w,1)+' kg'),fact('Seconda pesata',date(jump.d)+' · '+f(jump.w,1)+' kg')],paragraphs:['Il confronto è tra due mattine consecutive. Non rappresenta una misura del grasso né una spiegazione della variazione.'],caveat:'Servono altre pesate per osservare che cosa succede dopo. La storia può evolvere se compare un ritorno vicino alla pesata precedente.',source:'Pesate accettate; soglia di comparsa: almeno 0,6 kg e almeno 3 volte la mediana dei cambiamenti assoluti precedenti.'});}moves.push({delta:delta});}
+ // Comparable exercise records: same exercise, repetitions and load convention.
+ var exercises={};workouts.forEach(function(w){(w.exercises||[]).forEach(function(ex){if(ex.cardio)return;var name=clean(ex.name);if(!name)return;var key=norm(name)+'|'+(ex.assisted?'assistito':'standard'),e=exercises[key]||(exercises[key]={name:name,assisted:!!ex.assisted,dates:{}}),d=e.dates[w.date]||(e.dates[w.date]={loads:{},reps:0});(ex.sets||[]).forEach(function(s){if(s.w||!num(s.reps)||s.reps<=0||s.reps>1000||s.sec>0||s.min>0||s.km>0)return;if(num(s.kg)&&s.kg>0&&s.kg<=1500)d.loads[s.reps]=Math.max(d.loads[s.reps]||0,s.kg);else if(!ex.assisted)d.reps=Math.max(d.reps,s.reps);});});});
+ Object.keys(exercises).sort().forEach(function(key){var e=exercises[key],history={},bodyBest=0,bodyN=0;Object.keys(e.dates).sort().forEach(function(d){var row=e.dates[d],best=null;Object.keys(row.loads).forEach(function(r){var kg=row.loads[r],old=history[r];if(old&&old.n>=2&&kg-old.kg>=Math.max(.5,old.kg*.025)){var increase=kg-old.kg;if(!best||increase/old.kg>best.ratio)best={old:old.kg,kg:kg,reps:+r,ratio:increase/old.kg,n:old.n};}history[r]={kg:old?Math.max(kg,old.kg):kg,n:old?old.n+1:1};});if(best)story({id:'esercizio-carico-'+hash(key)+'-'+d,family:'esercizio-'+hash(key),cat:'Allenamenti',date:d,score:94,eyebrow:'STESSE RIPETIZIONI, PIÙ CARICO',title:e.name+': '+best.reps+' ripetizioni con più peso nel diario del '+date(d),stat:'+'+f(best.kg-best.old,1)+' kg'+(e.assisted?' effettivi':''),lead:'Un confronto fra registrazioni dello stesso esercizio con lo stesso numero di ripetizioni.',facts:[fact('Carico migliore precedente',f(best.old,1)+' kg × '+best.reps),fact('Nuovo carico registrato',f(best.kg,1)+' kg × '+best.reps),fact('Giornate precedenti confrontabili',best.n)],paragraphs:[e.assisted?'Per questo esercizio assistito confronto il peso effettivamente sollevato stimato dall’app, non il contrappeso della macchina.':'Il confronto conserva lo stesso nome dell’esercizio e lo stesso numero di ripetizioni. Le serie di riscaldamento sono escluse.'],caveat:'Tecnica, attrezzatura e condizioni possono cambiare: è un record nel diario, non un test controllato della forza.',source:'Serie registrate in almeno 3 date distinte; confronto a ripetizioni uguali.'});if(row.reps){if(bodyN>=2&&row.reps>=bodyBest+2)story({id:'esercizio-rip-'+hash(key)+'-'+d,family:'esercizio-'+hash(key),cat:'Allenamenti',date:d,score:92,eyebrow:'UNA SERIE DA RICORDARE',title:e.name+': nel diario compare una serie da '+row.reps+' ripetizioni',stat:'+'+(row.reps-bodyBest)+' ripetizioni',lead:'È un nuovo massimo tra le serie senza carico registrato di questo esercizio.',facts:[fact('Massimo precedente',bodyBest+' ripetizioni'),fact('Nuova serie',row.reps+' ripetizioni'),fact('Giornate precedenti',bodyN)],paragraphs:['Conto le ripetizioni della serie migliore; non sommo tutte le serie per creare un record di una singola serie.'],caveat:'Confronto soltanto ciò che è registrato. Un carico non indicato non dimostra che tecnica e condizioni fossero uguali.',source:'Serie senza carico registrato in almeno 3 date distinte; riscaldamento e cardio esclusi.'});bodyBest=Math.max(bodyBest,row.reps);bodyN++;}});});
+ // A documented rest day is needed for the comparison group; absence of an import is insufficient.
+ var gymDates=new Set(workouts.map(function(w){return w.date;})),withGym=[],withRest=[];
+ recentSteps.filter(function(x){return x.d>=add(today,-27);}).forEach(function(x){if(gymDates.has(x.d))withGym.push(x);else if(byDay[x.d]&&byDay[x.d].riposo===true)withRest.push(x);});
+ if(withGym.length>=6&&withRest.length>=6){var gm=med(withGym.map(function(x){return x.v;})),rm=med(withRest.map(function(x){return x.v;}));if(Math.abs(gm-rm)>=1500)story({id:'passi-e-palestra-'+week(today),family:'passi-e-palestra',cat:'Abitudini',date:recentSteps[recentSteps.length-1].d,score:83,eyebrow:'DUE PEZZI DEL TUO DIARIO',title:'I giorni con palestra e quelli di riposo hanno un ritmo di passi diverso',stat:signed(gm-rm)+' passi tra le mediane',lead:'Confronto i giorni con una seduta importata e quelli con riposo confermato negli ultimi 28 giorni.',facts:[fact('Giorni con palestra',f(gm)+' passi · '+withGym.length+' giorni'),fact('Giorni di riposo confermato',f(rm)+' passi · '+withRest.length+' giorni')],paragraphs:['Ogni gruppo contiene almeno 6 giornate con passi completi. I giorni privi di sedute e senza riposo confermato non entrano nel secondo gruppo.'],caveat:'È un’associazione descrittiva. Lavoro, turni e altre abitudini possono spiegare la differenza; non attribuisco l’effetto alla palestra.',source:'Passi completi, sedute importate e riposo esplicitamente confermato.'});}
+ // Coverage is contextual information, not a claim that the maintenance estimate is unreliable.
+ var observed=days.filter(function(d){return d.date>=add(today,-27)&&num(d.kcal)&&d.kcal>=0&&d.kcal<=20000;});if(dates.length&&observed.length>=7){var kRecent=kcal.filter(function(x){return x.d>=add(today,-27);}),last=observed[observed.length-1].date,from=dates[0]>add(today,-27)?dates[0]:add(today,-27),span=diff(from,today)+1;story({id:'copertura-'+week(today),family:'copertura',cat:'Abitudini',date:last,score:25,eyebrow:'IL DIARIO DIETRO LE STORIE',title:'Le tue storie recenti si appoggiano a '+kRecent.length+' giornate alimentari complete',stat:kRecent.length+' / '+span+' giorni',lead:'Questa è la copertura delle calorie nel periodo recente, non un voto al tuo percorso.',facts:[fact('Periodo',date(from)+' – '+date(today)),fact('Giornate complete',kRecent.length),fact('Giorni senza calorie complete',span-kRecent.length)],paragraphs:['Una giornata con dati parziali resta distinta da una giornata confermata completa. Le curiosità non riempiono i buchi con calorie inventate.'],caveat:'La copertura del diario e l’incertezza del fabbisogno sono informazioni diverse.',source:'Stati di conferma delle calorie negli ultimi 28 giorni, o dall’inizio dell’archivio se più recente.'});}
+ stories.forEach(function(s){s.recent=diff(s.date,today)<=14;s.rank=s.score+Math.max(0,30-diff(s.date,today))*1.5;});
+ stories.sort(function(a,b){return b.date.localeCompare(a.date)||b.score-a.score||a.id.localeCompare(b.id);});
+ var ranked=stories.slice().sort(function(a,b){return b.rank-a.rank||b.date.localeCompare(a.date)||a.id.localeCompare(b.id);}),highlights=[],families={},cats={};
+ ranked.forEach(function(s){if(highlights.length>=10||families[s.highlightGroup||s.family]||(cats[s.cat]||0)>=3)return;highlights.push(s);families[s.highlightGroup||s.family]=1;cats[s.cat]=(cats[s.cat]||0)+1;});
+ return {version:'1.0',today:today,stories:stories,highlights:highlights,guides:guides(),counts:{personal:stories.length,recent:stories.filter(function(s){return s.recent;}).length,days:dates.length,complete:kcal.length,weights:weights.length,workouts:workouts.length},firstDate:dates[0]||null,lastDate:dates[dates.length-1]||null};
 }
-function bindCurio() {
-  document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.classList && d.classList.contains('cu')) { state.curOpen = state.curOpen || {}; state.curOpen[d.id.slice(3)] = d.open; } }, true);
-  document.addEventListener('click', function (e) {
-    var filt = e.target.closest('[data-curio-filter]'); if (filt) { state.curFilter=filt.dataset.curioFilter; renderCurio(); return; }
-    var b = e.target.closest('[data-curio]'); if (!b) return;
-    state.curOpen = state.curOpen || {}; state.curOpen[b.dataset.curio] = true;
-    setDview('curiosita', true);
-    setTimeout(function () { var el = document.getElementById('cu-' + b.dataset.curio); if (el) { el.open = true; try { el.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); } catch (er) {} } }, 450);
-  });
+return {build:build,validDate:validDate,add:add,diff:diff,week:week};
+});
+
+/* Local, read-only stories. This module never writes the diary or changes model results. */
+function curiositySnapshot(){
+  var t=todayStr(),rows=[];
+  state.days.forEach(function(raw,d){if(!GJCuriosity.validDate(d)||d>t)return;var row={date:d,states:{},riposo:raw.riposo===true};['kcal','steps','sleepH','protein','carbs','fat','weight'].forEach(function(k){var v=raw[k];row.states[k]=GJM.fieldState(raw,k,d===t);row[k]=v!=null&&v!==''&&isFinite(Number(v))?Number(v):null;if(row.states[k]==='zero_confermato'&&k!=='weight')row[k]=0;});rows.push(row);});
+  var wl=[];state.workouts.forEach(function(w,id){if(!GJCuriosity.validDate(w.date)||w.date>t)return;wl.push({id:id,date:w.date,title:w.title,durMin:w.durMin,exercises:(w.exercises||[]).map(function(ex){return {name:ex.name,cardio:cardioExercise(ex.name),assisted:isAssisted(ex.name),sets:setsOf(ex,w.date)};})});});
+  return GJCuriosity.build({today:t,days:rows,weights:weightsSeries(),workouts:wl});
+}
+function curiosityCard(x,i,featured){
+  var facts=x.facts.length?'<dl class="cu-facts">'+x.facts.map(function(p){return '<div><dt>'+esc(p.label)+'</dt><dd>'+esc(p.value)+'</dd></div>';}).join('')+'</dl>':'';
+  var recent=x.kind!=='guide'&&x.recent?'<span class="cu-recent">Recente</span>':'';
+  return '<details class="cu cu-story'+(featured?' cu-feature':'')+'" id="cu-'+esc(x.id)+'" style="--c:'+x.c+';--delay:'+Math.min(i,6)*35+'ms"'+(state.curOpen&&state.curOpen[x.id]?' open':'')+'><summary><span class="cu-index" aria-hidden="true">'+(x.kind==='guide'?'✦':String(i+1).padStart(2,'0'))+'</span><span class="cu-copy"><span class="cu-topic">'+esc(x.cat+' / '+x.eyebrow)+'</span><strong class="cu-q">'+esc(x.title)+'</strong>'+(x.kind!=='guide'?'<span class="cu-preview">'+esc(x.stat)+'</span>':'')+'<span class="cu-a">'+esc(x.lead)+'</span><span class="cu-story-meta">'+(x.date?'<time datetime="'+x.date+'">'+esc(fmtDay(x.date))+'</time>':'<span>Per leggere meglio i tuoi dati</span>')+recent+'</span></span><span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Scopri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24" focusable="false"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="cu-b"><div class="cu-stat">'+esc(x.stat)+'</div>'+facts+x.paragraphs.map(function(p){return '<p>'+esc(p)+'</p>';}).join('')+(x.caveat?'<p class="cu-limit">'+esc(x.caveat)+'</p>':'')+'<div class="cu-source">'+esc(x.source)+'</div></div></details>';
+}
+function renderCurio(){
+  var box=$('#curio-list');if(!box)return;var sec=box.closest('.dsec');if(sec.hidden||state.tab!=='diario')return;
+  var data=curiositySnapshot();state.curData=data;
+  var mode=state.curView||'highlights',q=String(state.curQuery||'').trim().toLocaleLowerCase('it-IT'),filter=state.curFilter||'Tutte';
+  var base=mode==='learn'?data.guides:mode==='archive'?data.stories:data.highlights;
+  var cats=['Tutte','Bilancia','Energia','Abitudini','Allenamenti'];
+  if(mode==='learn')filter='Tutte';
+  var search=function(x){return !q||[x.title,x.lead,x.stat,x.date||'',x.date?x.date.split('-').reverse().join('/'):''].concat(x.paragraphs,x.facts.map(function(p){return p.value;})).join(' ').toLocaleLowerCase('it-IT').indexOf(q)>=0;};
+  var matched=base.filter(search),chosen=matched.filter(function(x){return filter==='Tutte'||x.cat===filter;}),shown=state.curShown||18;
+  var filters=$('#curio-filters');filters.hidden=mode==='learn';filters.innerHTML=cats.map(function(cat){var n=cat==='Tutte'?matched.length:matched.filter(function(x){return x.cat===cat;}).length;return '<button type="button" data-curio-filter="'+cat+'" aria-pressed="'+(cat===filter?'true':'false')+'"><span>'+cat+'</span><b>'+n+'</b></button>';}).join('');
+  $$('[data-curio-view]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.curioView===mode?'true':'false');});
+  var searchBox=$('#curio-search');if(searchBox.value!==(state.curQuery||''))searchBox.value=state.curQuery||'';
+  var count=$('#curio-count');if(count)count.textContent=data.counts.personal+(data.counts.personal===1?' storia personale · ':' storie personali · ')+data.guides.length+' da sapere';
+  var status=$('#curio-status');status.innerHTML='<span class="cu-live-mark" aria-hidden="true">✦</span><div><b>'+(data.counts.personal?'Il tuo percorso continua a raccontarsi':'Le tue storie iniziano dai primi dati')+'</b><p>'+(data.lastDate?'Ultimi dati: '+esc(fmtDay(data.lastDate))+'. Le storie si aggiornano quando registri, importi o correggi i dati.':'Nessuna storia personale inventata: registra i primi dati o importa le tue sedute per iniziare.')+'</p></div>';
+  var context=$('#curio-context');context.textContent=mode==='learn'?'Curiosità generali, uguali per tutti: aiutano a leggere le tue storie personali.':mode==='archive'?'La storia del tuo percorso, dagli episodi più recenti. Anche le storie passate si ricalcolano se correggi o importi dati.':'Una selezione varia dal tuo diario. “Recente” indica un episodio degli ultimi 14 giorni; non la data di importazione.';
+  if(chosen.length)box.innerHTML=chosen.slice(0,shown).map(function(x,i){return curiosityCard(x,i,i===0&&mode==='highlights'&&filter==='Tutte'&&!q);}).join('');
+  else if(!data.counts.personal&&mode!=='learn'&&!q){box.innerHTML='<div class="cu-start"><span class="cu-start-symbol" aria-hidden="true">✦</span><h3>Il diario cresce. Le curiosità crescono con lui.</h3><p>Qui compariranno episodi che riguardano proprio te, quando ci saranno i dati per riconoscerli.</p><div class="cu-unlocks"><div><b>Una settimana da raccontare</b><span>Almeno 5 giornate alimentari complete in una settimana conclusa.</span></div><div><b>Un confronto in palestra</b><span>Almeno 3 date con lo stesso esercizio e ripetizioni confrontabili.</span></div><div><b>Un cambiamento recente</b><span>Almeno 10 valori completi in ciascuno dei due periodi di 14 giorni.</span></div></div><button type="button" class="btn ghost fit" data-curio-view="learn">Esplora le curiosità da sapere</button></div>';}
+  else box.innerHTML='<div class="cu-no-results"><b>Nessuna storia per questo filtro.</b><p>Prova un’altra categoria o cerca una parola diversa. Le storie personali compaiono solo quando i dati le sostengono.</p></div>';
+  var more=$('#curio-more');more.hidden=chosen.length<=shown;more.textContent='Mostra altre '+Math.max(0,Math.min(18,chosen.length-shown))+' storie';
+  var teaser=$('#curio-teaser');if(teaser)teaser.hidden=true;
+}
+function bindCurio(){
+ document.addEventListener('toggle',function(e){var d=e.target;if(d&&d.classList&&d.classList.contains('cu')){state.curOpen=state.curOpen||{};state.curOpen[d.id.slice(3)]=d.open;}},true);
+ document.addEventListener('click',function(e){
+  var view=e.target.closest('[data-curio-view]');if(view){state.curView=view.dataset.curioView;state.curFilter='Tutte';state.curQuery='';state.curShown=18;renderCurio();return;}
+  var filt=e.target.closest('[data-curio-filter]');if(filt){state.curFilter=filt.dataset.curioFilter;state.curShown=18;renderCurio();return;}
+  if(e.target.closest('#curio-more')){state.curShown=(state.curShown||18)+18;renderCurio();return;}
+  var b=e.target.closest('[data-curio]');if(!b)return;state.curView='archive';state.curFilter='Tutte';state.curQuery='';state.curOpen=state.curOpen||{};state.curOpen[b.dataset.curio]=true;setDview('curiosita',true);
+  setTimeout(function(){var data=state.curData,index=data?data.stories.findIndex(function(x){return x.id===b.dataset.curio;}):-1;if(index>=0){state.curShown=Math.max(18,index+1);renderCurio();}var el=document.getElementById('cu-'+b.dataset.curio);if(el){el.open=true;el.scrollIntoView({behavior:RM?'auto':'smooth',block:'start'});}},450);
+ });
+ var search=$('#curio-search');if(search)search.addEventListener('input',function(){state.curQuery=search.value;if(state.curView!=='learn')state.curView='archive';state.curShown=18;renderCurio();});
+ var lastDay=todayStr();setInterval(function(){var day=todayStr();if(day!==lastDay){lastDay=day;renderAll();}},60000);
+ document.addEventListener('visibilitychange',function(){if(!document.hidden){if(lastDay!==todayStr()){lastDay=todayStr();renderAll();}else renderCurio();}});
 }
 
 // One reversible height transition for native disclosures and contextual help.
@@ -11682,5 +11690,351 @@ document.addEventListener('click', function (e) {
 @media(max-width:650px){.maintenance-hero{padding:18px}.maintenance-bottom{grid-template-columns:1fr 1fr}.maintenance-bottom>span:last-child{grid-column:1/-1}.maintenance-routine{grid-template-columns:1fr;gap:9px}.maintenance-routine b{display:inline;margin-right:8px}.daily-energy{grid-template-columns:1fr;padding:16px;gap:16px}.daily-energy-facts{padding-top:12px;border-top:1px solid #ffffff12}.energy-week-days{grid-template-columns:repeat(4,minmax(0,1fr))}.energy-history td,.energy-history th{padding:10px 6px;font-size:.72rem}}
 
 @media(max-width:650px){#need-body{padding-top:20px}}
+/* Clear mobile navigation: six equal targets, no overflowing icon padding. */
+.nav-label-compact{display:none}
+@media(max-width:1023px){
+ body .nav .tabs:not(#z):not(#y){display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:0!important;box-sizing:border-box!important;padding:6px 4px!important}
+ body .nav .tab:not(#z):not(#y){display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:0!important;max-width:100%!important;width:100%!important;min-height:52px!important;padding:5px 0!important;gap:5px!important;box-sizing:border-box!important;overflow:hidden!important;font-size:10px!important;line-height:1.15!important;letter-spacing:0!important}
+ body .nav .tab>span:not(#z):not(#y){max-width:100%!important;min-width:0!important;white-space:nowrap!important;font-size:10px!important;line-height:1.15!important;letter-spacing:0!important;text-align:center!important}
+ body .nav .tab svg:not(#z):not(#y){box-sizing:border-box!important;width:22px!important;height:22px!important;padding:0!important;margin:0!important;flex:0 0 22px!important}
+ body .nav .tab .nav-label-wide:not(#z):not(#y){display:none!important}
+ body .nav .tab .nav-label-compact:not(#z):not(#y){display:block!important}
+}
+body .tab[data-tab="allenamenti"][aria-selected="true"]:not(#z):not(#y){color:#BF8AFF!important}
+body .tab[data-tab="ricette"][aria-selected="true"]:not(#z):not(#y){color:#FFBD69!important}
+body .tab[data-tab="amici"][aria-selected="true"]:not(#z):not(#y){color:#65DFC4!important}
+/* Identity follows the section, with the existing dark surfaces retained. */
+#tab-allenamenti{--section-color:#BF8AFF;--section-end:#7E6FE8;--section-rgb:167,114,246}
+#tab-ricette{--section-color:#FFBD69;--section-end:#E98D53;--section-rgb:255,168,76}
+#tab-amici{--section-color:#65DFC4;--section-end:#5AAED2;--section-rgb:70,210,177}
+body #tab-allenamenti>.area-lead{--area:#BF8AFF!important;--area2:#7E6FE8!important}
+body #tab-ricette>.area-lead{--area:#FFBD69!important;--area2:#E98D53!important}
+body #tab-allenamenti>.area-lead:not(#z):not(#y),body #tab-ricette>.area-lead:not(#z):not(#y){display:block!important;position:relative!important;overflow:hidden!important;margin:18px 0 22px!important;padding:28px 30px!important;border:1px solid rgba(var(--section-rgb),.24)!important;border-radius:24px!important;background:radial-gradient(ellipse at 100% 0,rgba(var(--section-rgb),.18),transparent 65%),linear-gradient(130deg,rgba(var(--section-rgb),.11),transparent),#1C1C1E!important;box-shadow:none!important}
+body #tab-allenamenti>.area-lead .area-kicker:not(#z):not(#y),body #tab-ricette>.area-lead .area-kicker:not(#z):not(#y){display:block;color:var(--section-color)!important;font-size:.7rem!important;font-weight:750!important;letter-spacing:.1em!important;margin-bottom:12px!important}
+body #tab-allenamenti>.area-lead strong:not(#z):not(#y),body #tab-ricette>.area-lead strong:not(#z):not(#y){display:block;color:#fff!important;font-size:clamp(1.4rem,2.6vw,2rem)!important;line-height:1.2!important;max-width:75%!important}
+body #tab-allenamenti>.area-lead p:not(#z):not(#y),body #tab-ricette>.area-lead p:not(#z):not(#y){margin:12px 0 0!important;color:#BCB8C5!important;max-width:75%!important;font-size:.84rem!important;line-height:1.65!important}
+body #tab-allenamenti>.area-lead .area-mark:not(#z):not(#y),body #tab-ricette>.area-lead .area-mark:not(#z):not(#y){position:absolute!important;right:26px!important;top:50%!important;transform:translateY(-50%)!important;font-size:5rem!important;opacity:.22!important;color:var(--section-color)!important;animation:none!important}
+body #tab-allenamenti>.panel:not(#z):not(#y){background:linear-gradient(145deg,rgba(167,114,246,.09),transparent 60%),#1C1C1E!important;border:1px solid rgba(167,114,246,.12)!important}
+body #tab-allenamenti .panel h2:not(#z):not(#y){color:#E5D3FF!important}
+body #tab-allenamenti .seg button[aria-pressed="true"]:not(#z):not(#y),body #tab-allenamenti .segbar button[aria-selected="true"]:not(#z):not(#y){background:#BF8AFF24!important;color:#DFC5FF!important;border-color:#BF8AFF55!important}
+body #tab-allenamenti .btn:not(.ghost):not(.danger):not(#z):not(#y){background:#A971ED!important;color:#fff!important}
+body #tab-allenamenti .linkbtn:not(#z):not(#y){color:#D4ADFF!important;-webkit-text-fill-color:#D4ADFF!important}
+body #tab-allenamenti .workout-calendar:not(#z):not(#y){background:radial-gradient(ellipse at 0 0,#A771E51B,transparent 70%),#1C1C1E!important;border-color:#B382F332!important}
+#tab-allenamenti #heat{padding:14px;border-radius:20px;background:linear-gradient(145deg,#302239,#24212E);border:1px solid #BA88FF20;gap:8px}
+#tab-allenamenti #heat .dow{padding:2px 0 8px;font-size:.68rem;letter-spacing:.03em;color:#B2A3C5;font-weight:700}
+#tab-allenamenti #heat .c{border-radius:12px;background:#FFFFFF05;border:1px solid #FFFFFF06;padding:8px;transition:background .2s ease,border-color .2s ease,transform .2s ease;box-shadow:none}
+#tab-allenamenti #heat .c.on{background:linear-gradient(145deg,color-mix(in srgb,var(--c) 29%,#29222F),color-mix(in srgb,var(--c) 10%,#23202B));border:1px solid color-mix(in srgb,var(--c) 48%,transparent)}
+#tab-allenamenti #heat .c .n{font-size:.72rem;color:#B9ADC8}
+#tab-allenamenti #heat .c.on .n{color:#F6F1FF;font-weight:650}
+#tab-allenamenti #heat .c .t{font-size:.95rem;color:var(--c,#D2ADFF);font-weight:800}
+#tab-allenamenti #heat .c.sel{outline:2px solid #EDDDFF;outline-offset:1px;background-color:#BF8AFF24}
+#tab-allenamenti #heat .c.today:not(.sel){outline:2px solid #BE88FF;outline-offset:1px}
+#tab-allenamenti .calnav{padding:11px 14px;border-radius:15px;background:#A971ED14;border:1px solid #B382F326;margin-bottom:16px}
+#tab-allenamenti .calnav b{color:#E4D0FF}
+#tab-allenamenti .mini-stats .ms{border:1px solid #BA88FF24;border-radius:16px;padding:16px;background:linear-gradient(140deg,#A971ED16,#FFFFFF03)}
+#tab-allenamenti .mini-stats .ms .v{color:#DFC0FF}
+#tab-allenamenti .caldetail{border:1px solid #BA88FF30;background:#A971ED0A;border-radius:16px}
+body #tab-allenamenti .sess:not(#z):not(#y){border:1px solid #A971ED24!important;border-radius:18px!important;background:linear-gradient(120deg,#A971ED0D,transparent),#232125!important;margin:10px 0!important;overflow:hidden}
+body #tab-allenamenti .sess>summary:not(#z):not(#y){background:transparent!important;border:0!important;padding-top:18px!important;padding-bottom:18px!important}
+body #tab-allenamenti .sess[open]>summary:not(#z):not(#y){background:#A971ED16!important;border-bottom:1px solid #A971ED25!important}
+#tab-allenamenti .sess .ico{background:color-mix(in srgb,var(--c,#BF8AFF) 19%,#29232F);border-radius:13px}
+#tab-allenamenti .sess .body{padding:18px}
+#tab-allenamenti .sess .sets>span{background:#FFFFFF08;border:1px solid #FFFFFF08}
+/* Recipes use warm amber surfaces and controls. */
+#tab-ricette .rgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+#tab-ricette #r-tags .chip[aria-pressed="true"]{background:#FFBD6926;border-color:#FFBD6955;color:#FFD399}
+body #tab-ricette>.panel:not(#z):not(#y),body #tab-ricette>.form-box:not(#z):not(#y){background:linear-gradient(135deg,#FFAA4C0B,transparent),#1C1C1E!important;border:1px solid #FFBD691F!important;border-radius:22px!important}
+body #tab-ricette .rcard:not(#z):not(#y){background:linear-gradient(145deg,#FFAA4C12,transparent 65%),#211F1D!important;border:1px solid #FFBD692B!important;border-top:3px solid #DFA45C!important;border-radius:22px!important;padding:22px!important;gap:18px!important}
+#tab-ricette .rcard h3{color:#FFE2B9;font-size:1.2rem;line-height:1.35}
+#tab-ricette .rcard .rk{display:flex;align-items:baseline;gap:10px;padding:16px;background:#FFBD690D;border:1px solid #FFBD6914;border-radius:16px}
+#tab-ricette .rcard .rk b{font-size:2rem;color:#FFD399}
+#tab-ricette .rcard .chip{background:#FFBD6915;color:#E6BD87;border-color:#FFBD6930}
+body #tab-ricette input:focus:not(#z):not(#y),body #tab-ricette select:focus:not(#z):not(#y),body #tab-ricette textarea:focus:not(#z):not(#y){border-color:#FFBD69!important}
+body #tab-ricette .btn:not(.ghost):not(.danger):not(#z):not(#y){background:#F0AD58!important;color:#251A0B!important;-webkit-text-fill-color:#251A0B!important}
+body #tab-ricette .linkbtn:not(#z):not(#y){color:#FFD399!important;-webkit-text-fill-color:#FFD399!important}
+/* Friends: two people, one shared path. Decoration never changes data or requests. */
+#tab-amici .friends-intro{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 220px;align-items:center;gap:20px;overflow:hidden;padding:30px;margin:8px 0 22px;border-radius:25px;background:radial-gradient(ellipse at 95% 15%,#39D3B220,transparent 65%),linear-gradient(130deg,#258D7616,transparent),#1C2323;border:1px solid #65DFC42E}
+#tab-amici .friends-kicker{font-size:.7rem;font-weight:750;letter-spacing:.12em;color:#71DBC5;margin-bottom:12px}
+#tab-amici .friends-intro h2{margin:0 0 12px;font-size:clamp(1.5rem,2.6vw,2rem);line-height:1.18;max-width:490px;color:#F0FFF9}
+#tab-amici .friends-intro p{font-size:.85rem;line-height:1.65;margin:0;color:#AAC9C2;max-width:480px}
+#tab-amici .friends-orbit{width:220px;justify-self:end;position:relative}
+#tab-amici .friends-orbit svg{display:block;width:100%;height:auto;overflow:visible}
+#tab-amici .friend-halo{transform-origin:center;animation:friendHalo 4s ease-in-out 3}
+#tab-amici .friend-person-a{animation:friendMeetA 2.4s ease-out both}
+#tab-amici .friend-person-b{animation:friendMeetB 2.4s ease-out both}
+#tab-amici .friend-link{stroke-dasharray:4 6;animation:friendLink 6s linear 2}
+#tab-amici .friend-spark{transform-origin:120px 62px;animation:friendSpark 3s ease-in-out 4}
+@keyframes friendMeetA{from{transform:translateX(-10px);opacity:.25}to{transform:translateX(0);opacity:1}}
+@keyframes friendMeetB{from{transform:translateX(10px);opacity:.25}to{transform:translateX(0);opacity:1}}
+@keyframes friendLink{to{stroke-dashoffset:-60}}
+@keyframes friendHalo{0%,100%{opacity:.3}50%{opacity:.65}}
+@keyframes friendSpark{0%,100%{opacity:.5;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+#tab-amici .friends-code-card{background:linear-gradient(140deg,#1B3B35,#243331);border-color:#5BC9AC45}
+#tab-amici .friends-code-card>small{color:#8FE2CD}
+#tab-amici .friends-code-card>b{color:#E3FFF4}
+#tab-amici .friends-add,#tab-amici .friends-settings,#tab-amici .friends-compare{background:linear-gradient(140deg,#49C9A90A,transparent),#232928;border-color:#5BC9AC29}
+#tab-amici .friends-onboarding{background:linear-gradient(140deg,#1E3A33,#252C2B);border-color:#5BC9AC40}
+#tab-amici .friends-symbol{background:#2B5B4D;color:#BEF8DE}
+body #tab-amici .btn:not(.ghost):not(.danger):not(#z):not(#y){background:#64D6B7!important;color:#102D24!important;-webkit-text-fill-color:#102D24!important}
+#tab-amici .friends-empty{background:#24312D;border-color:#5BC9AC38;color:#ACC9BE}
+@media(max-width:760px){
+ body #tab-allenamenti>.area-lead:not(#z):not(#y),body #tab-ricette>.area-lead:not(#z):not(#y){padding:23px 21px!important;margin:14px 0 18px!important}
+ body #tab-allenamenti>.area-lead strong:not(#z):not(#y),body #tab-ricette>.area-lead strong:not(#z):not(#y){max-width:88%!important;font-size:1.45rem!important}
+ body #tab-allenamenti>.area-lead p:not(#z):not(#y),body #tab-ricette>.area-lead p:not(#z):not(#y){max-width:92%!important}
+ body #tab-allenamenti>.area-lead .area-mark:not(#z):not(#y),body #tab-ricette>.area-lead .area-mark:not(#z):not(#y){right:12px!important;opacity:.12!important;font-size:4.5rem!important}
+ #tab-allenamenti .heat-row{grid-template-columns:minmax(0,1fr);gap:16px}
+ #tab-allenamenti .mini-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ #tab-allenamenti .mini-stats .ms{padding:12px 9px;min-width:0}
+ #tab-allenamenti .mini-stats .ms .l{font-size:.65rem}
+ #tab-allenamenti .mini-stats .ms .v{font-size:1.25rem}
+ #tab-allenamenti #heat{gap:5px;padding:10px}
+ #tab-allenamenti #heat .c{padding:5px;border-radius:9px}
+ #tab-allenamenti #heat .c .n{font-size:.62rem}
+ #tab-allenamenti #heat .c .t{font-size:.76rem}
+ #tab-amici .friends-intro{grid-template-columns:minmax(0,1fr) 90px;padding:24px 20px;gap:10px}
+ #tab-amici .friends-intro h2{font-size:1.45rem}
+ #tab-amici .friends-orbit{width:110px;justify-self:center}
+ #tab-amici .friends-intro p{font-size:.78rem}
+ #tab-amici .friends-kicker{font-size:.62rem;letter-spacing:.07em}
+}
+@media(prefers-reduced-motion:reduce){#tab-amici .friends-orbit *{animation:none!important}#tab-allenamenti #heat .c{transition:none!important}}
+@media(max-width:380px){
+ #tab-allenamenti #heat{gap:4px;padding:8px}
+ #tab-allenamenti #heat .c{aspect-ratio:auto;min-height:49px;padding:4px 2px;align-items:center;gap:3px}
+ #tab-allenamenti #heat .c .n{white-space:normal;text-align:center;font-size:.58rem;line-height:1.15;max-width:100%;overflow-wrap:normal}
+ #tab-allenamenti #heat .c .t{align-self:center;font-size:.7rem;line-height:1}
+ #tab-allenamenti #heat .dow{font-size:.57rem}
+ #tab-allenamenti .calctl .seg button{font-size:.72rem}
+ #tab-amici .friends-intro{grid-template-columns:minmax(0,1fr);gap:14px}
+ #tab-amici .friends-orbit{width:140px;justify-self:end;margin-top:-8px}
+}
+/* The calendar and its summary share the same full-width alignment. */
+#tab-allenamenti .workout-calendar .heat-row{grid-template-columns:minmax(0,1fr);gap:20px;align-items:stretch}
+#tab-allenamenti .workout-calendar #heat{box-sizing:border-box;width:100%}
+#tab-allenamenti .workout-calendar #heat .c{aspect-ratio:auto;min-height:68px}
+#tab-allenamenti .workout-calendar #heat-legend{margin:16px 0 0;gap:10px 20px;line-height:1.5}
+#tab-allenamenti .workout-calendar #heat-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch;width:100%;min-width:0}
+#tab-allenamenti .workout-calendar #heat-stats .ms{box-sizing:border-box;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:10px;padding:20px 14px;text-align:center;border-radius:18px}
+#tab-allenamenti .workout-calendar #heat-stats .l{margin:0;font-size:.78rem;line-height:1.4;color:#BBB0C9}
+#tab-allenamenti .workout-calendar #heat-stats .v{margin:0;font-size:clamp(1.1rem,2.3vw,1.7rem);line-height:1.2;white-space:nowrap;color:#E0C4FF}
+/* Day details have their own inset, with room around the header and content. */
+body #tab-allenamenti #cal-detail:not(#z):not(#y){box-sizing:border-box;min-width:0;margin-top:24px;padding:22px;border:1px solid #BA88FF2B;border-radius:20px;display:grid;gap:18px;background:linear-gradient(135deg,#A971ED0B,transparent)}
+#tab-allenamenti #cal-detail .cd-head{align-items:center;gap:12px 18px;padding-bottom:16px;border-bottom:1px solid #BA88FF1F}
+#tab-allenamenti #cal-detail .cd-head h3{min-width:0;margin:0;font-size:1.15rem;line-height:1.35}
+body #tab-allenamenti #cal-detail .cd-head .linkbtn:not(#z):not(#y){display:inline-flex;align-items:center;justify-content:center;flex:none;min-height:40px;padding:8px 12px;border-radius:12px;background:#BF8AFF14;line-height:1.3;text-decoration:none;white-space:nowrap}
+body #tab-allenamenti #cal-detail .cd-head .linkbtn.small:not(#z):not(#y)::after{display:none}
+body #tab-allenamenti #cal-detail>.wd-empty:not(#z):not(#y){box-sizing:border-box;margin:0;padding:17px 18px;border-radius:14px;border:1px solid #FFFFFF06;background:#FFFFFF06;color:#D7CFDF;font-size:.9rem;line-height:1.5}
+#tab-allenamenti #cal-detail>p{margin:0;line-height:1.65}
+#tab-allenamenti #cal-detail .wday{margin:0;min-width:0}
+#tab-allenamenti #cal-detail .wh{align-items:flex-start;gap:14px}
+#tab-allenamenti #cal-detail .wh>div{min-width:0}
+#tab-allenamenti #cal-detail .dt{line-height:1.65}
+#tab-allenamenti #cal-detail .p2-sess{margin:14px 0;line-height:1.65}
+#tab-allenamenti #cal-detail .body{display:grid;gap:16px}
+#tab-allenamenti #cal-detail .ex{margin:0;min-width:0}
+/* The progression plot sits in a rounded, padded surface; values stay untouched. */
+body #tab-allenamenti .workout-progression .chart-box:not(#z):not(#y){box-sizing:border-box;padding:18px 16px 12px;border:1px solid #BA88FF26!important;border-radius:20px!important;background:linear-gradient(145deg,#A971ED0C,transparent),#242127!important;box-shadow:inset 0 1px #FFFFFF04!important}
+#tab-allenamenti #x-chart{border-radius:12px;overflow:hidden;background:transparent}
+#tab-allenamenti .workout-progression .caption{margin:14px 2px 0;line-height:1.6}
+#tab-allenamenti .workout-progression #x-note{margin:8px 2px 0!important;line-height:1.6}
+@media(max-width:760px){
+ #tab-allenamenti .workout-calendar .heat-row{gap:16px}
+ #tab-allenamenti .workout-calendar #heat .c{min-height:49px}
+ #tab-allenamenti .workout-calendar #heat-legend{gap:8px 14px;font-size:.75rem}
+ #tab-allenamenti .workout-calendar #heat-stats{gap:8px}
+ #tab-allenamenti .workout-calendar #heat-stats .ms{padding:15px 6px;gap:10px;border-radius:14px}
+ #tab-allenamenti .workout-calendar #heat-stats .l{font-size:.65rem;line-height:1.4}
+ #tab-allenamenti .workout-calendar #heat-stats .v{font-size:1.05rem}
+ body #tab-allenamenti #cal-detail:not(#z):not(#y){padding:17px 15px;gap:16px;margin-top:20px;border-radius:17px}
+ #tab-allenamenti #cal-detail .cd-head{align-items:flex-start;padding-bottom:14px;gap:10px}
+ #tab-allenamenti #cal-detail .cd-head h3{flex:1 1 100%;font-size:1.05rem}
+ body #tab-allenamenti #cal-detail .cd-head .linkbtn:not(#z):not(#y){min-height:38px;padding:8px 11px}
+ body #tab-allenamenti #cal-detail>.wd-empty:not(#z):not(#y){padding:14px;font-size:.85rem}
+ body #tab-allenamenti .workout-progression .chart-box:not(#z):not(#y){padding:13px 8px 8px;border-radius:17px!important}
+ #tab-allenamenti .workout-progression>.panel-head{align-items:stretch;gap:16px}
+ #tab-allenamenti .workout-progression>.panel-head>.f{flex:1 1 100%!important;min-width:0}
+}
+/* Corpo shares the workout palette; muscle colors retain their original meaning. */
+#tab-corpo{--body-accent:#C49BFF;--body-rgb:177,128,244}
+body #tab-corpo>.area-lead:not(#z):not(#y){display:block!important;--area:#C49BFF!important;--area2:#9875DF!important;position:relative;overflow:hidden;margin:18px 0 22px!important;padding:28px 30px!important;border:1px solid #C49BFF33!important;border-radius:24px!important;background:radial-gradient(ellipse at 100% 0,#B78BF52B,transparent 65%),linear-gradient(130deg,#B78BF51A,transparent),#1C1C1E!important;box-shadow:none!important}
+body #tab-corpo>.area-lead .area-kicker:not(#z):not(#y){display:block;color:#CCA9FF!important;font-size:.7rem!important;font-weight:750;letter-spacing:.1em;margin-bottom:12px}
+body #tab-corpo>.area-lead strong:not(#z):not(#y){display:block;color:#fff!important;font-size:clamp(1.4rem,2.6vw,2rem)!important;line-height:1.2;max-width:82%}
+body #tab-corpo>.area-lead p:not(#z):not(#y){margin:12px 0 0!important;color:#BEB6CB!important;max-width:78%;font-size:.84rem!important;line-height:1.65}
+body #tab-corpo>.area-lead .area-mark:not(#z):not(#y){position:absolute;right:26px;top:50%;transform:translateY(-50%);font-size:5.5rem;opacity:.2;color:#C49BFF;animation:none!important}
+body #tab-corpo>.panel:not(#z):not(#y){background:radial-gradient(ellipse at 0 0,#AC78F114,transparent 65%),#1C1C1E!important;border:1px solid #C49BFF22!important;border-radius:25px!important}
+body #tab-corpo .segbar button[aria-selected="true"]:not(#z):not(#y){background:#BF8AFF24!important;color:#DFC5FF!important;border-color:#BF8AFF55!important}
+body #tab-corpo .seg button[aria-pressed="true"]:not(#z):not(#y){background:#C49BFF25!important;color:#E1CAFF!important;border-color:#C49BFF44!important;box-shadow:inset 0 1px #E1CAFF0D!important}
+#tab-corpo .body-map-panel>.panel-head{display:flex;flex-direction:column;align-items:stretch;gap:20px;margin-bottom:18px}
+#tab-corpo .body-map-panel>.panel-head>.ph-t{width:100%;box-sizing:border-box}
+#tab-corpo .body-heading-icon{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:#BD8EFF22;color:#CCA9FF;margin-right:10px;vertical-align:middle}
+#tab-corpo .body-heading-icon svg{width:19px;height:19px}
+#tab-corpo .bctrl{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;padding:17px 18px;border:1px solid #C49BFF1A;border-radius:18px;background:#C49BFF07}
+#tab-corpo .body-control-group{min-width:0;display:flex;flex-direction:column;gap:9px}
+#tab-corpo .body-control-label{font-size:.68rem;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:#ADA0C0}
+#tab-corpo .bctrl .seg{display:flex;width:100%;box-sizing:border-box;min-width:0;padding:4px;gap:3px;background:#FFFFFF04;border:1px solid #FFFFFF04;border-radius:13px}
+#tab-corpo .bctrl .seg button{flex:1 1 0;min-width:0;padding:10px 8px;line-height:1.35;white-space:normal;border-radius:10px;font-size:.76rem}
+#tab-corpo .body-period-strip{display:flex;align-items:center;gap:9px;color:#C8B6DD;margin-bottom:18px;padding:0 2px}
+#tab-corpo .body-period-strip>svg{width:15px;height:15px;flex:none;opacity:.8}
+#tab-corpo #body-period{margin:0;font-size:.78rem;line-height:1.55;color:#B7A9C7}
+#tab-corpo .body-grid{grid-template-columns:minmax(0,.95fr) minmax(0,1.15fr);gap:20px;align-items:start;margin-top:0}
+#tab-corpo .figs{box-sizing:border-box;max-width:none;min-width:0;margin:0;padding:20px;gap:16px 12px;border:1px solid #C49BFF27;border-radius:22px;background:radial-gradient(ellipse at 50% 5%,#C49BFF15,transparent 65%),linear-gradient(155deg,#282331,#211F26)}
+#tab-corpo .figs figure{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:14px;padding:18px 8px 14px;border:1px solid #FFFFFF06;border-radius:17px;background:linear-gradient(180deg,#FFFFFF02,#FFFFFF04)}
+#tab-corpo .figs svg{width:100%;max-width:170px;height:auto;flex:none;filter:drop-shadow(0 10px 14px #00000025)}
+#tab-corpo .figs figcaption{box-sizing:border-box;min-width:70px;margin:0;padding:7px 12px;border-radius:9px;background:#C49BFF10;color:#D3C2E6;font-size:.72rem;line-height:1.3}
+#tab-corpo polygon.m{stroke:#26212F;stroke-width:.5}
+#tab-corpo polygon.m.sel{stroke:#FFF6FF;stroke-width:1;filter:drop-shadow(0 0 2px #D6B5FF99)}
+#tab-corpo polygon.m:focus-visible{stroke:#EEDEFF;stroke-width:1.4;filter:drop-shadow(0 0 3px #D6B5FF)}
+#tab-corpo polygon.nm{fill:#82818D;stroke:#26212F}
+#tab-corpo .bscale{display:grid;grid-template-columns:1fr auto;gap:9px;margin:2px 0 0;font-size:.65rem;line-height:1.4;min-width:0;color:#B5A9C4}
+#tab-corpo .bscale[hidden]{display:none!important}
+#tab-corpo .bscale>span:first-child{grid-row:1;grid-column:1}
+#tab-corpo .bscale>span:last-child{grid-row:1;grid-column:2;text-align:right}
+#tab-corpo .bscale>i{grid-row:2;grid-column:1/-1;width:100%;height:6px}
+#tab-corpo .bhint{margin:0;line-height:1.6;font-size:.72rem;color:#A79BB7}
+body #tab-corpo #body-detail:not(#z):not(#y){box-sizing:border-box;min-width:0;display:grid;gap:18px;margin:0;padding:22px;border:1px solid #C49BFF27;border-radius:22px;background:linear-gradient(150deg,#B484F50A,transparent),#222024}
+#tab-corpo #body-detail .cd-head{align-items:center;gap:10px;padding:0 0 17px;border-bottom:1px solid #C49BFF20}
+#tab-corpo #body-detail .cd-head h3{font-size:1.35rem;line-height:1.3;color:#F0E4FF;margin:0}
+#tab-corpo #body-detail .cd-head .chip{font-size:.66rem;padding:6px 9px;line-height:1.4;white-space:normal}
+#tab-corpo .bstats{gap:10px;grid-auto-rows:1fr}
+body #tab-corpo .bstats .ds:not(#z):not(#y){box-sizing:border-box;min-width:0;min-height:112px;display:flex;flex-direction:column;gap:8px;padding:16px 13px;border:1px solid color-mix(in srgb,var(--c) 18%,transparent)!important;border-radius:16px;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 10%,transparent),transparent),#2A262E!important}
+body #tab-corpo .bstats .ds .l:not(#z):not(#y){font-size:.7rem;line-height:1.4;color:#C2B7CC!important;align-items:flex-start;gap:6px}
+#tab-corpo .bstats .ds .l i{flex:none;width:6px;height:6px;margin-top:5px}
+body #tab-corpo .bstats .ds .v:not(#z):not(#y){margin:0;font-size:clamp(1.13rem,1.8vw,1.5rem);line-height:1.2;white-space:nowrap;overflow:visible;text-overflow:clip;letter-spacing:-.025em}
+body #tab-corpo .bstats .ds .v small:not(#z):not(#y){font-size:.7rem;margin-left:4px;color:#AB9FB8!important}
+#tab-corpo .bstats .ds .s{margin:auto 0 0;font-size:.65rem;line-height:1.45;color:#A99DB5}
+#tab-corpo #body-detail>div:has(>.wkbars){box-sizing:border-box;min-width:0;padding:15px 12px 9px;border:1px solid #C49BFF18;border-radius:16px;background:#C49BFF06;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#755499 transparent}
+#tab-corpo #body-detail>div:has(>.wkbars)>.small{margin:0 0 12px!important;font-size:.72rem;font-weight:600;line-height:1.5;color:#C0AFCF}
+#tab-corpo .wkbars{box-sizing:border-box;width:100%;max-width:none;min-width:290px}
+#tab-corpo .wkbars text{font-size:7px;fill:#A99CB8}
+#tab-corpo .wkbars rect[fill="#8EA8FF"]{fill:#B98AEE}
+#tab-corpo #body-detail>div:has(>.frow){min-width:0;padding-top:2px}
+#tab-corpo #body-detail>div:has(>.frow)>.small{margin:0 0 12px!important;font-size:.72rem;line-height:1.55;color:#B8A9C9;font-weight:600}
+#tab-corpo #body-detail .frow{gap:12px;padding:13px 0;border-color:#C49BFF14;align-items:center;font-size:.8rem;line-height:1.5}
+#tab-corpo #body-detail .frow:nth-child(2){border-top:0;padding-top:0}
+#tab-corpo #body-detail .frow:last-child{padding-bottom:0}
+#tab-corpo #body-detail .frow>span{flex:1;min-width:0}
+#tab-corpo #body-detail .frow>span>b{font-weight:600!important}
+#tab-corpo #body-detail .frow .faint{font-size:.67rem;line-height:1.6;color:#A99DB5}
+#tab-corpo #body-detail .frow>.tr{flex:none;font-size:.72rem;font-variant-numeric:tabular-nums}
+body #tab-corpo #body-detail>.empty:not(#z):not(#y){margin:0;padding:18px;border:1px dashed #C49BFF32;border-radius:16px;background:#C49BFF07;color:#C2B6CF;font-size:.85rem;line-height:1.75}
+/* Comparable cards and a two-column ranking make the lower panel easier to scan. */
+#tab-corpo .bratios{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 0 26px;align-items:stretch}
+body #tab-corpo .bratios .ds:not(#z):not(#y){box-sizing:border-box;display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:20px;border:1px solid color-mix(in srgb,var(--c) 24%,transparent)!important;background:linear-gradient(140deg,color-mix(in srgb,var(--c) 11%,transparent),transparent),#252229!important}
+body #tab-corpo .bratios .ds .l:not(#z):not(#y){font-size:.77rem;color:#CEC2D9!important;font-weight:600}
+body #tab-corpo .bratios .ds .v:not(#z):not(#y){font-size:clamp(1.3rem,2.6vw,1.9rem);line-height:1.2;margin:0;white-space:nowrap;overflow:visible;letter-spacing:-.03em}
+#tab-corpo .bratios .ds .s{font-size:.74rem;line-height:1.75;margin:0;color:#B4A6C2}
+#tab-corpo .body-rank-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 2px 14px}
+#tab-corpo .body-rank-heading h3{font-size:.91rem;margin:0;color:#E0D0F0}
+#tab-corpo .body-rank-heading span{font-size:.7rem;color:#A99AB9}
+#tab-corpo .brank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+body #tab-corpo .brank .rk:not(#z):not(#y){box-sizing:border-box;min-width:0;display:grid;grid-template-columns:minmax(100px,1fr) minmax(40px,.85fr) 35px;gap:12px;align-items:center;min-height:54px;padding:12px 14px;border:1px solid #C49BFF0B;border-radius:13px;background:#FFFFFF02;transition:background .2s,border-color .2s}
+body #tab-corpo .brank .rk.on:not(#z):not(#y){background:#C49BFF17;border-color:#C49BFF55;box-shadow:inset 3px 0 #C49BFF}
+body #tab-corpo .brank .rk:hover:not(#z):not(#y){background:#C49BFF0E;border-color:#C49BFF36}
+#tab-corpo .brank .rk:focus-visible{outline:2px solid #D5B6FF;outline-offset:2px}
+#tab-corpo .brank .rk .nm{font-size:.76rem;line-height:1.45;color:#C4B9CE}
+#tab-corpo .brank .rk.on .nm{color:#EFE0FF;font-weight:650}
+#tab-corpo .brank .rk .bar{height:6px;background:#FFFFFF07}
+#tab-corpo .brank .rk .vv{font-size:.8rem;font-weight:650;color:#D1C0E2}
+#tab-corpo .body-balance-panel>.caption{margin:18px 0 0;padding:15px 2px 0;border-top:1px solid #C49BFF16;font-size:.72rem;line-height:1.75;color:#A99BB8}
+@media(max-width:1100px){#tab-corpo .body-grid{grid-template-columns:minmax(0,1fr)}#tab-corpo .figs{max-width:600px;justify-self:center;padding:24px;gap:18px}#tab-corpo .figs svg{max-width:180px}#tab-corpo .body-map-panel>.body-grid>#body-detail{width:100%}}
+@media(max-width:760px){
+ body #tab-corpo>.area-lead:not(#z):not(#y){padding:23px 21px!important;margin:14px 0 18px!important}
+ body #tab-corpo>.area-lead strong:not(#z):not(#y){font-size:1.45rem!important;max-width:92%}
+ body #tab-corpo>.area-lead p:not(#z):not(#y){max-width:95%}
+ body #tab-corpo>.area-lead .area-mark:not(#z):not(#y){right:12px;opacity:.1;font-size:4.5rem}
+ #tab-corpo .bctrl{grid-template-columns:minmax(0,1fr);gap:16px;padding:15px 12px;border-radius:16px}
+ #tab-corpo .bctrl .seg button{padding:10px 6px;font-size:.71rem}
+ #tab-corpo .body-grid{gap:18px}
+ #tab-corpo .figs{padding:15px;gap:14px 9px;border-radius:19px}
+ #tab-corpo .figs figure{padding:14px 5px 12px;gap:12px;border-radius:13px}
+ #tab-corpo .figs svg{max-width:155px}
+ #tab-corpo .figs figcaption{min-width:0;padding:6px 10px;font-size:.66rem}
+ #tab-corpo .bscale{font-size:.59rem;gap:8px}
+ #tab-corpo .bhint{font-size:.66rem}
+ body #tab-corpo #body-detail:not(#z):not(#y){padding:18px 15px;border-radius:19px;gap:16px}
+ #tab-corpo #body-detail .cd-head h3{font-size:1.22rem}
+ #tab-corpo #body-detail .cd-head{padding-bottom:14px}
+ body #tab-corpo .bstats .ds:not(#z):not(#y){padding:14px 10px;min-height:110px;border-radius:13px}
+ body #tab-corpo .bstats .ds .l:not(#z):not(#y){font-size:.64rem}
+ #tab-corpo .bstats .ds .s{font-size:.62rem}
+ #tab-corpo .bratios{grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:22px}
+ body #tab-corpo .bratios .ds:not(#z):not(#y){padding:18px;border-radius:17px}
+ #tab-corpo .brank{grid-template-columns:minmax(0,1fr);gap:7px}
+ body #tab-corpo .brank .rk:not(#z):not(#y){grid-template-columns:minmax(108px,1fr) minmax(30px,.8fr) 30px;padding:12px 11px;gap:8px;min-height:52px}
+ #tab-corpo .brank .rk .nm{font-size:.73rem}
+ #tab-corpo .body-rank-heading{margin-bottom:12px}
+ #tab-corpo .body-rank-heading span{font-size:.65rem}
+}
+@media(prefers-reduced-motion:reduce){#tab-corpo .brank .rk,#tab-corpo polygon.m{transition:none!important}}
+.dsec[data-dsec="curiosita"]{--curio:#D08CFF}
+body #tab-diario .dsec[data-dsec="curiosita"]>.cu-head:not(#z):not(#y){display:block!important;position:relative;overflow:hidden;padding:28px!important;margin:18px 0!important;border:1px solid #C787FA30!important;border-radius:24px!important;background:radial-gradient(ellipse at 95% 0,#BF5AF22A,transparent 65%),linear-gradient(130deg,#BF5AF215,transparent),#1C1C1E!important;box-shadow:none!important}
+body #tab-diario .cu-head .area-kicker:not(#z):not(#y){display:block;color:#D79CFF!important;font-size:.68rem;font-weight:750;letter-spacing:.1em;margin-bottom:12px}
+body #tab-diario .cu-head strong:not(#z):not(#y){display:block;max-width:85%;font-size:clamp(1.4rem,2.6vw,2rem)!important;line-height:1.2;color:#fff!important}
+body #tab-diario .cu-head p:not(#z):not(#y){max-width:80%;margin:12px 0 0!important;font-size:.84rem;line-height:1.65;color:#C1B1CF}
+body #tab-diario .cu-head .area-mark:not(#z):not(#y){position:absolute;top:50%;right:26px;transform:translateY(-50%);color:#D79CFF;font-size:5rem;opacity:.18}
+#curio-count{margin-top:17px!important;font-weight:600!important;font-size:.7rem!important;position:relative}
+#curio-status{display:flex;align-items:center;gap:13px;padding:17px 19px;border:1px solid #BE83F02B;border-radius:18px;background:linear-gradient(120deg,#BD75F411,transparent),#211E26;margin:0 0 18px}
+.cu-live-mark{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:11px;background:#BF5AF21C;color:#DDA7FF;font-size:1.2rem}
+#curio-status b{font-size:.85rem;color:#E9D5F9;line-height:1.4}
+#curio-status p{margin:5px 0 0;font-size:.74rem;line-height:1.6;color:#B3A3C2}
+.cu-toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-bottom:18px}
+.cu-views{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid #C787FA1A;background:#211E26;border-radius:14px}
+.cu-views button{border:0;border-radius:10px;background:transparent;color:#B6A6C5;font:600 .76rem/1.4 var(--f-body);padding:10px 14px;cursor:pointer;min-height:40px}
+.cu-views button[aria-pressed="true"]{background:#C787FA26;color:#E5C1FF}
+.cu-search{flex:0 1 270px;min-width:180px;margin:0}
+.cu-search input{width:100%;box-sizing:border-box;min-height:44px;font-size:.75rem!important}
+.cu-search>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#curio-context{margin:14px 2px 20px;font-size:.75rem;line-height:1.65;color:#B4A4C3}
+#curio-filters[hidden],#curio-more[hidden]{display:none!important}
+body #tab-diario .cu-story:not(#z):not(#y){border:1px solid color-mix(in srgb,var(--c) 23%,transparent)!important;border-top:3px solid color-mix(in srgb,var(--c) 75%,transparent)!important;border-radius:20px!important;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 8%,transparent),transparent 75%),#1E1C22!important}
+body #tab-diario .cu-story.cu-feature:not(#z):not(#y){background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--c) 16%,transparent),transparent 60%),linear-gradient(130deg,#BE83F00C,transparent),#211D28!important}
+body #tab-diario .cu-story>summary:not(#z):not(#y){min-height:0!important;padding:21px 20px!important;grid-template-columns:30px minmax(0,1fr) auto!important;gap:13px!important}
+body #tab-diario .cu-story .cu-index:not(#z):not(#y){background:color-mix(in srgb,var(--c) 16%,#211D28)!important;color:var(--c)!important;border-color:color-mix(in srgb,var(--c) 30%,transparent)!important}
+.cu-story .cu-q{font-size:1.12rem;line-height:1.35;letter-spacing:-.02em}
+.cu-story .cu-preview{display:block;font:650 .94rem/1.5 var(--f-display);letter-spacing:-.02em;color:var(--c);margin-top:2px;overflow-wrap:anywhere}
+body #tab-diario .cu-story>summary>.disclosure-cue:not(#z):not(#y){position:static!important;grid-column:3;align-self:start;justify-self:end;inset:auto!important;transform:none!important;margin:0!important;min-width:75px;box-shadow:none!important;background:color-mix(in srgb,var(--c) 18%,#27212F)!important;color:var(--c)!important;border:1px solid color-mix(in srgb,var(--c) 22%,transparent)!important}
+.cu-story.cu-feature .cu-q{font-size:clamp(1.2rem,2vw,1.5rem)}
+.cu-story .cu-a{font-size:.77rem;line-height:1.65;color:#BFAFCE;margin-top:3px}
+.cu-story .cu-topic{font-size:.58rem;line-height:1.5;letter-spacing:.08em}
+.cu-story-meta{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:8px;font-size:.64rem;color:#A08EAF;line-height:1.5}
+.cu-recent{padding:3px 7px;border-radius:6px;border:1px solid #75D8B529;color:#9FDCC9;background:#75D8B50A;font-size:.6rem}
+body #tab-diario .cu-story .cu-b:not(#z):not(#y){padding:0 22px 22px!important;border-top:1px solid #C787FA1C;padding-top:18px!important;font-size:.8rem;line-height:1.8;color:#BCADC9}
+.cu-facts{margin:14px 0 18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.cu-facts>div{min-width:0;padding:12px 13px;border-radius:12px;background:#FFFFFF04;border:1px solid #FFFFFF04}
+.cu-facts dt{font-size:.64rem;line-height:1.5;color:#A996BA;margin:0 0 5px}
+.cu-facts dd{font-size:.8rem;line-height:1.6;color:#E3D3ED;margin:0;overflow-wrap:anywhere}
+.cu-story .cu-limit{padding:12px 14px;background:#C787FA07;border-radius:12px;font-size:.73rem;line-height:1.75;color:#AE9DBD}
+.cu-story .cu-source{font-size:.67rem;line-height:1.7;background:#FFFFFF03;border-radius:0 10px 10px 0;padding:11px 13px;color:#A08FAE}
+.cu-start,.cu-no-results{grid-column:1/-1;padding:28px;border:1px solid #C787FA29;border-radius:22px;background:linear-gradient(145deg,#C787FA0E,transparent),#1E1C22}
+.cu-start-symbol{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#C787FA1A;color:#DCA7FF;font-size:1.6rem;margin-bottom:18px}
+.cu-start h3{font-size:1.15rem;line-height:1.4;margin:0 0 10px;color:#EADAF4}
+.cu-start>p,.cu-no-results p{font-size:.8rem;line-height:1.7;color:#AD9DBD;margin:0 0 18px}
+.cu-unlocks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.cu-unlocks>div{padding:17px;border-radius:15px;background:#FFFFFF03;border:1px solid #FFFFFF06}
+.cu-unlocks b{display:block;font-size:.76rem;line-height:1.4;color:#D2BDDF;margin-bottom:8px}
+.cu-unlocks span{font-size:.7rem;line-height:1.7;color:#A28EAF}
+.cu-more-wrap{display:flex;justify-content:center;margin-top:20px}
+body #tab-diario #curio-more:not(#z):not(#y){color:#E1B6FF!important;background:#C787FA1A!important;border:1px solid #C787FA29!important;border-radius:12px;padding:12px 18px}
+@media(max-width:760px){
+ body #tab-diario .dviews button:not(#z):not(#y){min-width:0!important;white-space:normal!important;line-height:1.3!important;padding:9px 5px!important;font-size:.7rem!important;min-height:44px}
+ body #tab-diario .dsec[data-dsec="curiosita"]>.cu-head:not(#z):not(#y){padding:23px 21px!important}
+ body #tab-diario .cu-head strong:not(#z):not(#y){max-width:95%;font-size:1.42rem!important}
+ body #tab-diario .cu-head p:not(#z):not(#y){max-width:95%}
+ body #tab-diario .cu-head .area-mark:not(#z):not(#y){right:12px;font-size:4rem;opacity:.1}
+ #curio-status{padding:15px;align-items:flex-start;border-radius:16px;gap:11px}
+ #curio-status b{font-size:.79rem}#curio-status p{font-size:.69rem}
+ .cu-live-mark{width:30px;height:30px;border-radius:9px}
+ .cu-toolbar{gap:12px}.cu-views{width:100%;box-sizing:border-box;flex-wrap:nowrap}.cu-views button{flex:1;min-width:0;font-size:.67rem;padding:10px 6px}.cu-search{flex:1 1 100%;min-width:0}
+ #curio-context{font-size:.7rem;margin:13px 2px 17px}
+ body #tab-diario .cu-story>summary:not(#z):not(#y){grid-template-columns:26px minmax(0,1fr)!important;padding:18px 15px!important;gap:10px!important}
+ .cu-story .cu-index{width:26px;height:26px}.cu-story .cu-open{grid-column:2;justify-self:start;padding:6px 9px;font-size:.64rem;margin-top:3px}
+ body #tab-diario .cu-story>summary>.disclosure-cue:not(#z):not(#y){grid-column:2;justify-self:start;margin-top:2px!important;height:33px;min-width:73px}
+ .cu-story .cu-q{font-size:1rem;line-height:1.4}.cu-story .cu-a{font-size:.73rem}.cu-story .cu-topic{font-size:.54rem}
+ body #tab-diario .cu-story .cu-b:not(#z):not(#y){padding:16px 16px 18px!important;font-size:.76rem}
+ .cu-facts{grid-template-columns:minmax(0,1fr)}.cu-facts>div{padding:11px 12px}
+ .cu-story .cu-stat{font-size:1.25rem;line-height:1.25;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+ .cu-start,.cu-no-results{padding:23px 19px}.cu-unlocks{grid-template-columns:minmax(0,1fr);gap:9px}.cu-unlocks>div{padding:14px}
+}
+@media(prefers-reduced-motion:reduce){.cu-story{animation:none!important}.cu-story *{transition:none!important}}
 </style>
 </body></html>
