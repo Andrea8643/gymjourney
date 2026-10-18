@@ -3024,7 +3024,7 @@ var EXC = [
   { cls: 'vogatore', re: /rowing machine|rower|vogator|ergometer|row erg|concept ?2/, met: 6.2, lo: 5.0, hi: 7.3, nome: 'Vogatore', fonte: 'Compendium: vogatore 5,0 (leggero) – 7,3 (moderato)' },
   { cls: 'scale', re: /stair|stepper|scale|step machine|stairmaster/, met: 9.3, lo: 7.4, hi: 11.2, nome: 'Scale', fonte: 'Compendium: macchina per le scale 9,3 MET; intervallo ±20% scelto dal prodotto' },
   { cls: 'hiit', re: /hiit|circuit|tabata|crossfit|metcon|interval/, met: 9.0, lo: 7.0, hi: 11.0, nome: 'Allenamento a intervalli', fonte: 'Compendium: circuito/HIIT 7,0 – 11,0' },
-  { cls: 'corda', re: /jump rope|corda|skipping/, met: 11.0, lo: 8.8, hi: 13.2, nome: 'Salto della corda', fonte: 'Compendium: corda 11,0 MET; intervallo ±20% scelto dal prodotto' },
+  { cls: 'corda', re: /\bjump(?:ing)? rope\b|\brope jump(?:ing)?\b|\bsalt(?:o|i|are)\s+(?:(?:con|della|alla|la)\s+)*(?:la\s+)?corda\b|\bskipping\b/, met: 11.0, lo: 8.8, hi: 13.2, nome: 'Salto della corda', fonte: 'Compendium: corda 11,0 MET; intervallo ±20% scelto dal prodotto' },
   { cls: 'nuoto', re: /swim|nuoto/, met: 6.0, lo: 5.8, hi: 9.8, nome: 'Nuoto', fonte: 'Compendium: nuoto generico 6,0, da 5,8 a 9,8' },
   { cls: 'sport', re: /calcio|soccer|football|tennis|padel|basket|pallavolo|volley|boxe|boxing|martial|arti marziali|squash/, met: 7.0, lo: 4.0, hi: 10.0, nome: 'Sport', fonte: 'Compendium: sport ricreativi da 4 a 10 MET; valore centrale scelto dal prodotto' },
   { cls: 'cardio', re: /cardio/, met: 6.0, lo: 4.0, hi: 9.0, nome: 'Cardio non specificato', fonte: 'tipo non riconosciuto: intervallo ampio scelto dal prodotto' }
@@ -4724,7 +4724,7 @@ function renderCalendar() {
 /* ---------- allenamenti ---------- */
 function fmtSet(s) {
   if (s.min) return fmt(s.min, s.min % 1 ? 1 : 0) + ' min';
-  if (s.sec) return s.sec + ' s';
+  if (s.sec > 0) { var sec = Math.round(s.sec), min = Math.floor(sec / 60), rem = sec % 60; return min > 0 ? min + ' min' + (rem ? ' ' + rem + ' s' : '') : sec + ' s'; }
   if (s.bw || !(s.kg > 0)) return s.reps + ' rep';
   return (s.w ? '(r) ' : '') + fmt(s.kg, s.kg % 1 ? 1 : 0) + '×' + s.reps;
 }
@@ -6199,7 +6199,7 @@ function dayWorkHTML(date) {
     var G = GROUP[wGroup(w)], vol = 0, nS = 0, e = se.filter(function (s) { return s.title === w.title; })[0] || se[i];
     (w.exercises || []).forEach(function (ex) { setsOf(ex, w.date).forEach(function (s) { vol += (s.kg || 0) * (s.reps || 0); nS++; }); });
     var meta = [w.start ? 'ore ' + esc(w.start) : '', w.durMin ? fmtDur(w.durMin) : 'durata non registrata', (w.exercises || []).length + ((w.exercises || []).length === 1 ? ' esercizio' : ' esercizi'), nS + ' serie', vol > 0 ? fmt(vol, 0) + ' kg sollevati' : ''].filter(Boolean).join(', ');
-    var en = e ? '<div class="p2-sess">Energia stimata: ' + fmt(e.k, 0) + ' kcal (' + fmt(e.lo, 0) + '–' + fmt(e.hi, 0) + ')' + (e.strengthMin != null ? ' · pesi ' + fmt(e.strengthMin, 0) + ' min' : '') + (e.cardio && e.cardio.length ? ' · cardio: ' + e.cardio.map(function (c) { return esc(c.nome) + ' ' + fmt(c.k, 0) + ' kcal (' + esc(c.orig || c.cls) + ')'; }).join(', ') : '') + (e.note && e.note.length ? ' · ' + esc(e.note.join('; ')) : '') + '</div>' : '';
+    var en = e ? '<div class="p2-sess">Consumo stimato: <b>circa ' + fmt(e.k, 0) + ' kcal</b> oltre il riposo' + (e.strengthMin > 0 ? ' · pesi e pause: ' + fmt(e.strengthMin, 0) + ' min' : '') + (e.cardio && e.cardio.length ? ' · cardio: ' + e.cardio.map(function (c) { return esc(c.nome) + (c.min > 0 ? ' ' + fmt(c.min, c.min % 1 ? 1 : 0) + ' min' : '') + (c.unknown ? ' (consumo non stimabile: dati insufficienti)' : ', circa ' + fmt(c.k, 0) + ' kcal'); }).join('; ') : '') + (e.note && e.note.length ? ' · ' + esc(e.note.join('; ')) : '') + '</div>' : '';
     return '<div class="wday" style="--c:' + G.c + '"><div class="wh"><span class="ico">' + esc(G.s) + '</span><div><div class="tt">' + esc(w.title) + '</div><div class="dt">' + meta + '</div></div></div>' + en
       + '<div class="body">' + (w.exercises || []).map(function (ex) { return '<div class="ex"><b>' + esc(ex.name) + '</b><div class="sets">' + (ex.sets || []).map(function (s) { return '<span>' + esc(fmtSet(s)) + '</span>'; }).join('') + '</div></div>'; }).join('') + '</div></div>';
   }).join('');
