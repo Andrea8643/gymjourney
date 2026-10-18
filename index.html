@@ -5927,6 +5927,7 @@ function lastWeekNeed() {
 }
 function renderNeed() {
   var box = $('#need-body'); if (!box) return;
+  var selectedDay=ringDay();if(selectedDay!==todayStr()){renderHistoricalNeed(selectedDay,box);return;}
   var h = $('#need-card h2'); if (h) h.textContent = 'Mantenimento e piano di oggi';
   var E = state.E, t = todayStr();
   if (!E || E.status === 'nessun_piano') { box.innerHTML = noPlanHTML(); return; }
@@ -7411,8 +7412,10 @@ function saveDayForm(date, o) {
     if (!Object.keys(d.st).length) delete d.st;
     d.sleepH = o.sleepH; d.note = o.note || null; d.source = d.source || 'app';
     if (o.riposo) d.riposo = true; else delete d.riposo;
+    if (o.acts !== undefined || o.actsNone !== undefined) {
     if (o.acts && o.acts.length) { d.acts = o.acts.map(function (a, i) { return { id: a.id || 'a' + (i + 1), type: a.type, min: a.min || null, km: a.km || null }; }); delete d.actsNone; }
     else { delete d.acts; if (o.actsNone) d.actsNone = true; else delete d.actsNone; }
+    }
   });
 }
 
@@ -10315,6 +10318,36 @@ function energyView() {
   if (energyViewCache.E !== state.E) { energyViewCache.E = state.E; energyViewCache.value = GJEnergySummary.build(engineD(), state.E, GJM); }
   return energyViewCache.value || { available: false, history: [] };
 }
+/* Browsing a date uses an independent model result; it never replaces state.E or saves a plan. */
+var needDateCache={source:null,entries:[]};
+function needDateContext(date){
+  if(!state.E||date===todayStr())return {date:date,historical:date!==todayStr(),E:state.E,view:energyView()};
+  if(needDateCache.source!==state.E){needDateCache.source=state.E;needDateCache.entries=[];}
+  var cached=needDateCache.entries.filter(function(x){return x.date===date;})[0];if(cached)return cached;
+  var result={date:date,historical:true,E:null,view:{available:false,history:[]}};
+  try{var D=engineD();result.E=GJM.engine(D,date);result.view=GJEnergySummary.build(D,result.E,GJM);}catch(e){result.error=e;}
+  needDateCache.entries.push(result);if(needDateCache.entries.length>8)needDateCache.entries.shift();
+  return result;
+}
+function renderHistoricalNeed(date,box){
+  var context=needDateContext(date),E=context.E,h=$('#need-card h2'),why=$('#nc-why');
+  if(h)h.textContent='Mantenimento e piano del '+fmtDay(date);
+  if(why)why.innerHTML='<p>Il riquadro segue il giorno scelto con le frecce. Mostra il piano in vigore e la settimana di quella data, con una ricostruzione basata sui dati registrati fino a quel giorno.</p><p>Le correzioni dello storico possono aggiornare questi valori. Consultare un giorno passato non modifica il piano attuale.</p>';
+  if(context.error){box.innerHTML='<div class="p2-empty"><b>Non riesco a ricostruire questa data.</b><p>'+esc(String(context.error.message||context.error))+'</p></div>';return;}
+  if(!E||E.status==='nessun_piano'){box.innerHTML='<div class="p2-empty"><b>Nessun piano in vigore il '+fmtDay(date)+'.</b><p>Non ci sono obiettivi registrati per questa data.</p></div>';return;}
+  var td=E.today||{},T=td.target,M=td.macros,B=td.balance,Rs=td.residual,cf=E.confidence||{},tr=E.weight&&E.weight.trend,rows=[];
+  var note=T?'È quanto prevedeva il piano per il '+fmtDay(date)+', in vigore dal '+fmtDay(T.from)+'. L’obiettivo alimentare è distinto dal consumo stimato.':'Nessun obiettivo disponibile per questa data.';
+  rows.push(p2tile('Obiettivo calorico del giorno',T?kc(T.v):'—',note,{rule:'obiettivo-kcal'}));
+  var balance='—',balanceNote='Bilancio del piano non disponibile.';
+  if(B&&B.expected!=null){var ex=B.expected;balance=Math.abs(ex)<50?'Equilibrio':'<em>'+(ex>0?'Deficit atteso':'Surplus atteso')+'</em>'+kc(Math.abs(ex));balanceNote='Consumo stimato con le calorie del piano '+fmt(B.expected+B.T,0)+' − obiettivo '+fmt(B.T,0)+' kcal. Il bilancio del diario usa invece le calorie effettivamente confermate.';}
+  if(Rs&&Rs.intake!=null)balanceNote+='<div class="p2-res"><span>Scostamento dalle calorie del piano</span><b>'+(Rs.v>=0?kc(Rs.v)+' sotto':kc(-Rs.v)+' sopra')+'</b><small>'+fmt(Rs.intake,0)+' kcal registrate · '+lb('fstate',Rs.state).toLowerCase()+'</small></div>';
+  else balanceNote+='<p>Calorie del giorno non registrate: scostamento non disponibile.</p>';
+  rows.push(p2tile('Rispetto al piano',balance,balanceNote,{rule:'deficit-sett'}));
+  rows.push(p2tile('Macro',M?macroHTML(M):'—','Quantità previste dal piano in vigore il '+fmtDay(date)+'.',{cls:'wide',rule:'macro'}));
+  rows.push(p2tile('Fiducia nella stima del fabbisogno',lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
+  rows.push(p2tile('Peso, tendenza',tr&&!tr.none?fmt(tr.v,1)+' kg':'—',tr&&!tr.none?'Tendenza ricostruita con le pesate fino al '+fmtDay(date)+'. Ultima pesata: '+fmt(tr.last.w,1)+' kg il '+fmtDay(tr.last.d)+'.':'Nessuna pesata disponibile fino a questa data.',{rule:'tendenza'}));
+  box.innerHTML=maintenanceHeroHTML(context.view,context)+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>';
+}
 function routineEnergyHTML(r) {
   var j=r.routine.job, a=[], R=r.routine;
   if(j&&j.days&&j.days.length)a.push('<span><b>Lavoro</b>'+j.days.length+' giorni × '+fmt(j.hours,1)+' h · '+esc(j.days.map(function(x){return WD[x];}).join(', '))+'</span>');
@@ -10324,19 +10357,20 @@ function routineEnergyHTML(r) {
   a.push('<span><b>Passi abituali</b>'+(r.unknown.some(function(x){return x.indexOf('Passi abituali')===0;})?'Da completare':R.steps!=null?fmt(R.steps,0)+' al giorno':'Da completare')+'</span>');
   return '<div class="maintenance-routine">'+a.join('')+'</div>';
 }
-function dailyEnergyHTML(view) {
-  var x=view.today;if(!x||x.C==null)return '<p class="muted small">Consumo di oggi non stimabile con i dati disponibili.</p>';
+function dailyEnergyHTML(view,options) {
+  var past=options&&options.historical,dayLabel=past?fmtDay(options.date):'Oggi';
+  var x=view.today;if(!x||x.C==null)return '<p class="muted small">Consumo '+(past?'del giorno selezionato':'di oggi')+' non stimabile con i dati disponibili.</p>';
   var a=x.A||{},p=a.parts||{},closed=x.usable,src=a.orig||{};
-  return '<div class="daily-energy"><div><span>'+(closed?'Oggi · dati confermati':'Oggi · previsione')+'</span><b>'+kc(x.C)+'</b><small>Consumo totale del giorno, distinto dal mantenimento medio.</small></div><div class="daily-energy-facts"><span><b>Lavoro di oggi</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo oggi':'Non disponibile'))+'</span><span><b>Palestra di oggi</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
+  return '<div class="daily-energy"><div><span>'+esc(dayLabel)+(closed?' · dati confermati':past?' · dati incompleti':' · previsione')+'</span><b>'+kc(x.C)+'</b><small>Consumo totale del giorno, distinto dal mantenimento medio.</small></div><div class="daily-energy-facts"><span><b>Lavoro '+(past?'del giorno':'di oggi')+'</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile'))+'</span><span><b>Palestra '+(past?'del giorno':'di oggi')+'</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
 }
-function maintenanceHeroHTML(view) {
-  if(!view.available)return '<div class="maintenance-hero"><h3>Il tuo mantenimento attuale</h3><p>Completa profilo e piano per ottenere la prima stima. I dati mancanti non sono attività confermate.</p></div>';
-  var r=view.reference,change=view.change,E=state.E;
+function maintenanceHeroHTML(view,options) {
+  if(!view.available)return '<div class="maintenance-hero"><h3>'+(options&&options.historical?'Mantenimento della settimana selezionata':'Il tuo mantenimento attuale')+'</h3><p>Completa profilo e piano per ottenere la prima stima. I dati mancanti non sono attività confermate.</p></div>';
+  var past=options&&options.historical,r=view.reference,change=view.change,E=options&&options.E||state.E;
   var changeText=change?'Rispetto al riferimento di fine settimana scorsa: '+(change.total>=0?'+':'−')+fmt(Math.abs(change.total),0)+' kcal/giorno.':'Primo riferimento disponibile: non c’è ancora una settimana precedente confrontabile.';
   if(change&&change.routine!=null)changeText+=' Routine e peso di riferimento: '+sgn(change.routine,0)+'; aggiornamento della calibrazione: '+sgn(change.calibration,0)+' kcal/giorno. È una scomposizione del modello, non una misura delle cause fisiologiche.';
-  return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato attuale"><div class="maintenance-top"><span>SETTIMANA '+fmtShort(view.from)+' – '+fmtShort(view.to)+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Il tuo mantenimento attuale</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media della tua routine attuale</small></span></div><p>Questo è il riferimento stimato per mantenere il peso, con il lavoro e l’attività della tua settimana tipo.</p><div class="maintenance-bottom"><span><small>Equivalente su 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel(E))+'</b></span></div>'+routineEnergyHTML(r)
+  return '<section class="maintenance-hero" aria-label="'+(past?'Mantenimento medio stimato della settimana selezionata':'Mantenimento medio stimato attuale')+'"><div class="maintenance-top"><span>SETTIMANA '+fmtShort(view.from)+' – '+fmtShort(view.to)+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>'+(past?'Il tuo mantenimento in quella settimana':'Il tuo mantenimento attuale')+'</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>'+(past?'media della routine di quella settimana':'media della tua routine attuale')+'</small></span></div><p>'+(past?'Riferimento ricostruito al '+fmtDay(options.date)+', con il lavoro e l’attività di quel periodo.':'Questo è il riferimento stimato per mantenere il peso, con il lavoro e l’attività della tua settimana tipo.')+'</p><div class="maintenance-bottom"><span><small>Equivalente su 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel(E))+'</b></span></div>'+routineEnergyHTML(r)
     +(r.unknown.length?'<div class="maintenance-missing"><b>Stima da completare</b><p>'+r.unknown.map(esc).join(' ')+'</p></div>':'')
-    +'<details class="maintenance-details"><summary>Da dove arriva e perché cambia</summary><p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali di oggi non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<p>Il consumo di oggi può essere diverso: segue il lavoro, l’allenamento e la digestione del giorno. Mangiare di più non moltiplica l’intero metabolismo.</p><button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
+    +'<details class="maintenance-details"><summary>Da dove arriva e perché cambia</summary><p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<p>Il consumo del singolo giorno può essere diverso: segue il lavoro, l’allenamento e la digestione del giorno. Mangiare di più non moltiplica l’intero metabolismo.</p><button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
 }
 function energyWeeksHTML(view) {
   var W=view.week;
@@ -10489,7 +10523,7 @@ function renderTodayRings() {
 function avatarKey() { var a = state.avatar || ''; return a.length + ':' + a.slice(-24) + '|' + (S().name || ''); }
 function renderLayoutB() {
   var av = $('#h-avatar'); if (av && av.dataset.k !== avatarKey()) { av.dataset.k = avatarKey(); av.innerHTML = avatarHTML(S().name); }
-  renderTodayRings(); renderNeed(); renderWeekCard();
+  renderTodayRings(); renderNeed(); renderWeekCard(); decorateHelpControls();
 }
 function setPhotoMsg(m) {
   state.photoMsg = m; renderAll();
@@ -10608,42 +10642,31 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
     { k: 'carbs', l: 'Carboidrati (g)', m: 'decimal' },
     { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
-    { k: 'steps', l: M.steps.SEM.quotidiani_esclusa_palestra, m: 'numeric' },
+    { k: 'steps', l: 'Passi', m: 'numeric' },
     { k: 'sleepH', l: 'Sonno (ore, es. 7:30)', m: 'text' }
   ];
   /* sezione 6.1: facoltativi, servono solo a spiegare la differenza fra calorie e 4/4/9 */
   var XF = [{ k: 'alcohol', l: 'Alcol (g)' }, { k: 'fiber', l: 'Fibre (g)' }, { k: 'polyols', l: 'Polioli (g)' }];
   var COND = { '': 'Non indicato', mattino_digiuno: 'Mattino, a digiuno', mattino: 'Mattino', sera: 'Sera', dopo_pasto: 'Dopo mangiato', altro: 'Altro momento' };
   var KST = { '': 'Scegli…', completo: 'Completa: ho segnato tutto', parziale: 'Parziale: manca qualcosa', zero_confermato: 'Digiuno confermato (zero calorie)', da_confermare: 'Da confermare' };
-  var ACT = {}; Object.keys(M.ACT_T).forEach(function (k) { ACT[k] = M.ACT_T[k].nome || k; });
   function opts(map, cur) { return Object.keys(map).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + map[k] + '</option>'; }).join(''); }
   var box = document.createElement('div');
   box.id = 'dayform'; box.className = 'df-bg'; box.hidden = true;
-  box.innerHTML = '<form class="panel stack df-card" novalidate>'
-    + '<div class="panel-head" style="margin:0"><h2>I dati del giorno</h2><button type="button" class="btn ghost icon fit" data-x aria-label="Chiudi">✕</button></div>'
-    + '<label class="f"><span>Giorno</span><input type="date" name="date" required></label>'
+  box.innerHTML = '<form class="panel df-card df-form" role="dialog" aria-modal="true" aria-labelledby="dayform-title" novalidate>'
+    + '<div class="df-head"><h2 id="dayform-title">I dati del giorno</h2><button type="button" class="df-close" data-x aria-label="Chiudi senza salvare">✕</button></div>'
+    + '<div class="df-content"><label class="f df-date"><span>Giorno</span><input type="date" name="date" required></label>'
+    + '<p class="muted small df-meals" hidden></p>'
     + '<div class="df-grid">' + FIELDS.map(function (f) { return '<label class="f"><span>' + f.l + '</span><input name="' + f.k + '" inputmode="' + f.m + '" autocomplete="off"></label>'; }).join('')
     + '<label class="f"><span>Ora della pesata</span><input name="weightTime" type="time"></label>'
+    + '<label class="ped-chk df-rest"><input type="checkbox" name="riposo"><span>Riposo dalla palestra confermato</span></label>'
     + '<label class="f"><span>Condizione della pesata</span><select name="weightCond">' + opts(COND, '') + '</select></label>'
-    + '<label class="f"><span>Calorie del giorno</span><select name="kcalState">' + opts(KST, 'parziale') + '</select></label>'
-    + '</div>'
-    + '<p class="muted small df-meals" hidden></p>'
-    + '<div class="df-info small" data-stepsinfo hidden><b>' + M.steps.SEM.quotidiani_esclusa_palestra + '.</b> Scrivi solo i passi della vita di tutti i giorni. Il cammino o la corsa fatti in palestra arrivano da Hevy: se li sommi qui vengono contati due volte. <button type="button" class="linkbtn small" data-stepsok>Ho capito</button></div>'
-    + '<label class="ped-chk"><input type="checkbox" name="riposo"> Oggi riposo dalla palestra (confermato)</label>'
-    + '<details class="more" data-xf><summary>Alcol, fibre e polioli (facoltativi)</summary><div class="in"><div class="df-grid">' + XF.map(function (x) { return '<label class="f"><span>' + x.l + '</span><input name="' + x.k + '" inputmode="decimal" autocomplete="off"></label>'; }).join('') + '</div><p class="muted small">Non cambiano le calorie che scrivi: servono a capire se la differenza fra calorie e proteine × 4 + carboidrati × 4 + grassi × 9 viene da alcol (7 kcal/g), fibre (2 kcal/g) o polioli (2,4 kcal/g).</p></div></details>'
-    + '<details class="more"><summary>Attività fuori palestra non contate nei passi</summary><div class="in"><div data-acts></div><button type="button" class="btn ghost fit small" data-actadd>Aggiungi</button><label class="ped-chk"><input type="checkbox" name="actsNone"> Oggi nessuna (non uso le abitudini dichiarate)</label></div></details>'
-    + '<label class="f"><span>Note</span><textarea name="note" rows="2"></textarea></label>'
-    + '<p class="muted small" data-msg style="margin:0">Lascia vuoto ciò che non sai: si può aggiungere dopo. Una giornata entra nel calcolo del consumo solo se la segni completa.</p>'
-    + '<div class="row"><button class="btn fit" type="submit">Salva</button><button class="btn ghost fit" type="button" data-x>Annulla</button></div>'
-    + '</form>';
+    + '<label class="f"><span>Calorie del giorno</span><select name="kcalState">' + opts(KST, 'parziale') + '</select></label></div>'
+    + '<label class="f df-notes"><span>Note</span><textarea name="note" rows="2"></textarea></label>'
+    + '<details class="more df-extra" data-xf><summary>Alcol, fibre e polioli</summary><div class="in"><div class="df-grid">' + XF.map(function (x) { return '<label class="f"><span>' + x.l + '</span><input name="' + x.k + '" inputmode="decimal" autocomplete="off"></label>'; }).join('') + '</div><p class="muted small">Valori facoltativi per il confronto fra calorie e macronutrienti.</p></div></details></div>'
+    + '<div class="df-footer"><p class="small df-message" data-msg role="alert"></p><div class="df-actions"><button class="btn ghost fit" type="button" data-x>Annulla</button><button class="btn fit" type="submit">Salva</button></div></div></form>';
   document.body.appendChild(box);
-  var f = box.querySelector('form'), msg = box.querySelector('[data-msg]'), actsBox = box.querySelector('[data-acts]'), info = box.querySelector('[data-stepsinfo]');
-  var acts = [];
-  function actsRender() {
-    actsBox.innerHTML = acts.map(function (a, i) { return '<div class="ped-act"><select data-ai="' + i + '" data-ak="type">' + opts(ACT, a.type) + '</select><label class="f">min<input data-ai="' + i + '" data-ak="min" type="number" min="0" step="5" value="' + (a.min || '') + '"></label><label class="f">km<input data-ai="' + i + '" data-ak="km" type="number" min="0" step="0.1" value="' + (a.km || '') + '"></label><button type="button" class="linkbtn small" data-actdel="' + i + '">Togli</button></div>'; }).join('');
-  }
+  var f = box.querySelector('form'), msg = box.querySelector('[data-msg]'), opener = null;
   function show(v) { return v == null ? '' : String(v).replace('.', ','); }
-  function stepsInfo() { var seen = false; try { seen = localStorage.getItem('gj-steps-info') === '1'; } catch (e) {} info.hidden = seen; }
   function fill(date) {
     var d = state.days.get(date) || {}, t = todayStr();
     f.date.value = date;
@@ -10654,20 +10677,16 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
       f[x.k].value = show(v);
     });
     f.weightTime.value = d.weightTime || '';
+    f.note.value = d.note || '';
     /* una pesata nuova parte da «mattino, a digiuno», il caso più comune; una pesata già salvata tiene la sua condizione */
     f.weightCond.value = d.weightCond || (d.weight == null ? 'mattino_digiuno' : '');
     XF.forEach(function (x) { f[x.k].value = show(d[x.k]); }); box.querySelector('[data-xf]').open = XF.some(function (x) { return d[x.k] > 0; });
     var ks = d.st && d.st.kcal ? d.st.kcal : d.kcal > 0 ? M.fieldState(d, 'kcal', date === t) : (date === t ? 'parziale' : '');
     f.kcalState.value = KST[ks] != null ? ks : '';
-    f.riposo.checked = d.riposo === true; f.actsNone.checked = d.actsNone === true;
-    acts = (d.acts || []).map(function (a) { return Object.assign({}, a); }); actsRender();
+    f.riposo.checked = d.riposo === true;
     var mm = box.querySelector('.df-meals');
     if (d.meals && d.meals.length) { mm.hidden = false; mm.textContent = 'Questo giorno ha ' + d.meals.length + ' voci di pasti: il totale è la loro somma. Se cambi il totale qui, la differenza diventa la voce «Correzione del totale» (visibile e modificabile nel diario).'; } else mm.hidden = true;
-    var lb = f.steps.closest('label').querySelector('span'); lb.textContent = M.steps.SEM.quotidiani_esclusa_palestra;
-    if (d.steps != null && d.stepsSem && d.stepsSem !== 'quotidiani_esclusa_palestra') lb.textContent += ' (il valore salvato era: ' + (M.steps.SEM[d.stepsSem] || d.stepsSem).toLowerCase() + ')';
-    else if (d.steps != null && !d.stepsSem && !d.stepsV) lb.textContent += ' (valore scritto prima: significato non noto)';
-    msg.className = 'muted small'; msg.style.color = ''; msg.textContent = 'Lascia vuoto ciò che non sai: si può aggiungere dopo. Una giornata entra nel calcolo del consumo solo se la segni completa.';
-    stepsInfo();
+    msg.className = 'small df-message'; msg.style.color = ''; msg.textContent = '';
   }
   var RANGE = { weight: [30, 300], kcal: [0, 10000], protein: [0, 500], carbs: [0, 1500], fat: [0, 500], steps: [0, 100000], sleepH: [0, 20], alcohol: [0, 500], fiber: [0, 200], polyols: [0, 300] };
   var HINT = { weight: 'in kg, tra 30 e 300', kcal: 'fino a 10.000', protein: 'in grammi, fino a 500', carbs: 'in grammi, fino a 1.500', fat: 'in grammi, fino a 500', steps: 'fino a 100.000', sleepH: 'ore e minuti, es. 7:30, fino a 20 ore', alcohol: 'in grammi, fino a 500', fiber: 'in grammi, fino a 200', polyols: 'in grammi, fino a 300' };
@@ -10687,21 +10706,29 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     if (isNaN(v) || v < RANGE[k][0] || v > RANGE[k][1]) return undefined;
     return v;
   }
+  function fitViewport(){
+    if(box.hidden)return;var v=window.visualViewport;
+    box.style.setProperty('--df-vh',(v?v.height:window.innerHeight)+'px');
+    box.style.setProperty('--df-top',(v?v.offsetTop:0)+'px');
+  }
   window.openDayForm = function (date) {
-    fill(date || todayStr());
-    box.hidden = false;
-    setTimeout(function () { var first = f.weight.value ? f.kcal : f.weight; first.focus(); }, 60);
+    opener=document.activeElement;fill(date || todayStr());box.hidden=false;
+    document.documentElement.classList.add('dayform-open');fitViewport();
+    box.querySelector('.df-content').scrollTop=0;
+    requestAnimationFrame(function(){if(!box.hidden)box.querySelector('.df-close').focus({preventScroll:true});});
   };
-  function close() { box.hidden = true; }
-  box.addEventListener('click', function (e) {
-    if (e.target === box || e.target.closest('[data-x]')) { close(); return; }
-    if (e.target.closest('[data-stepsok]')) { try { localStorage.setItem('gj-steps-info', '1'); } catch (er) {} info.hidden = true; return; }
-    if (e.target.closest('[data-actadd]')) { acts.push({ type: 'bici', min: null, km: null }); actsRender(); return; }
-    var d = e.target.closest('[data-actdel]'); if (d) { acts.splice(+d.dataset.actdel, 1); actsRender(); }
-  });
-  actsBox.addEventListener('input', function (e) { var i = e.target.dataset.ai, k = e.target.dataset.ak; if (i == null) return; acts[+i][k] = k === 'type' ? e.target.value : (parseFloat(String(e.target.value).replace(',', '.')) || null); });
-  actsBox.addEventListener('change', function (e) { var i = e.target.dataset.ai, k = e.target.dataset.ak; if (i == null || k !== 'type') return; acts[+i].type = e.target.value; });
-  f.steps.addEventListener('focus', stepsInfo);
+  function close(){box.hidden=true;document.documentElement.classList.remove('dayform-open');if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
+  box.addEventListener('click',function(e){if(e.target===box||e.target.closest('[data-x]'))close();});
+  document.addEventListener('keydown',function(e){
+    if(box.hidden)return;
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}
+    if(e.key!=='Tab')return;
+    var items=Array.from(f.querySelectorAll('button,input,select,textarea,summary')).filter(function(el){return !el.disabled&&el.getClientRects().length;}),first=items[0],last=items[items.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  },true);
+  window.addEventListener('resize',fitViewport);
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',fitViewport);window.visualViewport.addEventListener('scroll',fitViewport);}
   f.date.addEventListener('change', function () { if (f.date.value) fill(f.date.value); });
   f.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -10715,8 +10742,7 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     if (ks === 'completo' && date > todayStr()) bad.push('un giorno futuro non può essere completo');
     if (bad.length) { msg.className = 'small'; msg.style.color = 'var(--bad)'; msg.textContent = 'Controlla: ' + bad.join(', ') + '.'; return; }
     vals.kcalState = ks; vals.weightTime = f.weightTime.value || null; vals.weightCond = f.weightCond.value || null;
-    vals.riposo = f.riposo.checked; vals.actsNone = f.actsNone.checked;
-    vals.acts = acts.filter(function (a) { return a.type && (a.min > 0 || a.km > 0); });
+    vals.riposo = f.riposo.checked;
     vals.note = f.note.value.trim() || null;
     G.saveDayForm(date, vals);
     close();
@@ -11059,7 +11085,7 @@ body .panel+.panel:not(#z):not(#y){margin-top:0}
 #tab-diario .daybar>.btn.icon:not(#z):not(#y){flex:none!important;width:40px!important;min-width:40px!important}
 #tab-diario #d-today:not(#z):not(#y){flex:none!important;padding-left:12px!important;padding-right:12px!important}
 #tab-diario #d-date-txt:not(#z):not(#y){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#tab-diario .daybar:has(#d-today:not([hidden])) .dp-btn svg:not(#z):not(#y){display:none}
+/* Il calendario rimane visibile anche quando compare il pulsante Oggi. */
 #d-today[hidden]:not(#z):not(#y){display:none!important}
 #tab-diario .dayhead:not(#z):not(#y){display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:10px}
 #tab-diario .dayhead h2:not(#z):not(#y){flex:1 1 auto;min-width:0;margin:0!important}
@@ -12092,6 +12118,71 @@ body .nav .tab .friend-request-badge[hidden]:not(#z):not(#y){display:none!import
  body .nav .tab .friend-request-badge:not(#z):not(#y){right:calc(50% - 20px);top:0;transform:none;min-width:18px;height:18px;padding:0 4px;font-size:9px!important}
 }
 @media(prefers-reduced-motion:reduce){body .nav .tab .friend-request-badge:not(#z):not(#y){animation:none!important}}
+
+
+body #tab-diario #d-date>svg:not(#z):not(#y){display:block!important;flex:0 0 22px!important;width:22px!important;height:22px!important;color:#FF5C8A!important;opacity:1!important;visibility:visible!important}
+@media(max-width:430px){#tab-diario .daybar:not(#z):not(#y){gap:6px!important}#tab-diario .daybar>.btn.icon:not(#z):not(#y){width:32px!important;min-width:32px!important;height:36px!important;min-height:36px!important;padding:0!important}#tab-diario #d-today:not(#z):not(#y){padding:10px 8px!important;font-size:.78rem!important}#tab-diario #d-date:not(#z):not(#y){gap:6px!important;padding:10px 8px!important;font-size:.82rem!important}}
+
+/* A bounded dialog: the header and actions stay outside the scrolling fields. */
+html.dayform-open,html.dayform-open body{overflow:hidden!important;overscroll-behavior:none}
+body #dayform:not(#z):not(#y){z-index:1200;display:flex;align-items:center;justify-content:center;top:var(--df-top,0px);bottom:auto;left:0;right:0;width:100%;height:var(--df-vh,100dvh);min-height:0;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));box-sizing:border-box;overflow:hidden;overscroll-behavior:none}
+body #dayform[hidden]:not(#z):not(#y){display:none!important}
+body #dayform .df-form:not(#z):not(#y){display:flex;flex-direction:column;align-items:stretch;width:min(100%,540px);max-width:100%;max-height:100%;min-width:0;min-height:0;margin:0;padding:0!important;overflow:hidden;box-sizing:border-box;border:1px solid #FA114F26!important;border-radius:24px!important;background:#1C1C1E!important;box-shadow:0 24px 80px #0008!important}
+#dayform .df-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 20px;background:linear-gradient(115deg,#FA114F16,transparent);border-bottom:1px solid #ffffff0a}
+body #dayform .df-head h2:not(#z):not(#y){margin:0;font-size:1.2rem!important;line-height:1.3!important;min-width:0}
+#dayform .df-close{flex:none;display:grid;place-items:center;width:42px;height:42px;min-width:42px;padding:0;border:1px solid #ffffff0b;border-radius:50%;background:#ffffff07;color:#eee;font:600 1rem/1 var(--f-body);cursor:pointer}
+#dayform .df-close:hover{background:#ffffff10}
+#dayform .df-close:focus-visible{outline:2px solid #FF7D9D;outline-offset:2px}
+#dayform .df-content{flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable;padding:20px;display:flex;flex-direction:column;gap:20px}
+#dayform .df-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px;min-width:0;width:100%;align-items:end}
+#dayform .f{min-width:0;max-width:100%;margin:0;display:flex;flex-direction:column;gap:8px}
+#dayform .f>span{font-size:.76rem;color:#BCBAC3;line-height:1.4;min-width:0}
+body #dayform input:not([type=checkbox]):not(#z):not(#y),body #dayform select:not(#z):not(#y),body #dayform textarea:not(#z):not(#y){box-sizing:border-box;display:block;width:100%!important;max-width:100%!important;min-width:0!important;min-inline-size:0!important;margin:0!important;min-height:48px;padding:12px!important;border:1px solid #ffffff0a!important;border-radius:13px!important;background:#29292D!important;color:#F3F0F5!important;font:500 16px/1.35 var(--f-body)!important;box-shadow:inset 0 1px #ffffff04!important}
+body #dayform input:focus:not(#z):not(#y),body #dayform select:focus:not(#z):not(#y),body #dayform textarea:focus:not(#z):not(#y){outline:0;border-color:#FF5C8A!important;box-shadow:0 0 0 3px #FA114F16!important}
+#dayform input[type=date],#dayform input[type=time]{-webkit-appearance:none;appearance:none;overflow:hidden}
+#dayform input::-webkit-date-and-time-value{min-width:0;text-align:left}
+#dayform input::-webkit-datetime-edit{min-width:0;padding:0}
+#dayform .df-date{padding:14px 16px;border-radius:16px;background:#FA114F08;border:1px solid #FA114F1A}
+#dayform .df-date>span{color:#F1ABC0;font-size:.7rem;letter-spacing:.05em;text-transform:uppercase}
+body #dayform .df-date input:not(#z):not(#y){padding:2px 0!important;min-height:32px;border:0!important;background:transparent!important;border-radius:0!important;box-shadow:none!important;font-size:17px!important}
+#dayform .df-rest{grid-column:1/-1;display:flex!important;align-items:center!important;gap:10px;margin:0!important;padding:12px 14px;border:1px solid #ffffff08;border-radius:13px;background:#ffffff03;min-width:0;color:#CDC8D1;font-size:.8rem;line-height:1.45}
+#dayform .df-rest input{width:18px!important;min-width:18px!important;height:18px!important;accent-color:#FA114F}
+#dayform .df-notes textarea{resize:vertical;min-height:82px}
+body #dayform .df-extra>summary:not(#z):not(#y){min-height:58px;box-sizing:border-box;padding:14px 106px 14px 15px!important;border-radius:14px!important;background:#242428!important;border:1px solid #ffffff0a!important;box-shadow:none!important;color:#DCC7D0!important;font-size:.84rem;line-height:1.45}
+body #dayform .df-extra>.in:not(#z):not(#y){margin-top:10px!important;padding:15px!important;border:1px solid #ffffff08!important;background:#202023!important}
+#dayform .df-extra .df-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#dayform .df-extra p{margin-top:12px;line-height:1.6;font-size:.75rem}
+#dayform .df-footer{flex:none;padding:14px 20px 18px;border-top:1px solid #ffffff0a;background:#1F1E21}
+#dayform .df-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+body #dayform .df-actions .btn:not(#z):not(#y){width:100%;min-width:0;min-height:46px;padding:11px 14px!important;border-radius:13px!important;font-size:.9rem!important}
+#dayform .df-message{margin:0 0 12px;font-size:.8rem;line-height:1.5;overflow-wrap:anywhere}
+#dayform .df-message:empty{display:none}
+#dayform .df-meals{padding:12px;border-radius:12px;background:#ffffff05;font-size:.76rem;line-height:1.55}
+/* Prevent intrinsic chart/label widths from moving the weight column sideways. */
+@media(max-width:1023px){
+ body:has(#tab-diario:not([hidden]) .dsec[data-dsec="peso"]:not([hidden])){margin-inline:0!important;padding-inline:max(14px,env(safe-area-inset-left,0px),env(safe-area-inset-right,0px))!important}
+ body:has(#tab-diario:not([hidden]) .dsec[data-dsec="peso"]:not([hidden]))>.wrap{width:100%;min-width:0;max-width:100%;margin-inline:auto}
+ #tab-diario,#tab-diario .dsec[data-dsec="peso"]{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+ #tab-diario .dsec[data-dsec="peso"]>.panel{width:100%;max-width:100%;min-width:0;margin-inline:auto!important;box-sizing:border-box}
+ #tmw,#tmw-body,#tmw .bs-hero,#tmw .bs-scale,#tmw .bs-res{min-width:0;max-width:100%;box-sizing:border-box}
+ #tmw .tmw-nav{width:100%;max-width:420px;margin-inline:auto!important;grid-template-columns:42px minmax(0,1fr) 42px;gap:10px}
+ #tmw .bs-range-main{justify-content:center;text-align:center;gap:6px}
+ #tmw .bs-hero{text-align:center}
+ body #tab-diario #tmw .bs-hero>p:not(#z):not(#y){text-align:center!important}
+ #tmw .bs-axis{margin-inline:26px}
+ #tmw .bs-nums{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #tmw .bs-nums>div{padding:10px 6px;text-align:center}
+ #tmw .bs-nums small{font-size:.65rem;white-space:normal;overflow-wrap:anywhere}
+ #tmw .bs-nums b{font-size:clamp(.95rem,4vw,1.25rem)}
+}
+@media(max-width:430px){
+ #dayform .df-head{padding:14px 16px}
+ #dayform .df-content{padding:16px;gap:18px;scrollbar-gutter:auto}
+ #dayform .df-footer{padding:12px 16px 14px}
+ #dayform .df-grid{gap:14px 10px}
+ body #dayform .df-extra>summary:not(#z):not(#y){padding:13px 92px 13px 13px!important;font-size:.79rem}
+ #dayform .df-date{padding:12px}
+}
 
 </style>
 </body></html>
