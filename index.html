@@ -7196,7 +7196,7 @@ function bindPlan(box) {
     if (a === 'ver-restore') { var v0 = planVersions().filter(function (x) { return x.id === b.dataset.id; })[0]; if (!v0) return; pedOpen(v0); var dm = $('#pf-modifica'); if (dm) { dm.open = true; pfBody(PF_ROWS[1]); dm.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); } return; }
     if (a === 'ver-cancel') { cancelVersion(b.dataset.id); return; }
     if (a === 'job-add') {
-      var f = formVals($('#job-new')), days = WD.map(function (x, i) { return f['jd' + i] ? i : -1; }).filter(function (i) { return i >= 0; }), hw = n2(f.hw), hd = n2(f.hd);
+      var f = formVals($('#job-new')), days = WD.map(function (x, i) { var cb = $('#pf-lavoro input[name="jd' + i + '"]'); return cb && cb.checked ? i : -1; }).filter(function (i) { return i >= 0; }), hw = n2(f.hw), hd = n2(f.hd);
       if (!dValidApp(f.from)) return msg('#job-msg', 'Data non valida.');
       if (days.length && !(hd > 0)) return msg('#job-msg', 'Con i giorni scelti indica le ore al giorno.');
       if (!days.length && hw == null && f.type !== 'seduto' && f.type !== 'non_so') return msg('#job-msg', 'Indica le ore a settimana o i giorni con le ore.');
