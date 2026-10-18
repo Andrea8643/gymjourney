@@ -5989,7 +5989,7 @@ function renderNeed() {
   rows = [rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
   box.innerHTML = maintenanceHeroHTML(energyView()) + dailyEnergyHTML(energyView()) + '<div class="p2-tiles">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
   var why = $('#nc-why');
-  if (why) why.innerHTML = '<p><b>Obiettivo</b> e <b>consumo</b> sono due numeri diversi: l\'obiettivo è quanto mangiare secondo il piano, il consumo è una stima di quanto spendi. Il residuo si calcola sull\'obiettivo.</p><p>Il consumo di oggi è previsto (la giornata non è finita); i giorni passati sono ricostruiti con i loro dati. Il piano non cambia mentre inserisci i pasti: cambia solo con una revisione, con una data e un motivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
+  if (why) why.innerHTML = '<p>Il <b>mantenimento medio della settimana</b> è il riferimento giornaliero della routine, uguale mentre scorri i giorni della stessa settimana. Per quella in corso è aggiornato con i dati fino a oggi; per quelle concluse fino alla domenica. Nuovi dati e correzioni possono aggiornarlo.</p><p>Il <b>consumo stimato del giorno</b> segue invece lavoro, palestra, passi e calorie di quel giorno. Il dettaglio indica se le calorie sono complete o se è ancora una previsione.</p><p><b>Mantenimento × 7 giorni</b> significa il riferimento medio moltiplicato per sette; la somma dei consumi giornalieri è distinta e si trova in «Totali della settimana e metodo di calcolo».</p><p>L’obiettivo alimentare è quanto mangiare secondo il piano; non è il consumo stimato. Il residuo si calcola sull’obiettivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
 }
 /* ---------- la settimana in corso (Progressi > Settimana in corso) ---------- */
 function weekCardEl() {
@@ -10318,6 +10318,23 @@ function energyView() {
   if (energyViewCache.E !== state.E) { energyViewCache.E = state.E; energyViewCache.value = GJEnergySummary.build(engineD(), state.E, GJM); }
   return energyViewCache.value || { available: false, history: [] };
 }
+/* One reporting cutoff per calendar week. Daily reconstructions keep their own date. */
+var needWeekCache={source:null,entries:[]};
+function needWeekContext(date){
+  var from=GJEnergySummary.add(date,-((new Date(date+'T00:00:00Z').getUTCDay()+6)%7)),to=GJEnergySummary.add(from,6);
+  var latest=state.E&&state.E.asOf||todayStr(),cutoff=to<latest?to:latest;
+  if(needWeekCache.source!==state.E){needWeekCache.source=state.E;needWeekCache.entries=[];}
+  var cached=needWeekCache.entries.filter(function(x){return x.from===from;})[0];if(cached)return cached;
+  var result={from:from,to:to,cutoff:cutoff,E:null,view:{available:false,history:[]}};
+  if(from>latest){result.future=true;return result;}
+  try{
+    result.E=cutoff===latest?state.E:GJM.engine(engineD(),cutoff);
+    result.view=cutoff===latest?energyView():GJEnergySummary.build(engineD(),result.E,GJM);
+    result.view=Object.assign({},result.view,{referenceAsOf:cutoff,referenceCurrent:to>=latest});
+  }catch(e){result.error=e;}
+  needWeekCache.entries.push(result);if(needWeekCache.entries.length>8)needWeekCache.entries.shift();
+  return result;
+}
 /* Browsing a date uses an independent model result; it never replaces state.E or saves a plan. */
 var needDateCache={source:null,entries:[]};
 function needDateContext(date){
@@ -10330,9 +10347,9 @@ function needDateContext(date){
   return result;
 }
 function renderHistoricalNeed(date,box){
-  var context=needDateContext(date),E=context.E,h=$('#need-card h2'),why=$('#nc-why');
+  var context=needDateContext(date),weekly=needWeekContext(date),E=context.E,h=$('#need-card h2'),why=$('#nc-why');
   if(h)h.textContent='Mantenimento e piano del '+fmtDay(date);
-  if(why)why.innerHTML='<p>Il riquadro segue il giorno scelto con le frecce. Mostra il piano in vigore e la settimana di quella data, con una ricostruzione basata sui dati registrati fino a quel giorno.</p><p>Le correzioni dello storico possono aggiornare questi valori. Consultare un giorno passato non modifica il piano attuale.</p>';
+  if(why)why.innerHTML='<p>Il piano e il consumo del giorno seguono il giorno scelto con le frecce. Il mantenimento medio, invece, è un unico riferimento per tutta la settimana da lunedì a domenica.</p><p>Per una settimana conclusa uso la stima aggiornata alla sua domenica; per quella in corso uso la stima aggiornata a oggi. La data di aggiornamento è indicata nel riquadro. Il consumo del singolo giorno conserva i dati e la calibrazione di quel giorno.</p><p>Nuovi dati o correzioni dello storico possono aggiornare il riferimento. Consultare lo storico non modifica il piano.</p>';
   if(context.error){box.innerHTML='<div class="p2-empty"><b>Non riesco a ricostruire questa data.</b><p>'+esc(String(context.error.message||context.error))+'</p></div>';return;}
   if(!E||E.status==='nessun_piano'){box.innerHTML='<div class="p2-empty"><b>Nessun piano in vigore il '+fmtDay(date)+'.</b><p>Non ci sono obiettivi registrati per questa data.</p></div>';return;}
   var td=E.today||{},T=td.target,M=td.macros,B=td.balance,Rs=td.residual,cf=E.confidence||{},tr=E.weight&&E.weight.trend,rows=[];
@@ -10344,9 +10361,9 @@ function renderHistoricalNeed(date,box){
   else balanceNote+='<p>Calorie del giorno non registrate: scostamento non disponibile.</p>';
   rows.push(p2tile('Rispetto al piano',balance,balanceNote,{rule:'deficit-sett'}));
   rows.push(p2tile('Macro',M?macroHTML(M):'—','Quantità previste dal piano in vigore il '+fmtDay(date)+'.',{cls:'wide',rule:'macro'}));
-  rows.push(p2tile('Fiducia nella stima del fabbisogno',lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
+  rows.push(p2tile('Fiducia nella stima al '+fmtDay(date),lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
   rows.push(p2tile('Peso, tendenza',tr&&!tr.none?fmt(tr.v,1)+' kg':'—',tr&&!tr.none?'Tendenza ricostruita con le pesate fino al '+fmtDay(date)+'. Ultima pesata: '+fmt(tr.last.w,1)+' kg il '+fmtDay(tr.last.d)+'.':'Nessuna pesata disponibile fino a questa data.',{rule:'tendenza'}));
-  box.innerHTML=maintenanceHeroHTML(context.view,context)+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>';
+  box.innerHTML=maintenanceHeroHTML(weekly.view,{historical:true,date:date,E:weekly.E,weekError:weekly.error})+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>';
 }
 function routineEnergyHTML(r) {
   var j=r.routine.job, a=[], R=r.routine;
@@ -10358,19 +10375,27 @@ function routineEnergyHTML(r) {
   return '<div class="maintenance-routine">'+a.join('')+'</div>';
 }
 function dailyEnergyHTML(view,options) {
-  var past=options&&options.historical,dayLabel=past?fmtDay(options.date):'Oggi';
+  var past=options&&options.historical,dayLabel=past?fmtDay(options.date):'oggi · '+fmtDay(view.today&&view.today.d||todayStr());
   var x=view.today;if(!x||x.C==null)return '<p class="muted small">Consumo '+(past?'del giorno selezionato':'di oggi')+' non stimabile con i dati disponibili.</p>';
   var a=x.A||{},p=a.parts||{},closed=x.usable,src=a.orig||{};
-  return '<div class="daily-energy"><div><span>'+esc(dayLabel)+(closed?' · dati confermati':past?' · dati incompleti':' · previsione')+'</span><b>'+kc(x.C)+'</b><small>Consumo totale del giorno, distinto dal mantenimento medio.</small></div><div class="daily-energy-facts"><span><b>Lavoro '+(past?'del giorno':'di oggi')+'</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile'))+'</span><span><b>Palestra '+(past?'del giorno':'di oggi')+'</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
+  var status=closed?'Calorie del diario complete · consumo ricostruito.':past?'Calorie incomplete: per la digestione è usato il piano.':'Previsione della giornata; si aggiorna con i dati completi.';
+  return '<div class="daily-energy" role="group" aria-label="Consumo stimato del giorno selezionato"><div><span class="daily-energy-title">Consumo stimato del giorno</span><strong class="daily-energy-date">'+esc(dayLabel)+'</strong><b>'+kc(x.C)+'</b><small>'+status+'</small><small>Segue lavoro, allenamento, passi e digestione di questo giorno; può essere diverso dalla media settimanale.</small></div><div class="daily-energy-facts"><span><b>Lavoro '+(past?'del giorno':'di oggi')+'</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile'))+'</span><span><b>Palestra '+(past?'del giorno':'di oggi')+'</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
+}
+function maintenanceWeekDetailsHTML(view){
+  var W=view.week,r=view.reference;if(!W||!r)return '';
+  var days=W.days||[],future=days.filter(function(x){return x.kind==='futuro';}).length,complete=days.filter(function(x){return x.kind!=='futuro'&&x.usable;}).length;
+  var total=W.consumption!=null?kc(W.consumption):'Non disponibile per tutti i 7 giorni';
+  return '<div class="maintenance-week-explain"><p><b>Riferimento della routine su 7 giorni: '+kc(r.weekly)+'.</b> È il mantenimento medio moltiplicato per sette, prima degli arrotondamenti: l’equivalente di una settimana tipo, non la somma dei consumi del diario.</p><p><b>Somma dei consumi giornalieri stimati, '+fmtShort(view.from)+' – '+fmtShort(view.to)+': '+total+'.</b> '+complete+'/7 giorni con calorie complete'+(future?'; '+future+' giorni futuri previsti dal piano e dalla routine':'')+'. Nei giorni con calorie incomplete la digestione usa il piano.</p><p>Questi due totali possono differire: il primo rappresenta la routine con un unico aggiornamento; il secondo somma giornate diverse, con le rispettive attività, calorie e calibrazioni.</p><div class="energy-week-days">'+days.map(function(x){return '<span><b>'+fmtShort(x.d)+'</b><strong>'+(x.C!=null?kc(x.C):'—')+'</strong><small>'+(x.kind==='futuro'?'Previsto':x.usable?'Ricostruito':'Dati incompleti')+'</small></span>';}).join('')+'</div></div>';
 }
 function maintenanceHeroHTML(view,options) {
-  if(!view.available)return '<div class="maintenance-hero"><h3>'+(options&&options.historical?'Mantenimento della settimana selezionata':'Il tuo mantenimento attuale')+'</h3><p>Completa profilo e piano per ottenere la prima stima. I dati mancanti non sono attività confermate.</p></div>';
+  if(!view.available)return '<div class="maintenance-hero"><h3>Mantenimento medio della settimana</h3><p>'+(options&&options.weekError?'La ricostruzione della settimana non è disponibile. Riprova dopo aver ricaricato la pagina.':'Completa profilo e piano per ottenere la prima stima. I dati mancanti non sono attività confermate.')+'</p></div>';
   var past=options&&options.historical,r=view.reference,change=view.change,E=options&&options.E||state.E;
+  var latest=state.E&&state.E.asOf||todayStr(),cutoff=view.referenceAsOf||E&&E.asOf||latest,range=fmtShort(view.from)+' – '+fmtShort(view.to),current=view.referenceCurrent!=null?view.referenceCurrent:view.from<=latest&&view.to>=latest;
   var changeText=change?'Rispetto al riferimento di fine settimana scorsa: '+(change.total>=0?'+':'−')+fmt(Math.abs(change.total),0)+' kcal/giorno.':'Primo riferimento disponibile: non c’è ancora una settimana precedente confrontabile.';
   if(change&&change.routine!=null)changeText+=' Routine e peso di riferimento: '+sgn(change.routine,0)+'; aggiornamento della calibrazione: '+sgn(change.calibration,0)+' kcal/giorno. È una scomposizione del modello, non una misura delle cause fisiologiche.';
-  return '<section class="maintenance-hero" aria-label="'+(past?'Mantenimento medio stimato della settimana selezionata':'Mantenimento medio stimato attuale')+'"><div class="maintenance-top"><span>SETTIMANA '+fmtShort(view.from)+' – '+fmtShort(view.to)+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>'+(past?'Il tuo mantenimento in quella settimana':'Il tuo mantenimento attuale')+'</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>'+(past?'media della routine di quella settimana':'media della tua routine attuale')+'</small></span></div><p>'+(past?'Riferimento ricostruito al '+fmtDay(options.date)+', con il lavoro e l’attività di quel periodo.':'Questo è il riferimento stimato per mantenere il peso, con il lavoro e l’attività della tua settimana tipo.')+'</p><div class="maintenance-bottom"><span><small>Equivalente su 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel(E))+'</b></span></div>'+routineEnergyHTML(r)
+  return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato della settimana selezionata"><div class="maintenance-top"><span>SETTIMANA '+range+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Mantenimento medio della settimana</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media giornaliera della routine</small></span></div><p class="maintenance-cutoff">'+(current?'Aggiornato':'Ricostruito')+' con i dati fino al <b>'+fmtDay(cutoff)+'</b>. Lo stesso riferimento per tutti i giorni del '+range+'.</p><div class="maintenance-bottom"><span><small>Mantenimento × 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel({confidence:view.confidence||E&&E.confidence}))+'</b></span></div>'+routineEnergyHTML(r)
     +(r.unknown.length?'<div class="maintenance-missing"><b>Stima da completare</b><p>'+r.unknown.map(esc).join(' ')+'</p></div>':'')
-    +'<details class="maintenance-details"><summary>Da dove arriva e perché cambia</summary><p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<p>Il consumo del singolo giorno può essere diverso: segue il lavoro, l’allenamento e la digestione del giorno. Mangiare di più non moltiplica l’intero metabolismo.</p><button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
+    +'<details class="maintenance-details"><summary>Totali della settimana e metodo di calcolo</summary><p>Il riferimento usa peso, routine e calibrazione disponibili fino al '+fmtDay(cutoff)+'. Per le settimane concluse la data è la domenica; per la settimana in corso è oggi. Non uso dati successivi a questa data. Nuove registrazioni o correzioni possono aggiornare il valore: non è un numero congelato.</p>'+maintenanceWeekDetailsHTML(view)+'<p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
 }
 function energyWeeksHTML(view) {
   var W=view.week;
@@ -12183,6 +12208,15 @@ body #dayform .df-actions .btn:not(#z):not(#y){width:100%;min-width:0;min-height
  body #dayform .df-extra>summary:not(#z):not(#y){padding:13px 92px 13px 13px!important;font-size:.79rem}
  #dayform .df-date{padding:12px}
 }
+
+/* A week-wide reference and a separate, date-specific expenditure. */
+.maintenance-cutoff b{color:#f6e8ee}
+.maintenance-top>span,.maintenance-bottom>span{min-width:0}
+.daily-energy-title{font-weight:700;color:#f4b7c8!important}
+.daily-energy-date{font-size:.86rem;color:#eddee4;font-weight:600}
+.maintenance-week-explain{padding:4px 14px 12px;margin:14px 0;border:1px solid #ffffff12;border-radius:14px;background:#ffffff04}
+.maintenance-week-explain .energy-week-days>span{min-width:0}
+@media(max-width:430px){.maintenance-value{gap:12px}.maintenance-value>span{font-size:.85rem}.maintenance-bottom{gap:12px}.maintenance-week-explain{padding:4px 10px 10px}.maintenance-week-explain .energy-week-days{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
 </body></html>
