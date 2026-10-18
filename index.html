@@ -2278,9 +2278,10 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <button class="tab" role="tab" data-tab="diario" data-group="diario" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/></svg><span>Progressi</span></button>
       <button class="tab" role="tab" aria-label="Allenamenti" data-tab="allenamenti" data-group="allenamenti corpo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg><span class="nav-label-wide">Allenamenti</span><span class="nav-label-compact" aria-hidden="true">Palestra</span></button>
       <button class="tab" role="tab" data-tab="ricette" data-group="ricette" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c0-1.5 1-2 1-3.5M13 8c0-1.5 1-2 1-3.5"/></svg><span>Ricette</span></button>
-      <button class="tab" role="tab" data-tab="amici" data-group="amici" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg><span>Amici</span></button>
+      <button class="tab" role="tab" data-tab="amici" data-group="amici" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg><span>Amici</span><i class="friend-request-badge" id="friend-request-badge" aria-hidden="true" hidden></i></button>
       <button class="tab" role="tab" data-tab="dati" data-group="dati regole" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><span>Profilo</span></button>
     </nav>
+    <span class="friend-request-status" id="friend-request-status" role="status" aria-live="polite" aria-atomic="true"></span>
   </div>
 
   <main>
@@ -2349,7 +2350,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       </div>
 
       <div class="grid2">
-        <div class="panel" data-cat="avvisi"><div class="panel-head"><div class="ph-t"><h2>Da tenere d'occhio</h2><button type="button" class="rq" data-rule="av-dati" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="al-count"></span></div><div id="alerts"></div></div>
+        <div class="panel" data-cat="avvisi"><details class="day-alerts"><summary><h2>Da tenere d'occhio</h2><span class="hint" id="al-count"></span></summary><div class="day-alerts-body"><div id="alerts"></div><div class="day-alerts-help"><button type="button" class="rq" data-rule="av-dati" aria-label="Come si calcolano gli avvisi" title="Come si calcolano gli avvisi">?</button></div></div></details></div>
         <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-oggi"></div></div>
       </div>
       <div class="panel cu-teaser" id="curio-teaser" hidden></div>
@@ -2388,20 +2389,13 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <button class="btn ghost fit" id="d-today">Oggi</button>
         </div>
       </div>
-      <div class="grid2">
-        <div class="stack">
+      <div class="day-sections stack">
           <div class="panel stack">
             <div class="dayhead"><h2 id="d-title">Giorno</h2><span class="src" id="d-src" hidden>Dal diario</span><button type="button" class="btn ghost fit small add-data" data-adddata="sel">Modifica i dati</button></div>
             <div class="daystats" id="d-stats"></div><div id="d-energy-guide"></div>
             <div class="daynote" id="d-note" hidden></div>
             <div class="bars" id="d-bars"></div>
           </div>
-          <div class="panel stack" data-cat="allen">
-            <div class="panel-head" style="margin:0"><h2>Allenamento del giorno</h2><span class="hint">Le tue sedute</span></div>
-            <div id="d-work"></div>
-          </div>
-        </div>
-        <div class="stack">
           <div class="panel">
             <div class="cal-head">
               <button class="btn ghost icon fit" id="c-prev" aria-label="Mese precedente">‹</button>
@@ -2415,7 +2409,10 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
               <span><i style="background:rgba(255,255,255,.18)"></i>Sotto</span>
             </div>
           </div>
-        </div>
+          <div class="panel stack" data-cat="allen">
+            <div class="panel-head" style="margin:0"><h2>Allenamento del giorno</h2><span class="hint">Le tue sedute</span></div>
+            <div id="d-work"></div>
+          </div>
       </div>
       <div class="panel" data-cat="storico">
         <div class="panel-head" style="margin-bottom:6px"><h2>Ultimi giorni</h2><span class="hint" id="d-recent-n"></span></div>
@@ -6320,7 +6317,7 @@ function dayStatsHTML(date) {
     + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'h', HEX.sleep, d.sleepH > 0 && S().sleepGoal > 0 ? 'obiettivo ' + fmtH(S().sleepGoal) + ' h' : '')
     + wTile;
 }
-function dayWorkHTML(date) {
+function dayWorkHTML(date, compact) {
   var ws = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }).sort(function (x, y) { return (x.start || '') < (y.start || '') ? -1 : 1; });
   var x = dayInfoOf(date), se = x && x.A && x.A.gym ? x.A.gym.sessions : [];
   if (!ws.length) {
@@ -6334,8 +6331,9 @@ function dayWorkHTML(date) {
     (w.exercises || []).forEach(function (ex) { setsOf(ex, w.date).forEach(function (s) { vol += (s.kg || 0) * (s.reps || 0); nS++; }); });
     var meta = [w.start ? 'ore ' + esc(w.start) : '', w.durMin ? fmtDur(w.durMin) : 'durata non registrata', (w.exercises || []).length + ((w.exercises || []).length === 1 ? ' esercizio' : ' esercizi'), nS + ' serie', vol > 0 ? fmt(vol, 0) + ' kg sollevati' : ''].filter(Boolean).join(', ');
     var en = e ? '<div class="p2-sess">Consumo stimato: <b>circa ' + fmt(e.k, 0) + ' kcal</b> oltre il riposo' + (e.strengthMin > 0 ? ' · pesi e pause: ' + fmt(e.strengthMin, 0) + ' min' : '') + (e.cardio && e.cardio.length ? ' · cardio: ' + e.cardio.map(function (c) { return esc(c.nome) + (c.min > 0 ? ' ' + fmt(c.min, c.min % 1 ? 1 : 0) + ' min' : '') + (c.unknown ? ' (consumo non stimabile: dati insufficienti)' : ', circa ' + fmt(c.k, 0) + ' kcal'); }).join('; ') : '') + (e.note && e.note.length ? ' · ' + esc(e.note.join('; ')) : '') + '</div>' : '';
-    return '<div class="wday" style="--c:' + G.c + '"><div class="wh"><span class="ico">' + esc(G.s) + '</span><div><div class="tt">' + esc(w.title) + '</div><div class="dt">' + meta + '</div></div></div>' + en
-      + '<div class="body">' + (w.exercises || []).map(function (ex) { return '<div class="ex"><b>' + esc(ex.name) + '</b><div class="sets">' + (ex.sets || []).map(function (s) { return '<span>' + esc(fmtSet(s)) + '</span>'; }).join('') + '</div></div>'; }).join('') + '</div></div>';
+    var exercises = '<div class="body">' + (w.exercises || []).map(function (ex) { return '<div class="ex"><b>' + esc(ex.name) + '</b><div class="sets">' + (ex.sets || []).map(function (s) { return '<span>' + esc(fmtSet(s)) + '</span>'; }).join('') + '</div></div>'; }).join('') + '</div>';
+    if (compact && (w.exercises || []).length) exercises = '<details class="day-exercises"><summary>Esercizi e serie<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24" focusable="false"><path d="m6 9 6 6 6-6"/></svg></span></summary>' + exercises + '</details>';
+    return '<div class="wday" style="--c:' + G.c + '"><div class="wh"><span class="ico">' + esc(G.s) + '</span><div><div class="tt">' + esc(w.title) + '</div><div class="dt">' + meta + '</div></div></div>' + en + exercises + '</div>';
   }).join('');
 }
 /* sezione 6.1: calorie scritte e energia dei nutrienti, con alcol, fibre e polioli se ci sono; nessun valore viene cambiato */
@@ -6367,7 +6365,7 @@ function renderDiary() {
   var dg = $('#d-energy-guide'); if (dg) dg.innerHTML = macroGapHTML(date) + mealsHTML(date) + '<details class="more day-energy-help"><summary>Quale consumo uso per questo giorno?</summary><div class="in">' + energyMethodHTML(date) + '</div></details>';
   $('#d-bars').hidden = !(d.kcal > 0);
   $('#d-bars').innerHTML = d.kcal > 0 ? barsFor(date, false) : '';
-  $('#d-work').innerHTML = dayWorkHTML(date);
+  $('#d-work').innerHTML = dayWorkHTML(date, true);
   renderCalendar();
   renderRecent();
 }
@@ -10178,6 +10176,16 @@ function bindFriends() {
   function fmtCode(x){return x?x.match(/.{1,4}/g).join('–'):'';}
   function relationPeer(x){return x.from===F.uid?x.to:x.from;}
   function relationName(x){return x.from===F.uid?x.toName:x.fromName;}
+  function incomingRequests(){return F.links.filter(function(x){return x.status==='pending'&&x.to===F.uid&&F.blocks.indexOf(x.from)<0;});}
+  var lastRequestCount=null;
+  function updateRequestBadge(){
+    var count=F.uid?incomingRequests().length:0,tab=$('.tab[data-tab="amici"]'),badge=$('#friend-request-badge'),status=$('#friend-request-status');
+    var message=count===1?'1 richiesta di amicizia da gestire':count+' richieste di amicizia da gestire';
+    if(badge){badge.textContent=count>99?'99+':count?String(count):'';badge.hidden=count===0;}
+    if(tab){tab.setAttribute('aria-label',count?'Amici, '+message:'Amici');tab.setAttribute('title',count?message:'Amici');}
+    if(status&&lastRequestCount!==count)status.textContent=count?message+'.':F.uid&&lastRequestCount>0?'Nessuna richiesta di amicizia da gestire.':'';
+    lastRequestCount=count;
+  }
   function friendList(){var seen={};return F.links.filter(function(x){var p=relationPeer(x);if(x.status!=='accepted'||F.blocks.indexOf(p)>=0||seen[p])return false;seen[p]=true;return true;});}
   function report(e){var code=String(e&&e.code||'');return /permission-denied/.test(code)?'Accesso non consentito. Per attivare Amici pubblica le nuove regole Firestore fornite con questa versione; se sono già attive, verifica che l’amicizia sia ancora valida.':/unavailable|network|offline|timeout/.test(code)?'Connessione non disponibile. Riprova online.':e&&e.userMessage||'Operazione non completata. Riprova.';}
   function problem(s){var e=new Error(s);e.userMessage=s;throw e;}
@@ -10188,11 +10196,12 @@ function bindFriends() {
   function safeName(v){return String(v||'').trim().slice(0,40);}
   function liveProfile(){return F.profile&&F.config;}
   function render(){
+    updateRequestBadge();
     var box=$('#friends-body');if(!box)return;
     if(!F.uid){box.innerHTML='<div class="friends-empty"><b>Amici ti aspetta nel tuo account</b><p>Accedi online con l’account Firebase per inviare richieste e scegliere cosa condividere.</p></div>';note();return;}
     if(!F.ready){box.innerHTML='<div class="friends-empty">Caricamento della sezione Amici…</div>';note();return;}
     if(!F.profile){box.innerHTML='<div class="friends-onboarding"><div class="friends-symbol" aria-hidden="true">＋</div><h2>Il tuo percorso, insieme</h2><p>Crea il tuo codice amico e accetta solo le persone che conosci. Nessun dato del diario viene condiviso finché non lo scegli.</p><label class="f"><span>Nome visibile agli amici</span><input id="friend-nickname" maxlength="40" value="'+esc(safeName(S().name)||'Utente')+'" autocomplete="nickname"></label>'+actionButton('activate','Crea il mio codice amico')+'</div>';note();return;}
-    var cfg=F.config||defaults(),friends=friendList(),incoming=F.links.filter(function(x){return x.status==='pending'&&x.to===F.uid&&F.blocks.indexOf(x.from)<0;}),outgoing=F.links.filter(function(x){return x.status==='pending'&&x.from===F.uid;});
+    var cfg=F.config||defaults(),friends=friendList(),incoming=incomingRequests(),outgoing=F.links.filter(function(x){return x.status==='pending'&&x.from===F.uid;});
     var h='<div class="friends-top-grid"><div class="friends-code-card"><small>Il tuo codice amico</small><b>'+fmtCode(F.profile.code)+'</b><span>Condividilo con chi vuoi aggiungere.</span>'+actionButton('copy','Copia codice')+'</div><form id="friend-request-form" class="friends-add"><label class="f"><span>Aggiungi un amico</span><input name="code" placeholder="Codice amico" maxlength="20" autocomplete="off" spellcheck="false" required></label><button class="btn fit small"'+(F.busy?' disabled':'')+'>Invia richiesta</button></form></div>';
     h+='<details class="friends-settings"><summary>La tua condivisione <span class="friends-state">'+(cfg.enabled?'Attiva':'Disattivata')+'</span></summary><div class="friends-settings-body" data-ib-keep><form id="friend-sharing-form"><label class="f"><span>Nome visibile</span><input name="nickname" maxlength="40" value="'+esc(F.profile.nickname)+'" required></label><label class="friends-check friends-master"><input type="checkbox" name="enabled"'+(cfg.enabled?' checked':'')+'>Condividi i riepiloghi con gli amici accettati</label><div class="friends-pref-grid">'+FD.KEYS.map(function(k){return '<label class="friends-check"><input type="checkbox" name="'+k+'"'+(cfg.prefs[k]?' checked':'')+'>'+labels[k]+'</label>';}).join('')+'</div><p class="friends-help">Solo i riepiloghi selezionati degli ultimi 14 giorni vengono aggiornati. Pasti, note, email e dettagli degli allenamenti restano privati. La condivisione si aggiorna quando apri l’app online e il diario è salvato.</p><button class="btn fit small"'+(F.busy?' disabled':'')+'>Salva condivisione</button></form></div></details>';
     if(incoming.length||outgoing.length){h+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){h+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){h+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});h+='</div>';}
@@ -10249,7 +10258,7 @@ function bindFriends() {
     F.unsub.push(rootRef().onSnapshot(function(s){if(!s.exists)return;F.config=s.data();render();queuePublish();},function(e){F.error=report(e);note();}));
     F.unsub.push(profileRef().collection('blocks').onSnapshot(function(q){F.blocks=q.docs.map(function(d){return d.id;});applyLinks(outgoing,incoming);},function(e){F.error=report(e);note();}));
   }
-  function clean(){clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.ready=false;F.publishHash='';}
+  function clean(){clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
   async function load(uid){clean();F.uid=uid;F.error='';if(!uid){render();return;}var expected=uid;
     try{var s=await profileRef().get({source:'server'});if(F.uid!==expected)return;F.profile=s.exists?s.data():null;
       if(F.profile){var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
@@ -12036,5 +12045,53 @@ body #tab-diario #curio-more:not(#z):not(#y){color:#E1B6FF!important;background:
  .cu-start,.cu-no-results{padding:23px 19px}.cu-unlocks{grid-template-columns:minmax(0,1fr);gap:9px}.cu-unlocks>div{padding:14px}
 }
 @media(prefers-reduced-motion:reduce){.cu-story{animation:none!important}.cu-story *{transition:none!important}}
+
+/* Progressi / Giorno: dati, calendario, poi riepilogo della seduta. */
+#tab-diario .day-sections{grid-template-columns:minmax(0,1fr);gap:18px}
+#tab-diario .day-sections>.panel{min-width:0}
+#tab-diario .day-sections #cal button.cell{aspect-ratio:auto;min-height:76px}
+#d-work .wday .wh{align-items:start}
+#d-work .wday .dt{line-height:1.7;margin-top:4px}
+#d-work .p2-sess{margin:14px 0 0;line-height:1.65}
+#d-work .day-exercises{margin-top:18px;border:1px solid color-mix(in srgb,var(--c) 20%,transparent);border-radius:16px;background:color-mix(in srgb,var(--c) 4%,transparent)}
+body #d-work .day-exercises>summary:not(#z):not(#y){display:flex;align-items:center;min-height:58px;padding:14px 106px 14px 16px!important;box-sizing:border-box;font-size:.88rem;font-weight:650;line-height:1.5;border-radius:15px;color:color-mix(in srgb,var(--c) 50%,white)!important}
+body #d-work .day-exercises>summary:hover:not(#z):not(#y){background:color-mix(in srgb,var(--c) 8%,transparent)!important;box-shadow:none!important}
+body #d-work .day-exercises>summary>.disclosure-cue:not(#z):not(#y){background:color-mix(in srgb,var(--c) 13%,#29272b)!important;color:color-mix(in srgb,var(--c) 65%,white)!important}
+#d-work .day-exercises>.body{margin:0;padding:6px 16px 18px;gap:16px}
+#d-work .day-exercises .ex{margin:0;min-width:0}
+#d-work .day-exercises .ex+.ex{padding-top:14px;border-top:1px solid #ffffff0b}
+#d-work .day-exercises .ex>b{display:block;font-size:.9rem;line-height:1.5}
+#d-work .day-exercises .sets{margin-top:8px}
+/* Il titolo e il numero di avvisi restano leggibili a tendina chiusa. */
+body .day-alerts>summary:not(#z):not(#y){display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-content:center;min-height:66px;padding:0 106px 0 0!important;box-sizing:border-box;border-radius:12px}
+.day-alerts>summary h2{margin:0;font-size:1.2rem;line-height:1.4}
+.day-alerts>summary .hint{line-height:1.5}
+body .day-alerts>summary:hover:not(#z):not(#y){background:transparent!important;box-shadow:none!important}
+.day-alerts-body{padding-top:18px}
+.day-alerts-help{display:flex;justify-content:flex-end;margin-top:14px}
+.day-alerts-body .alert{margin:0}
+.day-alerts-body .alert+.alert{margin-top:10px}
+@media(max-width:760px){
+ #tab-diario .day-sections{gap:14px}
+ #tab-diario .day-sections #cal button.cell{min-height:50px}
+ body #d-work .day-exercises>summary:not(#z):not(#y){padding:13px 92px 13px 13px!important;font-size:.82rem}
+ #d-work .day-exercises>.body{padding:4px 13px 16px}
+ body .day-alerts>summary:not(#z):not(#y){padding-right:92px!important;min-height:66px}
+ .day-alerts>summary h2{font-size:1.1rem}
+}
+
+
+/* Unread actions belong to the navigation, even while another section is open. */
+body .nav .tab[data-tab="amici"]:not(#z):not(#y){padding-right:46px!important}
+body .nav .tab .friend-request-badge:not(#z):not(#y){position:absolute;right:12px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:22px;height:22px;padding:0 5px;border:2px solid #1C1C1E;border-radius:999px;background:#FF557B!important;color:#fff!important;font:750 11px/1 var(--f-body)!important;font-style:normal;font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap;pointer-events:none;animation:friendBadgeAppear .25s ease-out both}
+body .nav .tab .friend-request-badge[hidden]:not(#z):not(#y){display:none!important}
+.friend-request-status{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}
+@keyframes friendBadgeAppear{from{opacity:0;scale:.7}to{opacity:1;scale:1}}
+@media(max-width:1023px){
+ body .nav .tab[data-tab="amici"]:not(#z):not(#y){padding:5px 0!important}
+ body .nav .tab .friend-request-badge:not(#z):not(#y){right:calc(50% - 20px);top:0;transform:none;min-width:18px;height:18px;padding:0 4px;font-size:9px!important}
+}
+@media(prefers-reduced-motion:reduce){body .nav .tab .friend-request-badge:not(#z):not(#y){animation:none!important}}
+
 </style>
 </body></html>
