@@ -2656,7 +2656,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div id="rules-list"></div>
     </section>
 
-    <section id="tab-amici" class="view" hidden><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Il percorso è più bello insieme.</h2><p>Connettiti ai tuoi amici, condividi i tuoi progressi e accompagnatevi un giorno alla volta. Scegli tu quali dati mostrare.</p></div><div class="friends-orbit" aria-hidden="true"><svg viewBox="0 0 240 160" fill="none"><circle class="friend-halo" cx="120" cy="80" r="71" stroke="#70DCC1" stroke-opacity=".28"/><circle cx="120" cy="80" r="53" stroke="#70DCC1" stroke-opacity=".12"/><path class="friend-link" d="M67 87C94 113 146 113 173 87" stroke="#67DEC0" stroke-width="2"/><g class="friend-person-a"><rect x="27" y="44" width="70" height="77" rx="24" fill="#244A40" stroke="#73DBC0" stroke-opacity=".65"/><circle cx="62" cy="70" r="11" fill="#90E8CD"/><path d="M43 102C43 82 81 82 81 102" stroke="#90E8CD" stroke-width="5" stroke-linecap="round"/></g><g class="friend-person-b"><rect x="143" y="44" width="70" height="77" rx="24" fill="#263D49" stroke="#82CDE3" stroke-opacity=".65"/><circle cx="178" cy="70" r="11" fill="#A0DEEC"/><path d="M159 102C159 82 197 82 197 102" stroke="#A0DEEC" stroke-width="5" stroke-linecap="round"/></g><g class="friend-spark"><circle cx="120" cy="62" r="16" fill="#285B4A" stroke="#97EDCF" stroke-opacity=".45"/><path d="m114 62 4 4 8-8" stroke="#B4F9DA" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="118" cy="134" r="3" fill="#72DCC2" fill-opacity=".7"/><circle cx="105" cy="25" r="2" fill="#9FE5D7" fill-opacity=".6"/></svg></div></div><div id="friends-status" role="status" aria-live="polite"></div><div id="friends-body"></div></section>
+    <section id="tab-amici" class="view" hidden><div class="segbar friends-switch" role="tablist" aria-label="Sezioni amici"><button type="button" role="tab" id="friends-tab-list" data-friends-view="list" aria-controls="friends-list-panel" aria-selected="true" tabindex="0">I tuoi amici<span id="friends-view-requests" class="friends-view-badge" aria-hidden="true" hidden></span></button><button type="button" role="tab" id="friends-tab-settings" data-friends-view="settings" aria-controls="friends-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><div id="friends-status" role="status" aria-live="polite"></div><template id="friends-intro-template"><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Il percorso è più bello insieme.</h2><p>Connettiti ai tuoi amici, condividi i tuoi progressi e accompagnatevi un giorno alla volta. Scegli tu quali dati mostrare.</p></div><div class="friends-orbit" aria-hidden="true"><svg viewBox="0 0 240 160" fill="none"><circle class="friend-halo" cx="120" cy="80" r="71" stroke="#70DCC1" stroke-opacity=".28"/><circle cx="120" cy="80" r="53" stroke="#70DCC1" stroke-opacity=".12"/><path class="friend-link" d="M67 87C94 113 146 113 173 87" stroke="#67DEC0" stroke-width="2"/><g class="friend-person-a"><rect x="27" y="44" width="70" height="77" rx="24" fill="#244A40" stroke="#73DBC0" stroke-opacity=".65"/><circle cx="62" cy="70" r="11" fill="#90E8CD"/><path d="M43 102C43 82 81 82 81 102" stroke="#90E8CD" stroke-width="5" stroke-linecap="round"/></g><g class="friend-person-b"><rect x="143" y="44" width="70" height="77" rx="24" fill="#263D49" stroke="#82CDE3" stroke-opacity=".65"/><circle cx="178" cy="70" r="11" fill="#A0DEEC"/><path d="M159 102C159 82 197 82 197 102" stroke="#A0DEEC" stroke-width="5" stroke-linecap="round"/></g><g class="friend-spark"><circle cx="120" cy="62" r="16" fill="#285B4A" stroke="#97EDCF" stroke-opacity=".45"/><path d="m114 62 4 4 8-8" stroke="#B4F9DA" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="118" cy="134" r="3" fill="#72DCC2" fill-opacity=".7"/><circle cx="105" cy="25" r="2" fill="#9FE5D7" fill-opacity=".6"/></svg></div></div></template><div id="friends-body"></div></section>
     <section id="tab-dati" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
       <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
@@ -4710,7 +4710,7 @@ function enqueue(path, fn) {
 }
 /* la modifica entra subito nella coda dell'archivio (salvata anche nel browser); la promessa dice com'è andata:
    confermata, rifiutata dal server, oppure «queued» se il server non ha ancora risposto (la coda riprova da sola) */
-function saveDoc(path, data) {
+function profileSourceSaveDoc(path, data) {
   if (!db) return Promise.resolve();
   var p = db.doc(path).set(data); p.catch(showError); return p;
 }
@@ -4911,7 +4911,7 @@ function show(tab) {
   var changed = state.tab !== tab, prevTab = state.tab;
   state.tab = tab;
   $$('.tab').forEach(function (b) { b.setAttribute('aria-selected', (' ' + (b.dataset.group || b.dataset.tab) + ' ').indexOf(' ' + tab + ' ') >= 0 ? 'true' : 'false'); });
-  $$('.segbar button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.sub === tab ? 'true' : 'false'); });
+  $$('.segbar button[data-sub]').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.sub === tab ? 'true' : 'false'); });
   var PT = { amici: 'Amici', diario: 'Progressi', allenamenti: 'Allenamenti', corpo: 'Allenamenti', ricette: 'Ricette', regole: 'Profilo', dati: 'Profilo' };
   $('#h-greet').hidden = tab !== 'oggi'; if ($('#h-fresh')) $('#h-fresh').hidden = tab !== 'oggi'; $('#h-page').hidden = tab === 'oggi'; $('#h-page').textContent = PT[tab] || '';
   $$('main > section').forEach(function (s) { s.hidden = s.id !== 'tab-' + tab; });
@@ -6942,7 +6942,7 @@ function cancelVersion(id) {
 }
 
 /* ---------- editor della versione ---------- */
-function pedHTML() {
+function profilePedSourceHTML() {
   var P = state.ped, v = P.v, g = v.goal || {}, td = v.tdee, kc = v.kcal, mc = v.macros, hb = v.habits, dm = v.days || {};
   var h = '';
   if (P.base) h += '<p class="p2-note">Stai ripristinando le impostazioni di una versione precedente: controlla l\'anteprima e salva per farle valere di nuovo da una data che scegli. Niente viene cancellato.</p>';
@@ -7064,7 +7064,7 @@ function pedSchedule() {
     if (m) m.textContent = why ? 'Non salvabile: ' + why + '.' : '';
   }, 250);
 }
-function pedRender() { var b = $('#ped-body'); if (!b) return; b.innerHTML = state.ped ? pedHTML() : pedClosedHTML(); }
+function profileSourcePedRender() { var b = $('#ped-body'); if (!b) return; b.innerHTML = state.ped ? pedHTML() : pedClosedHTML(); }
 function pedClosedHTML() {
   return '<p class="muted">Ogni modifica crea una nuova versione del piano con la sua data: i giorni passati restano calcolati con il piano di allora.</p>'
     + (state.pedMsg ? '<p class="p2-note">' + esc(state.pedMsg) + '</p>' : '')
@@ -7288,7 +7288,7 @@ function buildProfile() {
   sec.appendChild(acct.previousElementSibling); sec.appendChild(acct);
   bindPlan(box);
 }
-function pfBody(r) { var d = $('#pf-' + r.id); if (!d) return; d.querySelector('.pf-body').innerHTML = r.b(); d.dataset.fresh = '1'; }
+function profileSourceBody(r) { var d = $('#pf-' + r.id); if (!d) return; d.querySelector('.pf-body').innerHTML = r.b(); d.dataset.fresh = '1'; }
 /* aggiorna i corpi indicati (o quelli «live» aperti) senza toccare un modulo che si sta compilando */
 function pfRefresh(ids) {
   PF_ROWS.forEach(function (r) {
@@ -7296,7 +7296,7 @@ function pfRefresh(ids) {
     if (ids && ids.indexOf(r.id) >= 0) { if (d.open) pfBody(r); else d.dataset.fresh = ''; }
   });
 }
-function renderSettings() {
+function profileSourceSettings() {
   buildProfile();
   PF_ROWS.forEach(function (r) {
     var d = $('#pf-' + r.id); if (!d) return;
@@ -7874,7 +7874,7 @@ var IB = { busy: false, moved: [], btn: null, timer: 0 };
 var IB_NOTE = ['p.muted.small', 'p.caption', 'div.caption', '.estimate-note', '.weigh-explain', '.hero-sub', '.p2-note:not(.p2-act)',
   '.context-chip.context-note', '.context-chip.context-neutral', '.split-intro > span', '#fc-conflict', 'details[data-ibfold]',
   'details.model-note', 'details.day-energy-help', '#sum-more', '.panel > p.muted', '.in > p.muted', '.ds .s', '.k > small', '.p2-three'].join(',');
-var IB_SKIP = '#ib-sheet, #tab-regole, #pf-modifica, #pf-tu, #unsaved-panel, #dati-count, #body-period, .dsec[data-dsec="curiosita"], form, dialog, .modal, .dp-pop, #intro, [data-ib-keep], .pf-who, .pf-fresh, .empty, .p2-empty, .cu';
+var IB_SKIP = '#ib-sheet, #tab-dati, #tab-regole, #pf-modifica, #pf-tu, #unsaved-panel, #dati-count, #body-period, .dsec[data-dsec="curiosita"], form, dialog, .modal, .dp-pop, #intro, [data-ib-keep], .pf-who, .pf-fresh, .empty, .p2-empty, .cu';
 var IB_SCOPE = '[data-ibs], .panel, .hero-main, .tile';
 /* nelle righe del Profilo la «i» sta nella riga stessa, accanto al valore */
 function ibPfPlace() { $$('.pf-row[data-ibs] > .pf-body .ib[data-ib-auto], .pf-row[data-ibs] > .ib[data-ib-auto]').forEach(function (b) { var s = b.closest('.pf-row'), v = s && s.querySelector(':scope > summary .pf-v'); if (v) { b.classList.remove('ib-abs'); v.parentNode.insertBefore(b, v); } }); }
@@ -9490,7 +9490,7 @@ function renderSync() {
       + '<div class="row"><button class="btn ghost fit small" data-us="retry" data-id="' + bkEsc(r.id) + '">Riprova</button><button class="btn ghost fit small" data-us="discard" data-id="' + bkEsc(r.id) + '">Scarta</button></div></div>';
   }).join('');
 }
-window.GJ_onSync = function (st) { syncSt = st; renderSync(); };
+window.GJ_onSync = function (st) { syncSt = st; renderSync(); profileSyncStatus(st); };
 async function unsavedAction(e) {
   var b = e.target.closest('[data-us]'); if (!b) return;
   var id = b.dataset.id, msg = $('#unsaved-msg');
@@ -9597,7 +9597,7 @@ function setSel(d) { state.sel = d; var ym = d.slice(0, 7); state.calMonth = ym;
 
 function bind() {
   $$('.tab').forEach(function (b) { b.addEventListener('click', function () { var g = (b.dataset.group || '').split(' '); show(g.indexOf(state.tab) >= 0 ? state.tab : (b.dataset.last || b.dataset.tab)); }); });
-  $$('.segbar button').forEach(function (b) { b.addEventListener('click', function () { var tb = $('.tab[data-group~="' + b.dataset.sub + '"]'); if (tb) tb.dataset.last = b.dataset.sub; show(b.dataset.sub); }); });
+  $$('.segbar button[data-sub]').forEach(function (b) { b.addEventListener('click', function () { var tb = $('.tab[data-group~="' + b.dataset.sub + '"]'); if (tb) tb.dataset.last = b.dataset.sub; show(b.dataset.sub); }); });
   $('#go-diary').addEventListener('click', function () { setSel(ringDay()); setDview('giorno', true); });
   $$('[data-range]').forEach(function (b) { b.addEventListener('click', function () { state.range = b.dataset.range; $$('[data-range]').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); }); renderSummary(); }); });
 
@@ -10136,7 +10136,7 @@ function animatePanel(el,open,isDetails){
     if(!wasVisible&&!previous)start=0;
   }
   el.style.overflow='clip';
-  var duration=el.classList.contains('impact-reconstruction')?260:Math.min(580,360+Math.sqrt(Math.abs(end-start))*4);
+  var duration=el.closest('#tab-dati')?220:el.classList.contains('impact-reconstruction')?260:Math.min(580,360+Math.sqrt(Math.abs(end-start))*4);
   return new Promise(function(resolve){
     var frames=isDetails?[{height:start+'px'},{height:end+'px'}]:[{height:start+'px',opacity:wasVisible?1:0},{height:end+'px',opacity:open?1:0}];
     if(!isDetails){var natural=window.getComputedStyle(el);props.forEach(function(p){frames[0][p]=wasVisible?fromSpace[p]:'0px';frames[1][p]=open?natural[p]:'0px';});}
@@ -10153,7 +10153,7 @@ function animatePanel(el,open,isDetails){
 function setDisclosure(el,open){return animatePanel(el,open,true);}
 document.addEventListener('click',function(e){
   var summary=e.target.closest('summary');if(!summary||summary.parentElement.tagName!=='DETAILS')return;
-  if(e.target.closest('a,button,input,select,textarea'))return;
+  if(e.target.closest('a,button,input,select,textarea')||summary.closest('#tab-dati .profile-menu-row'))return;
   e.preventDefault();var d=summary.parentElement;setDisclosure(d,!motionTarget(d,d.open));
 },true);
 window.addEventListener('resize',function(){
@@ -10169,7 +10169,7 @@ var renderWorkoutsV4Base=renderWorkouts;renderWorkouts=function(){renderWorkouts
 var renderRecipesV4Base=renderRecipes;renderRecipes=function(){renderRecipesV4Base();decorateHelpControls();};
 /* Social data uses separate Firestore paths; the private users/{uid} archive is untouched. */
 function bindFriends() {
-  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false};
+  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',view:'list',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false};
   var FD=window.GJFriendData, fs=null, auth=null;
   var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Numero di allenamenti',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
@@ -10185,6 +10185,8 @@ function bindFriends() {
     var count=F.uid?incomingRequests().length:0,tab=$('.tab[data-tab="amici"]'),badge=$('#friend-request-badge'),status=$('#friend-request-status');
     var message=count===1?'1 richiesta di amicizia da gestire':count+' richieste di amicizia da gestire';
     if(badge){badge.textContent=count>99?'99+':count?String(count):'';badge.hidden=count===0;}
+    var innerBadge=$('#friends-view-requests');if(innerBadge){innerBadge.textContent=count>99?'99+':count?String(count):'';innerBadge.hidden=count===0;}
+    var listTab=$('#friends-tab-list');if(listTab)listTab.setAttribute('aria-label',count?'I tuoi amici, '+message:'I tuoi amici');
     if(tab){tab.setAttribute('aria-label',count?'Amici, '+message:'Amici');tab.setAttribute('title',count?message:'Amici');}
     if(status&&lastRequestCount!==count)status.textContent=count?message+'.':F.uid&&lastRequestCount>0?'Nessuna richiesta di amicizia da gestire.':'';
     lastRequestCount=count;
@@ -10198,21 +10200,31 @@ function bindFriends() {
   function profileRef(){return fs.doc('socialProfiles/'+F.uid);}
   function safeName(v){return String(v||'').trim().slice(0,40);}
   function liveProfile(){return F.profile&&F.config;}
+  function panelsHTML(list,settings){
+    var intro=$('#friends-intro-template');
+    return '<div id="friends-list-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-list"'+(F.view!=='list'?' hidden':'')+'>'+list+'</div><div id="friends-settings-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-settings"'+(F.view!=='settings'?' hidden':'')+'>'+(intro?intro.innerHTML:'')+settings+'</div>';
+  }
+  function setFriendsView(view,focus,animate){
+    F.view=view==='settings'?'settings':'list';
+    document.querySelectorAll('#tab-amici [data-friends-view]').forEach(function(b){var active=b.dataset.friendsView===F.view;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;if(active&&focus)b.focus({preventScroll:true});});
+    ['list','settings'].forEach(function(v){var p=$('#friends-'+v+'-panel');if(p){p.hidden=v!==F.view;p.classList.remove('friends-pane-enter');if(v===F.view&&animate){void p.offsetWidth;p.classList.add('friends-pane-enter');}}});
+  }
+  function fillPanels(list,settings){var box=$('#friends-body');box.innerHTML=panelsHTML(list,settings);setFriendsView(F.view);note();}
   function render(){
     updateRequestBadge();
     var box=$('#friends-body');if(!box)return;
-    if(!F.uid){box.innerHTML='<div class="friends-empty"><b>Amici ti aspetta nel tuo account</b><p>Accedi online con l’account Firebase per inviare richieste e scegliere cosa condividere.</p></div>';note();return;}
-    if(!F.ready){box.innerHTML='<div class="friends-empty">Caricamento della sezione Amici…</div>';note();return;}
-    if(!F.profile){box.innerHTML='<div class="friends-onboarding"><div class="friends-symbol" aria-hidden="true">＋</div><h2>Il tuo percorso, insieme</h2><p>Crea il tuo codice amico e accetta solo le persone che conosci. Nessun dato del diario viene condiviso finché non lo scegli.</p><label class="f"><span>Nome visibile agli amici</span><input id="friend-nickname" maxlength="40" value="'+esc(safeName(S().name)||'Utente')+'" autocomplete="nickname"></label>'+actionButton('activate','Crea il mio codice amico')+'</div>';note();return;}
+    if(!F.uid){var login='<div class="friends-empty"><b>Amici ti aspetta nel tuo account</b><p>Accedi online con l’account Firebase per inviare richieste e scegliere cosa condividere.</p></div>';fillPanels(login,login);return;}
+    if(!F.ready){var loading='<div class="friends-empty">Caricamento della sezione Amici…</div>';fillPanels(loading,loading);return;}
+    if(!F.profile){fillPanels('<div class="friends-list-heading"><h3>I tuoi amici <span>0</span></h3></div><div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Apri le impostazioni per creare il tuo codice e aggiungere le persone che conosci.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi il tuo primo amico</button></div>','<div class="friends-onboarding"><div class="friends-symbol" aria-hidden="true">＋</div><h2>Crea il tuo codice amico</h2><p>Nessun dato del diario viene condiviso finché non lo scegli.</p><label class="f"><span>Nome visibile agli amici</span><input id="friend-nickname" maxlength="40" value="'+esc(safeName(S().name)||'Utente')+'" autocomplete="nickname"></label>'+actionButton('activate','Crea il mio codice amico')+'</div>');return;}
     var cfg=F.config||defaults(),friends=friendList(),incoming=incomingRequests(),outgoing=F.links.filter(function(x){return x.status==='pending'&&x.from===F.uid;});
     var h='<div class="friends-top-grid"><div class="friends-code-card"><small>Il tuo codice amico</small><b>'+fmtCode(F.profile.code)+'</b><span>Condividilo con chi vuoi aggiungere.</span>'+actionButton('copy','Copia codice')+'</div><form id="friend-request-form" class="friends-add"><label class="f"><span>Aggiungi un amico</span><input name="code" placeholder="Codice amico" maxlength="20" autocomplete="off" spellcheck="false" required></label><button class="btn fit small"'+(F.busy?' disabled':'')+'>Invia richiesta</button></form></div>';
     h+='<details class="friends-settings"><summary>La tua condivisione <span class="friends-state">'+(cfg.enabled?'Attiva':'Disattivata')+'</span></summary><div class="friends-settings-body" data-ib-keep><form id="friend-sharing-form"><label class="f"><span>Nome visibile</span><input name="nickname" maxlength="40" value="'+esc(F.profile.nickname)+'" required></label><label class="friends-check friends-master"><input type="checkbox" name="enabled"'+(cfg.enabled?' checked':'')+'>Condividi i riepiloghi con gli amici accettati</label><div class="friends-pref-grid">'+FD.KEYS.map(function(k){return '<label class="friends-check"><input type="checkbox" name="'+k+'"'+(cfg.prefs[k]?' checked':'')+'>'+labels[k]+'</label>';}).join('')+'</div><p class="friends-help">Solo i riepiloghi selezionati degli ultimi 14 giorni vengono aggiornati. Pasti, note, email e dettagli degli allenamenti restano privati. La condivisione si aggiorna quando apri l’app online e il diario è salvato.</p><button class="btn fit small"'+(F.busy?' disabled':'')+'>Salva condivisione</button></form></div></details>';
-    if(incoming.length||outgoing.length){h+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){h+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){h+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});h+='</div>';}
-    h+='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3>'+actionButton('refresh','Aggiorna')+'</div>';
-    if(!friends.length)h+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta con il suo codice oppure condividi il tuo. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p></div>';
-    else{h+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'">'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
+    var requests='';if(incoming.length||outgoing.length){requests+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){requests+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){requests+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});requests+='</div>';}
+    var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3>'+actionButton('refresh','Aggiorna')+'</div>';
+    if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta o condividi il tuo codice dalle impostazioni. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi un amico</button></div>';
+    else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'">'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
-    box.innerHTML=h;note();
+    fillPanels(list+requests,h);
   }
   function localRows(){var D=engineD(),E=state.E,t=todayStr(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(t,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
@@ -10261,7 +10273,7 @@ function bindFriends() {
     F.unsub.push(rootRef().onSnapshot(function(s){if(!s.exists)return;F.config=s.data();render();queuePublish();},function(e){F.error=report(e);note();}));
     F.unsub.push(profileRef().collection('blocks').onSnapshot(function(q){F.blocks=q.docs.map(function(d){return d.id;});applyLinks(outgoing,incoming);},function(e){F.error=report(e);note();}));
   }
-  function clean(){clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
+  function clean(){clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='list';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
   async function load(uid){clean();F.uid=uid;F.error='';if(!uid){render();return;}var expected=uid;
     try{var s=await profileRef().get({source:'server'});if(F.uid!==expected)return;F.profile=s.exists?s.data():null;
       if(F.profile){var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
@@ -10295,7 +10307,7 @@ function bindFriends() {
   function queuePublish(){clearTimeout(F.timer);F.timer=setTimeout(publish,900);if(F.opened)refreshComparison();}
   async function perform(fn){if(F.busy)return;F.busy=true;F.error='';F.message='';note();try{await fn();}catch(e){F.error=report(e);}finally{F.busy=false;render();}}
   document.addEventListener('submit',function(e){if(e.target.id==='friend-request-form'){e.preventDefault();var code=e.target.elements.code.value;perform(function(){return request(code);});}if(e.target.id==='friend-sharing-form'){e.preventDefault();var form=e.target;perform(function(){return saveSharing(form);});}});
-  document.addEventListener('click',function(e){var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
+  document.addEventListener('click',function(e){var viewButton=e.target.closest('#tab-amici [data-friends-view],#tab-amici [data-friends-view-go]');if(viewButton){setFriendsView(viewButton.dataset.friendsView||viewButton.dataset.friendsViewGo,false,true);return;}var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
     if(a==='select'){subscribePeer(k);render();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
     if(a==='refresh'){if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
     perform(async function(){if(a==='activate')return activate();if(a==='copy'){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(F.profile.code);F.message='Codice copiato.';}else{F.message='Il tuo codice: '+F.profile.code;}return;}
@@ -10305,13 +10317,299 @@ function bindFriends() {
       if(a==='unblock'){await profileRef().collection('blocks').doc(k).delete();F.message='Utente sbloccato. Per tornare amici serve una nuova richiesta.';}
     });
   });
-  var originalShow=show;show=function(tab){originalShow(tab);F.opened=tab==='amici';if(F.opened){render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else stopPeer();};
+  document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var v=e.key==='Home'?'list':e.key==='End'?'settings':F.view==='list'?'settings':'list';setFriendsView(v,true,true);});
+  var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='list';render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else stopPeer();};
   var originalRender=renderAll;renderAll=function(){originalRender();queuePublish();};
   var originalSync=window.GJ_onSync;window.GJ_onSync=function(st){if(originalSync)originalSync(st);queuePublish();};
   window.GJFriends={open:function(){show('amici');},localChanged:queuePublish};
   if(window.firebase&&firebase.apps&&firebase.apps.length){fs=firebase.firestore();auth=firebase.auth();auth.onAuthStateChanged(function(u){load(u?u.uid:null);});}else render();
   if((location.hash||'')==='#amici')show('amici');
 }
+
+/* Profile presentation: existing field names, plan rules and save handlers are retained. */
+function pfSection(title,copy,body){return '<fieldset class="pf-fieldset"><legend>'+title+'</legend>'+(copy?'<p class="pf-section-copy">'+copy+'</p>':'')+body+'</fieldset>';}
+function pfField(title,control,hint){return '<label class="f"><span>'+title+'</span>'+control+(hint?'<small class="muted">'+hint+'</small>':'')+'</label>';}
+function pfMore(title,body,open){return '<details class="more pf-more" data-ib-keep'+(open?' open':'')+'><summary>'+title+'</summary><div class="in">'+body+'</div></details>';}
+function pfMini(title,value,copy){return '<div class="pf-mini"><span>'+title+'</span><b>'+value+'</b>'+(copy?'<small>'+copy+'</small>':'')+'</div>';}
+function profileReveal(el){for(var p=el&&el.parentElement;p&&p.id!=='tab-dati';p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;}
+function profilePhase(k){return {cut:'Dimagrimento',surplus:'Aumento di peso',mantenimento:'Mantenimento'}[k]||lb('fase',k);}
+function profileJourneyHTML(start,goal,lw,phase,from){
+  if(phase==='mantenimento')return '<div class="pf-journey-note">Mantenimento del peso: il riferimento è la stabilità nel tempo.</div>';
+  if(!(start>0&&goal>0)||start===goal)return '';
+  if(!lw||from&&lw.d<from)return '<div class="pf-journey-note">La barra del percorso comparirà con la prima pesata di questa fase.</div>';
+  var raw=(lw.w-start)/(goal-start),fraction=Math.max(0,Math.min(1,raw)),pct=raw>=1?100:Math.min(99,Math.round(fraction*100));
+  var status=raw>=1?'Peso obiettivo raggiunto nell’ultima pesata.':'Distanza dall’obiettivo: '+fmt(Math.abs(lw.w-goal),1)+' kg';
+  var desc='Partenza '+fmt(start,1)+' kg; ultima pesata '+fmt(lw.w,1)+' kg del '+fmtDay(lw.d)+'; obiettivo '+fmt(goal,1)+' kg.';
+  return '<div class="pf-journey"><div class="pf-journey-heading"><span>Il tuo percorso in peso</span><b>'+pct+'%</b></div><div class="pf-journey-track" role="progressbar" aria-label="Percorso verso il peso obiettivo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+(Math.round(fraction*1000)/10)+'" aria-valuetext="'+esc(desc)+'" style="--journey-progress:'+(Math.round(fraction*10000)/100)+'%"><span class="pf-journey-fill"></span><span class="pf-journey-marker" aria-hidden="true"></span></div><div class="pf-journey-meta"><span>'+status+'</span><small>In base all’ultima pesata</small></div></div>';
+}
+
+PATHS.piano_mio.t='Ho già calorie e macro';PATHS.piano_mio.s='Inserisci i tuoi valori e mantienili sotto il tuo controllo.';
+PATHS.so_calorie.t='Conosco le calorie';PATHS.so_calorie.s='Scegli le calorie; l’app ti aiuta a ripartire i macro.';
+PATHS.so_mantenimento.t='Conosco il mantenimento';PATHS.so_mantenimento.s='Parti da un consumo che conosci e scegli il tuo obiettivo.';
+PATHS.aiutami.t='Voglio una guida';PATHS.aiutami.s='Parti dai tuoi dati per costruire calorie e macro.';
+
+function renderProfileIdentity(){
+  var card=$('#pf-card');if(!card)return;
+  var p=profileDoc(),s=S(),v=activeVersion(),g=v&&v.goal||{},lw=null,name=(p.name||s.name||'Il tuo profilo').trim();
+  state.days.forEach(function(day,date){if(date<=todayStr()&&day&&day.weight>0&&(!lw||date>lw.d))lw={d:date,w:day.weight};});
+  var start=g.startWeight>0?g.startWeight:p.weight>0?p.weight:null,goal=g.goalWeight>0?g.goalWeight:null;
+  var phase=v?profilePhase(g.phase||'mantenimento'):'Piano da completare',from=g.startDate||v&&v.from;
+  var photo='<span class="pf-photo-acts"><button type="button" class="linkbtn small" data-photo>'+(state.avatar?'Cambia foto':'Aggiungi foto')+'</button><button type="button" class="linkbtn small" data-profile-open="tu">Dati personali</button>'+(state.avatar?'<button type="button" class="linkbtn small" data-photo-del>Rimuovi foto</button>':'')+'</span>';
+  var h='<div class="pf-head"><button type="button" class="pf-av" data-photo aria-label="Cambia la foto del profilo">'+avatarHTML(name)+'</button><div class="pf-who"><span class="profile-eyebrow">IL TUO PROFILO</span><b>'+esc(name)+'</b><span class="profile-phase">'+esc(phase)+(from?' · dal '+fmtDay(from):'')+'</span>'+photo+'</div></div>';
+  h+='<div class="pf-overview">'+pfMini('Partenza',start!=null?fmt(start,1)+' <small>kg</small>':'Da inserire',from?'Inizio fase: '+fmtDay(from):'Peso del profilo')+pfMini(lw?'Ultima pesata':'Peso registrato',lw?fmt(lw.w,1)+' <small>kg</small>':'Nessuna pesata',lw?fmtDay(lw.d):'Aggiungila dal diario')+pfMini('Obiettivo',goal!=null?fmt(goal,1)+' <small>kg</small>':g.phase==='mantenimento'?'Mantenimento':'Da definire',g.endDate?'Entro il '+fmtDay(g.endDate):'Dal tuo piano')+'</div>';
+  if(v)h+=profileJourneyHTML(start,goal,lw,g.phase,from);
+  if(state.photoMsg)h+='<p class="pf-photo-msg" role="status">'+esc(state.photoMsg)+'</p>';
+  if(card._h!==h){card._h=h;card.innerHTML=h;}
+}
+
+function planNowHTML(){
+  var E=state.E,v=activeVersion();if(!v)return '<div class="pf-empty"><b>Costruiamo il tuo primo piano</b><p>Parti dai valori che conosci oppure lascia che l’app ti guidi.</p><button type="button" class="btn fit" data-profile-edit>Crea il piano</button></div>';
+  var z=E&&E.plan?E.plan.active:v.resolved,g=v.goal||{},fr=E&&E.plan&&E.plan.fresh;
+  var mac=function(k,n,c){return '<span class="pv-mac" style="--mc:'+c+'"><i>'+n+'</i><b>'+(z&&z[k]!=null?fmt(z[k],0):'—')+'<small>g</small></b></span>';};
+  var h='<div class="pf-plan-top"><span class="pf-active-badge">Attivo dal '+fmtDay(v.from)+'</span><button type="button" class="btn ghost fit small" data-profile-edit>Modifica il piano</button></div>';
+  h+='<div class="pv-hero"><div class="pv-kc"><small>Calorie del giorno</small><b>'+(z&&z.kcal!=null?fmt(z.kcal,0):'—')+'<span>kcal</span></b></div><div class="pv-macs">'+mac('p','Proteine',HEX.prot)+mac('c','Carboidrati',HEX.carb)+mac('f','Grassi',HEX.fat)+'</div></div>';
+  h+='<div class="pf-plan-facts">'+pfMini('Il tuo obiettivo',esc(profilePhase(g.phase)),g.goalWeight?'Verso '+fmt(g.goalWeight,1)+' kg'+(g.endDate?' · '+fmtDay(g.endDate):''):'Peso stabile secondo il piano')+pfMini('Calorie',v.kcal&&v.kcal.mode==='manuale'?'Scelte da te':'Calcolate dall’app',v.kcal&&v.kcal.mode==='manuale'?'Il target rimane quello inserito':esc(lb('update',v.kcal&&v.kcal.update||'proposta')))+pfMini('Macro',v.macros&&v.macros.mode==='manuale'?'Scelti da te':v.macros&&v.macros.mode==='ibrido'?'In parte fissati':'Calcolati dall’app','Proteine, carboidrati e grassi')+pfMini('Mantenimento',v.tdee&&v.tdee.mode==='manuale_fisso'?'Valore fisso':v.tdee&&v.tdee.mode==='manuale_da_calibrare'?'Valore personalizzato':'Adattivo al diario','Il consumo aggiornato si trova in Oggi')+'</div>';
+  h+=pfMore('Come è impostato questo piano','<div class="pv-list">'+pvRow('Punto di partenza',esc((PATHS[v.path]||{}).t||'Piano importato'))+pvRow('Stima del mantenimento',esc(MODE_TXT[(v.tdee||{}).mode]||''))+pvRow('Calorie',esc(MODE_TXT[(v.kcal||{}).mode]||''))+pvRow('Macro',esc(MACRO_TXT[(v.macros||{}).mode]||''))+(v.reason?pvRow('Ultima modifica',esc(v.reason)):'')+'</div>');
+  if(E&&E.plan&&E.plan.reconstructed)h+='<p class="p2-note">I valori di questo piano sono stati ricostruiti alla sua data di inizio.</p>';
+  if(fr&&fr.errors&&fr.errors.length)h+='<p class="p2-warn">Da verificare con i dati di oggi: '+esc(fr.errors.map(function(e){return e.msg;}).join('; '))+'. Il piano salvato resta attivo.</p>';
+  return h;
+}
+
+function pedHTML(){
+  var root=document.createElement('div');root.innerHTML=profilePedSourceHTML();
+  var fields=Array.prototype.slice.call(root.querySelectorAll(':scope > fieldset.ped-sec'));
+  if(fields.length!==8)return root.innerHTML;
+  var titles=['Il punto di partenza','Obiettivo','Come stimare il mantenimento','Calorie del giorno','Proteine, carboidrati e grassi','Distribuzione nella settimana','La tua routine','Data di attivazione'];
+  fields.forEach(function(f,i){var l=f.querySelector('legend');if(l)l.textContent=titles[i];});
+  var pathNote=fields[0].querySelector('p');if(pathNote)pathNote.remove();
+  var labelNames={'v.goal.phase':'Obiettivo del percorso','v.tdee.mode':'Come vuoi stimare il mantenimento?','v.kcal.mode':'Come scegli le calorie?','v.macros.mode':'Come scegli i macro?','v.habits.steps':'Passi in una giornata abituale','v.habits.trainPerWeek':'Allenamenti ogni settimana','v.habits.trainMin':'Minuti per allenamento'};
+  Object.keys(labelNames).forEach(function(k){var c=root.querySelector('[data-pk="'+k+'"]'),l=c&&c.closest('label');if(l)for(var j=0;j<l.childNodes.length;j++)if(l.childNodes[j].nodeType===3){l.childNodes[j].textContent=labelNames[k];break;}});
+  var choiceNames={'v.goal.phase':{cut:'Dimagrimento',surplus:'Aumento di peso',mantenimento:'Mantenimento'},'v.tdee.mode':{manuale_fisso:'Uso un valore fisso',manuale_da_calibrare:'Parto dal mio valore e lo adatto',profilo_adattivo:'Stima dal profilo e dal diario'},'v.kcal.mode':{manuale:'Le inserisco io',da_consumo_manuale:'Dal mantenimento che ho inserito',da_stima_adattiva:'Dal mantenimento stimato'},'v.macros.mode':{manuale:'Li inserisco io',automatico:'Li calcola l’app',ibrido:'Fisso alcuni valori'}};
+  Object.keys(choiceNames).forEach(function(k){var c=root.querySelector('[data-pk="'+k+'"]');if(c)c.querySelectorAll('option').forEach(function(o){if(choiceNames[k][o.value])o.textContent=choiceNames[k][o.value];});});
+  var policies=root.querySelector('[data-pk="v.macros.policy"]');if(policies)Array.prototype.forEach.call(policies.options,function(o){if(o.value==='allenamento_v1')o.textContent='Per chi si allena';if(o.value==='generale_amdr_v1')o.textContent='Intervalli generali';});
+  root.querySelectorAll('.ped-path').forEach(function(b,i){b.insertAdjacentHTML('afterbegin','<span class="ped-path-number" aria-hidden="true">'+(i+1)+'</span>');});
+  root.querySelectorAll('.ped-macro').forEach(function(grid){var custom=grid.classList.contains('ped-pol'),cards=MK3.map(function(m){var key='v.macros.'+(custom?'custom.':'')+m[0],a=grid.querySelector('[data-pk="'+key+(custom?'.lo':'.v')+'"]'),b=grid.querySelector('[data-pk="'+key+(custom?'.hi':'.unit')+'"]'),unit=custom?grid.querySelector('[data-pk="'+key+'.unit"]'):null,lock=grid.querySelector('[data-pk="'+key+'.locked"]');if(!a||!b)return '';return '<div class="pf-macro-card"><h4>'+m[1]+'</h4><div class="settings-fields">'+pfField(custom?'Minimo':'Quantità',a.outerHTML)+pfField(custom?'Massimo':'Unità',b.outerHTML)+(unit?pfField('Unità',unit.outerHTML):'')+'</div>'+(lock?'<label class="ped-chk">'+lock.outerHTML+' Mantieni questo valore fisso</label>':'')+'</div>';}).join('');if(cards){grid.className='pf-macro-editor';grid.innerHTML=cards;}});
+  var prefix=Array.prototype.filter.call(root.children,function(x){return x.tagName==='P';}).map(function(x){return x.outerHTML;}).join('');
+  var preview=root.querySelector('#ped-prev'),save=preview&&preview.nextElementSibling;
+  if(save){var sb=save.querySelector('[data-pa="ped-save"]');if(sb)sb.textContent='Salva il piano';}
+  var steps=[{name:'Scelta',copy:'Scegli da quali informazioni vuoi partire.',html:fields[0].outerHTML},{name:'Obiettivi',copy:'Definisci cosa vuoi ottenere e le calorie da seguire.',html:fields[1].outerHTML+fields[2].outerHTML+fields[3].outerHTML},{name:'Routine',copy:'Completa i macro e le abitudini usate nelle stime.',html:fields[4].outerHTML+fields[5].outerHTML+fields[6].outerHTML},{name:'Riepilogo',copy:'Controlla l’anteprima e scegli da quando attivare il piano.',html:fields[7].outerHTML+(preview?preview.outerHTML:'')+(save?save.outerHTML:'')}];
+  var at=Math.max(0,Math.min(3,state.ped.uiStep||0));
+  return '<div class="profile-wizard"><div class="profile-wizard-head"><div><span class="profile-eyebrow">MODIFICA IL PIANO</span><h3>Un passaggio alla volta</h3><p>I cambiamenti restano in bozza fino al salvataggio.</p></div><button type="button" class="linkbtn small" data-pa="ped-cancel">Annulla</button></div><nav class="profile-steps" aria-label="Passaggi del piano">'+steps.map(function(x,i){return '<button type="button" data-profile-step="'+i+'"'+(at===i?' aria-current="step"':'')+'><span>'+(i+1)+'</span>'+x.name+'</button>';}).join('')+'</nav>'+prefix+steps.map(function(x,i){return '<section class="profile-step" data-profile-stage="'+i+'"'+(i!==at?' hidden':'')+'><p class="profile-step-copy">'+x.copy+'</p>'+x.html+'</section>';}).join('')+(at<3?'<div class="profile-step-actions">'+(at?'<button type="button" class="btn ghost fit" data-profile-step="'+(at-1)+'">Indietro</button>':'')+'<button type="button" class="btn fit" data-profile-step="'+(at+1)+'">Continua</button></div>':'<button type="button" class="linkbtn small" data-profile-step="2">Torna alla routine</button>')+'</div>';
+}
+
+function profHTML(){
+  var p=profileDoc(),sc=p.scope||{},rm=p.rmrMeasured||{},wU=p.entered&&p.entered.weightUnit||'kg',hU=p.entered&&p.entered.heightUnit||'cm';
+  var basics='<div class="settings-fields">'+pfField('Nome','<input name="name" type="text" autocomplete="given-name" value="'+esc(p.name||S().name||'')+'">')+pfField('Età','<input name="age" type="number" min="10" max="110" step="1" inputmode="numeric" value="'+esc(p.age==null?'':p.age)+'">')+pfField('Sesso usato dalla formula','<select name="sex">'+opts({'':'Non indicato',M:'Maschile',F:'Femminile'},p.sex||'')+'</select>','Serve a stimare il consumo a riposo.')+pfField('Altezza','<div class="pf-unit-pair"><input aria-label="Altezza" name="h" type="number" step="0.5" inputmode="decimal" value="'+esc(p.heightCm==null?'':hU==='in'?rnd(p.heightCm/2.54,1):p.heightCm)+'"><select aria-label="Unità dell’altezza" name="hU">'+opts({cm:'cm',in:'pollici'},hU)+'</select></div>')+pfField('Peso iniziale del profilo','<div class="pf-unit-pair"><input aria-label="Peso iniziale" name="w" type="number" step="0.1" inputmode="decimal" value="'+esc(p.weight==null?'':wU==='lb'?rnd(p.weight/GJM.units.KG_PER_LB,1):p.weight)+'"><select aria-label="Unità del peso" name="wU">'+opts({kg:'kg',lb:'libbre'},wU)+'</select></div>','Usato finché non registri le pesate nel diario.')+'</div>';
+  var scope=[['gravidanza','Gravidanza'],['allattamento','Allattamento'],['disturbi','Disturbi alimentari dichiarati'],['condizioni','Condizioni o terapie che cambiano liquidi, appetito o metabolismo']].map(function(x){return '<label class="ped-chk pf-check-card"><input type="checkbox" name="sc_'+x[0]+'"'+(sc[x[0]]?' checked':'')+'><span>'+x[1]+'</span></label>';}).join('');
+  var measured='<div class="settings-fields">'+pfField('Consumo a riposo (kcal)','<input name="rmr" type="number" step="10" inputmode="numeric" value="'+esc(rm.v||'')+'">')+pfField('Peso all’esame (kg)','<input name="rmrW" type="number" step="0.1" value="'+esc(rm.w||'')+'">')+pfField('Data dell’esame','<input name="rmrD" type="date" value="'+esc(rm.date||'')+'">')+'</div><p class="pf-section-copy">Sostituisce la formula del solo riposo, non il consumo totale.</p>';
+  return '<form id="prof-form" class="stack">'+pfSection('I dati di base','Questi dati servono alla stima iniziale del consumo.',basics)+pfSection('Condizioni da considerare','Seleziona solo le voci che ti riguardano. Determinano se il piano automatico è applicabile.','<div class="pf-check-grid">'+scope+'</div>'+pfMore('Come vengono usate queste informazioni','<p>In queste situazioni, sotto i 18 anni o con BMI sotto 18,5, restano disponibili diario, grafici e un piano manuale o indicato da un professionista.</p>'))+pfMore('Hai una misura del consumo a riposo?',measured,rm.v>0)+pfMore('Formato delle etichette alimentari',pfField('Convenzione delle etichette','<select name="labelConv">'+opts({ue:'Unione Europea',usa:'Stati Uniti'},p.labelConv==='usa'?'usa':'ue')+'</select>','Serve al confronto tra calorie e macro quando registri fibre o polioli.'))+'<div class="pf-save-row"><button type="submit" class="btn fit">Salva i dati personali</button><span class="muted small" id="prof-msg" role="status">'+esc(state.profMsg||'')+'</span></div></form>';
+}
+
+function jobsHTML(){
+  var js=((planDoc()||{}).jobs||[]).slice().sort(function(a,b){return a.from<b.from?-1:1;}),current=null;js.forEach(function(j){if(j.from<=todayStr())current=j;});
+  function jobCard(j){var days=j.days||[],hours=days.length?days.length*j.hours:j.hoursWeek||0;return '<div class="pl-it'+(j===current?' cur':'')+'"><div class="pl-top"><span class="pl-t">'+esc((GJM.JOB[j.type]||{}).nome||j.type)+'</span><span class="pl-b">'+(j===current?'Attuale':j.from>todayStr()?'Programmato':'Precedente')+'</span></div><div class="pl-v">'+(days.length?days.length+' giorni × '+fmt(j.hours,1)+' ore':fmt(hours,hours%1?1:0)+' ore a settimana')+'</div><small class="pl-s">Dal '+fmtDay(j.from)+(days.length?' · '+days.map(function(d){return cap(WD[d]);}).join(', '):' · giorni non specificati')+'</small><div class="pl-act"><button type="button" class="linkbtn small" data-pa="job-del" data-from="'+j.from+'" data-type="'+esc(j.type)+'">Rimuovi periodo</button></div></div>';}
+  var h=current?jobCard(current):'<p class="pl-empty">Nessun lavoro impostato: il lavoro non aggiunge energia al calcolo.</p>',others=js.filter(function(j){return j!==current;});if(others.length)h+=pfMore('Altri periodi di lavoro',others.map(jobCard).join(''));
+  var days=current&&current.days||[],type=current&&current.type||'non_so';
+  var form='<div class="settings-fields" id="job-new">'+pfField('Da quando vale','<input name="from" type="date" value="'+todayStr()+'">')+pfField('Attività lavorativa','<select name="type">'+opts(Object.keys(GJM.JOB).reduce(function(a,k){a[k]=GJM.JOB[k].nome;return a;},{}),type)+'</select>')+pfField('Ore per giornata lavorativa','<input name="hd" type="number" min="0" max="16" step="0.5" value="'+esc(days.length?current.hours:'')+'">','Indica poi i giorni della settimana.')+pfMore('Non hai giorni fissi? Usa le ore settimanali',pfField('Ore totali a settimana','<input name="hw" type="number" min="0" max="80" step="1" value="'+esc(current&&!days.length?current.hoursWeek||'':'')+'">','Lascia i giorni non selezionati per usare questo totale.'))+'</div><div class="ped-days pf-workdays"><span>Giorni in cui lavori</span>'+WD.map(function(d,i){return '<label class="ped-chk"><input type="checkbox" name="jd'+i+'"'+(days.indexOf(i)>=0?' checked':'')+'><span>'+cap(d)+'</span></label>';}).join('')+'</div><div class="pf-save-row"><button type="button" class="btn fit" data-pa="job-add">Salva questo periodo</button><span class="muted small" id="job-msg" role="status"></span></div>';
+  return h+pfSection(current?'Cambia il lavoro o i turni':'Imposta il tuo lavoro','Il calendario resta valido finché non aggiungi un nuovo periodo.',form)+pfMore('Come viene usato nel calcolo','<p>Il cammino al lavoro è già nei passi. Qui conta la postura o lo sforzo aggiuntivo. Un nuovo periodo modifica il calendario dalla data scelta e conserva quello precedente per lo storico.</p>');
+}
+
+function eventsHTML(){
+  var es=((planDoc()||{}).events||[]).slice().sort(function(a,b){return a.from<b.from?1:-1;});
+  var h=es.length?'<div class="pl-list">'+es.map(function(e){return plItem({t:esc(cap(EV_KIND[e.kind]||e.kind)),v:fmtDay(e.from)+(e.to?' – '+fmtDay(e.to):''),s:e.label?esc(e.label):'',act:'<button type="button" class="linkbtn small" data-pa="ev-del" data-id="'+esc(e.id||e.from+e.kind)+'">Rimuovi evento</button>'});}).join('')+'</div>':'<p class="pl-empty">Non hai registrato eventi.</p>';
+  var select='<select name="kind">'+opts(EV_KIND,'lavoro')+'</select>';
+  return h+pfSection('Registra un cambiamento','Segna ciò che può cambiare la tua routine o rendere meno leggibile il peso.','<div class="settings-fields" id="ev-new">'+pfField('Che cosa è cambiato?',select)+pfField('Data di inizio','<input name="from" type="date" value="'+todayStr()+'">')+pfField('Data di fine (facoltativa)','<input name="to" type="date">','Per ferie, viaggi e malattia.')+pfField('Una nota per ricordarlo','<input name="label" type="text" maxlength="60" placeholder="Facoltativa">')+'</div><div class="pf-save-row"><button type="button" class="btn fit" data-pa="ev-add">Salva l’evento</button><span class="muted small" id="ev-msg" role="status"></span></div>')+pfMore('Quale effetto ha sul percorso?','<p>I cambiamenti duraturi fanno ripartire la calibrazione dai dati successivi all’evento. Ferie, viaggio e malattia sono eccezioni brevi: quei giorni pesano meno, senza azzerare il percorso.</p>');
+}
+
+function profileSupLabel(s){var l=s&&s.label||{};return '<div class="settings-fields">'+pfField('Quantità di una porzione','<input name="lq" type="number" step="0.1" min="0" value="'+esc(l.qty!=null?l.qty:'')+'" placeholder="es. 30">')+pfField('Unità della porzione','<select name="lu">'+opts({g:'g',ml:'ml',capsule:'capsule',mg:'mg'},l.unit||'g')+'</select>')+pfField('Calorie per porzione','<input name="lk" type="number" step="1" min="0" value="'+esc(l.kcal!=null?l.kcal:'')+'">')+pfField('Proteine per porzione (g)','<input name="lp" type="number" step="0.1" min="0" value="'+esc(l.p!=null?l.p:'')+'">')+pfField('Carboidrati per porzione (g)','<input name="lc" type="number" step="0.1" min="0" value="'+esc(l.c!=null?l.c:'')+'">')+pfField('Grassi per porzione (g)','<input name="lf" type="number" step="0.1" min="0" value="'+esc(l.f!=null?l.f:'')+'">')+'</div>';}
+function suppHTML(){
+  var ss=(planDoc()||{}).supplements||[];
+  var h=ss.length?ss.map(function(s,i){var evs=(s.events||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;}),last=evs[evs.length-1],inf=GJM.supp.info(s),nut=inf.nutrients;
+    var inDiary=nut&&nut.kcal>0&&(state.days.get(todayStr())||{}).meals&&state.days.get(todayStr()).meals.some(function(m){return m.srcKey==='sup:'+s.id+':'+todayStr();});
+    var detail='<dl class="p2-sup-dl"><dt>Energia e nutrienti</dt><dd>'+esc(inf.energia)+'</dd><dt>Effetti considerati</dt><dd>'+esc(inf.effetto)+'</dd><dt>Stima personale</dt><dd>'+esc(inf.nonNoto)+'</dd><dt>Nel calcolo</dt><dd>'+esc(inf.calcolo)+'</dd></dl>';
+    var change='<div class="ped-act pf-sup-event"><div class="settings-fields">'+pfField('Che cosa vuoi registrare?','<select name="t">'+opts(SUP_EV,'variazione')+'</select>')+pfField('Data','<input name="d" type="date" value="'+todayStr()+'">')+pfField('Dose ('+esc(s.unit||'g')+')','<input name="q" type="number" step="0.1" placeholder="Facoltativa">')+'</div><button type="button" class="btn fit small" data-pa="sup-ev" data-i="'+i+'">Registra il cambiamento</button></div>';
+    var edit='<div data-supedit="'+i+'"><div class="settings-fields">'+pfField('Nome del prodotto','<input name="name" type="text" maxlength="40" value="'+esc(s.name||'')+'">')+pfField('Ingrediente principale','<input name="ing" type="text" maxlength="40" value="'+esc(s.ingredient||'')+'">')+pfField('Unità della dose','<select name="unit">'+opts({g:'g',mg:'mg',capsule:'capsule',ml:'ml'},s.unit||'g')+'</select>')+'</div>'+profileSupLabel(s)+'</div><div class="pf-save-row"><button type="button" class="btn fit small" data-pa="sup-edit" data-i="'+i+'">Salva prodotto</button><span class="muted small" data-supmsg="'+i+'"></span></div>';
+    return '<div class="p2-sup" data-sup="'+i+'"><div class="pf-sup-heading"><div><h3>'+esc(s.name||'Integratore')+'</h3><span>'+esc(s.ingredient||inf.catNome)+'</span></div><span class="pf-active-badge">'+(!last?'Da completare':inf.attivo?'In uso':'Sospeso')+'</span></div><div class="pf-sup-dose">'+(last&&last.dose?fmt(last.dose,1)+' '+esc(s.unit||'g'):'Dose non indicata')+(last&&last.freq?' <small>'+esc(last.freq)+'</small>':'')+'</div><p class="pf-section-copy">'+esc(inf.registrato)+'</p>'+(nut&&nut.kcal>0?(inDiary?'<p class="p2-note">Già aggiunto al diario di oggi.</p>':'<button type="button" class="btn ghost fit small" data-pa="sup-diary" data-i="'+i+'">Aggiungi una dose al diario di oggi</button>'):'')+pfMore('Registra un cambiamento',change)+pfMore('Assunzioni e cambiamenti registrati','<ul class="p2-evl">'+evs.map(function(e){return '<li><b>'+esc(SUP_EV[e.type]||e.type)+'</b> · '+fmtShort(e.date)+(e.dose?' · '+fmt(e.dose,1)+' '+esc(s.unit||'g'):'')+'</li>';}).join('')+'</ul>')+pfMore('Come viene considerato nel calcolo',detail)+pfMore('Modifica prodotto ed etichetta',edit)+'<button type="button" class="linkbtn small pf-remove" data-pa="sup-del" data-i="'+i+'">Rimuovi integratore</button></div>';
+  }).join(''):'<p class="pl-empty">Nessun integratore registrato.</p>';
+  var form='<div id="sup-new"><div class="settings-fields">'+pfField('Nome del prodotto','<input name="name" type="text" maxlength="40" placeholder="es. Creatina">')+pfField('Ingrediente principale (facoltativo)','<input name="ing" type="text" maxlength="40">')+pfField('Dose assunta','<input name="dose" type="number" step="0.1">')+pfField('Unità della dose','<select name="unit">'+opts({g:'g',mg:'mg',capsule:'capsule',ml:'ml'},'g')+'</select>')+pfField('Frequenza (facoltativa)','<input name="freq" type="text" maxlength="30" placeholder="es. al giorno">')+pfField('Data di inizio','<input name="from" type="date" value="'+todayStr()+'">')+'</div><label class="ped-chk pf-check-card"><input type="checkbox" name="load"><span>Ho iniziato con una fase di carico</span></label>'+pfMore('Valori nutrizionali dell’etichetta (facoltativi)','<p class="pf-section-copy">Inserisci i valori per una porzione dell’etichetta, che può essere diversa dalla dose assunta.</p>'+profileSupLabel(null))+'</div><div class="pf-save-row"><button type="button" class="btn fit" data-pa="sup-add">Salva integratore</button><span class="muted small" id="sup-msg" role="status"></span></div>';
+  return h+pfSection('Aggiungi un integratore','Registra ciò che assumi e quando hai iniziato.',form)+pfMore('Come vengono usati questi dati','<p>Avvio, carico, variazioni di dose, sospensione e ripresa restano nel percorso. La creatina segnala una transizione del peso senza sottrarre acqua inventata. Caffeina, termogenici e vitamine non aumentano il consumo stimato. I prodotti con calorie contano quando li aggiungi al diario, secondo etichetta e dose, senza duplicarli.</p>');
+}
+
+var PROFILE_ROWS={piano:{g:'Il tuo piano',t:'Il piano che stai seguendo',s:'Calorie, macro e data di attivazione'},modifica:{g:'Il tuo piano',t:'Modifica obiettivi e piano',s:'Una guida con anteprima prima di salvare'},tu:{g:'Profilo e routine',t:'Dati personali',s:'Nome, misure e condizioni da considerare'},lavoro:{g:'Profilo e routine',t:'Lavoro e turni',s:'Attività, giorni e ore di lavoro'},eventi:{g:'Profilo e routine',t:'Eventi del percorso',s:'Cambiamenti di routine, ferie o altri eventi'},integratori:{g:'Profilo e routine',t:'Integratori',s:'Prodotti, dosi e cambiamenti nel tempo'},storia:{g:'Archivio',t:'Piani precedenti e programmati',s:'Consulta o ripristina una configurazione'},passi:{g:'Archivio',t:'Dati dei passi',s:'Controlla il significato dei dati importati'},hevy:{g:'Archivio',t:'Copertura degli allenamenti',s:'Periodi compresi nei file Hevy'},conferma:{g:'Archivio',t:'Giornate da confermare',s:'Controlla le calorie importate'},migrazione:{g:'Archivio',t:'Dati del vecchio sito',s:'Importazione e recupero delle impostazioni'}};
+PF_ROWS.forEach(function(r){var x=PROFILE_ROWS[r.id];if(x){r.g=x.g;r.t=x.t;r.sub=x.s;}});
+PF_ROWS[1].v=function(){return state.ped?'In modifica':'';};
+PF_ROWS.filter(function(r){return r.id==='storia';})[0].show=function(){return planVersions().length>1;};
+PF_ROWS.filter(function(r){return r.id==='lavoro';})[0].v=function(){var j=null;((planDoc()||{}).jobs||[]).forEach(function(x){if(x.from<=todayStr()&&(!j||j.from<=x.from))j=x;});return j?j.days&&j.days.length?j.days.length+' giorni · '+fmt(j.hours,1)+' h':fmt(j.hoursWeek||0,0)+' h/settimana':'Da impostare';};
+PF_ROWS.filter(function(r){return r.id==='eventi'||r.id==='integratori';}).forEach(function(r){var key=r.id==='eventi'?'events':'supplements',noun=r.id==='eventi'?'evento':'prodotto',plural=r.id==='eventi'?'eventi':'prodotti';r.v=function(){var n=((planDoc()||{})[key]||[]).length;return n?n+' '+(n===1?noun:plural):'Nessuno';};});
+
+function buildProfile(){
+  var sec=$('#tab-dati'),box=$('#plan-box');if(!sec||!box||sec.dataset.pf)return;sec.dataset.pf='1';sec.setAttribute('data-ib-keep','');
+  var lead=sec.querySelector('.area-lead');if(lead)lead.remove();
+  var setPanel=box.closest('.panel'),acct=$('#acct-out').closest('.panel'),hevy=$('#hevy-panel'),backup=Array.prototype.filter.call(sec.querySelectorAll('.panel'),function(p){return !!p.querySelector('#bk-down');})[0];
+  var card=document.createElement('div');card.className='panel pf-card';card.id='pf-card';sec.insertBefore(card,setPanel);setPanel.classList.add('pf-settings');
+  var groups={},advanced=document.createElement('details');advanced.className='profile-archive';advanced.id='profile-advanced';advanced.innerHTML='<summary><span><b>Archivio e dettagli dei dati</b><small>Piani precedenti, passi e controlli delle importazioni</small></span></summary><div class="profile-archive-body"></div>';
+  PF_ROWS.forEach(function(r){var host;if(r.g==='Archivio')host=advanced.lastElementChild;else{if(!groups[r.g]){var g=document.createElement('div');g.className='pf-group';g.innerHTML='<h2 class="pf-gt">'+esc(r.g)+'</h2><div class="pf-list"></div>';box.appendChild(g);groups[r.g]=g.lastElementChild;}host=groups[r.g];}
+    var d=document.createElement('details');d.className='pf-row';d.id='pf-'+r.id;d.dataset.ibt=r.t;d.innerHTML='<summary>'+pfIcon(r.ic,r.c)+'<span class="pf-summary-copy"><span class="pf-t">'+esc(r.t)+'</span><small class="pf-sub">'+esc(r.sub||'')+'</small></span><span class="pf-v" id="pfv-'+r.id+'"></span><span class="pf-chev" aria-hidden="true">›</span></summary><div class="pf-body"></div>';
+    d.addEventListener('toggle',function(){if(d.open){profileReveal(d);if(d.dataset.fresh!=='1'){if(r.id==='modifica'&&!state.ped)pedOpen();pfBody(r);}}});host.appendChild(d);if(r.id==='piano')d.open=true;
+  });box.appendChild(advanced);
+  var dc=$('#dati-count');if(dc)advanced.lastElementChild.appendChild(dc);if(toConfirm().length)advanced.open=true;
+  function tool(panel,title,sub){if(!panel)return;var d=document.createElement('details');d.className='profile-tool';d.innerHTML='<summary><span><b>'+title+'</b><small>'+sub+'</small></span></summary><div class="profile-tool-body"></div>';panel.classList.add('pf-panel');d.lastElementChild.appendChild(panel);sec.appendChild(d);}
+  tool(hevy,'Importa gli allenamenti','Carica il file esportato da Hevy');tool(backup,'Backup ed esportazioni','Conserva o ripristina una copia del percorso');tool(acct,'Account','Accesso e dati dell’account');
+  bindPlan(box);
+}
+
+
+/* Profile navigation, one-topic editor and confirmation-aware save feedback. */
+var ProfileUX={view:'journey',active:null,records:{},seq:0,closing:0,observer:null};
+function profileRecord(id){return ProfileUX.records[id]||(ProfileUX.records[id]={state:'clean',dirty:false,rev:0,submitted:false,pending:0,serial:0,paths:{},seq:0,scroll:0});}
+function profileText(el,text){if(el&&el.textContent!==text)el.textContent=text;}
+function profileRow(id){return PF_ROWS.filter(function(r){return r.id===id;})[0];}
+function profileCurrentJob(){var j=null;((planDoc()||{}).jobs||[]).forEach(function(x){if(x.from<=todayStr()&&(!j||j.from<=x.from))j=x;});return j;}
+function profileCompactNumber(n){return fmt(n,Math.abs(n-Math.round(n))>.001?1:0);}
+function profileWorkDays(days){var list=(days||[]).slice().sort(function(a,b){return a-b;});if(!list.length)return '';if(list.length===7)return 'tutti i giorni';var ranges=[],run=[list[0]];for(var i=1;i<list.length;i++){if(list[i]===list[i-1]+1)run.push(list[i]);else{ranges.push(run);run=[list[i]];}}ranges.push(run);if(ranges.length>1&&list[0]===0&&list[list.length-1]===6){var first=ranges.shift(),last=ranges.pop();ranges.unshift(last.concat(first));}return ranges.map(function(x){return x.length>2?WD[x[0]]+'–'+WD[x[x.length-1]]:x.map(function(d){return WD[d];}).join(', ');}).join(', ');}
+function profileSummary(id){
+  var p=profileDoc(),v=activeVersion();
+  if(id==='tu')return [p.age?p.age+' anni':null,p.heightCm?profileCompactNumber(p.heightCm)+' cm':null].filter(Boolean).join(' · ')||'Completa i dati di base';
+  if(id==='modifica'){var z=state.E&&state.E.plan&&state.E.plan.active;return v?(z&&z.kcal?fmt(z.kcal,0)+' kcal al giorno · ':'')+profilePhase(v.goal&&v.goal.phase):'Crea il tuo primo piano';}
+  if(id==='lavoro'){var j=profileCurrentJob();if(!j)return 'Nessun lavoro impostato';if(j.days&&j.days.length)return profileCompactNumber(j.days.length*j.hours)+' h/settimana · '+profileWorkDays(j.days);return profileCompactNumber(j.hoursWeek||0)+' h/settimana · giorni variabili';}
+  if(id==='integratori'){var ss=(planDoc()||{}).supplements||[],names=ss.filter(function(s){return GJM.supp.info(s).attivo;}).map(function(s){return s.name||'Integratore';});return names.length?names.slice(0,2).join(' · ')+(names.length>2?' e altri '+(names.length-2):''):ss.length?'Nessun prodotto attualmente in uso':'Nessun integratore registrato';}
+  if(id==='eventi'){var es=((planDoc()||{}).events||[]).slice().sort(function(a,b){return a.from<b.from?1:-1;});return es.length?cap(EV_KIND[es[0].kind]||es[0].kind)+' · '+fmtDay(es[0].from):'Nessun evento registrato';}
+  var r=profileRow(id);return r&&r.v?r.v():'';
+}
+
+function buildProfile(){
+  var sec=$('#tab-dati'),box=$('#plan-box');if(!sec||!box||sec.dataset.pf)return;sec.dataset.pf='seven';sec.setAttribute('data-ib-keep','');
+  var setPanel=box.closest('.panel'),acct=$('#acct-out').closest('.panel'),hevy=$('#hevy-panel'),legacy=$('#sync-btn')&&$('#sync-btn').closest('.panel'),backup=Array.prototype.filter.call(sec.querySelectorAll('.panel'),function(p){return !!p.querySelector('#bk-down');})[0];
+  var lead=sec.querySelector('.area-lead');if(lead)lead.remove();
+  var nav=document.createElement('div');nav.className='profile-navigation';nav.innerHTML='<div class="segbar profile-switch" role="tablist" aria-label="Sezioni del profilo"><button type="button" role="tab" id="profile-tab-journey" data-profile-view="journey" aria-controls="profile-journey-panel" aria-selected="true" tabindex="0">Il mio percorso</button><button type="button" role="tab" id="profile-tab-settings" data-profile-view="settings" aria-controls="profile-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><button type="button" class="profile-help" data-profile-help><span aria-hidden="true">?</span> Come funziona</button>';
+  var old=sec.querySelector(':scope > .segbar');if(old)old.replaceWith(nav);else sec.insertBefore(nav,setPanel);
+  var notice=document.createElement('div');notice.id='profile-notice';notice.className='profile-notice';notice.hidden=true;notice.innerHTML='<span role="status" aria-live="polite"></span><button type="button" class="linkbtn small" data-profile-resume>Apri</button>';sec.insertBefore(notice,setPanel);
+  setPanel.classList.add('pf-settings');box.innerHTML='<section id="profile-journey-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-journey"><div class="panel pf-card" id="pf-card"></div><div id="profile-current-plan"></div></section><section id="profile-settings-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-settings" hidden><div class="profile-settings-intro"><h2>Le tue impostazioni</h2><p>Apri una voce per vedere e modificare i tuoi dati.</p></div><div id="profile-settings-menu"></div></section>';
+  var groups={},menu=$('#profile-settings-menu'),advanced=document.createElement('details');advanced.className='profile-archive';advanced.id='profile-advanced';advanced.innerHTML='<summary><span><b>Archivio e dettagli dei dati</b><small>Piani precedenti, dati importati e controlli</small></span></summary><div class="profile-archive-body"></div>';
+  PF_ROWS.forEach(function(r){
+    var d=document.createElement(r.id==='piano'?'section':'details');d.className='pf-row'+(r.id==='piano'?' pf-plan-card':' profile-menu-row');d.id='pf-'+r.id;d.dataset.ibt=r.t;
+    if(r.id==='piano'){d.open=true;d.innerHTML='<header class="profile-plan-heading">'+pfIcon(r.ic,r.c)+'<div><h2>Il tuo piano attivo</h2><span>Calorie, macro e obiettivo della fase</span></div><span id="pfv-piano" hidden></span></header><div class="pf-body"></div>';$('#profile-current-plan').appendChild(d);return;}
+    d.dataset.profileEditor=r.id;d.innerHTML='<summary>'+pfIcon(r.ic,r.c)+'<span class="pf-summary-copy"><span class="pf-t">'+esc(r.id==='modifica'?'Obiettivi e piano':r.t)+'</span><span class="pf-v" id="pfv-'+r.id+'"></span><small class="pf-sub">'+esc(r.sub||'')+'</small></span><span class="profile-draft-badge" hidden>Bozza</span><span class="pf-chev" aria-hidden="true">›</span></summary><div class="pf-body"></div>';
+    d.addEventListener('toggle',function(){if(d.open&&(!ProfileUX.active||ProfileUX.active.node!==d))profileOpen(r.id);});
+    if(r.g==='Archivio')advanced.lastElementChild.appendChild(d);else{var group=r.id==='modifica'?'Piano e obiettivi':'Profilo e routine';if(!groups[group]){var g=document.createElement('div');g.className='profile-menu-group';g.innerHTML='<h3>'+group+'</h3><div class="pf-list"></div>';menu.appendChild(g);groups[group]=g.lastElementChild;}groups[group].appendChild(d);}
+  });
+  menu.appendChild(advanced);var dc=$('#dati-count');if(dc)advanced.lastElementChild.appendChild(dc);var unsaved=$('#unsaved-panel');if(unsaved)menu.insertBefore(unsaved,menu.firstChild);
+  var tools=document.createElement('div');tools.className='profile-menu-group';tools.innerHTML='<h3>Dati e account</h3><div class="pf-list"></div>';menu.appendChild(tools);
+  function tool(panel,id,title,copy,ic,color,archive){if(!panel)return;var d=document.createElement('details');d.id='profile-tool-'+id;d.className='profile-tool profile-menu-row';d.dataset.profileTool=id;d.dataset.ibt=title;d.innerHTML='<summary>'+pfIcon(ic,color)+'<span class="pf-summary-copy"><span class="pf-t">'+title+'</span><small class="pf-sub">'+copy+'</small></span><span class="pf-chev" aria-hidden="true">›</span></summary><div class="profile-tool-body"></div>';panel.classList.add('pf-panel');d.lastElementChild.appendChild(panel);(archive?advanced.lastElementChild:tools.lastElementChild).appendChild(d);d.addEventListener('toggle',function(){if(d.open&&(!ProfileUX.active||ProfileUX.active.node!==d))profileOpen('tool:'+id);});}
+  tool(hevy,'import','Importa gli allenamenti','Carica o aggiorna i dati da Hevy','up','#BF8AFF');tool(backup,'backup','Backup ed esportazioni','Conserva o ripristina il tuo percorso','shield','#75CBE6');tool(acct,'account','Account','Accesso e indirizzo email','user','#98A9AF');tool(legacy,'legacy','Importa dal vecchio sito','Recupera i dati della versione precedente','up','#98A9AF',true);
+  var dialog=document.createElement('dialog');dialog.id='profile-dialog';dialog.className='profile-modal';dialog.setAttribute('aria-labelledby','profile-dialog-title');dialog.setAttribute('aria-describedby','profile-dialog-description');dialog.innerHTML='<div class="profile-modal-inner"><header class="profile-modal-head"><div><span class="profile-eyebrow">LE TUE IMPOSTAZIONI</span><h2 id="profile-dialog-title" tabindex="-1"></h2><p id="profile-dialog-description"></p></div><button type="button" class="profile-modal-close" data-profile-close aria-label="Chiudi la modifica">×</button></header><div class="profile-modal-body"></div><footer class="profile-modal-foot"><div id="profile-save-status" role="status" aria-live="polite" aria-atomic="true"></div><div class="profile-modal-actions"><button type="button" class="btn ghost fit" data-profile-discard>Annulla</button><button type="button" class="btn ghost fit" data-profile-prev hidden>Indietro</button><button type="button" class="btn fit" data-profile-commit>Salva</button></div></footer></div>';
+  box.appendChild(dialog);dialog.addEventListener('cancel',function(e){e.preventDefault();profileClose();});dialog.addEventListener('click',function(e){if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)profileClose();}});
+  dialog.addEventListener('keydown',function(e){if(e.key!=='Tab')return;var list=Array.prototype.filter.call(dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]'),function(x){return !x.disabled&&x.getClientRects().length;});if(!list.length)return;var first=list[0],last=list[list.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('#profile-dialog-title'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
+  bindPlan(box);profileSetView('journey');
+  if(window.visualViewport){var fit=function(){dialog.style.setProperty('--profile-vh',window.visualViewport.height+'px');dialog.style.setProperty('--profile-vtop',window.visualViewport.offsetTop+'px');};window.visualViewport.addEventListener('resize',fit);window.visualViewport.addEventListener('scroll',fit);fit();}
+}
+
+function profileSetView(view,focus){
+  ProfileUX.view=view==='settings'?'settings':'journey';['journey','settings'].forEach(function(k){var b=$('#profile-tab-'+k),p=$('#profile-'+k+'-panel'),on=k===ProfileUX.view;if(p)p.hidden=!on;if(b){b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;if(focus&&on)b.focus();}});var nav=$('#tab-dati .profile-switch');if(nav)nav.dataset.view=ProfileUX.view;
+}
+function profileReveal(el){var row=el&&el.closest('.profile-menu-row');if(row){profileSetView('settings');profileOpen(row.dataset.profileEditor||'tool:'+row.dataset.profileTool);return;}for(var p=el&&el.parentElement;p&&p.id!=='tab-dati';p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;}
+function profileRestoreRow(){var a=ProfileUX.active;if(!a)return;a.record.scroll=$('#profile-dialog .profile-modal-body').scrollTop;a.node.classList.remove('profile-modal-row');a.node.querySelectorAll('.profile-managed-save').forEach(function(b){b.classList.remove('profile-managed-save');});a.node.open=false;if(a.placeholder.parentNode)a.placeholder.parentNode.insertBefore(a.node,a.placeholder);a.placeholder.remove();ProfileUX.active=null;if(ProfileUX.observer){ProfileUX.observer.disconnect();ProfileUX.observer=null;}}
+function profileOpen(id,trigger){
+  var dialog=$('#profile-dialog'),node=id.indexOf('tool:')===0?$('#profile-tool-'+id.slice(5)):$('#pf-'+id),r=profileRow(id);if(!dialog||!node)return;if(ProfileUX.active&&ProfileUX.active.id===id)return;
+  if(ProfileUX.closing){clearTimeout(ProfileUX.closing);ProfileUX.closing=0;dialog.classList.remove('is-closing');}if(ProfileUX.active)profileRestoreRow();
+  var rec=profileRecord(id);if(id==='modifica'&&!state.ped){state.pedMsg='';pedOpen();rec.dirty=true;rec.state='draft';rec.submitted=false;}
+  if(r&&(node.dataset.fresh!=='1'||id==='modifica'))pfBody(r);
+  var ph=document.createComment('profile editor');node.parentNode.insertBefore(ph,node);ProfileUX.active={id:id,node:node,record:rec,placeholder:ph,trigger:trigger||document.activeElement};
+  node.classList.add('profile-modal-row');node.hidden=false;node.open=true;$('#profile-dialog .profile-modal-body').appendChild(node);
+  profileText($('#profile-dialog-title'),id==='modifica'?'Modifica il piano':node.dataset.ibt||'Impostazioni');profileText($('#profile-dialog-description'),id==='modifica'?'Una guida con anteprima prima del salvataggio.':r&&r.sub||'Gestisci i dati del tuo account.');
+  document.documentElement.classList.add('profile-modal-open');if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','');}$('#profile-dialog .profile-modal-body').scrollTop=rec.scroll||0;
+  profileObserve();profilePaint();try{$('#profile-dialog-title').focus({preventScroll:true});}catch(e){}
+}
+function profileClose(discard){
+  var dialog=$('#profile-dialog'),a=ProfileUX.active;if(!dialog||!a||ProfileUX.closing)return;
+  if(discard){if(a.id==='modifica'){state.ped=null;state.pedMsg='';}a.node.dataset.fresh='';a.record.dirty=false;if(!a.record.pending&&a.record.state!=='queued')a.record.state='clean';}
+  function finish(){ProfileUX.closing=0;var trigger=a.trigger;profileRestoreRow();if(dialog.close)dialog.close();else dialog.removeAttribute('open');dialog.classList.remove('is-closing');document.documentElement.classList.remove('profile-modal-open');profilePaint();if(trigger&&document.contains(trigger)&&trigger.getClientRects().length)try{trigger.focus({preventScroll:true});}catch(e){}else{var b=$('#profile-tab-'+ProfileUX.view);if(b)b.focus();}}
+  if(RM)finish();else{dialog.classList.add('is-closing');ProfileUX.closing=setTimeout(finish,170);}
+}
+function profileObserve(){if(ProfileUX.observer)ProfileUX.observer.disconnect();if(!ProfileUX.active||typeof MutationObserver==='undefined')return;ProfileUX.observer=new MutationObserver(function(){profileSyncFooter();});ProfileUX.observer.observe(ProfileUX.active.node,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});}
+function pfBody(r){profileSourceBody(r);var node=$('#pf-'+r.id);if(!node)return;node.querySelector('.pf-body')._result=null;if(r.id==='integratori'){var fs=Array.prototype.filter.call(node.querySelectorAll('fieldset.pf-fieldset'),function(x){return x.querySelector('#sup-new');})[0];if(fs){var d=document.createElement('details');d.className='more pf-more profile-add-supp';d.innerHTML='<summary>Aggiungi un integratore</summary><div class="in"></div>';while(fs.children.length){var child=fs.firstElementChild;if(child.tagName==='LEGEND'||child.classList.contains('pf-section-copy'))child.remove();else d.lastElementChild.appendChild(child);}if(!((planDoc()||{}).supplements||[]).length)d.open=true;fs.replaceWith(d);}}
+  if(ProfileUX.active&&ProfileUX.active.node===node){profileObserve();profilePaint();}
+}
+function pedRender(){profileSourcePedRender();if(ProfileUX.active&&ProfileUX.active.id==='modifica'){profileObserve();profileSyncFooter();}}
+function renderSettings(){profileSourceSettings();PF_ROWS.forEach(function(r){if(r.id==='piano')return;var node=$('#pf-'+r.id),value=$('#pfv-'+r.id);if(!node)return;var text='';try{text=profileSummary(r.id);}catch(e){}profileText(value,text);var sub=node.querySelector(':scope > summary .pf-sub');if(sub)sub.hidden=!!text;var badge=node.querySelector('.profile-draft-badge');if(badge)badge.hidden=!profileRecord(r.id).dirty;});profilePaint();}
+
+function profileStatusText(rec){
+  if(rec.state==='error')return rec.error||'Salvataggio non riuscito. Rivedi i dati e riprova.';
+  if(rec.state==='queued'||rec.state==='waiting')return rec.persisted===false?'Non ancora sincronizzato: tieni aperta questa pagina.':'In attesa di sincronizzazione. L’app riprova automaticamente.';
+  if(rec.state==='saving')return 'Salvataggio in corso…';
+  if(rec.state==='preview')return 'Anteprima: queste modifiche non vengono salvate.';
+  if(rec.dirty)return 'Bozza · modifiche non ancora salvate';
+  if(rec.state==='saved')return 'Salvato e sincronizzato';
+  return 'Dati attuali';
+}
+function profilePaint(){
+  var a=ProfileUX.active;if(a){var rec=a.record,st=$('#profile-save-status');profileText(st,profileStatusText(rec));st.dataset.state=rec.state==='clean'&&rec.dirty?'draft':rec.state;
+    ['#prof-msg','#job-msg','#ev-msg','#sup-msg'].forEach(function(id){var e=a.node.querySelector(id);if(e&&/salvat|sincronizz|versione/i.test(e.textContent))profileText(e,profileStatusText(rec));});
+    if(a.id==='modifica'&&!state.ped&&rec.submitted){var body=a.node.querySelector('.pf-body'),html='<div class="profile-save-result" data-state="'+rec.state+'"><span class="profile-result-mark" aria-hidden="true">'+(rec.state==='saved'?'✓':rec.state==='error'?'!':'↗')+'</span><h3>'+(rec.state==='saved'?'Piano salvato':rec.state==='error'?'Il piano richiede attenzione':rec.state==='preview'?'Anteprima del piano':'Aggiornamento in corso')+'</h3><p>'+esc(profileStatusText(rec))+'</p></div>';if(body._result!==html){body._result=html;body.innerHTML=html;}}
+    profileSyncFooter();
+  }
+  var chosen=null;Object.keys(ProfileUX.records).forEach(function(k){var r=ProfileUX.records[k];if((r.dirty||r.state!=='clean')&&(!chosen||r.seq>chosen.rec.seq))chosen={id:k,rec:r};});var notice=$('#profile-notice');if(notice){notice.hidden=!chosen;if(chosen){notice.dataset.state=chosen.rec.state;profileText(notice.querySelector('[role=status]'),profileStatusText(chosen.rec));notice.querySelector('button').dataset.profileResume=chosen.id;profileText(notice.querySelector('button'),chosen.rec.dirty?'Riprendi':'Dettagli');}}
+}
+function profileSourceButton(){var a=ProfileUX.active;if(!a)return null;var n=a.node;if(a.id==='tu')return n.querySelector('button[type=submit]');if(a.id==='modifica')return state.ped?n.querySelector('[data-pa=ped-save]'):null;var keys={lavoro:'job-add',eventi:'ev-add',passi:'sem-add'};if(keys[a.id])return n.querySelector('[data-pa="'+keys[a.id]+'"]');if(a.id==='integratori'&&a.record.suppKey){var k=a.record.suppKey,b=n.querySelector('[data-pa="'+k.pa+'"]'+(k.i!=null?'[data-i="'+k.i+'"]':''));for(var p=b&&b.parentElement;p&&p!==n;p=p.parentElement)if(p.tagName==='DETAILS'&&!p.open)return null;return b;}return null;}
+function profileSyncFooter(){
+  var a=ProfileUX.active;if(!a)return;var rec=a.record,commit=$('[data-profile-commit]'),prev=$('[data-profile-prev]'),cancel=$('[data-profile-discard]'),source=profileSourceButton(),wizard=a.id==='modifica'&&state.ped,stage=wizard?state.ped.uiStep||0:3;
+  prev.hidden=!wizard||stage===0;cancel.hidden=a.id==='modifica'&&!state.ped&&rec.submitted&&!(rec.state==='error'&&rec.planDraft);cancel.disabled=rec.pending>0;profileText(cancel,rec.dirty||wizard?'Annulla':'Chiudi');
+  a.node.querySelectorAll('.profile-managed-save').forEach(function(x){if(x!==source)x.classList.remove('profile-managed-save');});if(source)source.classList.add('profile-managed-save');
+  var text=wizard&&stage<3?'Continua':source?source.textContent.trim():a.id==='integratori'?'Aggiungi integratore':a.id==='modifica'&&rec.state==='error'&&rec.planDraft?'Rivedi la bozza':'Chiudi';profileText(commit,text);
+  commit.disabled=wizard&&stage<3?false:!!source&&(!!source.disabled||rec.pending>0||rec.submitted&&!rec.dirty&&(rec.state==='saved'||rec.state==='queued'||rec.state==='waiting'));
+  if(a.id.indexOf('tool:')===0||!source&&!wizard&&a.id!=='integratori'&&a.id!=='modifica'){commit.hidden=true;}else commit.hidden=false;
+  if(wizard&&stage===3&&source&&source.disabled){var m=a.node.querySelector('#ped-msg');if(m&&m.textContent.trim()){profileText($('#profile-save-status'),m.textContent.trim());$('#profile-save-status').dataset.state='error';}}
+}
+function profileChanged(target){var a=ProfileUX.active;if(!a||!a.node.contains(target))return;var r=a.record;r.rev++;r.dirty=true;r.seq=++ProfileUX.seq;if(!r.pending)r.state='draft';a.node.querySelectorAll('[aria-invalid=true]').forEach(function(el){el.removeAttribute('aria-invalid');el.removeAttribute('aria-errormessage');if(el.dataset.profileDescription!=null){if(el.dataset.profileDescription)el.setAttribute('aria-describedby',el.dataset.profileDescription);else el.removeAttribute('aria-describedby');delete el.dataset.profileDescription;}});a.node.querySelectorAll('.profile-field-error').forEach(function(el){el.remove();});profileChooseSupplement(target);profilePaint();}
+function profileFieldError(el,message){var label=el.closest('label');if(!label)return;el.setAttribute('aria-invalid','true');var hint=label.querySelector('.profile-field-error');if(!hint){hint=document.createElement('small');hint.className='profile-field-error';hint.id='profile-error-'+(ProfileUX.active.id+'-'+(el.name||++ProfileUX.seq)).replace(/[^a-z0-9_-]/gi,'-');label.appendChild(hint);}hint.textContent=message;if(el.dataset.profileDescription==null)el.dataset.profileDescription=el.getAttribute('aria-describedby')||'';el.setAttribute('aria-errormessage',hint.id);el.setAttribute('aria-describedby',[el.dataset.profileDescription,hint.id].filter(Boolean).join(' '));}
+function profileChooseSupplement(target){var a=ProfileUX.active;if(!a||a.id!=='integratori')return;var owner=target.closest('.ped-act,[data-supedit],#sup-new'),button=null;if(owner){if(owner.id==='sup-new')button=a.node.querySelector('[data-pa=sup-add]');else if(owner.matches('[data-supedit]'))button=owner.parentElement.querySelector('[data-pa=sup-edit]');else button=owner.querySelector('[data-pa=sup-ev]');}else{var more=target.closest('details.pf-more');if(more&&more.open)button=more.querySelector('[data-pa=sup-add],[data-pa=sup-edit],[data-pa=sup-ev]');}if(button)a.record.suppKey={pa:button.dataset.pa,i:button.dataset.i};}
+function profileValidation(){var a=ProfileUX.active;if(!a||a.record.pending)return;var msgs=Array.prototype.map.call(a.node.querySelectorAll('#prof-msg,#job-msg,#ev-msg,#sup-msg,#ped-msg,[data-supmsg]'),function(e){return e.textContent.trim();}).filter(function(s){return s&&(/^Non salv/i.test(s)||!/salvat|sincronizz|confermat|anteprima:/i.test(s));});var error=msgs.join(' ');if(a.id==='modifica'&&state.ped&&state.pedMsg&&/^Non salvato/.test(state.pedMsg))error=state.pedMsg;if(!error)return;a.record.state='error';a.record.error=error;
+  var targets=[];if(a.id==='tu'){if(/altezza/i.test(error))targets.push('[name=h]');if(/peso/i.test(error))targets.push('[name=w]');if(/età/i.test(error))targets.push('[name=age]');}else{if(/nome/i.test(error))targets.push('[name=name]');if(/ore/i.test(error))targets.push('[name=hd]');if(/data|inizio|fine/i.test(error))targets.push(a.id==='eventi'?'[name=to],[name=from]':'[name=from]');}
+  targets.forEach(function(sel){a.node.querySelectorAll(sel).forEach(function(el){profileFieldError(el,error);});});profilePaint();var first=a.node.querySelector('[aria-invalid=true]');if(first){first.focus();first.scrollIntoView({block:'center',behavior:RM?'auto':'smooth'});}}
+function profileCommit(){var a=ProfileUX.active;if(!a)return;if(a.id==='modifica'&&state.ped&&(state.ped.uiStep||0)<3){state.ped.uiStep=(state.ped.uiStep||0)+1;pedRender();$('#profile-dialog .profile-modal-body').scrollTop=0;return;}
+  var source=profileSourceButton();if(source){if(source.disabled)return;if(a.id==='modifica')a.record.planDraft=clone(state.ped);source.click();profileValidation();profilePaint();return;}
+  if(a.id==='integratori'){var d=a.node.querySelector('.profile-add-supp');if(d){d.open=true;a.record.suppKey={pa:'sup-add'};profileSyncFooter();var field=d.querySelector('input');if(field){field.focus();field.scrollIntoView({block:'center',behavior:RM?'auto':'smooth'});}}return;}
+  if(a.id==='modifica'&&a.record.state==='error'&&a.record.planDraft){state.ped=clone(a.record.planDraft);state.pedMsg='';a.record.dirty=true;a.record.state='draft';pfBody(profileRow('modifica'));return;}
+  profileClose();
+}
+
+/* The existing transport resolves only when Firebase acknowledges a write. */
+function saveDoc(path,data){
+  var a=ProfileUX.active,tracked=a&&/^(settings\/(piano|main)|days\/)/.test(path),rec=tracked?a.record:null;
+  if(!rec)return profileSourceSaveDoc(path,data);
+  var rev=rec.rev,serial=++rec.serial;rec.pending++;rec.submitted=true;rec.dirty=false;rec.state=typeof db==='undefined'||!db?'preview':'saving';rec.seq=++ProfileUX.seq;rec.error='';rec.paths[path]=true;rec.savedRev=rev;
+  if(window.GJ_sync&&window.GJ_sync.status){var sync=window.GJ_sync.status();rec.persisted=sync.persisted;rec.rejectedBefore=(sync.rejected||[]).map(function(x){return x.id;});}
+  profilePaint();var timer=setTimeout(function(){if(rec.pending&&rec.state==='saving'){rec.state='waiting';profilePaint();}},4200),result;
+  try{result=profileSourceSaveDoc(path,data);}catch(err){result=Promise.reject(err);}
+  Promise.resolve(result).then(function(){clearTimeout(timer);rec.pending--;if(rec.state!=='preview'&&rec.state!=='error'&&rec.pending===0){rec.state=rec.dirty||rec.rev!==rev?'draft':'saved';}profilePaint();},function(err){clearTimeout(timer);rec.pending--;if(err&&err.code==='queued'){if(rec.state!=='error')rec.state='queued';}else{rec.state='error';rec.error=err&&err.code==='restore'?'Modifica sostituita dal ripristino dei dati.':'Salvataggio non riuscito. I dati da recuperare sono in Impostazioni, alla voce Modifiche non salvate.';}profilePaint();});
+  return result;
+}
+function profileSyncStatus(st){if(!st)return;Object.keys(ProfileUX.records).forEach(function(id){var rec=ProfileUX.records[id];if(rec.state!=='queued')return;rec.persisted=st.persisted;var rejected=(st.rejected||[]).some(function(r){return rec.paths[r.path]&&(rec.rejectedBefore||[]).indexOf(r.id)<0;});if(rejected){rec.state='error';rec.error='Il server ha rifiutato la modifica. Puoi recuperarla da Modifiche non salvate.';}else if(!Object.keys(rec.paths).some(function(p){return (st.paths||[]).indexOf(p)>=0;})){rec.state=rec.dirty?'draft':'saved';}});profilePaint();}
+
+document.addEventListener('click',function(e){
+  var summary=e.target.closest('#tab-dati .profile-menu-row > summary');if(summary){e.preventDefault();var row=summary.parentElement;profileOpen(row.dataset.profileEditor||'tool:'+row.dataset.profileTool,summary);return;}
+  var tab=e.target.closest('[data-profile-view]');if(tab){profileSetView(tab.dataset.profileView);return;}
+  if(e.target.closest('[data-profile-help]')){show('regole');return;}
+  var resume=e.target.closest('[data-profile-resume]');if(resume){profileOpen(resume.dataset.profileResume,resume);return;}
+  var step=e.target.closest('[data-profile-step]');if(step&&state.ped){state.ped.uiStep=Math.max(0,Math.min(3,+step.dataset.profileStep||0));pedRender();if(ProfileUX.active)$('#profile-dialog .profile-modal-body').scrollTop=0;return;}
+  var edit=e.target.closest('[data-profile-edit]'),open=e.target.closest('[data-profile-open]');if(edit||open){profileOpen(edit?'modifica':open.dataset.profileOpen,edit||open);return;}
+  if(e.target.closest('[data-profile-close]')){profileClose();return;}
+  if(e.target.closest('[data-profile-discard]')){profileClose(ProfileUX.active&&ProfileUX.active.record.dirty);return;}
+  if(e.target.closest('[data-profile-prev]')&&state.ped){state.ped.uiStep=Math.max(0,(state.ped.uiStep||0)-1);pedRender();$('#profile-dialog .profile-modal-body').scrollTop=0;return;}
+  if(e.target.closest('[data-profile-commit]')){profileCommit();return;}
+  var a=ProfileUX.active;if(!a||!a.node.contains(e.target))return;
+  var path=e.target.closest('[data-path]');if(path)profileChanged(path);
+  var action=e.target.closest('[data-pa]');if(action&&action.dataset.pa==='ver-restore'){profileOpen('modifica',action);return;}
+  if(action&&action.dataset.pa==='ped-cancel'&&!state.ped){a.record.dirty=false;a.record.state='clean';profileClose();return;}
+  if(action&&/^(job-add|ev-add|sup-add|sup-edit|sup-ev|ped-save|sem-add)$/.test(action.dataset.pa)){profileValidation();profilePaint();}
+});
+document.addEventListener('input',function(e){profileChanged(e.target);});
+document.addEventListener('change',function(e){if(e.target.tagName==='SELECT'||e.target.type==='checkbox'||e.target.type==='date')profileChanged(e.target);});
+document.addEventListener('focusin',function(e){if(ProfileUX.active&&ProfileUX.active.node.contains(e.target)){profileChooseSupplement(e.target);profileSyncFooter();}});
+document.addEventListener('toggle',function(e){if(ProfileUX.active&&ProfileUX.active.node.contains(e.target)){profileChooseSupplement(e.target);profileSyncFooter();}},true);
+document.addEventListener('submit',function(e){if(ProfileUX.active&&e.target.id==='prof-form'){profileValidation();profilePaint();}});
+document.addEventListener('invalid',function(e){var a=ProfileUX.active;if(!a||!a.node.contains(e.target))return;a.record.state='error';a.record.error='Controlla i campi evidenziati prima di salvare.';profileFieldError(e.target,e.target.validationMessage||'Controlla il valore inserito.');profilePaint();},true);
+document.addEventListener('keydown',function(e){var b=e.target.closest('[data-profile-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();profileSetView(e.key==='Home'?'journey':e.key==='End'?'settings':b.dataset.profileView==='journey'?'settings':'journey',true);});
 
 var energyViewCache = { E: null, value: null };
 function energyView() {
@@ -10437,7 +10735,7 @@ renderAll();
 
 
 /* usati dal codice di account, importazione e modulo del giorno */
-window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: function () { if (!document.getElementById('gj-welcome')) obOpen(); }, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }, state: state, saveDay: saveDay, addMeal: addMeal, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
+window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: function () { if (!document.getElementById('gj-welcome')) obOpen(); }, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) { profileReveal(h); h.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 300); }, state: state, saveDay: saveDay, addMeal: addMeal, setSel: setSel, todayStr: todayStr, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
 /* Oggi tiene solo l'essenziale: gli altri riquadri passano nelle sezioni di Progressi */
 (function slimToday() {
   var oggi = document.getElementById('tab-oggi');
@@ -10478,13 +10776,7 @@ function renderExtras() {
     st.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + PF_IC.fire + '</svg>' + n + (n === 1 ? ' settimana' : ' settimane') + ' di fila in palestra';
   }
   buildProfile();
-  var card = $('#pf-card'); if (!card) return;
-  var lw = lastWeight(), w0 = s.startWeight, w1 = s.goalWeight, cur = lw ? lw.w : w0;
-  var pct = w0 && w1 && w0 !== w1 ? Math.max(0, Math.min(1, (w0 - cur) / (w0 - w1))) : 0;
-  var nm = (s.name || '').trim(), ph = s.phase === 'mantenimento' ? 'Mantenimento' : s.phase === 'surplus' ? 'Massa' : 'Cut';
-  var pfHtml = '<div class="pf-head"><button type="button" class="pf-av" data-photo aria-label="Cambia la foto del profilo">' + avatarHTML(nm) + '<span class="pf-cam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span></button><div class="pf-who"><b>' + esc(nm || 'Il tuo profilo') + '</b><span>' + ph + (phaseDayText() ? ' · ' + phaseDayText() : '') + ' · da ' + fmt(w0, 1) + ' a ' + fmt(w1, 1) + ' kg' + (s.endDate ? ' · entro il ' + fmtDay(s.endDate) : '') + '</span>' + '<span class="pf-photo-acts"><button type="button" class="linkbtn small" data-photo>' + (state.avatar ? 'Cambia foto' : 'Aggiungi una foto') + '</button>' + (state.avatar ? '<button type="button" class="linkbtn small" data-photo-del>Rimuovi</button>' : '') + '</span>' + (state.photoMsg ? '<span class="pf-photo-msg">' + esc(state.photoMsg) + '</span>' : '') + '</div></div>'
-    + '<div class="pf-bar"><span style="width:' + Math.round(pct * 100) + '%"></span></div><div class="pf-bl"><span>' + fmt(w0, 1) + ' kg</span><b>' + (lw ? fmt(cur, 1) + ' kg il ' + fmtDay(lw.d) : 'Nessuna pesata') + '</b><span>' + fmt(w1, 1) + ' kg</span></div>' + ($('#h-fresh') && $('#h-fresh').textContent.trim() ? '<div class="pf-fresh">' + $('#h-fresh').innerHTML + '</div>' : '');
-  if (card._h !== pfHtml) { card._h = pfHtml; card.innerHTML = pfHtml; }
+  renderProfileIdentity();
 }
 /* ---------- Oggi come l'anteprima "Cerchi e vetro" ---------- */
 function avatarHTML(name) {
@@ -12217,6 +12509,378 @@ body #dayform .df-actions .btn:not(#z):not(#y){width:100%;min-width:0;min-height
 .maintenance-week-explain{padding:4px 14px 12px;margin:14px 0;border:1px solid #ffffff12;border-radius:14px;background:#ffffff04}
 .maintenance-week-explain .energy-week-days>span{min-width:0}
 @media(max-width:430px){.maintenance-value{gap:12px}.maintenance-value>span{font-size:.85rem}.maintenance-bottom{gap:12px}.maintenance-week-explain{padding:4px 10px 10px}.maintenance-week-explain .energy-week-days{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* Friends opens on shared details; account controls live in the second tab. */
+body #tab-amici .friends-switch:not(#z):not(#y){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0 0 20px;padding:5px!important;overflow:visible}
+body #tab-amici .friends-switch>button:not(#z):not(#y){min-width:0;min-height:44px;padding:10px 12px!important;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.86rem!important}
+body #tab-amici .friends-switch>button[aria-selected="true"]:not(#z):not(#y){background:#63D6B928!important;color:#A6F2DC!important;box-shadow:inset 0 0 0 1px #63D6B947!important}
+#tab-amici .friends-switch>button:focus-visible{outline:2px solid #83E8CD;outline-offset:3px}
+.friends-view-badge{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#FF557B;color:white;font:700 .68rem/1 var(--f-body);font-style:normal}
+.friends-view-badge[hidden]{display:none!important}
+#tab-amici .friends-pane[hidden]{display:none!important}
+#friends-list-panel>.friends-list-heading{margin-top:0}
+#friends-settings-panel>.friends-intro{margin-top:0}
+#tab-amici .friends-empty>.btn{margin-top:16px}
+.friends-pane-enter{animation:friendsPaneEnter .22s cubic-bezier(.22,.68,.25,1) both}
+@keyframes friendsPaneEnter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){#friends-list-panel #friend-comparison{display:flex;flex-direction:column}#friends-list-panel .friends-comparison-head{display:contents}#friends-list-panel .friends-comparison-head>.friends-actions{order:2;margin-top:10px;padding-top:12px;border-top:1px solid #ffffff10}#friends-list-panel .friends-period{margin-top:13px}}
+@media(max-width:430px){body #tab-amici .friends-switch>button:not(#z):not(#y){font-size:.81rem!important;padding-inline:8px!important}.friends-switch{margin-bottom:16px!important}}
+@media(prefers-reduced-motion:reduce){.friends-pane-enter{animation:none!important}}
+
+
+/* A centered profile with readable summaries and progressive forms. */
+body #tab-dati:not([hidden]){display:flex;flex-direction:column;gap:20px;width:100%;max-width:1000px;margin-inline:auto;min-width:0}
+body #tab-dati>.segbar{margin:0;width:100%;box-sizing:border-box}
+body #tab-dati .pf-settings:not(#z):not(#y),body #tab-dati .pf-panel:not(#z):not(#y),body #tab-dati #pf-card:not(#z):not(#y){width:100%;max-width:none;box-sizing:border-box;margin-inline:auto}
+body #tab-dati #pf-card:not(#z):not(#y){padding:26px!important;border:1px solid #73DEC337!important;background:radial-gradient(ellipse at 95% 0,#70D9C01A,transparent 70%),#1C2323!important}
+#tab-dati .pf-head{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+#tab-dati .pf-av{width:72px;height:72px;flex:0 0 72px;background:#286252;box-shadow:0 0 0 5px #70D9C011}
+#tab-dati .pf-who{flex:1;gap:4px;min-width:180px}
+#tab-dati .pf-who>b{font-size:1.6rem;line-height:1.2;overflow-wrap:anywhere}
+#tab-dati .profile-eyebrow{font-size:.67rem;letter-spacing:.12em;font-weight:750;color:#83DEC8;display:block}
+#tab-dati .profile-phase{font-size:.82rem;color:#B4C9C3;line-height:1.5}
+#tab-dati .pf-photo-acts{margin-top:5px;gap:14px;flex-wrap:wrap}
+#tab-dati .pf-photo-acts .linkbtn{font-size:.75rem;color:#A7D9CD}
+#tab-dati .pf-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}
+#tab-dati .pf-mini{padding:15px;border:1px solid #ffffff0C;border-radius:15px;background:#ffffff05;display:flex;flex-direction:column;gap:7px;min-width:0}
+#tab-dati .pf-mini>span{font-size:.73rem;color:#A8BCB6}
+#tab-dati .pf-mini>b{font-size:1.08rem;color:#F1F8F5;line-height:1.3;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#tab-dati .pf-mini>b>small{font-size:.7em;color:#B1C4BF;font-weight:500}
+#tab-dati .pf-mini>small{font-size:.72rem;color:#91A29D;line-height:1.4}
+#tab-dati .pf-journey{margin-top:22px;padding-top:18px;border-top:1px solid #92D8C51C}
+#tab-dati .pf-journey-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:.81rem;color:#C1DCD3}
+#tab-dati .pf-journey-heading>b{font-size:.95rem;color:#A1EAD0;font-variant-numeric:tabular-nums}
+#tab-dati .pf-journey-track{position:relative;height:10px;margin:17px 8px;background:#081A1499;border:1px solid #8CDAB51F;border-radius:999px}
+#tab-dati .pf-journey-fill{display:block;height:100%;width:var(--journey-progress);border-radius:inherit;background:linear-gradient(90deg,#409D81,#83E5C8);transform-origin:left;animation:pf-journey-reveal .6s cubic-bezier(.2,.7,.3,1) both}
+#tab-dati .pf-journey-marker{position:absolute;left:var(--journey-progress);top:50%;width:15px;height:15px;box-sizing:border-box;transform:translate(-50%,-50%);border-radius:50%;background:#D5FFF0;border:3px solid #367560;box-shadow:0 0 0 4px #A8F0D619}
+#tab-dati .pf-journey-meta{display:flex;align-items:baseline;justify-content:space-between;gap:6px 16px;flex-wrap:wrap;color:#B1CEC2;font-size:.75rem;line-height:1.5}
+#tab-dati .pf-journey-meta small{font-size:.7rem;color:#96B0A4}
+#tab-dati .pf-journey-note{margin-top:18px;padding-top:15px;border-top:1px solid #92D8C51C;font-size:.77rem;line-height:1.6;color:#B1CEC2}
+@keyframes pf-journey-reveal{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){#tab-dati .pf-journey-fill{animation:none}}
+body #tab-dati .pf-group:not(#z):not(#y){margin:0 0 22px!important}
+body #tab-dati .pf-gt:not(#z):not(#y){margin:0 0 12px 2px!important;font-size:.83rem;color:#D9E9E4;letter-spacing:.025em;text-transform:none;line-height:1.4}
+#tab-dati .pf-list{background:transparent;display:grid;gap:12px;border-radius:0;overflow:visible}
+#tab-dati .pf-row{border:1px solid #ffffff10;background:#1D2122;border-radius:19px;overflow:clip;min-width:0;scroll-margin-top:20px}
+#tab-dati .pf-row+.pf-row{border:1px solid #ffffff10}
+body #tab-dati .pf-row>summary:not(#z):not(#y):not(#x){display:grid!important;grid-template-columns:38px minmax(0,1fr) auto 12px!important;gap:13px;padding:18px!important;align-items:center;background:transparent}
+#tab-dati .pf-summary-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+#tab-dati .pf-summary-copy .pf-t{font-size:.94rem;font-weight:700;line-height:1.35;white-space:normal}
+#tab-dati .pf-sub{font-size:.75rem;font-weight:400;color:#9AAFA7;line-height:1.45}
+#tab-dati .pf-v{font-size:.72rem;max-width:180px;color:#A7DCCB;line-height:1.4;background:#69D8B710;padding:5px 9px;border-radius:8px}
+#tab-dati .pf-v:empty{display:none}
+#tab-dati .pf-ic{width:36px;height:36px;border-radius:11px}
+body #tab-dati .pf-body:not(#z):not(#y){padding:4px 18px 20px!important}
+#tab-dati .pf-row[open]>summary{margin-bottom:6px}
+#tab-dati .pf-plan-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+#tab-dati .pf-active-badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:#6ED7B518;color:#A5EBCF;font-size:.73rem;line-height:1.4;font-weight:650}
+#tab-dati .pv-hero{padding:22px;background:radial-gradient(ellipse at 100% 0,#FA114F22,transparent 65%),#2B2025;border-color:#FA114F40}
+#tab-dati .pv-kc b{font-size:2.6rem;gap:9px;margin-top:5px}
+#tab-dati .pv-macs{margin-top:5px;gap:10px}
+#tab-dati .pv-mac{padding:13px;background:#00000022}
+#tab-dati .pf-plan-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+#tab-dati .pf-plan-facts .pf-mini{background:#23292A}
+#tab-dati .pf-plan-facts .pf-mini>b{font-size:.95rem}
+#tab-dati .pf-more{margin:14px 0 0;border-radius:15px;border:1px solid #ffffff10;background:#ffffff03;overflow:clip}
+#tab-dati .pf-more>summary{position:relative;padding:14px 110px 14px 15px!important;font-size:.8rem;line-height:1.5;font-weight:600;color:#D2E6DE}
+#tab-dati .pf-more>.in{padding:16px!important;border-top:1px solid #ffffff0D}
+#tab-dati .pf-more .pv-list{margin:0;background:transparent;border:0}
+#tab-dati .pv-r{grid-template-columns:1fr!important;gap:5px;padding:13px 0}
+#tab-dati .pv-v{text-align:left;font-size:.88rem;font-weight:500;line-height:1.55}
+#tab-dati .pv-k{font-size:.72rem;color:#8FA99E}
+#tab-dati .profile-archive,#tab-dati .profile-tool{border-radius:19px;border:1px solid #ffffff10;background:#1B2021;overflow:clip;min-width:0}
+#tab-dati .profile-archive>summary,#tab-dati .profile-tool>summary{padding:19px 112px 19px 18px!important;position:relative;list-style:none;cursor:pointer}
+#tab-dati .profile-archive>summary b,#tab-dati .profile-tool>summary b{display:block;font-size:.91rem;color:#DFEBE6;font-weight:650}
+#tab-dati .profile-archive>summary small,#tab-dati .profile-tool>summary small{display:block;margin-top:5px;font-size:.75rem;color:#90A99E;line-height:1.45}
+#tab-dati .profile-archive-body{padding:0 12px 12px;display:grid;gap:10px}
+body #tab-dati .profile-tool .pf-panel:not(#z):not(#y){padding:5px 18px 20px!important;background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important}
+#tab-dati .profile-tool h2{font-size:.95rem!important;margin-bottom:8px}
+#tab-dati #dati-count{padding:10px;font-size:.76rem;color:#97A9A0}
+#tab-dati .pf-fieldset,body #tab-dati .pf-body .ped-sec{min-width:0;border:1px solid #ffffff10!important;border-radius:18px!important;padding:20px!important;background:#24292A!important;margin:16px 0 0}
+#tab-dati .pf-fieldset>legend,#tab-dati .ped-sec>legend{float:none;width:auto;padding:0 7px;margin:0 0 8px;font-size:.93rem;font-weight:700;color:#E4F3EC}
+#tab-dati .pf-section-copy,#tab-dati .profile-step-copy{font-size:.81rem;line-height:1.6;color:#A6BAB0;margin:0 0 16px;font-weight:400}
+body #tab-dati .settings-fields:not(#z):not(#y){grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important;align-items:start}
+body #tab-dati .settings-fields>label.f:not(#z):not(#y){display:flex!important;flex-direction:column!important;grid-template-rows:none!important;grid-row:auto!important;gap:7px!important;font-size:.81rem;font-weight:550;color:#C7D7D0;min-width:0;align-self:stretch}
+body #tab-dati .settings-fields>label.f>small:not(#z){font-size:.73rem;line-height:1.5;color:#8EA59A;font-weight:400}
+#tab-dati .f input:not([type=checkbox]),#tab-dati .f select,#tab-dati .f textarea,#tab-dati .ped-macro input,#tab-dati .ped-macro select{width:100%;min-width:0;max-width:100%;box-sizing:border-box;font-size:16px!important;background:#191D1F!important;border:1px solid #ffffff16!important;border-radius:12px!important;min-height:48px;color:#EDF7F1;padding:11px 12px}
+#tab-dati input[type=date],#tab-dati input[type=time]{appearance:none;-webkit-appearance:none;min-inline-size:0}
+#tab-dati input::-webkit-date-and-time-value{min-width:0;text-align:left}
+#tab-dati input:focus-visible,#tab-dati select:focus-visible,#tab-dati textarea:focus-visible{outline:2px solid #70D9BB!important;outline-offset:2px}
+#tab-dati .pf-unit-pair{display:grid;grid-template-columns:minmax(0,1fr) 100px;gap:8px;min-width:0}
+#tab-dati .pf-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#tab-dati .pf-check-card{display:flex;align-items:flex-start;gap:10px;padding:14px;background:#191F20;border:1px solid #ffffff12;border-radius:13px;font-size:.8rem;line-height:1.55;color:#BDCEC5;margin:10px 0}
+#tab-dati input[type=checkbox]{accent-color:#65CDAE;width:18px;height:18px;flex:0 0 18px;margin-top:2px}
+#tab-dati .pf-save-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px}
+#tab-dati .pf-save-row>span{flex:1 1 180px;line-height:1.5}
+#tab-dati .pl-it{padding:17px;border-color:#ffffff10;border-radius:16px;background:#252B2B}
+#tab-dati .pl-it.cur{background:linear-gradient(145deg,#27554840,transparent),#232D2B;border-color:#69D8B74A}
+#tab-dati .pl-it.cur .pl-b{background:#245C48;color:#B5F5D5}
+#tab-dati .pl-top{align-items:flex-start;flex-wrap:wrap}
+#tab-dati .pl-s{line-height:1.6;margin-top:8px}
+#tab-dati .pl-act{margin-top:10px}
+#tab-dati .pf-workdays{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+#tab-dati .pf-workdays>span{flex-basis:100%;font-size:.8rem;color:#BAD0C5;margin-bottom:3px}
+#tab-dati .pf-workdays>label{display:flex;align-items:center;justify-content:center;gap:7px;min-width:68px;padding:10px;border:1px solid #ffffff16;border-radius:12px;background:#1B2021;font-size:.8rem}
+#tab-dati .pf-workdays>label:has(input:checked){background:#2B5545;border-color:#60BD97;color:#CCF7DC}
+#tab-dati .p2-sup{padding:20px;margin-bottom:14px;background:#232C2D;border:1px solid #73D4C52A;border-radius:18px}
+#tab-dati .pf-sup-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+#tab-dati .pf-sup-heading h3{font-size:1.1rem;margin:0 0 6px;color:#E2F3EC}
+#tab-dati .pf-sup-heading div>span{font-size:.76rem;color:#9FBDB1}
+#tab-dati .pf-sup-dose{font-size:1.4rem;font-weight:700;color:#D9EDE4;margin:14px 0 6px}
+#tab-dati .pf-sup-dose small{font-size:.8rem;font-weight:400;color:#A3B8AE}
+#tab-dati .pf-sup-event{display:block;padding:0;margin:0;background:transparent}
+#tab-dati .pf-sup-event>button{margin-top:16px}
+#tab-dati .p2-sup-dl{display:grid;grid-template-columns:1fr;gap:5px;margin:0}
+#tab-dati .p2-sup-dl dt{font-size:.73rem;color:#8FADA0;margin-top:10px}
+#tab-dati .p2-sup-dl dd{margin:0;font-size:.82rem;line-height:1.6;color:#C9DCD2}
+#tab-dati .pf-remove{margin-top:16px;color:#C59595}
+#tab-dati .profile-wizard-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+#tab-dati .profile-wizard-head h3{font-size:1.3rem;margin:6px 0;color:#E3F3EB}
+#tab-dati .profile-wizard-head p{font-size:.78rem;color:#95B0A2;margin:0;line-height:1.5}
+#tab-dati .profile-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 20px}
+#tab-dati .profile-steps button{display:flex;align-items:center;gap:8px;padding:12px 10px;background:#252C2C;border:1px solid #ffffff12;border-radius:13px;color:#8AA597;font:600 .78rem var(--f-body);cursor:pointer;min-width:0}
+#tab-dati .profile-steps button>span{width:23px;height:23px;display:grid;place-items:center;border-radius:8px;background:#151C1C;flex:none}
+#tab-dati .profile-steps button[aria-current=step]{background:#31594A;border-color:#71CBA6;color:#D6F8E4}
+#tab-dati .profile-step[hidden]{display:none!important}
+#tab-dati .profile-step-copy{margin:0 0 12px}
+#tab-dati .profile-step-actions{display:flex;justify-content:flex-end;gap:12px;margin:20px 0 0}
+#tab-dati .ped-paths{gap:12px}
+#tab-dati .ped-path{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:9px;padding:20px;min-height:155px;border:1px solid #ffffff17;border-radius:17px;background:#191F20;line-height:1.5}
+#tab-dati .ped-path b{font-size:.96rem;color:#D8E9DF;line-height:1.4}
+#tab-dati .ped-path>span:not(.ped-path-number){font-size:.78rem;color:#8FAA9A;margin:0;line-height:1.55}
+#tab-dati .ped-path .ped-path-number{display:grid;place-items:center;width:28px;height:28px;background:#323F37;border-radius:9px;color:#BAD7C6;font-size:.8rem;margin:0}
+#tab-dati .ped-path.on{background:#2A4A3D;border-color:#70C899;box-shadow:0 0 0 1px #70C89920}
+#tab-dati .ped-path.on .ped-path-number{background:#5AA87A;color:#071A0E}
+#tab-dati .ped-prev{margin-top:20px;border-radius:16px;border:1px solid #71CFA044;background:#22392D;padding:18px}
+#tab-dati .ped-prev .ped-h{margin-top:0;color:#D7F1DE}
+#tab-dati .ped-prev .kvl .r{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)!important;padding:12px 0}
+#tab-dati .ped-prev .kvl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:transparent;border:0;border-radius:0;overflow:visible;margin-top:14px}
+#tab-dati .ped-prev .kvl .r{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:9px;padding:15px!important;background:#14251D66;border:1px solid #91D5AD1C;border-radius:13px;min-width:0}
+#tab-dati .ped-prev .kvl .r:last-child{grid-column:1/-1}
+#tab-dati .ped-prev .kvl .k{font-size:.76rem;color:#B4CDBD;line-height:1.5}
+#tab-dati .ped-prev .kvl .v{text-align:left;font-size:1.15rem;color:#EBF8EE;line-height:1.45;overflow-wrap:anywhere}
+#tab-dati .ped-prev .kvl small{display:block;margin-top:4px;color:#91AF9B;font-size:.73rem;font-weight:400;line-height:1.5}
+#tab-dati .ped-prev>p{font-size:.75rem;line-height:1.6;color:#A7C1B0;margin-bottom:0}
+@media(max-width:680px){#tab-dati .ped-prev .kvl{grid-template-columns:1fr}#tab-dati .ped-prev{padding:14px}#tab-dati .ped-prev .kvl .r{padding:13px!important}}
+#tab-dati .pf-empty{padding:20px;background:#20382D;border:1px solid #6BCC9E44;border-radius:17px;line-height:1.6}
+#tab-dati .pf-empty b{font-size:1.1rem;color:#E0F0E6}
+#tab-dati .pf-empty p{font-size:.85rem;color:#AFCCBB}
+#tab-dati .pf-macro-editor{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+#tab-dati .pf-macro-card{min-width:0;padding:16px;border:1px solid #ffffff10;background:#192020;border-radius:15px}
+#tab-dati .pf-macro-card h4{font-size:.87rem;margin:0 0 14px;color:#C6E3D3}
+#tab-dati .pf-macro-card:nth-child(3n+1){border-top:2px solid #A6FF0080}#tab-dati .pf-macro-card:nth-child(3n+2){border-top:2px solid #FF9F0A80}#tab-dati .pf-macro-card:nth-child(3n+3){border-top:2px solid #BF5AF280}
+body #tab-dati .pf-photo-acts .linkbtn:not(#z):not(#y){color:#A7D9CD!important}
+body #tab-dati .pf-macro-card .settings-fields:not(#z):not(#y){grid-template-columns:1fr!important}
+#tab-dati .profile-step .ped-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+#tab-dati .profile-step .ped-week input{min-width:0;width:100%;box-sizing:border-box}
+@media(max-width:680px){#tab-dati .pf-macro-editor{grid-template-columns:1fr}#tab-dati .profile-step .ped-week{grid-template-columns:repeat(2,minmax(0,1fr))}#tab-dati .profile-step .ped-act{display:flex;flex-wrap:wrap;gap:12px}#tab-dati .profile-step .ped-act>select{flex-basis:100%;width:100%}#tab-dati .profile-step .ped-act>.f{flex:1;min-width:90px}}
+@media(max-width:680px){body #tab-dati #pf-card:not(#z):not(#y){padding:20px!important}#tab-dati .pf-head{gap:14px}#tab-dati .pf-who{min-width:140px}#tab-dati .pf-identity-edit{margin-left:86px}#tab-dati .pf-overview{gap:8px;margin-top:20px}#tab-dati .pf-overview .pf-mini{padding:11px 9px}#tab-dati .pf-overview .pf-mini>b{font-size:1rem}body #tab-dati .settings-fields:not(#z):not(#y){grid-template-columns:1fr!important}#tab-dati .pf-check-grid{grid-template-columns:1fr}body #tab-dati .pf-row>summary:not(#z):not(#y):not(#x){grid-template-columns:32px minmax(0,1fr) 12px!important;padding:16px!important;gap:10px}#tab-dati .pf-ic{width:32px;height:32px}#tab-dati .pf-v{grid-column:2;grid-row:2;justify-self:start;font-size:.69rem;text-align:left!important;max-width:100%;padding:3px 7px}#tab-dati .pf-chev{grid-column:3;grid-row:1 / span 2}#tab-dati .pf-summary-copy .pf-t{font-size:.88rem}#tab-dati .pf-sub{font-size:.72rem}#tab-dati .pf-plan-facts{gap:8px}#tab-dati .pf-plan-facts .pf-mini{padding:12px}#tab-dati .pv-hero{padding:16px}#tab-dati .pv-kc b{font-size:2.2rem}#tab-dati .pv-mac{padding:10px}#tab-dati .pf-body{min-width:0}#tab-dati .pf-fieldset,body #tab-dati .pf-body .ped-sec{padding:16px!important}#tab-dati .profile-steps{gap:5px}#tab-dati .profile-steps button{flex-direction:column;gap:6px;padding:9px 3px;font-size:.68rem}#tab-dati .ped-path{min-height:0;padding:16px}#tab-dati .ped-paths{grid-template-columns:1fr}#tab-dati .pf-sup-heading{flex-wrap:wrap}}
+@media(max-width:380px){#tab-dati .pf-who>b{font-size:1.35rem}#tab-dati .pf-overview{grid-template-columns:1fr}#tab-dati .pf-overview .pf-mini{display:grid;grid-template-columns:1fr auto;gap:5px 9px;padding:11px 13px}#tab-dati .pf-overview .pf-mini>small{grid-column:1/-1}#tab-dati .pf-identity-edit{margin-left:0}#tab-dati .pf-plan-facts{grid-template-columns:1fr}#tab-dati .pv-macs{gap:5px}#tab-dati .pv-mac{padding:9px 7px}#tab-dati .pv-mac i{font-size:.63rem}#tab-dati .profile-archive>summary,#tab-dati .profile-tool>summary{padding-right:95px!important}}
+@media(max-width:680px){body:has(#tab-dati:not([hidden])){margin-inline:0;padding-inline:max(14px,env(safe-area-inset-left),env(safe-area-inset-right))}body:has(#tab-dati:not([hidden]))>.wrap{min-width:0;max-width:100%;width:100%;margin-inline:auto}body #tab-dati .pf-body:not(#z):not(#y){padding:0 12px 16px!important}#tab-dati .profile-wizard-head .profile-eyebrow{display:none}#tab-dati .profile-wizard-head h3{font-size:1.05rem;margin-top:0}#tab-dati .profile-wizard-head p{font-size:.73rem}#tab-dati .profile-wizard-head{margin-bottom:12px}#tab-dati .pf-fieldset,body #tab-dati .pf-body .ped-sec{padding:14px!important}}
+
+/* A compact journey, a calm settings menu and a single-topic editor. */
+body #tab-dati:not([hidden]){max-width:980px;gap:18px}
+body #tab-dati #plan-panel:not(#z):not(#y):not(#x){background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;overflow:visible!important}
+#tab-dati #plan-box{display:block;width:100%;min-width:0}
+#tab-dati .profile-view[hidden]{display:none!important}
+#tab-dati .profile-view:not([hidden]){display:grid;gap:20px;animation:profile-view-in .2s ease both}
+#tab-dati .profile-navigation{display:flex;align-items:center;gap:16px;justify-content:space-between}
+#tab-dati .profile-switch{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(100%,540px);padding:5px;margin:0;overflow:visible;border:1px solid #ffffff10!important;background:#1B2222!important;border-radius:15px;isolation:isolate}
+#tab-dati .profile-switch::before{content:'';position:absolute;inset:5px auto 5px 5px;width:calc(50% - 5px);border:1px solid #83D4B731;border-radius:10px;background:#2A4B40;box-sizing:border-box;transition:transform .2s cubic-bezier(.2,.7,.3,1);z-index:-1}
+#tab-dati .profile-switch[data-view=settings]::before{transform:translateX(100%)}
+body #tab-dati .profile-switch button:not(#z):not(#y):not(#x){background:transparent!important;box-shadow:none!important;border-radius:10px!important;min-height:44px;padding:9px 14px;font-size:.87rem;color:#9CB4A7!important;white-space:normal;min-width:0}
+body #tab-dati .profile-switch button[aria-selected=true]:not(#z):not(#y):not(#x){background:transparent!important;color:#DAF4E7!important}
+#tab-dati .profile-help{display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:transparent;color:#B3C7BE;cursor:pointer;font:500 .8rem var(--f-body);min-height:44px;padding:8px 2px;white-space:nowrap}
+#tab-dati .profile-help>span{display:grid;place-items:center;width:22px;height:22px;border:1px solid #8FA89C60;border-radius:50%;font-weight:700;font-size:.75rem}
+#tab-dati .pf-head{gap:16px;flex-wrap:nowrap}
+#tab-dati .pf-av{width:58px;height:58px;flex-basis:58px;font-size:1.4rem}
+#tab-dati .pf-who{min-width:0}
+#tab-dati .pf-who>b{font-size:1.45rem}
+#tab-dati .pf-photo-acts{gap:15px;margin-top:4px}
+body #tab-dati .pf-photo-acts .linkbtn:not(#z):not(#y):not(#x){min-height:32px;display:inline-flex;align-items:center;font-size:.75rem;text-decoration:none;color:#A8CFBD!important}
+#tab-dati .pf-overview{margin-top:17px;gap:0;border-block:1px solid #9BCFB51A;padding-block:16px}
+#tab-dati .pf-overview .pf-mini{background:transparent;border:0;border-right:1px solid #9BCFB51A;border-radius:0;padding:0 20px;gap:7px;min-width:0}
+#tab-dati .pf-overview .pf-mini:first-child{padding-left:0}
+#tab-dati .pf-overview .pf-mini:last-child{border-right:0;padding-right:0}
+#tab-dati .pf-overview .pf-mini>b{font-size:1.35rem;letter-spacing:-.02em;white-space:nowrap}
+#tab-dati .pf-overview .pf-mini>small{font-size:.73rem}
+#tab-dati .pf-journey{margin-top:15px;padding-top:0;border:0}
+#tab-dati .pf-journey-track{margin-block:15px}
+#tab-dati .pf-journey-meta{font-size:.77rem}
+#tab-dati .pf-journey-meta small{font-size:.73rem}
+#tab-dati .pf-plan-card{border:1px solid #ffffff0F;border-radius:22px;background:#1C2122;overflow:hidden}
+#tab-dati .profile-plan-heading{display:flex;align-items:center;gap:12px;padding:23px 23px 13px}
+#tab-dati .profile-plan-heading h2{font-size:1.15rem;letter-spacing:-.02em;margin:0 0 5px}
+#tab-dati .profile-plan-heading div>span{font-size:.78rem;color:#9DAFA7}
+body #tab-dati .pf-plan-card>.pf-body:not(#z):not(#y){padding:4px 23px 22px!important}
+#tab-dati .pf-plan-top{margin-bottom:13px}
+#tab-dati .pv-hero{border-radius:18px;padding:20px;background:radial-gradient(ellipse at 100% 0,#FA114F1C,transparent 70%),#2A2024;border:1px solid #FA114F25}
+#tab-dati .pv-kc b{font-size:2.5rem}
+#tab-dati .pv-mac{background:transparent;border-left:1px solid #ffffff14;border-radius:0}
+#tab-dati .pf-plan-facts{gap:0 24px;margin:10px 0 0}
+#tab-dati .pf-plan-facts .pf-mini{padding:15px 0;gap:6px;background:transparent;border:0;border-bottom:1px solid #ffffff0C;border-radius:0}
+#tab-dati .pf-plan-facts .pf-mini>b{font-size:.91rem}
+#tab-dati .pf-plan-facts .pf-mini>small{font-size:.75rem;line-height:1.55}
+#tab-dati .profile-settings-intro{padding:6px 2px 0}
+#tab-dati .profile-settings-intro h2{font-size:1.4rem;letter-spacing:-.025em;margin:0 0 8px}
+#tab-dati .profile-settings-intro p{font-size:.87rem;color:#9DB3A7;line-height:1.6;margin:0}
+#tab-dati .profile-menu-group{margin-bottom:24px}
+#tab-dati .profile-menu-group>h3{font-size:.77rem;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:#94AD9E;padding-inline:3px;margin:0 0 10px}
+#tab-dati .profile-menu-group .pf-list{gap:0;background:#1C2222;border:1px solid #ffffff0F;border-radius:20px;overflow:hidden}
+#tab-dati .profile-menu-row{border-radius:0;border:0;background:transparent;overflow:visible}
+#tab-dati .profile-menu-row+.profile-menu-row{border:0;border-top:1px solid #ffffff0C}
+body #tab-dati .profile-menu-row>summary:not(#z):not(#y):not(#x){display:grid!important;grid-template-columns:38px minmax(0,1fr) auto 12px!important;gap:14px;padding:19px 20px!important;min-height:83px;box-sizing:border-box;cursor:pointer;background:transparent!important;transition:background .16s ease}
+#tab-dati .profile-menu-row>summary:hover{background:#94CDB00A!important}
+#tab-dati .profile-menu-row>summary .pf-summary-copy{gap:6px}
+#tab-dati .profile-menu-row>summary .pf-v{background:transparent;padding:0;max-width:100%;font-size:.8rem;font-weight:400;text-align:left!important;line-height:1.5;grid-area:auto;color:#A3C3B2}
+#tab-dati .profile-menu-row>summary .pf-sub{font-size:.79rem}
+#tab-dati .profile-menu-row>summary .pf-t{font-size:.94rem}
+#tab-dati .profile-menu-row>summary .pf-chev{grid-area:auto;font-size:1.5rem;color:#8BA89A;transform:none!important}
+#tab-dati .profile-menu-row>summary::after{display:none!important}
+body #tab-dati .profile-menu-row>summary .disclosure-cue:not(#z):not(#y),body #tab-dati .pf-more>summary .disclosure-cue:not(#z):not(#y){display:none!important}
+#tab-dati .profile-draft-badge{border:1px solid #E0C56D35;padding:4px 7px;border-radius:7px;color:#DACD9A;font-size:.68rem}
+#tab-dati #profile-advanced{margin:0 0 24px;background:#1C2222;border-radius:20px}
+#tab-dati #profile-advanced>summary{padding:18px 95px 18px 20px!important}
+#tab-dati #profile-advanced .profile-archive-body{padding:0 10px 10px;gap:0}
+#tab-dati .profile-notice{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 15px;background:#223A2E;border:1px solid #95D2A52A;border-radius:13px;font-size:.78rem;line-height:1.5;color:#B9D5C1}
+#tab-dati .profile-notice[hidden]{display:none}
+#tab-dati .profile-notice[data-state=error]{background:#40272A;border-color:#EF8F9840;color:#F4B3BA}
+#tab-dati .profile-notice[data-state=queued],#tab-dati .profile-notice[data-state=waiting]{background:#383323;border-color:#D9BA5B33;color:#E5D69E}
+html.profile-modal-open{overflow:hidden;scrollbar-gutter:stable}
+body #tab-dati dialog.profile-modal:not(#z):not(#y){position:fixed;inset:var(--profile-vtop,0px) 0 auto auto;display:none;box-sizing:border-box;width:min(760px,calc(100vw - 32px));height:calc(var(--profile-vh,100dvh) - 32px);max-height:none;max-width:none;margin:16px 16px 16px auto;padding:0;border-radius:24px;border:1px solid #748C7D35;background:#1C2222;color:#EDF5EF;box-shadow:0 25px 100px #0008;overflow:hidden;font-family:var(--f-body)}
+body #tab-dati dialog.profile-modal[open]:not(#z):not(#y){display:block;animation:profile-panel-in .26s cubic-bezier(.2,.7,.3,1) both}
+#tab-dati .profile-modal::backdrop{background:#0009;backdrop-filter:blur(7px);animation:profile-backdrop-in .2s ease both}
+#tab-dati .profile-modal-inner{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0}
+#tab-dati .profile-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:22px 24px 18px;border-bottom:1px solid #ffffff0D;background:#202929;min-width:0}
+#tab-dati .profile-modal-head h2{font-size:1.4rem;letter-spacing:-.025em;line-height:1.3;margin:6px 0 7px;outline:0;overflow-wrap:anywhere}
+#tab-dati .profile-modal-head p{font-size:.79rem;color:#9EB8A8;line-height:1.5;margin:0}
+#tab-dati .profile-modal-close{flex:none;width:44px;height:44px;border:1px solid #ffffff13;background:#ffffff06;border-radius:50%;font:300 1.6rem var(--f-body);color:#BAD0C4;cursor:pointer}
+#tab-dati .profile-modal-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;min-height:0;min-width:0;padding:22px 24px;scroll-padding-block:20px}
+body #tab-dati .profile-modal-row:not(#z):not(#y){border:0!important;border-radius:0!important;background:transparent!important;padding:0!important;margin:0!important;box-shadow:none!important}
+body #tab-dati .profile-modal-row>summary:not(#z):not(#y):not(#x){display:none!important}
+body #tab-dati .profile-modal-row>.pf-body:not(#z):not(#y){padding:0!important;min-width:0}
+#tab-dati .profile-modal .profile-wizard-head{display:none}
+#tab-dati .profile-modal .profile-step-actions,#tab-dati .profile-modal .profile-step>[data-profile-step],#tab-dati .profile-modal .profile-step>div.row:has([data-pa=ped-save]){display:none!important}
+#tab-dati .profile-modal .profile-managed-save{display:none!important}
+#tab-dati .profile-modal .profile-wizard .profile-steps{margin-top:0}
+body #tab-dati .profile-modal .pf-body .pf-fieldset:not(#z):not(#y),body #tab-dati .profile-modal .pf-body .ped-sec:not(#z):not(#y){background:transparent!important;border:0!important;border-bottom:1px solid #ffffff0D!important;border-radius:0!important;padding:0 0 22px!important;margin:0 0 22px!important;min-width:0}
+body #tab-dati .profile-modal .pf-body .pl-it+.pf-fieldset:not(#z):not(#y){margin-top:22px!important}
+#tab-dati .profile-modal .pf-fieldset>legend,#tab-dati .profile-modal .ped-sec>legend{padding:0;margin:0 0 14px;font-size:1.02rem;line-height:1.5}
+#tab-dati .profile-modal .settings-fields{row-gap:18px!important}
+#tab-dati .profile-modal .f>small{font-size:.77rem!important}
+#tab-dati .profile-modal .pf-more{border:0;border-bottom:1px solid #ffffff0F;border-radius:0;background:transparent;margin:12px 0}
+body #tab-dati .pf-more>summary:not(#z):not(#y):not(#x){padding:15px 36px 15px 0!important;background:transparent!important;min-height:44px;font-size:.81rem;line-height:1.5;position:relative}
+body #tab-dati .pf-more>summary::after{content:'⌄'!important;display:grid!important;place-items:center;position:absolute;inset:auto 5px auto auto;background:none!important;border:0!important;box-shadow:none!important;font-size:1.2rem;width:22px;height:22px;padding:0;color:#9FBEAD;transition:transform .2s ease}
+#tab-dati .pf-more[open]>summary::after{transform:rotate(180deg)}
+body #tab-dati .pf-more>.in:not(#z):not(#y){padding:8px 0 20px!important;border:0;background:transparent!important}
+body #tab-dati .pf-more>summary::before{display:none!important}
+#tab-dati .pf-more[open]>.in{animation:profile-view-in .18s ease both}
+#tab-dati .profile-modal .p2-sup{padding:0 0 22px;border:0;border-bottom:1px solid #ffffff10;border-radius:0;background:transparent;margin-bottom:22px}
+#tab-dati .profile-modal .p2-sup .pf-sup-dose{font-size:1.5rem}
+#tab-dati .profile-modal .pf-workdays{gap:8px}
+#tab-dati .profile-modal .pf-workdays>label{min-width:68px;min-height:44px;box-sizing:border-box}
+#tab-dati .profile-modal-foot{padding:14px 24px max(18px,env(safe-area-inset-bottom));background:#202929;border-top:1px solid #94B29F25;box-shadow:0 -8px 28px #0001;min-width:0}
+#tab-dati #profile-save-status{display:flex;align-items:flex-start;gap:9px;font-size:.76rem;line-height:1.5;color:#9FB9A9;margin-bottom:12px;min-height:18px}
+#tab-dati #profile-save-status::before{content:'';width:7px;height:7px;border-radius:50%;background:#8BAE98;flex:none;margin-top:5px}
+#tab-dati #profile-save-status[data-state=saved]{color:#A6E0BB}
+#tab-dati #profile-save-status[data-state=saved]::before{background:#74D7A0}
+#tab-dati #profile-save-status[data-state=error]{color:#F3ADB3}
+#tab-dati #profile-save-status[data-state=error]::before{background:#EF8795}
+#tab-dati #profile-save-status[data-state=queued],#tab-dati #profile-save-status[data-state=waiting]{color:#DCD099}
+#tab-dati #profile-save-status[data-state=queued]::before,#tab-dati #profile-save-status[data-state=waiting]::before{background:#D1BC65}
+#tab-dati .profile-modal-actions{display:flex;justify-content:flex-end;gap:10px;align-items:center}
+#tab-dati .profile-modal-actions>[data-profile-discard]{margin-right:auto}
+body #tab-dati .profile-modal-actions .btn:not(#z):not(#y):not(#x){min-height:46px;padding:11px 18px;font-size:.85rem;border-radius:12px!important}
+body #tab-dati .profile-modal-actions>[data-profile-commit]:not(#z):not(#y):not(#x){background:#79D8B1!important;color:#10281A!important;border:1px solid #8EE5C0!important;box-shadow:none!important}
+body #tab-dati .profile-modal-actions>[data-profile-commit]:disabled:not(#z):not(#y):not(#x){opacity:.45;cursor:default}
+body #tab-dati .profile-modal-actions>[data-profile-commit]:not(#z):not(#y):not(#x){-webkit-text-fill-color:#10281A!important}
+body #tab-dati .pf-photo-acts .linkbtn:not(#z):not(#y):not(#x){-webkit-text-fill-color:#A8CFBD!important}
+#tab-dati .profile-field-error{display:block;font-size:.77rem!important;color:#F4A8B3!important;line-height:1.5}
+body #tab-dati .profile-modal [aria-invalid=true]:not(#z):not(#y){border-color:#F18B9C!important}
+#tab-dati .profile-save-result{display:flex;flex-direction:column;align-items:center;text-align:center;justify-content:center;min-height:300px;padding:20px;gap:15px}
+#tab-dati .profile-result-mark{display:grid;place-items:center;width:62px;height:62px;border:1px solid #79C89C55;background:#365C4522;color:#99DDB1;border-radius:21px;font-size:1.9rem}
+#tab-dati .profile-save-result h3{font-size:1.3rem;margin:0;color:#DCEEE2}
+#tab-dati .profile-save-result p{font-size:.87rem;line-height:1.7;color:#A7C4B1;max-width:370px;margin:0}
+#tab-dati .profile-save-result[data-state=error] .profile-result-mark{color:#F0ACB4;border-color:#E5909B66;background:#642D3522}
+#tab-dati .profile-modal.is-closing{animation:profile-panel-out .17s ease both!important;pointer-events:none}
+#tab-dati .profile-modal.is-closing::backdrop{animation:profile-backdrop-out .17s ease both}
+#tab-dati button:focus-visible,#tab-dati summary:focus-visible{outline:2px solid #82D5AF!important;outline-offset:4px}
+@keyframes profile-view-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes profile-panel-in{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes profile-panel-out{to{opacity:0;transform:translateX(20px)}}
+@keyframes profile-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes profile-backdrop-out{to{opacity:0}}
+@media(max-width:680px){
+  html.profile-modal-open{scrollbar-gutter:auto}
+  #tab-dati .profile-navigation{display:grid;grid-template-columns:1fr;gap:1px}
+  #tab-dati .profile-switch{width:100%;box-sizing:border-box}
+  #tab-dati .profile-help{justify-self:end;font-size:.74rem;min-height:34px;padding-block:4px}
+  #tab-dati .profile-help>span{width:18px;height:18px;font-size:.66rem}
+  body #tab-dati #pf-card:not(#z):not(#y){padding:18px!important;border-radius:21px}
+  #tab-dati .pf-head{gap:12px}
+  #tab-dati .pf-av{width:48px;height:48px;flex-basis:48px;box-shadow:none}
+  #tab-dati .pf-who>b{font-size:1.25rem}
+  #tab-dati .profile-eyebrow{font-size:.6rem}
+  #tab-dati .profile-phase{font-size:.73rem}
+  #tab-dati .pf-photo-acts{gap:12px}
+  body #tab-dati .pf-photo-acts .linkbtn:not(#z):not(#y):not(#x){font-size:.69rem;min-height:30px}
+  #tab-dati .pf-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:13px;padding-block:13px}
+  #tab-dati .pf-overview .pf-mini{display:flex;padding:0 10px;gap:6px}
+  #tab-dati .pf-overview .pf-mini>span{font-size:.66rem;line-height:1.4;min-height:2.8em}
+  #tab-dati .pf-overview .pf-mini>b{font-size:1.05rem;line-height:1.4}
+  #tab-dati .pf-overview .pf-mini>small{font-size:.65rem;line-height:1.5}
+  #tab-dati .pf-journey{margin-top:12px}
+  #tab-dati .pf-journey-heading{font-size:.73rem}
+  #tab-dati .pf-journey-heading>b{font-size:.84rem}
+  #tab-dati .pf-journey-meta{font-size:.71rem;gap:3px}
+  #tab-dati .pf-journey-meta small{font-size:.66rem}
+  #tab-dati .profile-view:not([hidden]){gap:15px}
+  #tab-dati .profile-plan-heading{padding:18px 17px 12px}
+  #tab-dati .profile-plan-heading h2{font-size:1.07rem}
+  #tab-dati .profile-plan-heading div>span{font-size:.72rem}
+  body #tab-dati .pf-plan-card>.pf-body:not(#z):not(#y){padding:2px 17px 18px!important}
+  #tab-dati .pf-active-badge{font-size:.68rem}
+  #tab-dati .pf-plan-top .btn{font-size:.72rem!important;min-height:40px}
+  #tab-dati .pv-hero{padding:16px}
+  #tab-dati .pv-kc b{font-size:2.1rem}
+  #tab-dati .pf-plan-facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+  #tab-dati .pf-plan-facts .pf-mini{padding:13px 0}
+  #tab-dati .pf-plan-facts .pf-mini>b{font-size:.81rem}
+  #tab-dati .pf-plan-facts .pf-mini>span,#tab-dati .pf-plan-facts .pf-mini>small{font-size:.7rem}
+  #tab-dati .profile-settings-intro h2{font-size:1.25rem}
+  #tab-dati .profile-settings-intro p{font-size:.81rem}
+  body #tab-dati .profile-menu-row>summary:not(#z):not(#y):not(#x){grid-template-columns:32px minmax(0,1fr) auto 10px!important;padding:17px 14px!important;gap:11px;min-height:80px}
+  #tab-dati .profile-menu-row>summary .pf-t{font-size:.88rem}
+  #tab-dati .profile-menu-row>summary .pf-v,#tab-dati .profile-menu-row>summary .pf-sub{font-size:.75rem}
+  #tab-dati .profile-modal-head{padding:max(16px,env(safe-area-inset-top)) 18px 16px;gap:12px}
+  #tab-dati .profile-modal-head .profile-eyebrow{font-size:.6rem}
+  #tab-dati .profile-modal-head h2{font-size:1.18rem;margin-top:5px}
+  #tab-dati .profile-modal-head p{font-size:.73rem}
+  #tab-dati .profile-modal-close{width:44px;height:44px}
+  body #tab-dati dialog.profile-modal:not(#z):not(#y){inset:var(--profile-vtop,0px) 0 auto 0;width:100vw;height:var(--profile-vh,100dvh);max-height:var(--profile-vh,100dvh);margin:0;border-radius:21px 21px 0 0;border:0}
+  body #tab-dati dialog.profile-modal[open]:not(#z):not(#y){animation:profile-sheet-in .26s cubic-bezier(.2,.7,.3,1) both}
+  #tab-dati .profile-modal.is-closing{animation:profile-sheet-out .17s ease both!important}
+  #tab-dati .profile-modal-body{padding:20px 18px;scrollbar-gutter:auto}
+  #tab-dati .profile-modal-foot{padding:12px 18px max(15px,env(safe-area-inset-bottom))}
+  #tab-dati #profile-save-status{font-size:.72rem;margin-bottom:10px}
+  #tab-dati .profile-modal-actions{gap:8px}
+  body #tab-dati .profile-modal-actions .btn:not(#z):not(#y):not(#x){padding-inline:13px;font-size:.77rem;min-height:46px}
+  #tab-dati .profile-modal .pf-workdays>label{min-width:64px}
+  #tab-dati .profile-notice{font-size:.72rem;padding:10px 12px}
+}
+@media(max-width:380px){
+  #tab-dati .pf-overview .pf-mini{padding-inline:7px}
+  #tab-dati .pf-overview .pf-mini>b{font-size:.94rem;letter-spacing:-.035em}
+  #tab-dati .pf-overview .pf-mini>b>small{font-size:.65em}
+  #tab-dati .profile-menu-row>summary .profile-draft-badge{grid-column:2;justify-self:start}
+  #tab-dati .profile-menu-row>summary .pf-chev{grid-column:4;grid-row:1 / span 2}
+}
+@keyframes profile-sheet-in{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@keyframes profile-sheet-out{to{opacity:0;transform:translateY(24px)}}
+@media(prefers-reduced-motion:reduce){
+  #tab-dati .profile-view,#tab-dati .profile-switch::before,#tab-dati .pf-more>.in,#tab-dati .pf-more>summary::after,#tab-dati .profile-modal,#tab-dati .profile-modal::backdrop,#tab-dati .profile-modal.is-closing,#tab-dati .profile-menu-row>summary{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
 
 </style>
 </body></html>
