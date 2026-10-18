@@ -2246,7 +2246,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
         <div id="energy-now-body"></div>
       </div>
       <div class="panel tmw" data-cat="peso" id="tmw">
-        <div class="estimate-tag">Previsione dal tuo storico</div><div class="panel-head"><div class="ph-t"><h2 id="tmw-title">Stamattina sulla bilancia</h2><button type="button" class="rq" data-rule="domani" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="tmw-date"></span></div>
+        <div class="estimate-tag">Riferimento dal tuo storico</div><div class="panel-head"><div class="ph-t"><h2 id="tmw-title">La pesata rispetto al tuo andamento</h2><button type="button" class="rq" data-rule="domani" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="tmw-date"></span></div>
         <div class="daynav tmw-nav" aria-label="Giorno del riquadro, lo stesso della tua giornata"><button type="button" class="btn ghost icon" id="tm-prev" aria-label="Giorno precedente">‹</button><div class="dn-t" id="tm-day"></div><button type="button" class="btn ghost icon" id="tm-next" aria-label="Giorno successivo">›</button></div>
         <div id="tmw-body"></div><p class="estimate-note">È una previsione del modello, non una misurazione. Le oscillazioni di un giorno e la composizione corporea non si possono determinare dai soli dati del diario.</p>
       </div>
@@ -2351,16 +2351,17 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
       <div class="grid2">
         <div class="panel mcard" data-cat="prev">
           <div class="panel-head"><div class="ph-t"><h2 id="fc-title">Quando arrivi all'obiettivo</h2><button type="button" class="rq" data-rule="arrivo" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
-          <div class="big2"><span id="fc-v">—</span></div>
+          <div class="forecast-kicker">Previsione da oggi</div><p id="fc-origin" class="forecast-origin"></p><div class="big2"><span id="fc-v">—</span></div>
           <div class="chips" id="fc-chips"></div>
           <div id="fc-rows" style="margin-top:14px"></div>
           <p class="caption">Scenari condizionati al peso di tendenza, alle calorie registrate e al consumo stimato. Le date possono cambiare.</p>
         </div>
       </div>
+      <div class="panel" id="impact-panel" data-cat="prev"><div class="panel-head"><div class="ph-t"><h2>Impatto degli scostamenti dal piano</h2></div></div><div id="impact-body"></div></div>
       <div class="panel" id="proj-panel" data-cat="prev">
         <div class="panel-head"><div class="ph-t"><h2>Prospetto: se continui così</h2><button type="button" class="rq" data-rule="prospetto" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
         <p class="muted small" id="proj-text"></p>
-        <div class="tw" style="margin-top:12px"><table class="ttab ptab" id="proj-table"></table></div>
+        <div id="proj-context"></div><div id="proj-cards"></div>
         <p class="caption" id="proj-note"></p>
         <details class="more" data-ibfold><summary>Come lo calcolo</summary><div class="in" id="proj-more"></div></details>
       </div>
@@ -4234,6 +4235,8 @@ function engine(D, asOf, opts) {
      così non finisce nei salvataggi */
   var dMemo = {};
   Object.defineProperty(out, 'dayOf', { enumerable: false, value: function (d) { if (!dValid(d)) return null; return dMemo[d] || (dMemo[d] = dayInfo(ctx, cfg, d, kAt, targetOf, cfgAt)); } });
+  var impactCache;
+  Object.defineProperty(out, 'planImpact', { enumerable: false, get: function () { if (!impactCache) impactCache = planImpact(ctx, out, v, z, base, asOf); return impactCache; } });
   Object.defineProperty(out, 'ctx', { enumerable: false, value: ctx });
   Object.defineProperty(out, 'kAt', { enumerable: false, value: kAt });
   out.snapshot = {
@@ -4416,6 +4419,81 @@ function forecastOf(ctx, v, z, base, tr, asOf, out) {
   }
   return f;
 }
+
+/* Counterfactual comparison, independent of the current weight-trend forecast.
+   Missing intake contributes no deviation: both paths use target on those dates.
+   This is explicitly a partial comparison when the diary is incomplete. */
+function planImpact(ctx, out, v, z, base, asOf) {
+  var g = v.goal || {}, phase = g.phase, from = v.from;
+  var versions = ctx.versions.filter(function (x) { return x.from <= asOf; });
+  // Include target revisions within the current continuous goal phase, never an earlier cut/bulk cycle.
+  for (var i = versions.length - 1; i >= 0; i--) {
+    if ((versions[i].goal || {}).phase !== phase) break;
+    from = versions[i].from;
+  }
+  function usableIntake(d) {
+    var day = ctx.days[d], it = intakeOf(day, d === asOf);
+    it.usable = it.usable && (it.state === 'zero_confermato' || (day && day.kcal != null && day.kcal !== '' && isNum(it.kcal) && it.kcal >= 0));
+    return it;
+  }
+  var today = usableIntake(asOf), end = today.usable ? asOf : dAdd(asOf, -1);
+  var p = { from: from, to: end, phase: phase, desiredDate: g.endDate || null, goalWeight: +g.goalWeight || null,
+    complete: 0, above: 0, below: 0, excess: 0, under: 0, net: 0, missing: 0, unknownTarget: 0, includesToday: today.usable,
+    rho: K.RHO, tef: K.TEF, futureTarget: z ? z.kcal : null, rows: [] };
+  if (!dValid(from) || dDiff(from, end) > 3650) { p.why = 'Periodo del piano non disponibile o superiore a dieci anni.'; return p; }
+  for (var d = from; d <= end; d = dAdd(d, 1)) {
+    var it = usableIntake(d), info = out.dayOf(d), T = info && info.target;
+    if (T == null) { p.unknownTarget++; continue; }
+    var delta = it.usable ? it.kcal - T : 0;
+    p.rows.push({ d: d, target: T, intake: it.usable ? it.kcal : T, known: it.usable, B: info.B, W: ctx.weightAt(d) });
+    if (!it.usable) { p.missing++; continue; }
+    p.complete++;
+    if (delta > 1e-6) { p.above++; p.excess += delta; }
+    if (delta < -1e-6) { p.below++; p.under -= delta; }
+  }
+  p.net = p.excess - p.under;
+  p.effectiveEnergy = (1 - K.TEF) * p.net;
+  p.energyKg = p.effectiveEnergy / K.RHO;
+  p.partial = p.missing > 0 || p.unknownTarget > 0;
+  var dir = phase === 'cut' ? -1 : phase === 'surplus' ? 1 : 0;
+  var pace = base.ok && z ? -dir * (base.Bh - (1 - K.TEF) * z.kcal) : null;
+  p.equivalentDays = dir && pace > 0 ? -dir * p.effectiveEnergy / pace : null;
+  if (!p.complete) { p.why = 'Servono giornate complete con un obiettivo calorico attivo.'; return p; }
+  if (!dir || !(p.goalWeight > 0)) { p.why = 'Scostamenti disponibili; per confrontare le date serve un obiettivo di peso in deficit o surplus.'; return p; }
+  if (!base.ok || !z || !(z.kcal > 0)) { p.why = 'Per confrontare le date servono un piano e un consumo stimato disponibili.'; return p; }
+  if (p.unknownTarget) { p.why = 'Mancano obiettivi storici: non posso ricostruire le due date in modo coerente.'; return p; }
+  var startWeights = weighIns(ctx, asOf).acc.filter(function (x) { return x.d === from; });
+  var initial = startWeights.length ? startWeights[0].w : versions.length && from === versions[0].from && ctx.profile && +ctx.profile.weight;
+  if (!(initial > 0) || !isFinite(initial)) { p.why = 'Manca un peso iniziale del percorso utilizzabile.'; return p; }
+  // Profile weight is the declared starting weight, not a later measurement silently moved to the start.
+  p.initialWeight = initial; p.initialOrigin = startWeights.length ? 'pesata di inizio percorso' : 'peso iniziale dichiarato nel profilo';
+  if ((p.goalWeight - initial) * dir <= 0) { p.why = 'Il peso iniziale è già oltre il traguardo nella direzione del piano.'; return p; }
+  if (p.rows.some(function (x) { return x.B == null; })) { p.why = 'Consumo storico non disponibile per tutto il periodo.'; return p; }
+  var slope = base.perKg || 0;
+  function run(rho) {
+    var wp = initial, wr = initial, crossed = false;
+    p.rows.forEach(function (x) {
+      var bp = x.B + slope * (wp - x.W), br = x.B + slope * (wr - x.W);
+      wp -= (bp - (1 - K.TEF) * x.target) / rho;
+      wr -= (br - (1 - K.TEF) * x.intake) / rho;
+      if ((wp - p.goalWeight) * dir >= 0 || (wr - p.goalWeight) * dir >= 0) crossed = true;
+    });
+    if (crossed) return { why: 'Almeno uno scenario attraversa già il traguardo nel periodo storico: non mostro uno spostamento cumulativo della data.' };
+    var futureFrom = dAdd(end, 1), futureB = base.Bh, refW = base.W;
+    function arrive(w) {
+      var n = arrival({ w0: w, B0: futureB + slope * (w - refW), perKg: slope, I: z.kcal, rho: rho }, p.goalWeight, dir, K.ARR_MAX);
+      return n == null ? null : dAdd(futureFrom, n);
+    }
+    var planned = arrive(wp), recorded = arrive(wr);
+    return { planned: planned, recorded: recorded, shift: planned && recorded ? dDiff(planned, recorded) : null,
+      weightPlanned: wp, weightRecorded: wr, futureFrom: futureFrom };
+  }
+  p.comparison = run(K.RHO);
+  if (p.comparison.shift == null) p.why = p.comparison.why || 'Almeno uno scenario non raggiunge il traguardo entro tre anni: spostamento non disponibile.';
+  p.sensitivity = [K.RHO_LO, K.RHO_HI].map(function (rho) { var r = run(rho); return { rho: rho, shift: r.shift == null ? null : r.shift }; });
+  return p;
+}
+M.planImpact = planImpact;
 
 /* ===================== migrazione dalle impostazioni della versione precedente =====================
    Versionata e idempotente: l'esito è registrato in settings/migrazioni con l'identificativo qui sotto.
@@ -5855,41 +5933,48 @@ function phaseDayText() {
   return n >= 1 && n <= tot ? 'giorno ' + n + ' di ' + tot : '';
 }
 /* ---------- «bilancia di domani»: intervallo descrittivo, separato dalle previsioni d'arrivo ---------- */
+/* Riferimento descrittivo dalla tendenza; non è una previsione alimentare o un giudizio sulla pesata. */
 function renderTomorrow() {
   var t = todayStr(), R = ringDay(), box = $('#tmw-body'); $('#tmw').hidden = false; tmNav(R, t);
-  var asOf = addDays(R, -1), E = state.E, tm = null;
-  try { tm = R === addDays(t, 1) ? E.weight.tomorrow : GJM.tomorrowScale(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tm = null; }
-  $('#tmw-title').textContent = R === t ? 'Stamattina sulla bilancia' : 'Bilancia del ' + fmtDay(R);
+  var asOf = addDays(R, -1), tm = null;
+  try { tm = GJM.tomorrowScale(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tm = null; }
+  $('#tmw-title').textContent = 'La pesata rispetto al tuo andamento';
   $('#tmw-date').textContent = fmtDay(R);
   var meas = state.days.get(R), mw = meas && meas.weight > 0 ? +meas.weight : null;
-  if (!tm || tm.none) { box.innerHTML = '<p class="muted">Per questa mattina l\'intervallo non è disponibile: ' + esc(tm && tm.why || 'servono pesate recenti') + '. Un dato assente non viene trattato come zero.</p>'; return; }
   var past = R < t, mwTxt = mw != null ? fmt(mw, 1) : null;
-  var html = '<div class="bs-hero"><small>' + (past ? 'Peso previsto quella mattina' : 'Il peso previsto per stamattina') + '</small><div class="bs-big"><b>' + fmt(tm.c, 1) + '</b><span>kg</span></div>'
-    + '<p class="bs-range">Oscillazione normale: <b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + ' kg</b></p></div>';
-  /* scala: un asse con i valori della previsione e, se c'è, la pesata */
+  if (!tm || tm.none) {
+    box.innerHTML = '<div class="bs-wait bs-start"><b>Il tuo storico si costruisce una pesata alla volta</b><p>'
+      + (mw != null ? 'Pesata registrata: <strong>' + mwTxt + ' kg</strong>. ' : 'Puoi iniziare registrando il tuo peso. ')
+      + 'La fascia compare quando ci sono almeno ' + GJM.K.TREND_MIN + ' pesate confrontabili nei ' + GJM.K.TREND_DAYS + ' giorni precedenti, con una pesata negli ultimi 7 giorni. Fino ad allora non mostriamo un intervallo stimato.</p>'
+      + (!past && mw == null ? '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>' : '')
+      + '</div><div class="weigh-explain"><b>Dati disponibili</b>' + esc(tm && tm.why || 'Storico momentaneamente non disponibile') + '. Le pesate della sera o dopo mangiato non vengono usate per questo confronto.</div>';
+    return;
+  }
+  var html = '<div class="bs-hero"><small>Fascia indicativa dal tuo storico</small><div class="bs-big bs-range-main"><b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + '</b><span>kg</span></div>'
+    + '<p class="bs-range">Riferimento della tendenza: <b>' + fmt(tm.c, 1) + ' kg</b></p><p class="bs-context">Un riferimento per leggere la pesata, non un obiettivo da raggiungere stamattina.</p></div>';
   var lo = Math.min(tm.lo, mw != null ? mw : tm.lo), hi = Math.max(tm.hi, mw != null ? mw : tm.hi), pad = Math.max(0.25, (hi - lo) * 0.18);
   lo -= pad; hi += pad;
   var P = function (x) { return ((x - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   var inside = mw != null && mw >= tm.lo && mw <= tm.hi, diff = mw != null ? mw - tm.c : null;
-  var tone = mw == null ? 'none' : inside ? 'ok' : 'out';
-  html += '<div class="bs-scale bs-' + tone + '" role="img" aria-label="Previsto ' + fmt(tm.c, 1) + ' kg, oscillazione normale ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg' + (mw != null ? ', la tua pesata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
+  // Neutral styling in both cases: outside the descriptive band is not a failed objective.
+  html += '<div class="bs-scale bs-neutral" role="img" aria-label="Fascia indicativa ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg; riferimento della tendenza ' + fmt(tm.c, 1) + ' kg' + (mw != null ? '; pesata registrata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
     + (mw != null ? '<div class="bs-pin" style="left:' + P(mw) + '"><span>Tu · ' + mwTxt + '</span><i></i></div>' : '<div class="bs-pin bs-pin-wait" style="left:' + P(tm.c) + '"><span>Pesata non ancora inserita</span></div>')
     + '<div class="bs-track"><span class="bs-band" style="left:' + P(tm.lo) + ';width:calc(' + P(tm.hi) + ' - ' + P(tm.lo) + ')"></span><span class="bs-mid" style="left:' + P(tm.c) + '"></span>' + (mw != null ? '<span class="bs-me" style="left:' + P(mw) + '"></span>' : '') + '</div>'
-    + '<div class="bs-ticks"><span style="left:' + P(tm.lo) + '"><b>' + fmt(tm.lo, 1) + '</b>min</span><span class="bs-tc" style="left:' + P(tm.c) + '"><b>' + fmt(tm.c, 1) + '</b>previsto</span><span style="left:' + P(tm.hi) + '"><b>' + fmt(tm.hi, 1) + '</b>max</span></div></div>'
-    + '<div class="bs-key"><span class="k-band">oscillazione normale</span><span class="k-mid">previsto</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
-  if (mw == null) html += '<div class="bs-wait"><p>' + (past ? 'Quel giorno non c\'è una pesata nel diario.' : 'Pesati e inserisci il peso di stamattina: qui vedi subito dove cadi rispetto alla previsione.') + '</p>' + (past ? '' : '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>') + '</div>';
+    + '<div class="bs-ticks"><span style="left:' + P(tm.lo) + '"><b>' + fmt(tm.lo, 1) + '</b></span><span class="bs-tc" style="left:' + P(tm.c) + '"><b>' + fmt(tm.c, 1) + '</b>riferimento</span><span style="left:' + P(tm.hi) + '"><b>' + fmt(tm.hi, 1) + '</b></span></div></div>'
+    + '<div class="bs-key"><span class="k-band">fascia indicativa</span><span class="k-mid">tendenza</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
+  if (mw == null) html += '<div class="bs-wait"><p>' + (past ? 'Nessuna pesata registrata per questo giorno.' : 'Inserisci il peso di stamattina per confrontarlo con il tuo andamento.') + '</p>' + (past ? '' : '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>') + '</div>';
   else {
-    var word = inside ? 'Nella norma' : diff > 0 ? 'Sopra il previsto' : 'Sotto il previsto';
-    html += '<div class="bs-res bs-' + tone + '"><div class="bs-res-h"><b>Confronto con la bilancia</b><span class="bs-badge">' + word + '</span></div>'
-      + '<div class="bs-nums"><div><small>Previsto</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Scarto</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
-      + '<p class="bs-say">' + (Math.abs(diff) < 0.05 ? 'Esattamente come previsto.' : fmt(Math.abs(diff), 1) + ' kg ' + (diff > 0 ? 'sopra' : 'sotto') + ' il previsto, ' + (inside ? 'dentro l\'oscillazione normale.' : 'fuori dall\'oscillazione normale: guarda le prossime pesate.')) + '</p></div>';
+    var word = inside ? 'Dentro la fascia indicativa' : diff > 0 ? 'Sopra la fascia indicativa' : 'Sotto la fascia indicativa';
+    html += '<div class="bs-res bs-neutral"><div class="bs-res-h"><b>Il tuo confronto</b><span class="bs-badge">' + word + '</span></div>'
+      + '<div class="bs-nums"><div><small>Tendenza</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Scarto dalla tendenza</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
+      + '<p class="bs-say">Una singola pesata non stabilisce se il piano sta funzionando: conta l’andamento nel tempo.</p></div>';
   }
-  /* spiegazioni: dietro la «i» del riquadro; prima la frase che conta */
-  html += '<div class="weigh-explain"><b>In breve</b>' + (past ? 'Quella mattina' : 'Oggi') + ' ci aspettavamo circa ' + fmt(tm.c, 1) + ' kg: tutto fra ' + fmt(tm.lo, 1) + ' e ' + fmt(tm.hi, 1) + ' kg è normale, perché il peso di un giorno oscilla per acqua, sale e intestino.</div>'
-    + '<div class="weigh-explain"><b>Che cos\'è il peso previsto</b>È la tendenza delle tue pesate delle ultime due settimane, prolungata fino a questa mattina, calcolata con i dati fino al ' + fmtDay(asOf) + '. Non usa le calorie del giorno: sale, liquidi, intestino e orario non sono noti.</div>'
-    + '<div class="weigh-explain"><b>Che cos\'è l\'oscillazione normale</b>±' + fmt(tm.spread, 1) + ' kg attorno al previsto: è quanto le tue pesate si allontanano di solito dalla loro tendenza (almeno ±0,3 kg). Non è una probabilità. Uno scarto di una mattina non misura grasso o muscolo.</div>';
+  html += '<div class="weigh-explain"><b>Come leggere questa fascia</b>È un intervallo descrittivo, non una probabilità né un limite di peso normale. Non abbiamo verificato quale percentuale delle pesate successive conterrà.</div>'
+    + '<div class="weigh-explain"><b>Da dove viene</b>Tendenza robusta delle pesate confrontabili nei ' + GJM.K.TREND_DAYS + ' giorni precedenti, prolungata di un giorno. Usa solo i dati fino al ' + fmtDay(asOf) + ': la pesata del giorno selezionato non cambia il suo riferimento.</div>'
+    + '<div class="weigh-explain"><b>Cosa non prevede</b>Non applica una correzione per le calorie o i carboidrati del giorno prima. La fascia descrive la dispersione recente attorno alla tendenza, con almeno ±0,3 kg; non quantifica gli effetti di una giornata insolita.</div>';
   box.innerHTML = html;
 }
+
 /* settimana in corso: oggi non è né passato né futuro, lo dico esplicitamente (la settimana finisce sempre di domenica) */
 function wkRest(k) {
   var today = k.completi + k.parziali + k.vuoti + k.futuri < 7, parts = [];
@@ -6248,8 +6333,45 @@ function planEvents(x0, x1) {
   (p.supplements || []).forEach(function (sp) { (sp.events || []).forEach(function (e) { if (e.date >= x0 && e.date <= x1) out.push({ d: e.date, label: (sp.name || 'integratore') + ': ' + e.type }); }); });
   return out.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; }).slice(-6);
 }
+function renderPlanImpact() {
+  var box = $('#impact-body'); if (!box) return;
+  var E = state.E, p = E && E.planImpact;
+  if (!p) { box.innerHTML = '<p class="muted">Crea un piano e registra le tue giornate per confrontarle con i rispettivi obiettivi.</p>'; return; }
+  if (!p.complete) { box.innerHTML = '<p class="muted">' + esc(p.why || 'Registra e conferma completa almeno una giornata con un target attivo.') + '</p><p class="muted small">Le giornate mancanti o parziali non vengono contate come digiuni.</p>'; return; }
+  var c = p.comparison, shift = c && c.shift, hasShift = shift != null;
+  var title = !hasShift ? 'Confronto delle date non disponibile' : shift > 0 ? 'Spostamento stimato: +' + shift + (shift === 1 ? ' giorno' : ' giorni') : shift < 0 ? 'Spostamento stimato: ' + shift + (shift === -1 ? ' giorno' : ' giorni') : 'Nessuno spostamento di un giorno intero';
+  var tile = function (name, value, sub, tone) { return '<div class="impact-tile impact-' + (tone || 'blue') + '"><small>' + name + '</small><b>' + value + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>'; };
+  var h = '<p class="impact-period">Dal ' + fmtDay(p.from) + ' al ' + fmtDay(p.to) + ' · ' + p.complete + ' giornate complete' + (p.includesToday ? ' · oggi incluso' : '') + '</p>'
+    + '<div class="impact-hero"><small>Confronto dall’inizio del percorso</small><b>' + title + '</b><span>' + (p.partial ? 'Confronto parziale: mancano giornate complete o target. ' : '') + 'Misura la differenza tra due percorsi teorici, non una seconda previsione da oggi.</span></div>'
+    + '<div class="impact-grid">'
+    + tile('Giorni sopra il target', p.above + ' su ' + p.complete, 'giornate complete', 'blue')
+    + tile(p.net < 0 ? 'Calorie sotto il target' : 'Calorie sopra il target', kc(Math.abs(p.net)), 'saldo complessivo del periodo', 'orange')
+    + tile('Equivalente energetico netto', sgn(p.energyKg, 2) + ' kg', 'non grasso misurato', 'purple')
+    + tile('Equivalenza energetica in giorni', p.equivalentDays != null ? sgn(p.equivalentDays, 1) + ' giorni' : '—', 'non si somma alla data desiderata', 'mint')
+    + '</div>';
+  if (hasShift) h += '<details class="impact-details impact-reconstruction"><summary><span class="impact-summary-copy"><b>Confronto dall’inizio</b><small>Due percorsi teorici, la stessa partenza</small></span></summary><div class="impact-reconstruction-body" data-ib-keep>'
+    + '<div class="impact-setup"><div><small>Partenza comune</small><b>' + fmt(p.initialWeight, 1) + ' kg</b><span>' + fmtDay(p.from) + '</span></div><div><small>Traguardo comune</small><b>' + fmt(p.goalWeight, 1) + ' kg</b><span>stesso obiettivo</span></div></div>'
+    + '<div class="impact-dates">' + tile('Sempre secondo il piano', fmtDay(c.planned), 'Ricostruzione senza scostamenti dal target.', 'blue')
+    + tile('Con il diario registrato', fmtDay(c.recorded), 'Ricostruzione che include gli scostamenti.', 'mint') + '</div>'
+    + '<div class="impact-comparison-result"><span>Differenza fra le ricostruzioni</span><b>' + sgn(shift, 0) + ' giorni</b></div>'
+    + '<div class="impact-common-future"><small>Stessa ipotesi futura</small><span>Dal ' + fmtDay(c.futureFrom) + ': <b>' + kc(p.futureTarget) + ' al giorno</b> in entrambi i percorsi.</span></div>'
+    + '<p class="impact-comparison-note">Queste date spiegano lo scostamento dall’inizio. Per la previsione da oggi, usa il riquadro sopra.</p></div></details>';
+  else h += '<p class="muted small">' + esc(p.why || '') + '</p>';
+  if (p.partial) h += '<p class="impact-partial">' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>';
+  h += '<details class="impact-details"><summary>Come si calcola</summary>'
+    + (p.desiredDate ? '<p>Data desiderata: ' + fmtDay(p.desiredDate) + '. È un obiettivo scelto, distinto dalle date simulate.</p>' : '')
+    + '<p>Ogni giornata usa il target attivo in quella data. Entrambi gli scenari partono dallo stesso peso iniziale e condividono attività, stima del consumo e piano futuro. Le pesate successive non riavviano i due percorsi.</p>'
+    + '<p>Scostamento netto: ' + kc(p.excess) + ' − ' + kc(p.under) + ' = ' + sgn(p.net, 0) + ' kcal. Con il ' + fmt(p.tef * 100, 0) + '% di digestione del modello: ' + sgn(p.effectiveEnergy, 0) + ' kcal ÷ ' + fmt(p.rho, 0) + ' = ' + sgn(p.energyKg, 2) + ' kg equivalenti. Non è una misura di grasso guadagnato o perso.</p>'
+    + '<p>Le date derivano dalla simulazione giorno per giorno, con consumo che varia col peso. I giorni equivalenti dividono invece lo scostamento energetico per il deficit o surplus atteso al ritmo attuale: le due quantità possono differire. Le date sono arrotondate al giorno; oltre 12 settimane restano particolarmente indicative.</p>'
+    + (p.initialWeight ? '<p>Peso iniziale comune: ' + fmt(p.initialWeight, 1) + ' kg (' + esc(p.initialOrigin) + ').</p>' : '')
+    + '<p>Questo confronto isola gli scostamenti registrati rispetto al piano. Non certifica il fabbisogno, non sostituisce la tendenza reale e non prescrive giorni aggiuntivi di restrizione. Se cambi fase, il periodo riparte dalla nuova fase.</p></details>';
+  box.innerHTML = h;
+}
+
 function renderForecast() {
+  renderPlanImpact();
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
+  $('#fc-origin').textContent = f && f.w0 != null ? 'Peso di riferimento: ' + fmt(f.w0, 1) + ' kg, ricavato dalle tue pesate recenti. La data qui sotto ipotizza di seguire il piano da oggi.' : 'La previsione sarà disponibile con un piano attivo e pesate recenti.';
   $('#fc-title').textContent = s.goalWeight > 0 ? 'Quando potresti arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'Peso nelle prossime settimane';
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
@@ -6259,8 +6381,8 @@ function renderForecast() {
   big.textContent = rng(f.plan);
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
   var rows = '<div class="fc-grid">'
-    + line('Con le calorie del piano', (E.today.target ? fmt(E.today.target.v, 0) + ' kcal al giorno' : '—') + ', partendo dalla tendenza di ' + fmt(f.w0, 1) + ' kg', rng(f.plan), winText(f.plan))
-    + line('Con le calorie registrate', f.logged ? 'media di ' + fmt(f.logged.I, 0) + ' kcal al giorno, ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
+    + line('Se segui il piano da oggi', (f.plan ? fmt(f.plan.I, 0) + ' kcal al giorno' : '—') + ', dal peso di riferimento di ' + fmt(f.w0, 1) + ' kg', rng(f.plan), winText(f.plan))
+    + line('Se mantieni la media recente', f.logged ? fmt(f.logged.I, 0) + ' kcal al giorno: media delle giornate complete nelle ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
     + (f.required ? (f.required.conflict
       ? line('Per arrivare entro il ' + fmtDay(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
       : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
@@ -6272,17 +6394,29 @@ function renderForecast() {
   $('#fc-rows').innerHTML = rows;
 }
 function renderProjection() {
-  var E = state.E, f = E && E.forecast, s = S();
-  if (!f || f.none || f.done || !E.base || !E.base.ok) { $('#proj-text').textContent = f && f.none ? 'Prospetto non disponibile: ' + f.none + '.' : 'Serve un piano attivo con pesate recenti.'; $('#proj-table').innerHTML = ''; $('#proj-more').innerHTML = ''; $('#proj-note').textContent = ''; return; }
-  var T = E.today.target ? E.today.target.v : null, Il = f.logged ? f.logged.I : null, H = GJM.K.HORIZON, B = E.base, dir = goalDir(), gw = s.goalWeight;
+  var E = state.E, f = E && E.forecast, s = S(), box = $('#proj-cards');
+  if (!f || f.none || f.done || !E.base || !E.base.ok) {
+    $('#proj-text').textContent = f && f.none ? 'Prospetto non disponibile: ' + f.none + '.' : 'Serve un piano attivo con pesate recenti.';
+    box.innerHTML = '<div class="projection-empty">' + esc(f && f.none ? 'Servono dati sufficienti per costruire il prospetto: ' + f.none + '.' : f && f.done ? 'Il traguardo è già raggiunto secondo le pesate disponibili.' : 'Aggiungi un piano e le tue pesate: qui compariranno le proiezioni delle prossime settimane.') + '</div>';
+    $('#proj-context').innerHTML = ''; $('#proj-more').innerHTML = ''; $('#proj-note').textContent = ''; return;
+  }
+  var T = E.today.target ? E.today.target.v : null, Il = f.logged ? f.logged.I : null, B = E.base, dir = goalDir(), gw = s.goalWeight;
   var kd = B.kSD || 0, marks = [14, 28, 56, 84];
-  /* stessa fascia del motore: consumo ± una deviazione e livello di partenza ± il suo errore */
-  var cell = function (I, k) { if (I == null) return '—'; var b = GJM.weightBand(f.sim, I, k); if (dir && gw > 0 && (b.c - gw) * dir >= 0) return 'obiettivo raggiunto'; return fmt(b.c, 1) + ' kg <small>(' + fmt(b.lo, 1) + '–' + fmt(b.hi, 1) + ')</small>'; };
-  $('#proj-text').textContent = 'Simulazione da oggi per 12 settimane: con le calorie del piano (' + (T ? fmt(T, 0) : '—') + ' kcal) e con la media registrata (' + (Il ? fmt(Il, 0) : 'non disponibile') + '). Fra parentesi: consumo di una deviazione più alto o più basso e livello di partenza ±' + fmt(f.w0Se, 1) + ' kg.';
-  $('#proj-table').innerHTML = '<thead><tr><th>Fra</th><th>Data</th><th>Calorie del piano</th><th>Calorie registrate</th></tr></thead><tbody>' + marks.map(function (k) { return '<tr><td>' + (k / 7) + ' settimane</td><td>' + fmtShort(addDays(f.from, k)) + '</td><td>' + cell(T, k) + '</td><td>' + cell(Il, k) + '</td></tr>'; }).join('') + '</tbody>';
-  $('#proj-note').textContent = 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l\'obiettivo la tabella non continua a perdere o prendere peso.';
-  $('#proj-more').innerHTML = '<p>Consumo senza digestione all\'inizio: ' + kc(B.Bh) + ', che cambia di ' + fmt(B.perKg, 1) + ' kcal per kg di peso. Digestione: 10% delle calorie dello scenario. Energia per kg: 7.700 kcal (approssimazione; la tabella in Calorie mostra la sensibilità). Incertezza del consumo: ±' + fmt(kd * 100, 1) + '%.</p>';
+  function result(I, k, name, tone) {
+    if (I == null) return '<div class="projection-result '+tone+'"><small>'+name+'</small><b class="projection-unavailable">Non disponibile</b><span>Servono giornate complete sufficienti.</span></div>';
+    var b = GJM.weightBand(f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
+    return '<div class="projection-result '+tone+'"><small>'+name+'</small>'
+      + (done ? '<b class="projection-achieved">Traguardo raggiunto</b><span>in questo scenario</span>' : '<b>'+fmt(b.c,1)+'<em> kg</em></b><span>'+fmt(b.lo,1)+' – '+fmt(b.hi,1)+' kg · intervallo del modello</span>') + '</div>';
+  }
+  var dateText = function(d) { return d.split('-').reverse().join('/'); };
+  var startText = dateText(f.from);
+  $('#proj-context').innerHTML = '<div class="projection-scenarios"><span class="projection-plan"><i></i><span class="projection-scenario-copy"><span>Seguendo il piano da oggi, '+startText+'</span><b>'+(T!=null?kc(T)+'/giorno':'non disponibile')+'</b></span></span><span class="projection-diary"><i></i><span class="projection-scenario-copy"><span>Mantenendo la media recente delle ultime due settimane, da oggi</span><b>'+(Il!=null?kc(Il)+'/giorno':'non disponibile')+'</b></span></span></div>';
+  box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan')+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
+  $('#proj-text').textContent = 'Simulazioni dal peso di riferimento attuale, con lo stesso modello del riquadro di arrivo. Gli intervalli includono consumo e peso di partenza incerti.';
+  $('#proj-note').textContent = 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
+  $('#proj-more').innerHTML = '<p>Consumo senza digestione all’inizio: '+kc(B.Bh)+', che cambia di '+fmt(B.perKg,1)+' kcal per kg di peso. Digestione: 10% delle calorie dello scenario. Energia per kg: 7.700 kcal (approssimazione). Incertezza del consumo: ±'+fmt(kd*100,1)+'%. Gli intervalli usano un consumo di una deviazione più alto o più basso e il livello di partenza ±'+fmt(f.w0Se,1)+' kg. Non sono probabilità garantite.</p>';
 }
+
 /* ---------- calorie ---------- */
 function renderTdee() {
   var E = state.E, h = $('#td-h');
@@ -7421,8 +7555,8 @@ function rulesData() {
     what: 'Le calorie costanti che, con la stessa simulazione, portano all\'obiettivo esattamente alla data. Se sono fuori dai limiti del piano automatico, mostro comunque il numero, con un avviso chiaro che lo sconsiglio, e propongo alternative.',
     how: fx(L(O('Calorie'), 'ricerca per bisezione sulla simulazione')),
     why: 'Un numero fuori dai limiti è un\'informazione, non un consiglio: non lo uso mai come obiettivo del piano.' });
-  add({ id: 'domani', g: 'previsione', t: 'Bilancia di domattina', w: 'Oggi',
-    what: 'Un intervallo per la prossima pesata, calcolato con i dati fino al giorno prima, e il confronto con la pesata quando arriva. Una pesata dentro l\'intervallo non conferma il consumo; una fuori non lo smentisce.',
+  add({ id: 'domani', g: 'previsione', t: 'La pesata rispetto al tuo andamento', w: 'Progressi › Peso',
+    what: 'Una fascia descrittiva dal tuo storico, calcolata con i dati fino al giorno prima. Richiede almeno 4 pesate confrontabili nei 14 giorni precedenti e una pesata negli ultimi 7 giorni. Non è un intervallo con copertura probabilistica verificata. Il confronto non giudica il piano né il fabbisogno.',
     how: fx(L(O('Centro'), 'tendenza del giorno prima + pendenza'), L(O('Ampiezza'), 'dalla dispersione delle pesate recenti attorno alla tendenza')),
     why: 'Prevedere meglio la bilancia non dimostra che il consumo stimato sia giusto: sono domande diverse.' });
 
@@ -9826,7 +9960,7 @@ function animatePanel(el,open,isDetails){
     if(!wasVisible&&!previous)start=0;
   }
   el.style.overflow='clip';
-  var duration=Math.min(580,360+Math.sqrt(Math.abs(end-start))*4);
+  var duration=el.classList.contains('impact-reconstruction')?260:Math.min(580,360+Math.sqrt(Math.abs(end-start))*4);
   return new Promise(function(resolve){
     var frames=isDetails?[{height:start+'px'},{height:end+'px'}]:[{height:start+'px',opacity:wasVisible?1:0},{height:end+'px',opacity:open?1:0}];
     if(!isDetails){var natural=window.getComputedStyle(el);props.forEach(function(p){frames[0][p]=wasVisible?fromSpace[p]:'0px';frames[1][p]=open?natural[p]:'0px';});}
@@ -11129,5 +11263,51 @@ document.addEventListener('click', function (e) {
   }, 320);
 });
 </script>
-<style id="tema-giro3b">#tmw #tmw-date{display:none!important}</style>
+<style id="tema-giro3b">#tmw #tmw-date{display:none!important}
+/* La fascia ha priorità sul centro; colori neutri anche fuori fascia. */
+.bs-range-main{flex-wrap:wrap}.bs-range-main b{font-size:clamp(1.8rem,5vw,2.8rem)}
+.bs-context{font-size:.8rem;color:#D6E6FF;line-height:1.5;margin:10px 0 0}
+.bs-start>b{display:block;color:var(--ink);margin-bottom:8px}
+.bs-neutral .bs-pin span{background:#64D2FF;color:#111}.bs-neutral .bs-pin i{color:#64D2FF}
+.bs-neutral .bs-pin-wait span{background:#3A3A3C;color:#D1D1D6}
+.bs-neutral .bs-badge{background:#3A3A3C;color:#E5E5EA}
+.bs-neutral .bs-say{color:#D1D1D6}.bs-neutral .bs-n-me b{color:#fff}
+@media(max-width:480px){#tmw .panel-head{flex-wrap:wrap}#tmw .bs-nums{gap:8px}.bs-nums small{overflow-wrap:anywhere}}
+
+/* Impatto del diario: confronto separato dalle previsioni sulla tendenza. */
+.impact-period{font-size:.8rem;color:var(--sec,#AEAEB2);margin:6px 0 12px}
+.impact-hero{padding:16px;border-radius:18px;background:linear-gradient(120deg,#293044,#243540);display:grid;gap:7px;margin-bottom:12px}
+.impact-hero small{color:#CBD5E1}.impact-hero>b{font-size:clamp(1.2rem,3vw,1.7rem);color:#fff;line-height:1.25}.impact-hero>span{color:#CBD5E1;font-size:.8rem}
+.impact-grid,.impact-dates{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:10px 0}
+.impact-tile{--ic:#64D2FF;padding:15px;border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--ic) 20%,#232326),color-mix(in srgb,var(--ic) 8%,#232326));border:1px solid color-mix(in srgb,var(--ic) 28%,#333);border-top:3px solid var(--ic);display:flex;flex-direction:column;gap:8px;min-width:0}
+.impact-blue{--ic:#64D2FF}.impact-orange{--ic:#FF9F0A}.impact-purple{--ic:#BF5AF2}.impact-mint{--ic:#30D5A3}
+.impact-tile small{color:color-mix(in srgb,var(--ic) 58%,#fff);font-size:.78rem;font-weight:600}.impact-tile b{color:#fff;font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:1.2}.impact-tile span{color:#C4CBD4;font-size:.74rem;line-height:1.45}
+.impact-dates .impact-tile{border-top:1px solid color-mix(in srgb,var(--ic) 28%,#333);border-left:3px solid var(--ic)}.impact-start{font-size:.82rem;line-height:1.6;color:#CBD5E1;margin:18px 0 8px}.impact-partial,.impact-reference{font-size:.8rem;line-height:1.5;color:#D6D9E0}
+.impact-details{margin-top:12px;font-size:.8rem;line-height:1.6;color:#AEAEB2}.impact-details summary{cursor:pointer;color:#64D2FF;padding:8px 0}
+.impact-reconstruction{padding:0 12px;border:1px solid #3A3A3C;border-radius:14px}.forecast-kicker{color:#64D2FF;font-size:.75rem;font-weight:700;margin:14px 0 5px}.forecast-origin{color:#C7CDD6;font-size:.82rem;line-height:1.55;margin:5px 0 12px}
+@media(max-width:420px){.impact-dates{grid-template-columns:1fr}.impact-tile{padding:10px}}
+/* Scoped layout: a single content surface with deliberate spacing. */
+#impact-panel .impact-reconstruction{padding:0;overflow:hidden;border:1px solid #414854;background:#22262E}
+#impact-panel .impact-reconstruction>summary{padding:15px 105px 15px 16px!important;min-height:70px;display:flex;align-items:center;position:relative;margin:0!important}
+.impact-summary-copy{display:grid;gap:4px}.impact-summary-copy b{font-size:.88rem;color:#E7EDF5}.impact-summary-copy small{font-size:.74rem;color:#9CAABA;font-weight:400}
+#impact-panel .impact-reconstruction .impact-reconstruction-body{margin:0!important;padding:16px;border-top:1px solid #3A424E;display:grid;gap:14px}
+.impact-setup{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 0 14px;border-bottom:1px solid #39414A}
+.impact-setup>div{display:grid;gap:4px}.impact-setup small,.impact-common-future>small{color:#9DAABA;font-size:.72rem}.impact-setup b{color:#F4F7FA;font-size:1.25rem;line-height:1.2}.impact-setup span{color:#BDC6D0;font-size:.75rem}
+#impact-panel .impact-reconstruction .impact-dates{margin:0;gap:12px}.impact-reconstruction .impact-tile{padding:14px;gap:8px}
+.impact-comparison-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:12px;background:#303A46}.impact-comparison-result span{font-size:.78rem;color:#CAD4DF}.impact-comparison-result b{font-size:1.1rem;color:#fff;white-space:nowrap}
+.impact-common-future{display:grid;gap:5px}.impact-common-future span{font-size:.8rem;color:#D7DFE9;line-height:1.5}
+.impact-comparison-note{margin:0;padding:11px 13px;border-left:2px solid #6686A6;border-radius:0 10px 10px 0;background:#29313C;font-size:.76rem;line-height:1.5;color:#BAC9D8}
+#proj-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.projection-scenarios{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}.projection-scenarios>span{display:flex;align-items:flex-start;gap:8px;font-size:.75rem;color:#BAC4D0;padding:10px 0}.projection-scenarios i{height:6px;width:6px;flex:0 0 6px;margin-top:5px;border-radius:50%;background:var(--pc)}.projection-scenarios b{font-size:.9rem;color:var(--pc);font-weight:700}.projection-scenario-copy{display:grid;gap:5px;line-height:1.5}.projection-scenario-copy>small{font-size:.7rem;color:#9EADBD}
+.projection-plan{--pc:#64D2FF}.projection-diary{--pc:#30D5A3}
+.projection-scenarios>span{align-items:stretch}.projection-scenario-copy{grid-template-rows:1fr auto}
+.projection-card{border:1px solid #39414B;border-radius:18px;background:linear-gradient(150deg,#272D36,#22252C);overflow:hidden}
+.projection-card>header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 15px;background:#303844;border-bottom:1px solid #424B58;color:#CFD9E3;font-size:.8rem}.projection-card>header b{color:#fff;font-weight:700}.projection-card time{padding:4px 8px;border-radius:8px;background:#202936;color:#C6D8EC;font-size:.73rem;white-space:nowrap}
+.projection-results{display:grid;grid-template-columns:1fr 1fr;padding:16px 14px;gap:14px}.projection-result{display:grid;gap:8px;align-content:start;min-width:0}.projection-result+.projection-result{border-left:1px solid #3E4752;padding-left:14px}
+.projection-result small{color:var(--pc);font-weight:600;font-size:.73rem}.projection-result>b{color:#F5F7FA;font-size:1.7rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}.projection-result em{font-size:.8rem;font-style:normal;font-weight:500;color:#A9B6C4}.projection-result>span{font-size:.69rem;line-height:1.5;color:#A9B8C9}.projection-result>b.projection-achieved{font-size:1rem;line-height:1.4;color:var(--pc)}.projection-result>b.projection-unavailable{font-size:.9rem;color:#9AA8B7}
+.projection-empty{padding:18px;margin-top:12px;border:1px dashed #4C5967;border-radius:15px;color:#BFCAD6;font-size:.85rem;line-height:1.6}
+@media(max-width:760px){#proj-cards,.projection-scenarios{grid-template-columns:1fr}.projection-scenarios{gap:0}.impact-summary-copy small{max-width:210px}}
+@media(max-width:420px){#impact-panel .impact-reconstruction .impact-dates{grid-template-columns:1fr}.impact-comparison-result{align-items:flex-start;flex-direction:column;gap:6px}.impact-summary-copy small{font-size:.69rem;max-width:165px}}
+@media(prefers-reduced-motion:reduce){#impact-panel .impact-reconstruction,#impact-panel .impact-reconstruction-body{animation:none!important;transition:none!important}}
+</style>
 </body></html>
