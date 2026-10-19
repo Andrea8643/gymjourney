@@ -10681,7 +10681,7 @@ function dailyEnergyHTML(view,options) {
   ((planDoc()||{}).jobs||[]).forEach(function(j){if(j.from<=selectedDate&&(!selectedJob||j.from>=selectedJob.from))selectedJob=j;});
   var weekday=(new Date(selectedDate+'T00:00:00Z').getUTCDay()+6)%7;
   var scheduledRest=selectedJob&&selectedJob.days&&selectedJob.days.length&&selectedJob.days.indexOf(weekday)<0;
-  var jobLabel=scheduledRest?'Oggi non hai lavorato':src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
+  var jobLabel=scheduledRest?'Oggi non hai lavorato':(src.job||'').replace(/\s*\(dichiarato\)/gi,'')||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
   var sessions=Array.from(state.workouts.values()).filter(function(w){return w.date===selectedDate;}).sort(function(a,b){return (a.start||'').localeCompare(b.start||'');});
   var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · '):'Nessun allenamento, riposo';
   var status=closed?'Calorie del diario complete · consumo ricostruito.':past?'Calorie incomplete: per la digestione è usato il piano.':'Previsione della giornata; si aggiorna con i dati completi.';
