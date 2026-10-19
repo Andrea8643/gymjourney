@@ -6113,15 +6113,16 @@ function renderTomorrow() {
   }
   var html = '<div class="bs-hero"><small>Fascia indicativa dal tuo storico</small><div class="bs-big bs-range-main"><b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + '</b><span>kg</span></div>'
     + '<p class="bs-range">Riferimento della tendenza: <b>' + fmt(tm.c, 1) + ' kg</b></p><p class="bs-context">Un riferimento per leggere la pesata, non un obiettivo da raggiungere stamattina.</p></div>';
-  var lo = Math.min(tm.lo, mw != null ? mw : tm.lo), hi = Math.max(tm.hi, mw != null ? mw : tm.hi), pad = Math.max(0.25, (hi - lo) * 0.18);
-  lo -= pad; hi += pad;
+  // A symmetric display scale keeps the trend at the center, including outlying weigh-ins.
+  var radius = Math.max(tm.c - tm.lo, tm.hi - tm.c, mw != null ? Math.abs(mw - tm.c) : 0, 0.3);
+  var extent = radius + Math.max(0.25, radius * 0.18), lo = tm.c - extent, hi = tm.c + extent;
   var P = function (x) { return ((x - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   var inside = mw != null && mw >= tm.lo && mw <= tm.hi, diff = mw != null ? mw - tm.c : null;
   // Neutral styling in both cases: outside the descriptive band is not a failed objective.
   html += '<div class="bs-scale bs-neutral" role="img" aria-label="Fascia indicativa ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg; riferimento della tendenza ' + fmt(tm.c, 1) + ' kg' + (mw != null ? '; pesata registrata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
-    + (mw != null ? '<div class="bs-pin" style="left:' + P(mw) + '"><span>Tu · ' + mwTxt + '</span><i></i></div>' : '<div class="bs-pin bs-pin-wait" style="left:' + P(tm.c) + '"><span>Pesata non ancora inserita</span></div>')
+    + (mw != null ? '<div class="bs-pin"><span>Tu · ' + mwTxt + ' kg</span></div>' : '<div class="bs-pin bs-pin-wait"><span>Pesata non ancora inserita</span></div>')
     + '<div class="bs-track"><span class="bs-band" style="left:' + P(tm.lo) + ';width:calc(' + P(tm.hi) + ' - ' + P(tm.lo) + ')"></span><span class="bs-mid" style="left:' + P(tm.c) + '"></span>' + (mw != null ? '<span class="bs-me" style="left:' + P(mw) + '"></span>' : '') + '</div>'
-    + '<div class="bs-ticks"><span style="left:' + P(tm.lo) + '"><b>' + fmt(tm.lo, 1) + '</b></span><span class="bs-tc" style="left:' + P(tm.c) + '"><b>' + fmt(tm.c, 1) + '</b>riferimento</span><span style="left:' + P(tm.hi) + '"><b>' + fmt(tm.hi, 1) + '</b></span></div></div>'
+    + '<div class="bs-ticks"><span><b>' + fmt(lo, 1) + '</b></span><span class="bs-tc"><b>' + fmt(tm.c, 1) + '</b>riferimento</span><span><b>' + fmt(hi, 1) + '</b></span></div></div><div class="bs-scale-note">Scala in kg · centrata sulla tendenza</div>'
     + '<div class="bs-key"><span class="k-band">fascia indicativa</span><span class="k-mid">tendenza</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
   if (mw == null) html += '<div class="bs-wait"><p>' + (past ? 'Nessuna pesata registrata per questo giorno.' : 'Inserisci il peso di stamattina per confrontarlo con il tuo andamento.') + '</p>' + (past ? '' : '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>') + '</div>';
   else {
@@ -10253,7 +10254,7 @@ function bindFriends() {
     if(r.error||!r.config||!r.config.enabled)return head+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div>';
     if(!keys.length)return head+'<div class="friends-empty">Nessun dato selezionato per il confronto.</div>';
     var names={calories:F.period==='week'?'Calorie medie':'Calorie',macros:'Macro',steps:F.period==='week'?'Passi medi':'Passi',workouts:'Allenamenti',weight:'Peso'};
-    return head+'<div class="friends-table-wrap"><table class="friends-table"><thead><tr><th>Dato</th><th>Tu</th><th>'+esc(name)+'</th></tr></thead><tbody>'+keys.map(function(k){return '<tr><th scope="row">'+names[k]+'</th><td>'+cell(own,k,true)+'</td><td>'+cell(r.days,k,r.config.prefs[k])+'</td></tr>';}).join('')+'</tbody></table></div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
+    return head+'<div class="friends-metrics">'+keys.map(function(k){return '<section class="friend-metric" data-metric="'+k+'" aria-label="'+names[k]+'"><h4>'+names[k]+'</h4><div class="friend-metric-pair"><div class="friend-metric-person friend-metric-own"><span class="friend-metric-name">Tu</span><div class="friend-metric-value">'+cell(own,k,true)+'</div></div><div class="friend-metric-person friend-metric-peer"><span class="friend-metric-name">'+esc(name)+'</span><div class="friend-metric-value">'+cell(r.days,k,r.config.prefs[k])+'</div></div></div></section>';}).join('')+'</div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
   }
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
@@ -12923,6 +12924,66 @@ body #tab-dati .profile-switch button:not(#z):not(#y):not(#x){-webkit-text-fill-
     line-height:1.3!important;
     font-size:.75rem!important;
   }
+}
+
+/* Weight display: centered reference, in-flow label, equal endpoint spacing. */
+body #tab-diario #tmw .bs-scale{padding:18px 16px;overflow:visible}
+body #tab-diario #tmw .bs-axis{margin-inline:0;padding-top:0;min-width:0}
+body #tab-diario #tmw .bs-pin{position:static;transform:none;align-items:center;margin:0 0 18px;min-width:0}
+body #tab-diario #tmw .bs-pin span{max-width:100%;box-sizing:border-box;white-space:normal;text-align:center;overflow-wrap:anywhere;padding:7px 13px;line-height:1.4}
+body #tab-diario #tmw .bs-ticks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:auto;min-height:38px;gap:5px;margin-top:13px}
+body #tab-diario #tmw .bs-ticks span{position:static;transform:none;white-space:normal;text-align:center;min-width:0;overflow-wrap:anywhere}
+body #tab-diario #tmw .bs-ticks span:first-child{text-align:left}
+body #tab-diario #tmw .bs-ticks span:last-child{text-align:right}
+body #tab-diario #tmw .bs-scale-note{font-size:.67rem;line-height:1.5;text-align:center;color:#969BA4;margin:4px 0 13px}
+body #tab-diario #tmw .bs-key{margin-inline:0;gap:7px 13px;line-height:1.5}
+
+/* Each metric owns two flexible, independent person columns. No fixed table widths. */
+#tab-amici #friend-comparison{min-width:0;padding:22px;background:radial-gradient(ellipse at 100% 0,#64D2FF0B,transparent 65%),#1D232B;border-color:#6B92AE30;border-radius:24px;box-sizing:border-box}
+#tab-amici .friends-comparison-head,#tab-amici .friends-comparison-head>div{min-width:0}
+#tab-amici .friends-comparison-head h3{overflow-wrap:anywhere;line-height:1.4}
+#tab-amici .friends-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px;min-width:0}
+#tab-amici .friend-metric{min-width:0;border:1px solid #A0BCC21C;background:#FFFFFF03;border-radius:18px;padding:16px;box-sizing:border-box}
+#tab-amici .friend-metric h4{display:flex;align-items:center;gap:9px;font-size:.88rem;line-height:1.4;color:#E5EDF3;margin:0 0 15px;font-weight:700;letter-spacing:.01em}
+#tab-amici .friend-metric h4::before{content:'';width:5px;height:17px;border-radius:3px;background:#64D2FF;flex:none}
+#tab-amici .friend-metric[data-metric=macros] h4::before{background:#BF8AFF}
+#tab-amici .friend-metric[data-metric=steps] h4::before{background:#FFD06F}
+#tab-amici .friend-metric[data-metric=workouts] h4::before{background:#FF9D7D}
+#tab-amici .friend-metric[data-metric=weight] h4::before{background:#80B5FF}
+#tab-amici .friend-metric-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto auto;min-width:0}
+#tab-amici .friend-metric-person{display:contents}
+#tab-amici .friend-metric-person>*{min-width:0;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere}
+#tab-amici .friend-metric-own>*{grid-column:1;padding-right:14px}
+#tab-amici .friend-metric-peer>*{grid-column:2;padding-left:14px;border-left:1px solid #A0BCC21F}
+#tab-amici .friend-metric-name{grid-row:1;display:block;font-size:.75rem;font-weight:650;line-height:1.5;color:#77D9F5;padding-bottom:10px;white-space:normal;overflow-wrap:anywhere}
+#tab-amici .friend-metric-peer .friend-metric-name{color:#76D8BC}
+#tab-amici .friend-metric-value{grid-row:2;min-width:0;white-space:normal;overflow-wrap:anywhere}
+#tab-amici .friend-metric-value>b{display:block;font-size:1.16rem;line-height:1.5;color:#F1F5F8;font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere}
+#tab-amici .friend-metric-value>small{display:block;font-size:.73rem;font-weight:400;line-height:1.65;color:#A6B7C7;margin-top:7px;white-space:normal;overflow-wrap:anywhere}
+#tab-amici .friend-metric-value>b.friend-muted{font-size:.83rem;color:#A6B7C7;font-weight:500}
+#tab-amici .friend-metric-value .friends-macro{display:flex;justify-content:space-between;align-items:baseline;gap:7px;margin:0;padding:5px 0;min-width:0;white-space:normal;border-bottom:1px solid #FFFFFF08}
+#tab-amici .friend-metric-value .friends-macro small{font-size:.7rem;color:#A6B7C7;flex:none}
+#tab-amici .friend-metric-value .friends-macro b{font-size:.94rem;line-height:1.5;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-width:0}
+#tab-amici #friend-comparison>.friends-help{font-size:.75rem;line-height:1.7;color:#A6B7C7;margin:19px 2px 0;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:760px){
+  #tab-amici #friend-comparison{padding:17px;border-radius:22px}
+  #tab-amici .friends-metrics{grid-template-columns:minmax(0,1fr);gap:12px;margin-top:18px}
+  #tab-amici .friend-metric{padding:15px 13px}
+  #tab-amici .friend-metric h4{font-size:.85rem}
+  #tab-amici .friend-metric-own>*{padding-right:12px}
+  #tab-amici .friend-metric-peer>*{padding-left:12px}
+  #tab-amici .friend-metric-name{font-size:.73rem}
+  #tab-amici .friend-metric-value>b{font-size:1.05rem}
+  #tab-amici .friend-metric-value>small{font-size:.7rem}
+}
+@media(max-width:360px){
+  #tab-amici #friend-comparison{padding:14px}
+  #tab-amici .friend-metric{padding:14px 11px}
+  #tab-amici .friend-metric-own>*{padding-right:9px}
+  #tab-amici .friend-metric-peer>*{padding-left:9px}
+  #tab-amici .friend-metric-value>b{font-size:.98rem}
+  body #tab-diario #tmw .bs-scale{padding:16px 12px}
+  body #tab-diario #tmw .bs-ticks b{font-size:.86rem}
 }
 
 </style>
