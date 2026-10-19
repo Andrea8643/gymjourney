@@ -1,12 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261019-1">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261019-1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261019-1">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261019-1">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261019-1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2627,14 +2629,14 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
             <label class="f" style="flex:1 1 160px">Etichette, separate da virgola<input id="rf-tags" type="text" placeholder="colazione, alto proteico"></label>
             <label class="f" style="flex:0 1 110px">Minuti<input id="rf-time" type="number" min="0" step="1"></label>
           </div>
-          <div class="muted small">Valori per una porzione</div>
+          <div class="recipe-basis-fields"><label class="f"><span>Porzioni ottenute dalla ricetta</span><input id="rf-servings" type="number" min="1" step="1" inputmode="numeric" placeholder="es. 10 muffin"></label><label class="f"><span>Valori che stai inserendo</span><select id="rf-basis"><option value="total">Totale ricetta</option><option value="portion">Per una porzione</option></select></label></div><div class="recipe-form-heading" id="rf-nutrition-heading">Valori totali della ricetta</div>
           <div class="row">
-            <label class="f">kcal<input id="rf-kcal" type="number" min="0" step="1" required></label>
-            <label class="f">Proteine g<input id="rf-p" type="number" min="0" step="0.1"></label>
-            <label class="f">Carboidrati g<input id="rf-c" type="number" min="0" step="0.1"></label>
-            <label class="f">Grassi g<input id="rf-f" type="number" min="0" step="0.1"></label>
+            <label class="f">kcal<input id="rf-kcal" type="number" min="0" step="any" required></label>
+            <label class="f">Proteine g<input id="rf-p" type="number" min="0" step="any"></label>
+            <label class="f">Carboidrati g<input id="rf-c" type="number" min="0" step="any"></label>
+            <label class="f">Grassi g<input id="rf-f" type="number" min="0" step="any"></label>
           </div>
-          <label class="f">Ingredienti, uno per riga<textarea id="rf-ing"></textarea></label>
+          <div id="rf-nutrition-preview" class="recipe-form-preview"></div><label class="f">Ingredienti, uno per riga<textarea id="rf-ing"></textarea></label>
           <label class="f">Procedimento, un passaggio per riga<textarea id="rf-steps"></textarea></label>
           <div class="row"><button class="btn fit" type="submit">Salva ricetta</button></div>
         </form>
@@ -4853,9 +4855,343 @@ function parseSets(txt) {
 }
 
 /* ---------- ricette ---------- */
-function mealFromRecipe(r, portions, slot) {
-  return { slot: slot, name: r.name + (portions !== 1 ? ' ×' + fmt(portions, 2).replace(/,?0+$/, '') : ''), kcal: Math.round((r.kcal || 0) * portions), p: round1((r.protein || 0) * portions), c: round1((r.carbs || 0) * portions), f: round1((r.fat || 0) * portions) };
+/* Reconcile explicit manual totals with whole recipe entries, without changing the energy model. */
+var GJMealReconcile = (function () {
+  var FIELDS = ['kcal', 'protein', 'carbs', 'fat'], MEAL_FIELDS = ['kcal', 'p', 'c', 'f'], EPS = [1.000001, 0.100001, 0.100001, 0.100001];
+  function copy(x) { return JSON.parse(JSON.stringify(x)); }
+  function known(v) { return typeof v === 'number' && isFinite(v); }
+  function totals(d) { var out = {}; FIELDS.forEach(function (k) { out[k] = known(d[k]) ? d[k] : null; }); return out; }
+  function vector(d) { return FIELDS.map(function (k) { return known(d[k]) ? d[k] : null; }); }
+  function same(a, b) { return a.every(function (v, i) { return Math.abs(v - b[i]) <= EPS[i]; }); }
+  function removedVector(before, after) {
+    var a = vector(before), b = vector(after);
+    if (a.some(function (n) { return n == null; }) || b.some(function (n) { return n == null; })) return null;
+    var out = a.map(function (v, i) { return v - b[i]; });
+    return out.some(function (v, i) { return v < -EPS[i]; }) || !out.some(function (v, i) { return v > EPS[i]; }) ? null : out;
+  }
+  function match(day, ids, delta) {
+    if (!delta) return { status: 'none', ids: [] };
+    var rows = (day.meals || []).filter(function (m) { return ids.indexOf(m.id) >= 0; });
+    if (rows.some(function (m) { return MEAL_FIELDS.some(function (k) { return !known(m[k]) || m[k] < 0; }); })) return { status: 'incomplete', ids: [] };
+    rows = rows.filter(function (m) { return m.kcal > 0; }).sort(function (a, b) { return b.kcal - a.kcal; });
+    if (rows.length > 20) return { status: 'limited', ids: [] };
+    var found = [], nodes = 0, limited = false, suffix = [0];
+    for (var i = rows.length - 1; i >= 0; i--) suffix.unshift(suffix[0] + rows[i].kcal);
+    function visit(index, sum, picked) {
+      if (++nodes > 50000) { limited = true; return; }
+      if (found.length > 1 || limited || sum.some(function (n, j) { return n > delta[j] + EPS[j]; })) return;
+      if (picked.length && same(sum, delta)) { found.push(picked.slice()); return; }
+      if (index === rows.length || sum[0] + suffix[index] < delta[0] - EPS[0]) return;
+      var row = rows[index];
+      visit(index + 1, sum.map(function (n, j) { return n + row[MEAL_FIELDS[j]]; }), picked.concat(row.id));
+      visit(index + 1, sum, picked);
+    }
+    visit(0, [0, 0, 0, 0], []);
+    return limited ? { status: 'limited', ids: [] } : found.length === 1 ? { status: 'matched', ids: found[0] } : { status: found.length > 1 ? 'ambiguous' : 'unmatched', ids: [] };
+  }
+  function excludeKeepingTotals(day, ids, M) {
+    var out = copy(day), goal = totals(day), removed = (out.meals || []).filter(function (m) { return ids.indexOf(m.id) >= 0; });
+    if (!removed.length) return out;
+    out.meals = (out.meals || []).filter(function (m) { return ids.indexOf(m.id) < 0; });
+    out.manualMealArchive = (out.manualMealArchive || []).concat(removed.map(function (m) { return { reason: 'manual_total', meal: m }; }));
+    return M.meals.setManualTotal(out, goal);
+  }
+  function reconcile(day, ids, M) {
+    var correction = (day.meals || []).some(function (m) { return m.adjTotal && MEAL_FIELDS.some(function (k, i) { return known(m[k]) && m[k] < -EPS[i]; }); });
+    if (!correction || !ids.length) return { day: day, status: 'none', ids: [], correction: correction };
+    var sum = M.meals.total((day.meals || []).filter(function (m) { return !m.adjTotal; }));
+    if (sum.partial && (sum.partial.protein || sum.partial.carbs || sum.partial.fat)) return { day: day, status: 'incomplete', ids: [], correction: true };
+    var outcome = match(day, ids, removedVector(sum, day));
+    return { day: outcome.status === 'matched' ? excludeKeepingTotals(day, outcome.ids, M) : day, ids: outcome.ids, status: outcome.status, correction: true };
+  }
+  function applyManual(day, target, ids, M) {
+    var prior = reconcile(day, ids, M), current = prior.day;
+    var active = ids.filter(function (id) { return (current.meals || []).some(function (m) { return m.id === id; }); });
+    var outcome = match(current, active, removedVector(current, target));
+    var base = outcome.status === 'matched' ? excludeKeepingTotals(current, outcome.ids, M) : current;
+    return { day: M.meals.setManualTotal(base, target), ids: prior.ids.concat(outcome.ids), status: outcome.status };
+  }
+  return { reconcile: reconcile, applyManual: applyManual, excludeKeepingTotals: excludeKeepingTotals, totals: totals, match: match };
+})();
+
+/* Recipe cards and diary entries share an ID; each meal keeps its original nutrition. */
+var RecipeUI = { dialog: null, recipeId: '', date: '', mode: '', origin: null, notice: '', undo: null, serial: 0 };
+function recipeServings(r) { var n = Number(r.servings); return isFinite(n) && n >= 1 && Math.floor(n) === n ? n : null; }
+function recipeNutrition(r, total) {
+  var n = total ? recipeServings(r) : 1; if (!n) return null;
+  return { kcal: (+r.kcal || 0) * n, protein: (+r.protein || 0) * n, carbs: (+r.carbs || 0) * n, fat: (+r.fat || 0) * n };
 }
+function recipeNumber(n) { return fmt(n, Math.abs(n - Math.round(n)) < 0.000001 ? 0 : 1); }
+function recipeMacroChips(n, perPortion) {
+  return '<span class="recipe-chip recipe-chip-kcal">' + fmt(n.kcal, 0) + ' kcal' + (perPortion ? ' / porz.' : '') + '</span><span class="recipe-chip" title="Proteine in grammi">' + recipeNumber(n.protein) + 'P</span><span class="recipe-chip" title="Carboidrati in grammi">' + recipeNumber(n.carbs) + 'C</span><span class="recipe-chip" title="Grassi in grammi">' + recipeNumber(n.fat) + 'G</span>';
+}
+function recipeNutritionPanels(r, preview) {
+  var n = recipeServings(r), total = recipeNutrition(r, true), portion = recipeNutrition(r, false);
+  function tile(title, value, caption, kind) {
+    return '<section class="recipe-nutrition-tile ' + kind + '"><h4>' + title + '</h4>' + (value ? '<strong>' + fmt(value.kcal, 0) + '<small> kcal</small></strong><div class="recipe-nutrition-macros"><span>P <b>' + recipeNumber(value.protein) + ' g</b></span><span>C <b>' + recipeNumber(value.carbs) + ' g</b></span><span>G <b>' + recipeNumber(value.fat) + ' g</b></span></div>' : '<strong class="recipe-total-missing">Da completare</strong>') + '<p>' + caption + '</p></section>';
+  }
+  return '<div class="recipe-nutrition-pair' + (preview ? ' is-preview' : '') + '">' + tile('Totale ricetta', total, n ? (n === 1 ? 'La ricetta produce 1 porzione.' : 'La ricetta produce ' + fmt(n, 0) + ' porzioni.') : 'Indica quante porzioni produce la ricetta per calcolare il totale.', 'is-total')
+    + tile('Per una porzione', portion, n ? '1/' + fmt(n, 0) + ' della ricetta.' : 'Valori per porzione già registrati.', 'is-portion') + '</div>';
+}
+function recipePreparationHTML(r) {
+  var ing = r.ingredients || [], steps = r.steps || []; if (!ing.length && !steps.length) return '';
+  return '<div class="recipe-preparation">' + (ing.length ? '<section class="recipe-prep-block"><h4>Ingredienti</h4><ul class="recipe-ingredients">' + ing.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></section>' : '')
+    + (steps.length ? '<section class="recipe-prep-block"><h4>Procedimento</h4><ol class="recipe-steps">' + steps.map(function (s, i) { return '<li><span>' + esc(String(s).replace(new RegExp('^\\s*' + (i + 1) + '\\s*[.)]\\s*'), '')) + '</span></li>'; }).join('') + '</ol></section>' : '') + '</div>';
+}
+function recipeIdentity(r) {
+  return { name: r.name || '', kcal: +r.kcal || 0, protein: +r.protein || 0, carbs: +r.carbs || 0, fat: +r.fat || 0 };
+}
+function recipeIdentities(r) { return [recipeIdentity(r)].concat(Array.isArray(r.diaryAliases) ? r.diaryAliases : []); }
+function mealFromRecipe(r, portions, slot, recipeId) {
+  var meal = { slot: slot, name: r.name + (portions !== 1 ? ' ×' + fmt(portions, 2).replace(/,?0+$/, '') : ''), kcal: Math.round((r.kcal || 0) * portions), p: round1((r.protein || 0) * portions), c: round1((r.carbs || 0) * portions), f: round1((r.fat || 0) * portions) };
+  if (recipeId) { meal.recipe = recipeId; meal.portions = portions; }
+  return meal;
+}
+function recipeLegacyPortions(m, r) {
+  if (!m || !m.id || m.recipe || m.srcKey || m.adj || m.adjTotal || typeof m.name !== 'string') return null;
+  var portions = m.name === r.name ? 1 : null, prefix = r.name + ' ×';
+  if (portions == null && m.name.indexOf(prefix) === 0) {
+    var tail = m.name.slice(prefix.length);
+    if (/^\d+(?:[.,]\d+)?$/.test(tail)) portions = Number(tail.replace(',', '.'));
+  }
+  if (!(portions > 0) || !isFinite(portions)) return null;
+  var expected = mealFromRecipe(r, portions, m.slot);
+  return ['kcal', 'p', 'c', 'f'].every(function (k) { return typeof m[k] === 'number' && isFinite(m[k]) && Math.abs(m[k] - expected[k]) < 0.000001; }) ? portions : null;
+}
+function recipeMealBelongs(m, id) {
+  var r = state.recipes.get(id); if (!r) return false;
+  if (!m || !m.id) return false;
+  if (m.recipe) return m.recipe === id;
+  if (!recipeIdentities(r).some(function (v) { return recipeLegacyPortions(m, v) != null; })) return false;
+  var owners = 0;
+  state.recipes.forEach(function (other) { if (recipeIdentities(other).some(function (v) { return recipeLegacyPortions(m, v) != null; })) owners++; });
+  return owners === 1;
+}
+function recipeCandidateIds(day) {
+  return (day.meals || []).filter(function (m) {
+    if (!m || !m.id || m.adj || m.adjTotal) return false;
+    if (m.recipe) return true;
+    return Array.from(state.recipes.keys()).some(function (id) { return recipeMealBelongs(m, id); });
+  }).map(function (m) { return m.id; });
+}
+function recipeReconciledView(day) {
+  var cache = RecipeUI.mealView;
+  if (cache && cache.raw === day && cache.recipes === state.recipes && cache.size === state.recipes.size && cache.serial === RecipeUI.serial) return cache.view;
+  var view = GJMealReconcile.reconcile(day, recipeCandidateIds(day), GJM);
+  RecipeUI.mealView = { raw: day, recipes: state.recipes, size: state.recipes.size, serial: RecipeUI.serial, view: view };
+  return view;
+}
+function recipeDayNeedsReview(date) {
+  var view = recipeReconciledView(state.days.get(date) || {});
+  return view.correction && view.status !== 'matched' && recipeCandidateIds(view.day).length > 0;
+}
+function recipeDiaryMeals(id, date) {
+  var day = recipeReconciledView(state.days.get(date) || {}).day;
+  return (day.meals || []).filter(function (m) { return recipeMealBelongs(m, id); });
+}
+function applyManualMealTotals(day, totals) {
+  RecipeUI.mealView = null;
+  return GJMealReconcile.applyManual(day, totals, recipeCandidateIds(day), GJM).day;
+}
+function recipeDateLabel(date) { return date === todayStr() ? 'di oggi' : 'del ' + fmtDay(date); }
+function recipeMessage(text) {
+  RecipeUI.notice = text || '';
+  var el = $('#r-message');
+  if (!el) { el = document.createElement('div'); el.id = 'r-message'; el.className = 'recipe-message'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); $('#r-grid').before(el); }
+  el.hidden = !RecipeUI.notice;
+  el.innerHTML = '<span>' + esc(RecipeUI.notice) + '</span>' + (RecipeUI.undo ? '<button type="button" class="btn ghost sm" data-recipe-undo>Annulla rimozione</button>' : '');
+}
+function renderRecipes() {
+  RecipeUI.mealView = null;
+  var q = $('#r-search').value.trim().toLowerCase(), sort = $('#r-sort').value, date = state.sel || todayStr();
+  var expanded = RecipeUI.expanded || (RecipeUI.expanded = {}), prepOpen = RecipeUI.prepOpen || (RecipeUI.prepOpen = {});
+  $('#r-grid').querySelectorAll('[data-recipe-card]').forEach(function (card) { var id = card.dataset.recipeCard, d = card.querySelector('.recipe-expand'), p = card.querySelector('.recipe-prep-details'); if (d) expanded[id] = d.open; if (p) prepOpen[id] = p.open; });
+  var all = Array.from(state.recipes.entries()).map(function (e) { return Object.assign({}, e[1], { id: e[0] }); });
+  var tags = {}; all.forEach(function (r) { (r.tags || []).forEach(function (t) { tags[t] = 1; }); });
+  $('#r-tags').innerHTML = Object.keys(tags).sort().map(function (t) { return '<button class="chip" data-tag="' + esc(t) + '" aria-pressed="' + (state.rTag === t) + '">' + esc(cap(t)) + '</button>'; }).join('');
+  var list = all.filter(function (r) {
+    if (state.rTag && (r.tags || []).indexOf(state.rTag) < 0) return false;
+    return !q || (r.name + ' ' + (r.ingredients || []).join(' ')).toLowerCase().indexOf(q) >= 0;
+  });
+  list.sort(function (a, b) {
+    if (sort === 'prot') return (b.protein || 0) - (a.protein || 0);
+    if (sort === 'ratio') return ((b.protein || 0) / (b.kcal || 1)) - ((a.protein || 0) / (a.kcal || 1));
+    if (sort === 'kcal') return (a.kcal || 0) - (b.kcal || 0);
+    return a.name.localeCompare(b.name, 'it');
+  });
+  recipeMessage(RecipeUI.notice);
+  if (!list.length) {
+    $('#r-grid').innerHTML = '<div class="panel empty" style="grid-column:1/-1">' + (all.length ? 'Nessuna ricetta corrisponde ai filtri.' : 'Il ricettario è vuoto. Aggiungi la prima ricetta qui sotto con kcal e macro per porzione, poi la metti nel diario con un tocco.') + '</div>';
+    return;
+  }
+  $('#r-grid').innerHTML = list.map(function (r) {
+    var meals = recipeDiaryMeals(r.id, date), review = recipeDayNeedsReview(date), total = recipeNutrition(r, true), shown = total || recipeNutrition(r, false), preparation = recipePreparationHTML(r);
+    return '<article class="panel rcard recipe-compact" data-recipe-card="' + esc(r.id) + '"><details class="recipe-expand"' + (expanded[r.id] ? ' open' : '') + '><summary class="recipe-summary"><span class="recipe-summary-content"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="recipe-summary-chips" aria-label="' + (total ? 'Valori totali della ricetta' : 'Valori per una porzione; numero di porzioni non indicato') + '">' + (r.time ? '<span class="recipe-chip">' + esc(r.time) + ' min</span>' : '') + recipeMacroChips(shown, !total) + '</span></span></summary><div class="recipe-full">'
+      + ((r.tags || []).length || r.example ? '<div class="tags">' + (r.tags || []).map(function (t) { return '<span class="chip">' + esc(cap(t)) + '</span>'; }).join('') + (r.example ? '<span class="chip warn">Valori indicativi</span>' : '') + '</div>' : '')
+      + recipeNutritionPanels(r, false)
+      + (preparation ? '<details class="recipe-prep-details"' + (prepOpen[r.id] ? ' open' : '') + '><summary>Ingredienti e procedimento</summary>' + preparation + '</details>' : '')
+      + '<div class="rc-add"><label class="f">Porzioni da aggiungere<input data-por type="number" step="0.25" min="0.25" value="1" inputmode="decimal"></label><label class="f">Pasto<select data-slot>' + ['Colazione', 'Pranzo', 'Cena', 'Spuntino'].map(function (s) { return '<option' + (s === 'Pranzo' ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></label>'
+      + '<button type="button" class="btn sm" data-addrec="' + esc(r.id) + '">Aggiungi al diario ' + recipeDateLabel(date) + '</button></div>'
+      + (meals.length ? '<div class="recipe-in-diary"><span>' + (review ? meals.length + (meals.length === 1 ? ' voce da verificare' : ' voci da verificare') : (meals.length === 1 ? '1 voce nel diario ' : meals.length + ' voci nel diario ') + recipeDateLabel(date)) + '</span><button type="button" class="btn ghost sm" data-removerec="' + esc(r.id) + '">' + (review ? 'Controlla voci del diario' : 'Rimuovi dal diario ' + recipeDateLabel(date)) + '</button></div>' : '')
+      + '<div class="recipe-card-actions"><button type="button" class="btn ghost sm" data-editrec="' + esc(r.id) + '">Modifica ricetta</button><button type="button" class="btn danger sm" data-delrec="' + esc(r.id) + '">' + (state.delArm === r.id ? 'Conferma eliminazione' : 'Elimina ricetta') + '</button></div></div></details></article>';
+  }).join('');
+}
+function recipeEditorFields() {
+  function field(label, name, type, extra) { return '<label class="f"><span>' + label + '</span><input id="re-' + name + '" name="' + name + '" type="' + type + '" ' + (extra || '') + '></label>'; }
+  return '<div class="recipe-editor-grid">' + field('Nome', 'name', 'text', 'required maxlength="300" class="recipe-name"')
+    + field('Etichette, separate da virgola', 'tags', 'text', 'placeholder="colazione, alto proteico"') + field('Minuti', 'time', 'number', 'min="0" step="1" inputmode="numeric"')
+    + '</div><div class="recipe-basis-fields">' + field('Porzioni ottenute dalla ricetta', 'servings', 'number', 'min="1" step="1" inputmode="numeric" placeholder="es. 10 muffin"') + '<label class="f"><span>Valori che stai inserendo</span><select id="re-basis" name="basis"><option value="total">Totale ricetta</option><option value="portion">Per una porzione</option></select></label></div><div class="recipe-form-heading" id="re-nutrition-heading">Valori nutrizionali</div><div class="recipe-nutrients">' + field('Calorie (kcal)', 'kcal', 'number', 'required min="0" step="any" inputmode="decimal"')
+    + field('Proteine (g)', 'p', 'number', 'min="0" step="any" inputmode="decimal"') + field('Carboidrati (g)', 'c', 'number', 'min="0" step="any" inputmode="decimal"') + field('Grassi (g)', 'f', 'number', 'min="0" step="any" inputmode="decimal"')
+    + '</div><div id="re-nutrition-preview" class="recipe-form-preview"></div><label class="f"><span>Ingredienti, uno per riga</span><textarea id="re-ing" name="ing" rows="5"></textarea></label><label class="f"><span>Procedimento, un passaggio per riga</span><textarea id="re-steps" name="steps" rows="5"></textarea></label>';
+}
+function recipeDialog() {
+  if (RecipeUI.dialog) return RecipeUI.dialog;
+  var el = document.createElement('dialog'); el.id = 'recipe-dialog'; el.className = 'recipe-dialog'; el.setAttribute('aria-labelledby', 'recipe-dialog-title');
+  $('#tab-ricette').appendChild(el); RecipeUI.dialog = el;
+  el.addEventListener('click', function (e) {
+    if (e.target === el || e.target.closest('[data-recipe-close]')) { recipeCloseDialog(); return; }
+    var b = e.target.closest('[data-recipe-remove-meal]'); if (b) recipeRemoveEntry(RecipeUI.recipeId, RecipeUI.date, b.dataset.recipeRemoveMeal, b.dataset.keepTotals === 'true');
+  });
+  el.addEventListener('cancel', function (e) { e.preventDefault(); recipeCloseDialog(); });
+  el.addEventListener('submit', function (e) { e.preventDefault(); if (RecipeUI.mode === 'edit') recipeSaveEditor(); });
+  el.addEventListener('input', function () { if (RecipeUI.mode === 'edit') recipeRefreshNutritionForm('re-'); });
+  el.addEventListener('change', function () { if (RecipeUI.mode === 'edit') recipeRefreshNutritionForm('re-'); });
+  return el;
+}
+function recipeCloseDialog() {
+  var el = RecipeUI.dialog; if (!el) return;
+  if (el.close) el.close(); else el.removeAttribute('open');
+  document.documentElement.classList.remove('recipe-dialog-open'); RecipeUI.serial++; RecipeUI.mode = '';
+  var focus = RecipeUI.origin;
+  if (!focus || !document.contains(focus)) focus = Array.from($('#r-grid').querySelectorAll('[data-editrec],[data-removerec],[data-addrec]')).find(function (b) { return b.dataset.editrec === RecipeUI.recipeId || b.dataset.removerec === RecipeUI.recipeId || b.dataset.addrec === RecipeUI.recipeId; });
+  if (focus && focus.focus) focus.focus({ preventScroll: true });
+}
+function recipeOpenDialog(mode, id, trigger, date) {
+  var r = state.recipes.get(id); if (!r) return;
+  var el = recipeDialog(); RecipeUI.mode = mode; RecipeUI.recipeId = id; RecipeUI.date = date || state.sel || todayStr(); RecipeUI.origin = trigger; RecipeUI.serial++;
+  var body = mode === 'edit' ? '<p class="recipe-editor-note">Le modifiche valgono per le prossime aggiunte al diario. I pasti già registrati mantengono i loro valori.</p>' + recipeEditorFields() : recipeRemovalHTML(id, RecipeUI.date);
+  el.innerHTML = '<form class="recipe-dialog-layout"><header><div><span class="recipe-dialog-kicker">' + (mode === 'edit' ? 'IL TUO RICETTARIO' : 'DIARIO · ' + esc(fmtDay(RecipeUI.date))) + '</span><h2 id="recipe-dialog-title">' + (mode === 'edit' ? 'Modifica ricetta' : 'Rimuovi dal diario') + '</h2></div><button type="button" class="recipe-dialog-close" data-recipe-close aria-label="Chiudi">×</button></header><div class="recipe-dialog-content">' + (mode === 'remove' ? '<h3>' + esc(r.name) + '</h3>' : '') + body + '</div><footer><p class="recipe-save-status" role="status" aria-live="polite"></p><button type="button" class="btn ghost" data-recipe-close>' + (mode === 'edit' ? 'Annulla' : 'Chiudi') + '</button>' + (mode === 'edit' ? '<button type="submit" class="btn" data-recipe-save>Salva modifiche</button>' : '') + '</footer></form>';
+  if (mode === 'edit') {
+    var servings = recipeServings(r), basis = servings && r.nutritionBasis === 'total' ? 'total' : 'portion', values = recipeNutrition(r, basis === 'total');
+    var vals = { name: r.name, tags: (r.tags || []).join(', '), time: r.time, servings: servings, basis: basis, kcal: values.kcal, p: values.protein, c: values.carbs, f: values.fat, ing: (r.ingredients || []).join('\n'), steps: (r.steps || []).join('\n') };
+    Object.keys(vals).forEach(function (k) { $('#re-' + k, el).value = vals[k] == null ? '' : vals[k]; });
+    recipeRefreshNutritionForm('re-');
+  }
+  document.documentElement.classList.add('recipe-dialog-open');
+  if (!el.open) { if (el.showModal) el.showModal(); else el.setAttribute('open', ''); }
+  var focus = mode === 'edit' ? $('#re-name', el) : $('[data-recipe-remove-meal]', el); if (focus && focus.focus) focus.focus({ preventScroll: true });
+}
+function recipeRemovalHTML(id, date) {
+  var meals = recipeDiaryMeals(id, date), review = recipeDayNeedsReview(date);
+  return '<p class="recipe-editor-note">' + (review ? 'Hai corretto il totale a mano. Se avevi già sottratto questa voce dalle calorie e dai macro, scegli «Già tolta dal totale» per non sottrarla di nuovo.' : 'Scegli la voce da rimuovere. Verranno sottratti i valori registrati per quella porzione.') + '</p><div class="recipe-removal-list">' + meals.map(function (m) {
+    return '<div class="recipe-removal-row"><div><span class="recipe-meal-slot">' + esc(m.slot || 'Pasto') + '</span><b>' + esc(m.name || '') + '</b><span class="recipe-meal-values">' + fmt(m.kcal, 0) + ' kcal · P ' + fmt(m.p, 1) + ' g · C ' + fmt(m.c, 1) + ' g · G ' + fmt(m.f, 1) + ' g</span></div><div class="recipe-removal-actions"><button type="button" class="btn ghost sm" data-recipe-remove-meal="' + esc(m.id) + '">' + (review ? 'Rimuovi e sottrai' : 'Rimuovi') + '</button>' + (review ? '<button type="button" class="btn ghost sm" data-recipe-remove-meal="' + esc(m.id) + '" data-keep-totals="true">Già tolta dal totale</button>' : '') + '</div></div>';
+  }).join('') + '</div>';
+}
+function recipeReadNutrition(prefix) {
+  var value = function (k) { var el = $('#' + prefix + k); return el && el.value != null ? String(el.value).trim() : ''; };
+  var number = function (k) { var s = value(k); return s === '' ? 0 : Number(s.replace(',', '.')); };
+  var basis = value('basis') === 'total' ? 'total' : 'portion', rawServings = value('servings'), servings = rawServings ? number('servings') : null;
+  if (rawServings && (!isFinite(servings) || servings < 1 || Math.floor(servings) !== servings)) throw Error('Indica un numero intero di porzioni, da 1 in su.');
+  if (basis === 'total' && !servings) throw Error('Indica quante porzioni produce la ricetta per ricavare i valori di una porzione.');
+  if (!value('kcal') || ['kcal', 'p', 'c', 'f'].some(function (k) { return !isFinite(number(k)) || number(k) < 0; })) throw Error('Controlla calorie e macro: usa valori validi, da zero in su.');
+  var divisor = basis === 'total' ? servings : 1;
+  return { kcal: number('kcal') / divisor, protein: number('p') / divisor, carbs: number('c') / divisor, fat: number('f') / divisor, servings: servings, nutritionBasis: basis };
+}
+function recipeRefreshNutritionForm(prefix) {
+  var preview = $('#' + prefix + 'nutrition-preview'), heading = $('#' + prefix + 'nutrition-heading'), basis = $('#' + prefix + 'basis');
+  if (heading) heading.textContent = basis && basis.value === 'total' ? 'Valori totali della ricetta' : 'Valori per una porzione';
+  if (!preview) return;
+  try { preview.innerHTML = recipeNutritionPanels(recipeReadNutrition(prefix), true); }
+  catch (err) { preview.innerHTML = '<p class="recipe-portion-hint">' + esc(err.message) + '</p>'; }
+}
+function recipeReadFields(prefix) {
+  var value = function (k) { return $('#' + prefix + k).value.trim(); };
+  var name = value('name'); if (!name) throw Error('Inserisci il nome della ricetta.');
+  var time = value('time') ? Number(value('time').replace(',', '.')) : 0;
+  if (!isFinite(time) || time < 0) throw Error('Controlla i minuti: usa un valore valido, da zero in su.');
+  var lines = function (k) { return value(k).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); };
+  return Object.assign({ name: name, tags: value('tags').split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean), time: time, ingredients: lines('ing'), steps: lines('steps') }, recipeReadNutrition(prefix));
+}
+function recipeUpdatedData(old, fields) {
+  var next = Object.assign({}, old, fields), previous = recipeIdentity(old), current = recipeIdentity(next);
+  var aliases = (old.diaryAliases || []).slice();
+  if (JSON.stringify(previous) !== JSON.stringify(current) && !aliases.some(function (x) { return JSON.stringify(x) === JSON.stringify(previous); })) aliases.push(previous);
+  if (aliases.length) next.diaryAliases = aliases;
+  return next;
+}
+function recipeSaveEditor() {
+  var id = RecipeUI.recipeId, old = state.recipes.get(id), el = RecipeUI.dialog, msg = $('.recipe-save-status', el), button = $('[data-recipe-save]', el), serial = RecipeUI.serial;
+  if (!old) { msg.textContent = 'Questa ricetta non è più nel ricettario.'; return; }
+  if (button.disabled) return;
+  var data; try { data = recipeUpdatedData(old, recipeReadFields('re-')); } catch (err) { msg.textContent = err.message; return; }
+  button.disabled = true; msg.textContent = 'Salvataggio…'; state.recipes.set(id, data); renderAll();
+  Promise.resolve(saveDoc('recipes/' + id, data)).then(function () {
+    if (RecipeUI.serial !== serial) return;
+    RecipeUI.undo = null; recipeMessage('Ricetta aggiornata.'); recipeCloseDialog();
+  }, function (err) {
+    if (RecipeUI.serial !== serial) return;
+    button.disabled = false; msg.textContent = err && err.code === 'queued' ? 'Modifica salvata sul dispositivo, in attesa di sincronizzazione.' : 'Salvataggio non riuscito. I campi restano qui: puoi riprovare.';
+  });
+}
+function recipeRemoveEntry(id, date, mealId, keepTotals) {
+  var entry = recipeDiaryMeals(id, date).find(function (m) { return m.id === mealId; }); if (!entry) return;
+  var before = state.days.get(date) || {}, saved = JSON.parse(JSON.stringify(entry)), kcalState = before.st && before.st.kcal;
+  RecipeUI.undo = { date: date, meal: saved, archiveId: saved.id, kcalState: kcalState, keepTotals: !!keepTotals };
+  var result = keepTotals ? saveDay(date, function (d) { var n = GJMealReconcile.excludeKeepingTotals(recipeReconciledView(d).day, [mealId], GJM); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); }) : removeMeal(date, mealId);
+  recipeMessage(keepTotals ? 'Voce scollegata: calorie e macro restano quelli che hai corretto.' : 'Voce rimossa dal diario ' + recipeDateLabel(date) + '.'); renderRecipes();
+  if (RecipeUI.mode === 'remove') {
+    if (!recipeDiaryMeals(id, date).length) recipeCloseDialog();
+    else { var content = $('.recipe-dialog-content', RecipeUI.dialog), r = state.recipes.get(id); content.innerHTML = '<h3>' + esc(r.name) + '</h3>' + recipeRemovalHTML(id, date); var nextButton = $('[data-recipe-remove-meal]', content); if (nextButton) nextButton.focus({ preventScroll: true }); }
+  }
+  Promise.resolve(result).catch(function (err) { recipeMessage(err && err.code === 'queued' ? 'Rimozione salvata sul dispositivo, in attesa di sincronizzazione.' : 'Rimozione non confermata. Controlla lo stato della sincronizzazione.'); });
+}
+function recipeUndoRemoval() {
+  var undo = RecipeUI.undo; if (!undo) return; RecipeUI.undo = null;
+  var sameId = ((state.days.get(undo.date) || {}).meals || []).find(function (m) { return m.id === undo.meal.id; });
+  if (sameId) {
+    if (['name', 'slot', 'recipe', 'portions', 'kcal', 'p', 'c', 'f'].every(function (k) { return sameId[k] === undo.meal[k]; })) { recipeMessage('La voce è già presente nel diario.'); return; }
+    delete undo.meal.id; // Another entry may legitimately reuse a removed meal ID.
+  }
+  var result = saveDay(undo.date, function (d) {
+    var target = GJMealReconcile.totals(d), n = GJM.meals.add(d, undo.meal);
+    if (undo.keepTotals) { n = GJM.meals.setManualTotal(n, target); if (n.manualMealArchive) { var last = n.manualMealArchive.map(function (x) { return x.meal && x.meal.id; }).lastIndexOf(undo.archiveId); if (last >= 0) n.manualMealArchive.splice(last, 1); } }
+    Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n);
+    if (undo.kcalState && (!d.st || !d.st.kcal)) { d.st = Object.assign({}, d.st || {}); d.st.kcal = undo.kcalState; }
+  });
+  recipeMessage('Rimozione annullata.'); renderRecipes();
+  Promise.resolve(result).catch(function () { recipeMessage('Ripristino in attesa di conferma: controlla la sincronizzazione.'); });
+}
+function bindRecipes() {
+  $('#r-form').addEventListener('input', function () { recipeRefreshNutritionForm('rf-'); });
+  $('#r-form').addEventListener('change', function () { recipeRefreshNutritionForm('rf-'); });
+  $('#r-search').addEventListener('input', renderRecipes); $('#r-sort').addEventListener('change', renderRecipes);
+  $('#r-tags').addEventListener('click', function (e) { var b = e.target.closest('[data-tag]'); if (!b) return; state.rTag = state.rTag === b.dataset.tag ? '' : b.dataset.tag; renderRecipes(); });
+  $('#r-grid').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-addrec],[data-editrec],[data-removerec],[data-delrec]'); if (!b) return;
+    if (b.hasAttribute('data-editrec')) { recipeOpenDialog('edit', b.dataset.editrec, b); return; }
+    if (b.hasAttribute('data-removerec')) { if (recipeDiaryMeals(b.dataset.removerec, state.sel || todayStr()).length) recipeOpenDialog('remove', b.dataset.removerec, b); return; }
+    if (b.hasAttribute('data-addrec')) {
+      var r = state.recipes.get(b.dataset.addrec), card = b.closest('.rcard'), raw = $('[data-por]', card).value, portions = Number(raw.replace(',', '.')), date = state.sel || todayStr();
+      if (!r) return;
+      if (!isFinite(portions) || portions < 0.25 || Math.abs(portions * 4 - Math.round(portions * 4)) > 0.000001) { recipeMessage('Inserisci una porzione valida: 0,25, 0,5, 0,75, 1…'); $('[data-por]', card).focus(); return; }
+      RecipeUI.undo = null; var result = addMeal(date, mealFromRecipe(r, portions, $('[data-slot]', card).value, b.dataset.addrec)); recipeMessage('Ricetta aggiunta al diario ' + recipeDateLabel(date) + '.'); renderRecipes();
+      Promise.resolve(result).catch(function (err) { recipeMessage(err && err.code === 'queued' ? 'Aggiunta salvata sul dispositivo, in attesa di sincronizzazione.' : 'Aggiunta non confermata. Controlla lo stato della sincronizzazione.'); }); return;
+    }
+    var id = b.dataset.delrec;
+    if (state.delArm !== id) { state.delArm = id; renderRecipes(); return; }
+    state.delArm = ''; state.recipes.delete(id); renderAll();
+    Promise.resolve(deleteDoc('recipes/' + id)).catch(function () { recipeMessage('Eliminazione in attesa di conferma: controlla la sincronizzazione.'); });
+  });
+  $('#r-form').addEventListener('submit', function (e) {
+    e.preventDefault(); var data; try { data = recipeReadFields('rf-'); } catch (err) { recipeMessage(err.message); return; }
+    var id = slug(data.name) + '-' + Date.now().toString(36) + '-' + (++RecipeUI.serial).toString(36);
+    state.recipes.set(id, data); RecipeUI.undo = null; var result = saveDoc('recipes/' + id, data); renderAll(); e.target.reset(); recipeRefreshNutritionForm('rf-'); recipeMessage('Ricetta aggiunta al ricettario.');
+    Promise.resolve(result).catch(function () { recipeMessage('Ricetta salvata sul dispositivo: controlla lo stato della sincronizzazione.'); });
+  });
+  $('#tab-ricette').addEventListener('click', function (e) { if (e.target.closest('[data-recipe-undo]')) recipeUndoRemoval(); });
+  window.addEventListener('hashchange', function () { if (RecipeUI.mode && location.hash !== '#ricette') recipeCloseDialog(); });
+}
+
 
 /* ---------- impostazioni ---------- */
 
@@ -5477,39 +5813,6 @@ function renderWorkouts() {
 }
 
 /* ---------- ricette ---------- */
-function renderRecipes() {
-  var q = $('#r-search').value.trim().toLowerCase(), sort = $('#r-sort').value;
-  var all = Array.from(state.recipes.entries()).map(function (e) { return Object.assign({ id: e[0] }, e[1]); });
-  var tags = {}; all.forEach(function (r) { (r.tags || []).forEach(function (t) { tags[t] = 1; }); });
-  $('#r-tags').innerHTML = Object.keys(tags).sort().map(function (t) { return '<button class="chip" data-tag="' + esc(t) + '" aria-pressed="' + (state.rTag === t) + '">' + esc(cap(t)) + '</button>'; }).join('');
-  var list = all.filter(function (r) {
-    if (state.rTag && (r.tags || []).indexOf(state.rTag) < 0) return false;
-    if (!q) return true;
-    return (r.name + ' ' + (r.ingredients || []).join(' ')).toLowerCase().indexOf(q) >= 0;
-  });
-  list.sort(function (a, b) {
-    if (sort === 'prot') return (b.protein || 0) - (a.protein || 0);
-    if (sort === 'ratio') return ((b.protein || 0) / (b.kcal || 1)) - ((a.protein || 0) / (a.kcal || 1));
-    if (sort === 'kcal') return (a.kcal || 0) - (b.kcal || 0);
-    return a.name.localeCompare(b.name, 'it');
-  });
-  if (!list.length) {
-    $('#r-grid').innerHTML = '<div class="panel empty" style="grid-column:1/-1">' + (all.length ? 'Nessuna ricetta corrisponde ai filtri.' : 'Il ricettario è vuoto. Aggiungi la prima ricetta qui sotto con kcal e macro per porzione, poi la metti nel diario con un tocco.') + '</div>';
-    return;
-  }
-  $('#r-grid').innerHTML = list.map(function (r) {
-    var pK = (r.protein || 0) * 4, cK = (r.carbs || 0) * 4, fK = (r.fat || 0) * 9;
-    return '<article class="panel rcard"><div><h3>' + esc(r.name) + '</h3><div class="tags" style="margin-top:8px">' + (r.time ? '<span class="chip">' + r.time + ' min</span>' : '') + (r.tags || []).map(function (t) { return '<span class="chip">' + esc(cap(t)) + '</span>'; }).join('') + (r.example ? '<span class="chip warn">Valori indicativi</span>' : '') + '</div></div>'
-      + '<div class="rk"><b>' + fmt(r.kcal, 0) + '</b><span class="muted">kcal a porzione</span></div>'
-      + '<div class="mbar" aria-hidden="true"><span style="--c:' + HEX.prot + ';flex:' + (pK || .01) + '"></span><span style="--c:' + HEX.carb + ';flex:' + (cK || .01) + '"></span><span style="--c:' + HEX.fat + ';flex:' + (fK || .01) + '"></span></div>'
-      + '<div class="mlegend"><span><i style="--c:' + HEX.prot + '"></i><b>' + fmt(r.protein, 0) + '</b> g proteine</span><span><i style="--c:' + HEX.carb + '"></i><b>' + fmt(r.carbs, 0) + '</b> g carbo</span><span><i style="--c:' + HEX.fat + '"></i><b>' + fmt(r.fat, 0) + '</b> g grassi</span></div>'
-      + ((r.ingredients || []).length || (r.steps || []).length ? '<details><summary>Ingredienti e procedimento</summary>' + ((r.ingredients || []).length ? '<ul>' + r.ingredients.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul>' : '') + ((r.steps || []).length ? '<ol>' + r.steps.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ol>' : '') + '</details>' : '')
-      + '<div class="rc-add"><label class="f">Porzioni<input data-por type="number" step="0.25" min="0.25" value="1" inputmode="decimal"></label><label class="f">Pasto<select data-slot>' + ['Colazione', 'Pranzo', 'Cena', 'Spuntino'].map(function (s) { return '<option' + (s === 'Pranzo' ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></label>'
-      + '<button type="button" class="btn sm" data-addrec="' + esc(r.id) + '">Aggiungi al diario ' + (state.sel === todayStr() ? 'di oggi' : 'del ' + fmtShort(state.sel)) + '</button></div>'
-      + '<div><button class="btn danger sm" data-delrec="' + esc(r.id) + '">' + (state.delArm === r.id ? 'Conferma eliminazione' : 'Elimina ricetta') + '</button></div></article>';
-  }).join('');
-}
-
 function fmtDay(d) { var p = parseD(d); return p.getDate() + ' ' + MESI_L[p.getMonth()] + (p.getFullYear() !== new Date().getFullYear() ? ' ' + p.getFullYear() : ''); }
 /* ===================== motore 2: collegamento fra l'app e il motore di calcolo =====================
    Tutti i numeri energetici (consumo, obiettivi, macro, tendenza, previsioni, avvisi) vengono da un solo punto:
@@ -5708,16 +6011,16 @@ function addMeal(date, meal) {
   var was = state.days.get(date), wasComplete = !!(was && was.st && was.st.kcal === 'completo');
   if (wasComplete) setTimeout(function () { askStillComplete(date); }, 0);
   return saveDay(date, function (d) {
-    var n = GJM.meals.add(d, { slot: meal.slot, name: meal.name, kcal: meal.kcal, p: meal.p, c: meal.c, f: meal.f, srcKey: meal.srcKey, recipe: meal.recipe, portions: meal.portions });
+    var n = GJM.meals.add(recipeReconciledView(d).day, { slot: meal.slot, name: meal.name, kcal: meal.kcal, p: meal.p, c: meal.c, f: meal.f, srcKey: meal.srcKey, recipe: meal.recipe, portions: meal.portions });
     Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n);
     d.st = Object.assign({}, d.st || {}); if (!d.st.kcal || d.st.kcal === 'mancante') d.st.kcal = date === todayStr() ? 'parziale' : 'da_confermare';
   });
 }
 function removeMeal(date, id) {
-  return saveDay(date, function (d) { var n = GJM.meals.remove(d, id); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); });
+  return saveDay(date, function (d) { var n = GJM.meals.remove(recipeReconciledView(d).day, id); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); });
 }
 function setManualTotal(date, tot) {
-  return saveDay(date, function (d) { var n = GJM.meals.setManualTotal(d, tot); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); });
+  return saveDay(date, function (d) { var n = applyManualMealTotals(d, tot); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); });
 }
 
 /* ---------- caricamento, migrazione e salvataggio del piano ---------- */
@@ -6351,7 +6654,7 @@ function macroGapHTML(date) {
   return '<p class="muted small p2-mg">' + t + w + '</p>';
 }
 function mealsHTML(date) {
-  var d = state.days.get(date) || {}, ms = d.meals || [], rc = GJM.meals.reconcile(d);
+  var d = recipeReconciledView(state.days.get(date) || {}).day, ms = d.meals || [], rc = GJM.meals.reconcile(d);
   if (!ms.length) return '';
   return '<details class="more"><summary>Pasti del giorno (' + ms.length + ')</summary><div class="in"><div class="tw"><table class="p2-parts"><thead><tr><th>Voce</th><th>kcal</th><th>P</th><th>C</th><th>G</th><th></th></tr></thead><tbody>'
     + ms.map(function (m) { return '<tr' + (m.adj ? ' class="p2-adj"' : '') + '><td>' + esc((m.slot && !m.adj ? m.slot + ' · ' : '') + (m.name || '')) + '</td><td>' + fmt(m.kcal, 0) + '</td><td>' + (m.p != null ? fmt(m.p, 0) : '—') + '</td><td>' + (m.c != null ? fmt(m.c, 0) : '—') + '</td><td>' + (m.f != null ? fmt(m.f, 0) : '—') + '</td><td>' + (m.id ? '<button type="button" class="linkbtn small" data-meal-del="' + esc(m.id) + '" data-date="' + date + '">Togli</button>' : '') + '</td></tr>'; }).join('')
@@ -7394,7 +7697,7 @@ function saveDayForm(date, o) {
   return saveDay(date, function (d) {
     var same = function (a, b) { return (a == null ? null : +a) === (b == null ? null : +b); };
     if (d.meals && d.meals.length) {
-      if (NUTR4.some(function (k) { return !same(o[k], d[k]); })) { var n = GJM.meals.setManualTotal(d, { kcal: o.kcal, protein: o.protein, carbs: o.carbs, fat: o.fat }); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); }
+      if (NUTR4.some(function (k) { return !same(o[k], d[k]); })) { var n = applyManualMealTotals(d, { kcal: o.kcal, protein: o.protein, carbs: o.carbs, fat: o.fat }); Object.keys(d).forEach(function (k) { delete d[k]; }); Object.assign(d, n); }
     } else NUTR4.forEach(function (k) { if (o[k] == null) delete d[k]; else d[k] = o[k]; });
     d.st = Object.assign({}, d.st || {});
     if (o.kcalState === 'zero_confermato') { d.kcal = 0; d.st.kcal = 'zero_confermato'; }
@@ -9640,32 +9943,7 @@ function bind() {
     $('#w-title').value = ''; $('#w-exs').innerHTML = ''; addExerciseBlock();
   });
 
-  $('#r-search').addEventListener('input', renderRecipes);
-  $('#r-sort').addEventListener('change', renderRecipes);
-  $('#r-tags').addEventListener('click', function (e) { var b = e.target.closest('[data-tag]'); if (!b) return; state.rTag = state.rTag === b.dataset.tag ? '' : b.dataset.tag; renderRecipes(); });
-  $('#r-grid').addEventListener('click', function (e) {
-    var a = e.target.closest('[data-addrec]');
-    if (a) {
-      var card = a.closest('.rcard'), r = state.recipes.get(a.dataset.addrec); if (!r) return;
-      addMeal(state.sel, mealFromRecipe(r, num($('[data-por]', card).value) || 1, $('[data-slot]', card).value));
-      a.textContent = 'Aggiunto ✓'; return;
-    }
-    var d = e.target.closest('[data-delrec]');
-    if (d) {
-      var id = d.dataset.delrec;
-      if (state.delArm !== id) { state.delArm = id; renderRecipes(); return; }
-      state.delArm = ''; state.recipes.delete(id); deleteDoc('recipes/' + id); renderAll();
-    }
-  });
-  $('#r-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var name = $('#rf-name').value.trim(); if (!name) return;
-    var lines = function (id) { return $(id).value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); };
-    var data = { name: name, tags: $('#rf-tags').value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean), time: num($('#rf-time').value) || 0, kcal: num($('#rf-kcal').value) || 0, protein: num($('#rf-p').value) || 0, carbs: num($('#rf-c').value) || 0, fat: num($('#rf-f').value) || 0, ingredients: lines('#rf-ing'), steps: lines('#rf-steps') };
-    var id = slug(name) + '-' + Date.now().toString(36);
-    state.recipes.set(id, data); saveDoc('recipes/' + id, data); renderAll();
-    e.target.reset();
-  });
+  bindRecipes();
 
   $('#imp-file').addEventListener('change', function (e) {
     var f = e.target.files[0], msg = $('#imp-msg');
@@ -11224,8 +11502,8 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     { k: 'weight', l: 'Peso (kg)', m: 'decimal' },
     { k: 'carbs', l: 'Carboidrati (g)', m: 'decimal' },
     { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
-    { k: 'steps', l: 'Passi', m: 'numeric' },
     { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
+    { k: 'steps', l: 'Passi', m: 'numeric' },
     { k: 'sleepH', l: 'Sonno (ore, es. 7:30)', m: 'text' }
   ];
   /* sezione 6.1: facoltativi, servono solo a spiegare la differenza fra calorie e 4/4/9 */
@@ -11337,6 +11615,7 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     openDayForm(b.dataset.adddata === 'sel' ? state.sel : todayStr());
   });
 })();
+
 </script>
 <script>
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -13349,6 +13628,134 @@ body #tab-amici dialog.gg-dialog:not(#z):not(#y){position:fixed;inset:0;box-sizi
 #tab-amici dialog.gg-dialog[open]{animation:gg-dialog-in .2s ease both}
 @keyframes gg-dialog-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#tab-amici .gg-root *,#tab-amici .gg-dialog,#tab-amici .gg-dialog *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Warm recipe actions and bounded, accessible editing/removal dialogs. */
+#tab-ricette .recipe-card-actions{display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid #FFBD691A;padding-top:16px}
+body #tab-ricette .recipe-card-actions .btn.ghost,body #tab-ricette .recipe-in-diary .btn.ghost{background:#FFBD690C!important;border:1px solid #FFBD6938!important;color:#FFD399!important;-webkit-text-fill-color:#FFD399!important}
+#tab-ricette .recipe-in-diary{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px;border:1px solid #FFBD692B;border-radius:15px;background:#FFBD6908}
+#tab-ricette .recipe-in-diary>span{font-size:.76rem;color:#DDBE96;line-height:1.5}
+#tab-ricette .recipe-card-actions .btn,#tab-ricette .recipe-in-diary .btn{min-height:42px;white-space:normal;line-height:1.4}
+#tab-ricette .recipe-message{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;margin:0 0 16px;background:#FFBD6910;border:1px solid #FFBD6928;border-radius:15px;color:#F4D4AB;font-size:.84rem;line-height:1.6;overflow-wrap:anywhere}
+#tab-ricette .recipe-message[hidden]{display:none}
+.recipe-dialog-open{overflow:hidden}
+body #tab-ricette dialog.recipe-dialog:not(#z):not(#y){position:fixed;inset:0;box-sizing:border-box;margin:auto;padding:0;width:min(700px,calc(100vw - 28px));max-width:none;max-height:calc(100dvh - 32px);background:#23201D;border:1px solid #FFBD6938;border-radius:24px;color:#F6EEE4;font-family:var(--f-body);overflow:hidden;box-shadow:0 26px 100px #0009}
+#tab-ricette .recipe-dialog::backdrop{background:#000A;backdrop-filter:blur(7px)}
+#tab-ricette .recipe-dialog-layout{display:flex;flex-direction:column;max-height:calc(100dvh - 32px);margin:0;min-width:0}
+#tab-ricette .recipe-dialog header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;border-bottom:1px solid #FFBD691C;background:linear-gradient(135deg,#FFBD690B,transparent);flex:none}
+#tab-ricette .recipe-dialog header>div{min-width:0}
+#tab-ricette .recipe-dialog-kicker{display:block;font-size:.65rem;letter-spacing:.11em;line-height:1.5;font-weight:700;color:#DCAE75;margin-bottom:6px}
+#tab-ricette .recipe-dialog h2{font-size:1.35rem;line-height:1.3;letter-spacing:-.025em;margin:0;color:#FFF1DE}
+#tab-ricette .recipe-dialog h3{font-size:1.05rem;line-height:1.5;margin:0;overflow-wrap:anywhere;color:#FFE0B5}
+body #tab-ricette .recipe-dialog-close{flex:none;display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid #FFBD6924;border-radius:50%;background:#FFBD690A;color:#EFD3AE;font:300 1.65rem var(--f-body);cursor:pointer}
+#tab-ricette .recipe-dialog-content{display:flex;flex-direction:column;gap:18px;min-height:0;overflow:auto;overscroll-behavior:contain;padding:22px 24px;scroll-padding:20px}
+#tab-ricette .recipe-editor-note{font-size:.79rem;line-height:1.65;margin:0;color:#C4B5A4}
+#tab-ricette .recipe-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:15px}
+#tab-ricette .recipe-editor-grid>.f:first-child{grid-column:1/-1}
+#tab-ricette .recipe-nutrients{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#tab-ricette .recipe-dialog .f{min-width:0;max-width:100%;gap:8px;margin:0;font-size:.79rem;line-height:1.5;color:#D0C0AC}
+#tab-ricette .recipe-dialog .f input,#tab-ricette .recipe-dialog .f textarea{box-sizing:border-box;min-width:0;max-width:100%;width:100%;font-size:16px;background:#2E2A26;border:1px solid #FFFFFF0B;border-radius:13px;min-height:48px;padding:12px;color:#FFF3E2;font-family:var(--f-body)}
+#tab-ricette .recipe-dialog .f textarea{resize:vertical;min-height:108px;line-height:1.65}
+#tab-ricette .recipe-form-heading{font-size:.8rem;font-weight:650;color:#F1CC9C;margin-bottom:-6px}
+#tab-ricette .recipe-dialog footer{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding:16px 24px;border-top:1px solid #FFBD691C;flex:none;background:#25211E}
+#tab-ricette .recipe-save-status{flex-basis:100%;font-size:.76rem;line-height:1.5;margin:0;color:#EAC393}
+#tab-ricette .recipe-save-status:empty{display:none}
+#tab-ricette .recipe-dialog footer .btn{min-height:44px;font-size:.8rem}
+#tab-ricette .recipe-removal-list{display:grid;gap:12px}
+#tab-ricette .recipe-removal-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;background:#FFBD6907;border:1px solid #FFBD691D;border-radius:16px;min-width:0}
+#tab-ricette .recipe-removal-row>div{display:grid;gap:7px;min-width:0;overflow-wrap:anywhere}
+#tab-ricette .recipe-meal-slot{font-size:.67rem;color:#D7AD77;text-transform:uppercase;letter-spacing:.08em}
+#tab-ricette .recipe-removal-row b{font-size:.85rem;line-height:1.5;color:#F7E6CE}
+#tab-ricette .recipe-meal-values{font-size:.74rem;line-height:1.6;color:#BFAF9C}
+#tab-ricette .recipe-removal-actions{flex:none;max-width:48%}
+#tab-ricette .recipe-removal-actions .btn{min-height:44px;white-space:normal;line-height:1.5}
+#tab-ricette .recipe-dialog[open]{animation:recipe-dialog-in .2s ease both}
+@keyframes recipe-dialog-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+ body #tab-ricette dialog.recipe-dialog:not(#z):not(#y){width:calc(100vw - 20px);max-height:calc(100dvh - 24px);border-radius:22px}
+ #tab-ricette .recipe-dialog-layout{max-height:calc(100dvh - 24px)}
+ #tab-ricette .recipe-dialog header{padding:18px}
+ #tab-ricette .recipe-dialog h2{font-size:1.2rem}
+ #tab-ricette .recipe-dialog-content{padding:18px;gap:17px}
+ #tab-ricette .recipe-dialog footer{padding:14px 18px}
+ #tab-ricette .recipe-dialog footer>.btn{flex:1 1 100px}
+ #tab-ricette .recipe-nutrients{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ #tab-ricette .recipe-editor-grid{grid-template-columns:minmax(0,1fr) 85px;gap:12px}
+ #tab-ricette .recipe-card-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #tab-ricette .recipe-in-diary{align-items:stretch;flex-direction:column}
+ #tab-ricette .recipe-in-diary>.btn{width:100%}
+ #tab-ricette .recipe-message{align-items:flex-start;flex-direction:column;gap:10px}
+ #tab-ricette .recipe-removal-row{padding:14px;gap:12px;align-items:flex-start;flex-direction:column}
+ #tab-ricette .recipe-removal-actions{width:100%;max-width:none}
+ #tab-ricette .recipe-removal-actions .btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){#tab-ricette .recipe-dialog[open]{animation:none}}
+
+/* Closed recipe cards show only the title, cooking time and nutrition chips. */
+body #tab-ricette .rcard.recipe-compact:not(#z):not(#y){display:block!important;padding:0!important;gap:0!important;border-top-width:2px!important;overflow:hidden;align-self:start}
+#tab-ricette .recipe-compact:has(>.recipe-expand[open]){grid-column:1/-1}
+#tab-ricette .recipe-expand{margin:0;padding:0;border:0;background:none;min-width:0}
+body #tab-ricette .recipe-expand>summary.recipe-summary:not(#z):not(#y){display:block!important;position:relative;box-sizing:border-box;min-height:0!important;margin:0!important;padding:18px 20px!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:#FFE2B9!important;cursor:pointer;list-style:none}
+#tab-ricette .recipe-summary::-webkit-details-marker{display:none}
+#tab-ricette .recipe-summary-content{display:grid;gap:11px;min-width:0}
+#tab-ricette .recipe-title{display:block;padding-right:85px;font-family:var(--f-display);font-size:1.05rem;font-weight:700;line-height:1.45;letter-spacing:-.015em;overflow-wrap:anywhere;color:#FFE2B9}
+#tab-ricette .recipe-summary-chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center;min-width:0}
+#tab-ricette .recipe-chip{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;padding:5px 7px;min-height:28px;border:1px solid #FFBD6925;border-radius:999px;background:#FFBD690B;color:#E8C59A;font-size:.7rem;font-weight:600;line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums}
+#tab-ricette .recipe-chip-kcal{color:#FFE2B9;background:#FFBD6918;border-color:#FFBD6935}
+#tab-ricette .recipe-chip-basis{background:transparent;border-color:transparent;color:#B7A793;font-weight:400;padding-left:0}
+body #tab-ricette .recipe-summary>.disclosure-cue:not(#z):not(#y){position:absolute!important;inset:18px 18px auto auto!important;top:18px!important;right:18px!important;transform:none!important;min-width:70px;height:32px;padding:0 8px!important;border:1px solid #FFBD6926!important;border-radius:10px;background:#FFBD690C!important;color:#EAC08A!important;font-size:.66rem;box-shadow:none!important}
+#tab-ricette .recipe-summary>.disclosure-cue .disclosure-arrow{width:16px;height:16px;min-width:16px;flex-basis:16px}
+#tab-ricette .recipe-expand[open]>.recipe-summary{border-bottom:1px solid #FFBD691C!important}
+body #tab-ricette .recipe-expand>.recipe-full:not(#z):not(#y){display:grid;gap:18px;padding:18px 20px 20px;margin:0!important;min-width:0;animation:none!important}
+#tab-ricette .recipe-expand:not([open])>.recipe-full{display:none!important}
+#tab-ricette .recipe-full>.tags{margin:0}
+#tab-ricette .recipe-full .rc-add{margin:0}
+#tab-ricette .recipe-nutrition-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}
+#tab-ricette .recipe-nutrition-tile{display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px;background:#FFBD6907;border:1px solid #FFBD691E;border-radius:16px}
+#tab-ricette .recipe-nutrition-tile.is-total{background:linear-gradient(135deg,#FFBD6912,#FFBD6904);border-color:#FFBD6930}
+#tab-ricette .recipe-nutrition-tile h4{margin:0;color:#EAC597;font-size:.76rem;font-weight:650;line-height:1.5}
+#tab-ricette .recipe-nutrition-tile>strong{font-size:1.55rem;line-height:1.2;color:#FFE0B1;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+#tab-ricette .recipe-nutrition-tile>strong>small{font-size:.72rem;letter-spacing:0;font-weight:500;color:#C8B79F}
+#tab-ricette .recipe-nutrition-tile>strong.recipe-total-missing{font-size:.9rem;line-height:1.5;color:#D4C1AA;letter-spacing:0}
+#tab-ricette .recipe-nutrition-macros{display:flex;gap:8px 12px;flex-wrap:wrap;font-size:.72rem;line-height:1.6;color:#B8A78F}
+#tab-ricette .recipe-nutrition-macros b{font-weight:550;color:#E5D5BF}
+#tab-ricette .recipe-nutrition-tile p{margin:0;margin-top:auto;font-size:.69rem;line-height:1.6;color:#B7A68F}
+#tab-ricette .recipe-prep-details{margin:0;background:#FFFFFF02;border:1px solid #FFBD6918;border-radius:16px;overflow:hidden}
+body #tab-ricette .recipe-prep-details>summary:not(#z):not(#y){min-height:54px!important;margin:0!important;padding:14px 100px 14px 16px!important;border:0!important;border-radius:15px!important;background:#FFBD6906!important;box-shadow:none!important;color:#EED5B2!important;font-size:.82rem!important}
+body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){display:grid;gap:25px;margin:0!important;padding:18px 16px 20px;animation:none!important}
+#tab-ricette .recipe-prep-block{min-width:0}
+#tab-ricette .recipe-prep-block+.recipe-prep-block{padding-top:22px;border-top:1px solid #FFBD691C}
+#tab-ricette .recipe-prep-block h4{margin:0 0 14px;font-size:.9rem;color:#FFD399;line-height:1.5;font-weight:700}
+#tab-ricette .recipe-ingredients{display:grid;gap:9px;list-style:none;margin:0!important;padding:0!important}
+#tab-ricette .recipe-ingredients li{position:relative;padding-left:15px;font-size:.82rem;line-height:1.7;color:#D7CCBC;overflow-wrap:anywhere}
+#tab-ricette .recipe-ingredients li::before{content:'';position:absolute;left:0;top:.7em;width:5px;height:5px;border-radius:50%;background:#D4A666}
+#tab-ricette .recipe-steps{display:grid;gap:10px;counter-reset:recipe-step;list-style:none;margin:0!important;padding:0!important}
+#tab-ricette .recipe-steps li{counter-increment:recipe-step;display:grid;grid-template-columns:25px minmax(0,1fr);gap:11px;align-items:start;font-size:.82rem;line-height:1.75;color:#D7CCBC;padding:13px;background:#FFBD6905;border:1px solid #FFBD6912;border-radius:12px;overflow-wrap:anywhere}
+#tab-ricette .recipe-steps li::before{content:counter(recipe-step);display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#FFBD6914;color:#F0C58E;font-size:.71rem;font-weight:650;line-height:1}
+#tab-ricette .recipe-basis-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;min-width:0}
+#tab-ricette .recipe-basis-fields>.f{min-width:0}
+#tab-ricette .recipe-basis-fields input,#tab-ricette .recipe-basis-fields select,#tab-ricette .recipe-dialog select{box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:48px;font-family:var(--f-body);font-size:16px;padding:12px;border:1px solid #FFFFFF0B;border-radius:13px;background:#2E2A26;color:#FFF3E2}
+#tab-ricette .recipe-portion-hint{margin:0;font-size:.76rem;line-height:1.6;color:#C6B49C}
+#tab-ricette .recipe-form-preview .recipe-nutrition-tile{padding:13px}
+@media(max-width:600px){
+ body #tab-ricette .recipe-expand>summary.recipe-summary:not(#z):not(#y){padding:15px 14px!important}
+ #tab-ricette .recipe-summary-content{gap:10px}
+ #tab-ricette .recipe-title{font-size:.93rem;padding-right:76px;line-height:1.45}
+ #tab-ricette .recipe-summary-chips{gap:4px}
+ #tab-ricette .recipe-chip{font-size:.62rem;padding:5px;min-height:27px}
+ body #tab-ricette .recipe-summary>.disclosure-cue:not(#z):not(#y){top:15px!important;right:13px!important;min-width:63px;gap:4px;font-size:.62rem;height:30px}
+ body #tab-ricette .recipe-expand>.recipe-full:not(#z):not(#y){padding:16px 14px;gap:16px}
+ #tab-ricette .recipe-nutrition-pair{gap:9px}
+ #tab-ricette .recipe-nutrition-tile{padding:12px;gap:9px}
+ #tab-ricette .recipe-nutrition-tile>strong{font-size:1.25rem}
+ #tab-ricette .recipe-nutrition-macros{gap:3px 8px;font-size:.68rem}
+ #tab-ricette .recipe-prep-details>.recipe-preparation{padding:16px 13px}
+ #tab-ricette .recipe-steps li{padding:11px;gap:9px;grid-template-columns:23px minmax(0,1fr)}
+ #tab-ricette .recipe-basis-fields{grid-template-columns:minmax(0,1fr);gap:13px}
+}
+
+/* Approved Percorso Mosaico identity, shared with the installed app icon. */
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261019-1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261019-1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261019-1') center/contain no-repeat}
 
 </style>
 </body></html>
