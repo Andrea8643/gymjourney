@@ -10676,8 +10676,16 @@ function dailyEnergyHTML(view,options) {
   var past=options&&options.historical,dayLabel=past?fmtDay(options.date):'oggi · '+fmtDay(view.today&&view.today.d||todayStr());
   var x=view.today;if(!x||x.C==null)return '<p class="muted small">Consumo '+(past?'del giorno selezionato':'di oggi')+' non stimabile con i dati disponibili.</p>';
   var a=x.A||{},p=a.parts||{},closed=x.usable,src=a.orig||{};
+  var selectedDate=options&&options.date||x.d||todayStr();
+  var selectedJob=null;
+  ((planDoc()||{}).jobs||[]).forEach(function(j){if(j.from<=selectedDate&&(!selectedJob||j.from>=selectedJob.from))selectedJob=j;});
+  var weekday=(new Date(selectedDate+'T00:00:00Z').getUTCDay()+6)%7;
+  var scheduledRest=selectedJob&&selectedJob.days&&selectedJob.days.length&&selectedJob.days.indexOf(weekday)<0;
+  var jobLabel=scheduledRest?'Oggi non hai lavorato':src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
+  var sessions=Array.from(state.workouts.values()).filter(function(w){return w.date===selectedDate;}).sort(function(a,b){return (a.start||'').localeCompare(b.start||'');});
+  var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · '):'Nessun allenamento, riposo';
   var status=closed?'Calorie del diario complete · consumo ricostruito.':past?'Calorie incomplete: per la digestione è usato il piano.':'Previsione della giornata; si aggiorna con i dati completi.';
-  return '<div class="daily-energy" role="group" aria-label="Consumo stimato del giorno selezionato"><div><span class="daily-energy-title">Consumo stimato del giorno</span><strong class="daily-energy-date">'+esc(dayLabel)+'</strong><b>'+kc(x.C)+'</b><small>'+status+'</small><small>Segue lavoro, allenamento, passi e digestione di questo giorno; può essere diverso dalla media settimanale.</small></div><div class="daily-energy-facts"><span><b>Lavoro '+(past?'del giorno':'di oggi')+'</b>'+esc(src.job||(p.job===0?'Nessun contributo lavorativo':'Non disponibile'))+'</span><span><b>Palestra '+(past?'del giorno':'di oggi')+'</b>'+esc(a.gym&&a.gym.orig||'Non disponibile')+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
+  return '<div class="daily-energy" role="group" aria-label="Consumo stimato del giorno selezionato"><div><span class="daily-energy-title">Consumo stimato del giorno</span><strong class="daily-energy-date">'+esc(dayLabel)+'</strong><b>'+kc(x.C)+'</b><small>'+status+'</small><small>Segue lavoro, allenamento, passi e digestione di questo giorno; può essere diverso dalla media settimanale.</small></div><div class="daily-energy-facts"><span><b>Lavoro</b>'+esc(jobLabel)+'</span><span><b>Allenamento '+(past?'del giorno':'di oggi')+'</b>'+esc(workoutLabel)+'</span><span><b>Passi usati</b>'+(a.steps!=null?fmt(a.steps,0)+' · ':'')+esc(src.steps||'Non disponibili')+'</span></div></div>';
 }
 function maintenanceWeekDetailsHTML(view){
   var W=view.week,r=view.reference;if(!W||!r)return '';
