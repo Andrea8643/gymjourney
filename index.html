@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script>
 /* Configurazione del progetto Firebase (Impostazioni progetto → Le tue app). Questi valori sono pubblici per natura:
    a proteggere i dati sono l'accesso con password e le regole di Firestore. */
@@ -2656,7 +2657,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div id="rules-list"></div>
     </section>
 
-    <section id="tab-amici" class="view" hidden><div class="segbar friends-switch" role="tablist" aria-label="Sezioni amici"><button type="button" role="tab" id="friends-tab-list" data-friends-view="list" aria-controls="friends-list-panel" aria-selected="true" tabindex="0">I tuoi amici<span id="friends-view-requests" class="friends-view-badge" aria-hidden="true" hidden></span></button><button type="button" role="tab" id="friends-tab-settings" data-friends-view="settings" aria-controls="friends-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><div id="friends-status" role="status" aria-live="polite"></div><template id="friends-intro-template"><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Il percorso è più bello insieme.</h2><p>Connettiti ai tuoi amici, condividi i tuoi progressi e accompagnatevi un giorno alla volta. Scegli tu quali dati mostrare.</p></div><div class="friends-orbit" aria-hidden="true"><svg viewBox="0 0 240 160" fill="none"><circle class="friend-halo" cx="120" cy="80" r="71" stroke="#70DCC1" stroke-opacity=".28"/><circle cx="120" cy="80" r="53" stroke="#70DCC1" stroke-opacity=".12"/><path class="friend-link" d="M67 87C94 113 146 113 173 87" stroke="#67DEC0" stroke-width="2"/><g class="friend-person-a"><rect x="27" y="44" width="70" height="77" rx="24" fill="#244A40" stroke="#73DBC0" stroke-opacity=".65"/><circle cx="62" cy="70" r="11" fill="#90E8CD"/><path d="M43 102C43 82 81 82 81 102" stroke="#90E8CD" stroke-width="5" stroke-linecap="round"/></g><g class="friend-person-b"><rect x="143" y="44" width="70" height="77" rx="24" fill="#263D49" stroke="#82CDE3" stroke-opacity=".65"/><circle cx="178" cy="70" r="11" fill="#A0DEEC"/><path d="M159 102C159 82 197 82 197 102" stroke="#A0DEEC" stroke-width="5" stroke-linecap="round"/></g><g class="friend-spark"><circle cx="120" cy="62" r="16" fill="#285B4A" stroke="#97EDCF" stroke-opacity=".45"/><path d="m114 62 4 4 8-8" stroke="#B4F9DA" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="118" cy="134" r="3" fill="#72DCC2" fill-opacity=".7"/><circle cx="105" cy="25" r="2" fill="#9FE5D7" fill-opacity=".6"/></svg></div></div></template><div id="friends-body"></div></section>
+    <section id="tab-amici" class="view" hidden><div class="segbar friends-switch" role="tablist" aria-label="Sezioni amici"><button type="button" role="tab" id="friends-tab-games" data-friends-view="games" aria-controls="friends-games-panel" aria-selected="true" tabindex="0">Sfide<span id="friends-view-requests" class="friends-view-badge" aria-hidden="true" hidden></span></button><button type="button" role="tab" id="friends-tab-list" data-friends-view="list" aria-controls="friends-list-panel" aria-selected="false" tabindex="-1">Confronto</button><button type="button" role="tab" id="friends-tab-settings" data-friends-view="settings" aria-controls="friends-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><div id="friends-status" role="status" aria-live="polite"></div><template id="friends-intro-template"><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Ognuno il suo passo.<br>Un percorso insieme.</h2><p>Aggiungi gli amici, scegli cosa condividere e ritrova qui le impostazioni del tuo spazio.</p></div><div class="gg-welcome-symbol" aria-hidden="true">✦</div></div></template><div id="friends-body"></div></section>
     <section id="tab-dati" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
       <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
@@ -10168,10 +10169,266 @@ window.addEventListener('resize',function(){
 var renderCurioV4Base=renderCurio;renderCurio=function(){renderCurioV4Base();decorateHelpControls();};
 var renderWorkoutsV4Base=renderWorkouts;renderWorkouts=function(){renderWorkoutsV4Base();decorateHelpControls();};
 var renderRecipesV4Base=renderRecipes;renderRecipes=function(){renderRecipesV4Base();decorateHelpControls();};
+/* GymJourney Challenges v1: pure rules, shared by the page and the server. */
+(function(root){
+'use strict';
+var VERSION='diario-spark-1',DAY=86400000;
+function date(s){if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;var t=Date.parse(s+'T00:00:00Z');return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===s&&s>='1900-01-01'&&s<='2200-12-31';}
+function add(d,n){if(!date(d))throw Error('Data non valida');return new Date(Date.parse(d+'T00:00:00Z')+n*DAY).toISOString().slice(0,10);}
+function zone(z){try{if(typeof z!=='string'||z.length>64)return false;new Intl.DateTimeFormat('en',{timeZone:z}).format(0);return true;}catch(e){return false;}}
+function dayAt(ms,z){var p=new Intl.DateTimeFormat('en-CA',{timeZone:z,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(ms)),o={};p.forEach(function(x){o[x.type]=x.value;});return o.year+'-'+o.month+'-'+o.day;}
+function midnight(d,z){if(!date(d)||!zone(z))throw Error('Data o fuso non valido');var target=Date.parse(d+'T00:00:00Z'),guess=target;for(var i=0;i<5;i++){var p=new Intl.DateTimeFormat('en-GB',{timeZone:z,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(guess)),o={};p.forEach(function(x){o[x.type]=x.value;});var shown=Date.UTC(+o.year,+o.month-1,+o.day,+o.hour,+o.minute,+o.second),delta=target-shown;guess+=delta;if(!delta)break;}if(dayAt(guess,z)!==d)throw Error('Mezzanotte non disponibile in questo fuso');return guess;}
+function eligible(d){if(!d||!d.st)return false;var v=d.kcal,s=d.st.kcal;if((typeof v!=='number'&&typeof v!=='string')||(typeof v==='string'&&!/^[0-9]+([.][0-9]+)?$/.test(v))||v===''||!Number.isFinite(+v)||+v<0||+v>50000)return false;return s==='zero_confermato'?+v===0:s==='completo'&&+v>0;}
+function multiplier(n){return n>=14?1.25:n>=7?1.2:n>=3?1.1:1;}
+function personal(calendar,today){
+  var dates=Object.keys(calendar||{}).filter(function(d){return date(d)&&d<=today&&calendar[d]&&calendar[d].ok;}).sort(),set=new Set(dates),last=null,run=0,record=0,xp=0,comeback=false,returning=false;
+  dates.forEach(function(d){if(last&&add(last,1)===d)run++;else{run=1;returning=!!last;}if(run>=3&&returning)comeback=true;record=Math.max(record,run);last=d;xp+=Number.isFinite(calendar[d].xp)?calendar[d].xp:0;});
+  var anchor=set.has(today)?today:add(today,-1),streak=0;while(set.has(anchor)){streak++;anchor=add(anchor,-1);}
+  var next=[1,3,7,14,30].find(function(n){return n>record;})||Math.ceil((record+1)/30)*30;
+  return {complete:dates.length,streak:streak,record:record,xp:xp,last:dates[dates.length-1]||null,missing:streak?null:add(today,-1),todayComplete:set.has(today),next:next,multiplier:multiplier(streak),comeback:comeback};
+}
+function reconcile(old,raw,today,full){
+  var out={};Object.keys(old||{}).forEach(function(d){out[d]=Object.assign({},old[d]);});
+  if(full)Object.keys(out).forEach(function(d){if(!Object.prototype.hasOwnProperty.call(raw,d))out[d].ok=false;});
+  Object.keys(raw).sort().forEach(function(d){if(!date(d))return;var ok=d<=today&&eligible(raw[d]),entry=out[d]||{date:d,ok:false,xp:null,version:VERSION};entry.ok=ok;out[d]=entry;});
+  // Freeze the first legitimate award for a date. A correction can deactivate/reinstate it, never multiply it.
+  var run=0,last=null;Object.keys(out).filter(function(d){return date(d)&&d<=today;}).sort().forEach(function(d){var e=out[d];if(!e.ok){run=0;last=d;return;}run=last&&add(last,1)===d?run+1:1;last=d;if(e.xp==null){e.xp=Math.round(20*multiplier(run));e.multiplier=multiplier(run);e.version=VERSION;}});
+  return out;
+}
+var REWARDS=[
+  {id:'first',at:1,name:'Primo passo',title:'Un giorno alla volta',frame:'base',symbol:'✦'},
+  {id:'rhythm',at:3,name:'Prendi il ritmo',title:'In movimento',frame:'violet',symbol:'◆'},
+  {id:'week',at:7,name:'Settimana completa',title:'Costante',frame:'electric',symbol:'★'},
+  {id:'fortnight',at:14,name:'Due settimane insieme al diario',title:'Sempre sul pezzo',frame:'gold',symbol:'✷'},
+  {id:'month',at:30,name:'Un mese di costanza',title:'Passo dopo passo',frame:'aurora',symbol:'✺'},
+  {id:'comeback',at:null,name:'Si riparte',title:'Di nuovo in pista',frame:null,symbol:'↗'},
+  {id:'team',at:null,name:'Squadra affiatata',title:'Compagno di percorso',frame:null,symbol:'◇'}
+];
+function unlocked(stats,previous){var ids=(previous||[]).filter(function(id){return REWARDS.some(function(r){return r.id===id;});});REWARDS.forEach(function(r){if(r.at&&stats.record>=r.at||r.id==='comeback'&&stats.comeback){if(ids.indexOf(r.id)<0)ids.push(r.id);}});return ids;}
+function level(xp){return Math.floor(Math.sqrt(Math.max(0,xp)/100))+1;}
+function levelBounds(xp){var n=level(xp);return {level:n,from:(n-1)*(n-1)*100,to:n*n*100};}
+function score(n){return 10*n+(n>=5?10:0)+(n===7?20:0);}
+function roundDates(r){return Array.from({length:7},function(_,i){return add(r.startDate,i);});}
+function round(r,now){var today=dayAt(now,r.timezone),ds=roundDates(r),people={};r.participants.forEach(function(uid){var rows=ds.map(function(d){var e=(r.facts&&r.facts[uid]||{})[d];return {date:d,complete:d<=today&&!!(e&&e.ok),state:d>today?'future':e&&e.ok?'complete':d===today?'open':e?'partial':'unknown'};}),n=rows.filter(function(x){return x.complete;}).length;people[uid]={days:n,points:score(n),rows:rows};});var a=people[r.participants[0]],b=people[r.participants[1]],cooperative=a.days+b.days>=10&&a.days>=4&&b.days>=4;return {people:people,cooperative:cooperative,teamTotal:a.days+b.days,phase:now<r.startMs?'scheduled':now<r.endMs?'active':now<r.settleMs?'settling':'finished',winner:!a.days||!b.days?null:a.points===b.points?'tie':a.points>b.points?r.participants[0]:r.participants[1]};}
+function mergeFact(facts,uid,d,ok,ms,deadline){if(!date(d)||!Number.isFinite(ms)||ms>deadline)return false;var own=facts[uid]||(facts[uid]={}),old=own[d];if(old&&old.ms>=ms)return false;own[d]={ok:!!ok,ms:ms};return true;}
+var api={VERSION:VERSION,DAY:DAY,date:date,add:add,zone:zone,dayAt:dayAt,midnight:midnight,eligible:eligible,multiplier:multiplier,personal:personal,reconcile:reconcile,REWARDS:REWARDS,unlocked:unlocked,level:level,levelBounds:levelBounds,score:score,roundDates:roundDates,round:round,mergeFact:mergeFact};
+if(typeof module==='object'&&module.exports)module.exports=api;else root.GJGame=api;
+})(typeof window!=='undefined'?window:this);
+
+/* Spark transport: Firestore only. No Functions, paid scheduler or external server. */
+(function(root){
+'use strict';
+function create(ctx,notify){
+  var C=root.GJGame,uid=null,db=null,sdk=null,epoch=0,peer=null,member=null,other=null,personal=null,calendar={},yearOff={},yearLoaded={},pointers=[],rounds={},roundOff={},off=[],loading=false,available=true,syncing=false,again=false,lastHash='',personalLoaded=false;
+  function error(s){throw Error(s);}
+  function stamp(){return sdk.firestore.FieldValue.serverTimestamp();}
+  function millis(t){return t&&typeof t.toMillis==='function'?t.toMillis():0;}
+  function ref(p){return db.doc(p);}
+  function today(){return C.dayAt(Date.now(),member&&member.timezone||'Europe/Rome');}
+  function enabled(){return !!(member&&member.enabled);}
+  function profile(){if(!member)return null;var p=C.personal(calendar,today()),teams=personal&&personal.teams||{};return {enabled:member.enabled,ready:personalLoaded&&(!personal||(personal.years||[]).every(function(y){return yearLoaded[y];})),timezone:member.timezone,equipped:member.frame,title:member.title,badges:personal&&personal.badges||[],stats:Object.assign({},p,{xp:p.xp+50*Object.keys(teams).length})};}
+  function emit(){notify({profile:profile(),member:other,rounds:Object.keys(rounds).map(function(k){return rounds[k];}),pointers:pointers.map(function(p){var g=rounds[p.gameId];return g?Object.assign({},p,{status:g.status,open:g.status==='pending'||g.status==='active',pending:g.status==='pending'&&g.to===uid,untilMs:g.status==='pending'?g.expiresMs:g.status==='active'?g.settleMs:0}):p;}).filter(function(p){return p.open&&p.untilMs>Date.now()&&ctx.env().friends.some(function(f){return f.uid===p.peerUid;});}),loading:loading,available:available});}
+  function failure(e){available=false;loading=false;notify({error:/resource-exhausted/.test(String(e&&e.code))?'La quota gratuita Firebase è esaurita. La sincronizzazione è sospesa: riprova quando la quota si rinnova.':'Sfide non disponibili online. Verifica la connessione e pubblica le regole Firestore della versione gratuita.'});emit();}
+  function pointer(g,u){return {gameId:g.id,from:g.from,to:g.to,peerUid:g.from===u?g.to:g.from,status:g.status,pending:g.status==='pending'&&g.to===u,open:g.status==='pending'||g.status==='active',until:sdk.firestore.Timestamp.fromMillis(g.status==='pending'?g.expiresMs:g.status==='active'?g.settleMs:0),updatedAt:stamp()};}
+  function writePointers(batch,g){g.participants.forEach(function(u){batch.set(ref('sparkGamePersonal/'+u+'/inbox/'+g.id),pointer(g,u));});}
+  function decorate(v,id,facts){var g=Object.assign({},v,{id:id,createdMs:millis(v.createdAt),updatedMs:Math.max(millis(v.updatedAt),...Object.keys(facts||{}).flatMap(function(u){return Object.keys(facts[u]).map(function(d){return facts[u][d].ms;});})),facts:facts||{}});if(g.status==='active'||g.status==='settled'){g.dates=C.roundDates(g);g.progress=C.round(g,Date.now());}return g;}
+  function cancelWatch(id){var w=roundOff[id];if(w){w.forEach(function(f){f();});delete roundOff[id];}delete rounds[id];}
+  function watchRound(id){
+    if(roundOff[id])return;var e=epoch,g0=null,facts={},factsReady=false;
+    function update(){if(e!==epoch||!g0)return;rounds[id]=Object.assign(decorate(g0,id,facts),{factsAvailable:factsReady});emit();if(enabled()&&ctx.ready&&ctx.ready())sync().catch(failure);}
+    var stop=ref('sparkGameRounds/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(e!==epoch||s.metadata&&s.metadata.hasPendingWrites)return;if(!s.exists){cancelWatch(id);emit();return;}g0=s.data();update();},function(){if(e!==epoch)return;cancelWatch(id);pointers=pointers.map(function(p){return p.gameId===id?Object.assign({},p,{open:false,pending:false}):p;});emit();});
+    roundOff[id]=[stop];
+    var stopDays=ref('sparkGameRounds/'+id).collection('days').onSnapshot({includeMetadataChanges:true},function(q){if(e!==epoch||q.metadata&&(q.metadata.hasPendingWrites||q.metadata.fromCache))return;factsReady=true;facts={};q.docs.forEach(function(s){var d=s.data();(facts[d.uid]||(facts[d.uid]={}))[d.date]={ok:d.ok,ms:millis(d.updatedAt)};});update();},function(){if(e!==epoch)return;factsReady=false;update();var listeners=roundOff[id]||[];delete roundOff[id];listeners.forEach(function(f){f();});});roundOff[id].push(stopDays);
+  }
+  function watchNeeded(){
+    if(!uid||!enabled())return;var ids=[],sorted=pointers.slice().sort(function(a,b){return b.updatedMs-a.updatedMs;});
+    sorted.forEach(function(p){if(p.open&&p.untilMs>Date.now()&&ctx.env().friends.some(function(f){return f.uid===p.peerUid;}))ids.push(p.gameId);});
+    var chosen=sorted.find(function(p){return p.peerUid===peer;});if(chosen)ids.push(chosen.gameId);
+    Object.keys(roundOff).forEach(function(k){if(!ids.includes(k))cancelWatch(k);});ids.forEach(watchRound);emit();
+  }
+  function watchYears(){
+    var years=personal&&personal.years||[],e=epoch;
+    years.forEach(function(y){if(yearOff[y])return;yearOff[y]=ref('sparkGamePersonal/'+uid+'/calendar/'+y).onSnapshot(function(s){if(e!==epoch||s.metadata&&s.metadata.hasPendingWrites)return;var next={};Object.keys(calendar).forEach(function(d){if(d.slice(0,4)!==y)next[d]=calendar[d];});Object.assign(next,s.exists?s.data().days||{}:{});calendar=next;yearLoaded[y]=true;emit();},failure);});
+  }
+  function select(p){peer=p||null;if(off.peer){off.peer();off.peer=null;}other=null;if(!uid||!peer){emit();return;}var e=epoch,target=peer;off.peer=ref('sparkGameMembers/'+peer).onSnapshot(function(s){if(e!==epoch||peer!==target||s.metadata&&s.metadata.hasPendingWrites)return;other=s.exists?s.data():{enabled:false};if(!other.enabled)Object.keys(rounds).forEach(function(id){if(rounds[id].participants.includes(peer))cancelWatch(id);});emit();},function(){if(e!==epoch)return;other={enabled:false,unknown:true};Object.keys(rounds).forEach(function(id){if(rounds[id].participants.includes(target))cancelWatch(id);});emit();});watchNeeded();}
+  function disconnect(){epoch++;off.forEach(function(f){f();});if(off.peer)off.peer();off=[];Object.keys(yearOff).forEach(function(k){yearOff[k]();});yearOff={};yearLoaded={};Object.keys(roundOff).forEach(cancelWatch);uid=null;peer=null;member=null;other=null;personal=null;calendar={};pointers=[];rounds={};loading=false;syncing=false;again=false;lastHash='';personalLoaded=false;}
+  function connect(id){
+    if(uid===id)return;disconnect();uid=id;if(!id)return;sdk=ctx.sdk||root.firebase;if(!sdk||!sdk.apps.length){failure();return;}db=sdk.firestore();loading=true;available=true;var e=epoch;
+    off.push(ref('sparkGameMembers/'+uid).onSnapshot({includeMetadataChanges:true},function(s){if(e!==epoch||s.metadata&&s.metadata.hasPendingWrites)return;member=s.exists?s.data():null;loading=false;available=true;if(!enabled())Object.keys(roundOff).forEach(cancelWatch);else{watchNeeded();if(ctx.ready&&ctx.ready())sync().catch(failure);}emit();},failure));
+    off.push(ref('sparkGamePersonal/'+uid).onSnapshot(function(s){if(e!==epoch||s.metadata&&s.metadata.hasPendingWrites)return;personal=s.exists?s.data():null;personalLoaded=true;watchYears();emit();},failure));
+    off.push(ref('sparkGamePersonal/'+uid).collection('inbox').orderBy('updatedAt','desc').limit(30).onSnapshot({includeMetadataChanges:true},function(q){if(e!==epoch||q.metadata&&q.metadata.hasPendingWrites)return;pointers=q.docs.map(function(s){var p=s.data();return Object.assign({},p,{updatedMs:millis(p.updatedAt),untilMs:millis(p.until)});});watchNeeded();},failure));emit();
+  }
+  async function syncPersonal(raw){
+    var e=epoch,me=uid,rootRef=ref('sparkGamePersonal/'+me),day=today(),team={};
+    Object.keys(rounds).forEach(function(id){var g=rounds[id];if(g.status==='settled'&&g.progress&&g.progress.cooperative)team[id]=true;});
+    await db.runTransaction(async function(tx){
+      var ps=await tx.get(rootRef),p=ps.exists?ps.data():{years:[],badges:[],teams:{}},ys=Array.from(new Set((p.years||[]).concat(Object.keys(raw).filter(C.date).map(function(d){return d.slice(0,4);})))) .sort();
+      var ss=await Promise.all(ys.map(function(y){return tx.get(ref('sparkGamePersonal/'+me+'/calendar/'+y));})),old={};ss.forEach(function(s){if(s.exists)Object.assign(old,s.data().days||{});});
+      var cal=C.reconcile(old,raw,day,true),st=C.personal(cal,day),teams=Object.assign({},p.teams||{},team),badges=C.unlocked(st,p.badges||[]);if(Object.keys(teams).length&&!badges.includes('team'))badges.push('team');
+      if(e!==epoch||uid!==me)return;
+      ys.forEach(function(y,i){var days={};Object.keys(cal).forEach(function(d){if(d.slice(0,4)===y)days[d]=cal[d];});if(!ss[i].exists||JSON.stringify(ss[i].data().days)!==JSON.stringify(days))tx.set(ref('sparkGamePersonal/'+me+'/calendar/'+y),{days:days,version:C.VERSION});});
+      var next={years:ys,badges:badges,teams:teams,version:C.VERSION};if(!ps.exists||JSON.stringify(p.years)!==JSON.stringify(ys)||JSON.stringify(p.badges)!==JSON.stringify(badges)||JSON.stringify(p.teams)!==JSON.stringify(teams))tx.set(rootRef,Object.assign(next,{updatedAt:stamp()}));
+    });
+  }
+  async function syncFacts(raw){
+    var me=uid,e=epoch,now=Date.now(),writes=[];
+    Object.keys(rounds).forEach(function(id){var g=rounds[id];if(g.status!=='active'||g.factsAvailable===false||now>=g.settleMs)return;g.dates.forEach(function(d,i){if(now<g.boundaries[i])return;var old=g.facts&&g.facts[me]&&g.facts[me][d],v=raw[d],ok=C.eligible(v);if((!v&&!old)||old&&old.ok===ok)return;writes.push({id:id,day:{uid:me,date:d,index:i,ok:ok,updatedAt:stamp()}});});});
+    for(var i=0;i<writes.length;i+=1){if(e!==epoch)return;var b=db.batch();writes.slice(i,i+1).forEach(function(w){b.set(ref('sparkGameRounds/'+w.id+'/days/'+me+'~'+w.day.date),w.day);});await b.commit();}
+  }
+  async function sync(force){
+    if(!uid||!enabled()||!ctx.ready||!ctx.ready())return;if(syncing){again=true;return;}syncing=true;var e=epoch;
+    try{var rows={},summary=[];ctx.days().forEach(function(v,d){rows[d]=v;summary.push([d,v&&v.kcal,v&&v.st&&v.st.kcal]);});summary.sort(function(a,b){return a[0].localeCompare(b[0]);});var key=JSON.stringify([uid,today(),summary,Object.keys(rounds).map(function(id){return [id,rounds[id].status,!!(rounds[id].status==='settled'&&rounds[id].progress&&rounds[id].progress.cooperative)];})]);if(force||key!==lastHash){await syncPersonal(rows);if(e!==epoch)return;lastHash=key;}await syncFacts(rows);available=true;}
+    finally{if(e===epoch){syncing=false;if(again){again=false;Promise.resolve().then(function(){return sync();}).catch(failure);}}}
+  }
+  async function transition(g,status,fields){
+    var batch=db.batch(),next=Object.assign({},g,fields||{},{status:status});
+    batch.update(ref('sparkGameRounds/'+g.id),Object.assign({status:status,updatedAt:stamp()},fields||{}));
+    if(['active','cancelled','declined'].includes(status))g.participants.forEach(function(u){batch.set(ref('sparkGameLocks/'+u),{gameId:g.id,until:sdk.firestore.Timestamp.fromMillis(status==='active'?next.settleMs:0)});});
+    await batch.commit();var indexBatch=db.batch();writePointers(indexBatch,next);await indexBatch.commit();
+  }
+  async function readRound(id){var s=await ref('sparkGameRounds/'+id).get({source:'server'});if(!s.exists)return null;var q=await ref('sparkGameRounds/'+id).collection('days').get({source:'server'}),facts={};q.docs.forEach(function(s){var v=s.data();(facts[v.uid]||(facts[v.uid]={}))[v.date]={ok:v.ok,ms:millis(v.updatedAt)};});return decorate(s.data(),id,facts);}
+  async function refresh(){
+    if(!uid||!enabled())return;var e=epoch;
+    // Bounded catch-up; no hourly server or scans of all users.
+    var due=pointers.filter(function(p){var g=rounds[p.gameId];return p.open&&p.untilMs<=Date.now()||g&&p.status!==g.status;}).slice(0,10);
+    for(var p of due){if(e!==epoch)return;try{var g=await readRound(p.gameId);if(g&&g.status==='pending'&&g.expiresMs<=Date.now())await transition(g,'expired');else if(g&&g.status==='active'&&g.settleMs<=Date.now()){await transition(g,'settled');rounds[g.id]=Object.assign(g,{status:'settled'});}else if(g){var repair=db.batch();writePointers(repair,g);await repair.commit();}}catch(x){if(!/permission-denied/.test(String(x&&x.code)))throw x;}}
+    Object.keys(rounds).forEach(function(id){var g=rounds[id];if(g.status==='active'||g.status==='settled')g.progress=C.round(g,Date.now());});await sync(true);watchNeeded();emit();
+  }
+  async function action(data){
+    if(!uid)error('Accedi al tuo account.');data=data||{};var me=uid,a=data.action,e=epoch;
+    if(a==='enable'){
+      if(data.consent!==true||!C.zone(data.timezone))error('Conferma la partecipazione alle sfide.');
+      var p=await ref('socialProfiles/'+me).get({source:'server'});if(!p.exists)error('Crea prima il tuo codice amico.');
+      await ref('sparkGameMembers/'+me).set({enabled:true,timezone:member&&member.timezone||data.timezone,frame:member&&member.frame||'base',title:member&&member.title||'',updatedAt:stamp()});
+      if(e===epoch){member=Object.assign({},member||{timezone:data.timezone,frame:'base',title:''},{enabled:true});await sync(true);}return {ok:true};
+    }
+    if(!enabled())error('Attiva prima la partecipazione alle sfide.');
+    if(a==='disable'){
+      // Revoke availability first; game data immediately becomes unreadable to the peer.
+      var b=db.batch();b.set(ref('sparkGameMembers/'+me),{enabled:false,timezone:member.timezone,frame:'base',title:'',updatedAt:stamp()});
+      pointers.filter(function(p){return p.open&&p.untilMs>Date.now();}).forEach(function(p){var g={id:p.gameId,from:p.from,to:p.to,participants:[p.from,p.to],status:'cancelled'};b.update(ref('sparkGameRounds/'+g.id),{status:'cancelled',updatedAt:stamp()});writePointers(b,g);g.participants.forEach(function(u){b.set(ref('sparkGameLocks/'+u),{gameId:g.id,until:sdk.firestore.Timestamp.fromMillis(0)});});});await b.commit();return {ok:true};
+    }
+    if(a==='refresh'){await refresh();return {ok:true};}
+    if(a==='equip'){var reward=C.REWARDS.find(function(r){return r.id===data.reward;});if(!reward||!personal||!personal.badges.includes(reward.id))error('Questo premio non è ancora sbloccato.');await ref('sparkGameMembers/'+me).set({enabled:true,timezone:member.timezone,frame:reward.frame||member.frame,title:reward.title,updatedAt:stamp()});return {ok:true};}
+    if(a==='invite'){
+      if(!ctx.env().friends.some(function(f){return f.uid===data.peer;}))error('Scegli un amico accettato.');await refresh();
+      // A server timestamp anchors expiry without trusting the device clock.
+      await ref('sparkGameMembers/'+me).update({updatedAt:stamp()});
+      var id=crypto.randomUUID(),target=data.peer,g;
+      await db.runTransaction(async function(tx){
+        var both=await Promise.all([tx.get(ref('sparkGameMembers/'+me)),tx.get(ref('sparkGameMembers/'+target)),tx.get(ref('sparkGameLocks/'+me)),tx.get(ref('sparkGameLocks/'+target))]);
+        if(both.slice(0,2).some(function(s){return !s.exists||!s.data().enabled;}))error('Entrambi dovete attivare le sfide.');
+        for(var i=2;i<4;i++)if(both[i].exists&&millis(both[i].data().until)>Date.now())error('Uno di voi ha già una sfida o un invito attivo.');
+        var names={};names[me]=String(ctx.name?ctx.name():'Tu').slice(0,40)||'Tu';names[target]=ctx.env().friends.find(function(f){return f.uid===target;}).name.slice(0,40)||'Amico';
+        var anchor=both[0].data().updatedAt,expires=Math.floor(millis(anchor))+7*C.DAY;
+        g={id:id,from:me,to:target,participants:[me,target],names:names,status:'pending',timezone:both[0].data().timezone,rulesVersion:C.VERSION,createdAt:anchor,expiresMs:expires,updatedAt:stamp()};tx.set(ref('sparkGameRounds/'+id),g);
+        [me,target].forEach(function(u){tx.set(ref('sparkGameLocks/'+u),{gameId:id,until:sdk.firestore.Timestamp.fromMillis(expires)});});writePointers(tx,g);
+      });
+      return {ok:true,id:id};
+    }
+    if(a==='respond'){
+      var g=await readRound(data.gameId);if(!g||g.status!=='pending')error('Invito non più disponibile.');
+      if(data.accept===true){if(g.to!==me)error('Solo il destinatario può accettare.');var start=C.add(C.dayAt(Date.now(),g.timezone),1),dates=[],boundaries=[];for(var n=0;n<8;n++){var date=C.add(start,n);boundaries.push(C.midnight(date,g.timezone));if(n<7)dates.push(date);}await transition(g,'active',{acceptedAt:stamp(),startDate:dates[0],endDate:dates[6],boundaries:boundaries,startMs:boundaries[0],endMs:boundaries[7],settleMs:boundaries[7]+2*C.DAY});}
+      else await transition(g,g.from===me?'cancelled':'declined');return {ok:true};
+    }
+    error('Operazione non riconosciuta.');
+  }
+  async function cancelPeer(p){for(var v of pointers.filter(function(x){return x.peerUid===p&&x.open&&x.untilMs>Date.now();})){await transition({id:v.gameId,from:v.from,to:v.to,participants:[v.from,v.to]},'cancelled');}}
+  return {cancelPeer:cancelPeer,connect:connect,disconnect:disconnect,select:select,action:action,refresh:refresh,localChanged:function(){sync().catch(failure);},tick:function(){Object.keys(rounds).forEach(function(id){var g=rounds[id];if(g.status==='active'||g.status==='settled')g.progress=C.round(g,Date.now());});emit();}};
+}
+root.GJGameSpark={create:create};
+})(typeof window!=='undefined'?window:this);
+
+/* Opt-in social game. Numerical food/weight sharing remains under its existing preferences. */
+(function(root){
+'use strict';
+function create(ctx){
+  var C=root.GJGame,S={uid:null,profile:null,member:null,peer:null,rounds:[],pointers:[],loading:false,available:true,busy:false,consent:false,message:'',error:'',unsub:[],peerOff:null,epoch:0,read:0,timer:null,dialog:null,opener:null,lastXp:null,celebrate:false,lastRefresh:0};
+  var esc=ctx.esc;
+  var Free=root.GJGameSpark.create(ctx,function(v){if(v.error){S.error=v.error;S.transportError=v.error;changed();return;}if(v.available&&S.error===S.transportError){S.error='';S.transportError='';}var xp=v.profile&&v.profile.stats&&v.profile.stats.xp;if(S.lastXp!=null&&xp>S.lastXp){S.celebrate=true;setTimeout(function(){S.celebrate=false;},1200);}S.lastXp=xp;S.profile=v.profile;S.member=v.member;S.rounds=v.rounds;S.pointers=v.pointers;S.loading=v.loading;S.available=v.available;changed();});
+  function env(){return ctx.env();}
+  function today(){var p=S.profile;return C.dayAt(Date.now(),p&&p.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Rome');}
+  function day(d){return new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{day:'numeric',month:'short',timeZone:'UTC'});}
+  function stamp(ms){return ms?new Date(ms).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'In attesa';}
+  function button(a,label,key,extra){return '<button type="button" class="gg-btn'+(extra==='primary'?' gg-primary':'')+'" data-game-action="'+a+'"'+(key?' data-key="'+esc(key)+'"':'')+(S.busy?' disabled':'')+'>'+label+'</button>';}
+  function avatar(name,frame,own){return '<span class="gg-avatar gg-frame-'+esc(frame||'base')+(own?' gg-own':' gg-peer')+'" aria-hidden="true">'+esc(String(name||'?').slice(0,1).toUpperCase())+'</span>';}
+  function stats(){
+    if(S.profile&&S.profile.enabled&&S.profile.ready)return S.profile.stats;
+    var rows={};ctx.days().forEach(function(v,k){rows[k]=v;});return C.personal(C.reconcile({},rows,today(),true),today());
+  }
+  function statusMessage(){return S.error||S.message?'<div class="gg-message'+(S.error?' gg-error':'')+'" role="status">'+esc(S.error||S.message)+'</div>':'';}
+  function changed(){ctx.changed();}
+  function callable(){return function(data){return Free.action(data);};}
+  function failure(e){var code=String(e&&e.code||'');if(/resource-exhausted/.test(code))return 'Quota gratuita Firebase esaurita. La sincronizzazione è sospesa: riprova quando la quota si rinnova.';return /not-found|unimplemented|unavailable|internal|deadline-exceeded|permission-denied/.test(code)?'Le sfide non sono disponibili in questo momento. Il diario e il confronto restano utilizzabili.':e&&e.message||'Operazione non completata. Riprova.';}
+  async function run(data){
+    if(S.busy)return;S.busy=true;S.error='';S.message='';changed();var epoch=S.epoch;
+    try{var fn=callable();await fn(data);if(epoch!==S.epoch)return;S.available=true;S.message=data.action==='enable'?'Sfide attivate. Il tuo diario costruisce il tuo livello.':data.action==='invite'?'Invito inviato. La sfida partirà dopo l’accettazione.':data.action==='equip'?'Premio applicato.':data.action==='disable'?'Partecipazione disattivata.':'Aggiornamento completato.';if(data.action==='respond')closeDialog();}
+    catch(e){if(epoch===S.epoch)S.error=failure(e);}
+    finally{if(epoch===S.epoch){S.busy=false;changed();}}
+  }
+  function select(uid){S.peer=uid;Free.select(uid);}
+  function disconnect(){S.epoch++;clearInterval(S.timer);closeDialog();Free.disconnect();S.uid=null;S.profile=null;S.rounds=[];S.pointers=[];S.member=null;S.peer=null;S.loading=false;S.busy=false;S.consent=false;S.error='';S.message='';S.lastXp=null;S.lastRefresh=0;}
+  function connect(uid){if(S.uid===uid)return;disconnect();S.uid=uid;if(!uid)return;Free.connect(uid);S.timer=setInterval(function(){if(!S.uid)return;Free.tick();if(env().opened){Free.localChanged();if(Date.now()-S.lastRefresh>300000){S.lastRefresh=Date.now();Free.refresh().catch(function(e){S.error=failure(e);changed();});}}},60000);}
+  function pendingCount(){return S.profile&&S.profile.enabled?S.pointers.filter(function(x){return x.pending&&x.open;}).length:0;}
+  function current(){var peer=env().selected;return S.rounds.filter(function(g){return g.participants.includes(peer);}).sort(function(a,b){return (b.createdMs||0)-(a.createdMs||0);})[0]||null;}
+  function statCards(){
+    var p=stats(),enabled=S.profile&&S.profile.enabled&&S.profile.ready,bounds=C.levelBounds(p.xp||0),progress=enabled?Math.max(0,Math.min(100,(p.xp-bounds.from)/(bounds.to-bounds.from)*100)):0;
+    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div><span class="gg-spark" aria-hidden="true">✦</span></div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi premi'):'')+'</div></section>';
+  }
+  function rulesHTML(){return '<div class="gg-rules"><h3>Sette giorni. Un passo al giorno.</h3><p>Conferma le calorie del diario quando hai registrato tutto. La quantità mangiata non cambia i punti.</p><dl><div><dt>Ogni giornata completa</dt><dd>+10 punti</dd></div><div><dt>Arrivi a 5 giornate</dt><dd>+10 bonus</dd></div><div><dt>Le completi tutte e 7</dt><dd>+20 bonus</dd></div></dl><p>Massimo 100 punti a testa. Gli XP e i loro moltiplicatori fanno crescere il livello personale e non aumentano il punteggio della gara.</p><p>La sfida inizia alla mezzanotte successiva all’accettazione. Apri l’app online per sincronizzare il diario: dopo l’ultimo giorno hai ancora 48 ore. Le conferme arrivate dopo la scadenza non cambiano la gara.</p></div>';}
+  function rewardCards(all){var owned=S.profile&&S.profile.badges||[],stats0=stats(),rewards=all?C.REWARDS:C.REWARDS.slice(0,3);return '<div class="gg-reward-grid">'+rewards.map(function(r){var yes=owned.includes(r.id),desc=r.at?r.at+(r.at===1?' giorno completo':' giorni consecutivi'):r.id==='team'?'Missione di squadra completata':'Tre giorni consecutivi dopo una pausa';return '<button type="button" class="gg-reward'+(yes?' is-unlocked':'')+'" data-game-action="reward" data-key="'+r.id+'"><span class="gg-reward-icon" aria-hidden="true">'+r.symbol+'</span><b>'+esc(r.name)+'</b><small>'+esc(desc)+'</small><span class="gg-reward-state">'+(yes?'Sbloccato':r.at?Math.min(stats0.record,r.at)+' / '+r.at:'Da conquistare')+'</span></button>';}).join('')+'</div>';}
+  function rewardsSection(){return '<section class="gg-card"><div class="gg-section-head"><div><span class="gg-kicker">PICCOLI TRAGUARDI, TUOI</span><h3>Qual è il prossimo?</h3></div>'+button('rewards','Tutti i premi')+'</div>'+rewardCards(false)+'</section>';}
+  function stateLabel(x){return {complete:'Completo',open:'Oggi in corso',partial:'Da completare',unknown:'Dati non disponibili',future:'Deve ancora iniziare',pending:'In attesa di sincronizzazione'}[x.state]||'In attesa';}
+  function displayRow(x,own,g){return own&&g&&g.status==='active'&&Date.now()<g.settleMs&&x.date<=C.dayAt(Date.now(),g.timezone)&&!x.complete&&C.eligible(ctx.days().get(x.date))?Object.assign({},x,{state:'pending'}):x;}
+  function roundHTML(g){
+    var e=env(),uid=S.uid,peer=g.participants.find(function(u){return u!==uid;}),name=g.names[peer]||'Amico';
+    if(g.status==='pending')return '<section class="gg-card gg-duel"><span class="gg-kicker">UNA SFIDA DA CONDIVIDERE</span><h3>'+esc(g.to===uid?name+' ti ha invitato':'Invito inviato a '+name)+'</h3><p>Sette giorni di diario completo. Fino a 100 punti a testa e una missione di squadra.</p><p class="gg-note">Si parte alla mezzanotte successiva all’accettazione · fuso '+esc(g.timezone)+'. L’invito scade dopo 7 giorni.</p><div class="gg-actions">'+(g.to===uid?button('accept','Accetta la sfida',g.id,'primary')+button('decline','Rifiuta',g.id):button('decline','Annulla invito',g.id))+button('rules','Come si gioca')+'</div></section>';
+    if(!['active','settled'].includes(g.status))return '<section class="gg-card"><span class="gg-kicker">SFIDA ARCHIVIATA</span><h3>'+({declined:'Invito rifiutato',cancelled:'Sfida annullata',expired:'Invito scaduto'}[g.status]||'Sfida conclusa')+'</h3><p>'+esc(g.reason||'Puoi ripartire con una nuova sfida.')+'</p>'+button('invite','Nuova sfida',peer,'primary')+'</section>';
+    if(g.factsAvailable===false)return '<section class="gg-card"><span class="gg-kicker">AGGIORNAMENTO DELLA SFIDA</span><h3>Attendo i dati dei punteggi</h3><p>Riapri online per sincronizzare il confronto. I dati non disponibili non vengono mostrati come zero.</p>'+button('refresh','Riprova')+'</section>';
+    var value=g.progress||C.round(g,Date.now()),mine=value.people[uid],theirs=value.people[peer],phase=g.status==='settled'?'finished':C.round(g,Date.now()).phase;
+    var phaseName={scheduled:'SI PARTE DOMANI',active:'SFIDA IN CORSO',settling:'ULTIMI AGGIORNAMENTI',finished:'SFIDA CONCLUSA'}[phase],result=phase==='finished'?(value.winner==='tie'?'Stesso impegno, stesso traguardo.':value.winner===uid?'Hai vinto questa sfida.':value.winner?'La sfida va a '+name+'.':'Sfida conclusa senza un confronto completo.'):'Il tuo passo. Il suo passo. Insieme.';
+    if(phase==='finished'&&g.status!=='settled'){phaseName='CONFERMA DEI RISULTATI';result='La sfida è terminata. Attendo la sincronizzazione finale.';}
+    var dates=C.roundDates(g),ownName='Tu',currentDay=C.dayAt(Date.now(),g.timezone);
+    function person(u,n,p,frame,title){return '<button type="button" class="gg-player'+(u===uid?' gg-player-own':' gg-player-peer')+'" data-game-action="score" data-key="'+u+'">'+avatar(n,frame,u===uid)+'<span class="gg-player-name">'+esc(n)+(title?'<em class="gg-equipped">'+esc(title)+'</em>':'')+'</span><strong>'+p.points+'<small> / 100</small></strong><span class="gg-progress"><i style="width:'+p.points+'%"></i></span><small>'+p.days+'/7 giorni completi</small></button>';}
+    var calendar='<div class="gg-week" aria-label="Giorni della sfida">'+dates.map(function(d,i){var a=displayRow(mine.rows[i],true,g),b=theirs.rows[i];return '<button type="button" data-game-action="day" data-key="'+d+'" class="gg-day'+(d===currentDay?' is-today':'')+'" aria-label="'+esc(day(d)+': tu '+stateLabel(a)+', '+name+' '+stateLabel(b))+'"><span>'+new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{weekday:'short',timeZone:'UTC'})+'</span><b>'+Number(d.slice(-2))+'</b><i class="gg-day-own '+(a.complete?'done':'')+'">'+(a.complete?'✓':a.state==='pending'?'…':d>currentDay?'·':'—')+'</i><i class="gg-day-peer '+(b.complete?'done':'')+'">'+(b.complete?'✓':d>currentDay?'·':'—')+'</i></button>';}).join('')+'</div>';
+    var todayRow=mine.rows.find(function(x){return x.date===currentDay;}),action=phase==='scheduled'?'<p>La sfida parte il <b>'+day(g.startDate)+'</b>. Il diario di oggi continua a costruire la tua serie personale.</p>':phase==='active'&&todayRow&&!todayRow.complete?'<div><b>Il prossimo passo è tuo.</b><p>Quando hai registrato tutto, completa il diario di oggi: +10 punti.</p></div>'+button('open-day','Apri il diario',currentDay,'primary'):phase==='active'?'<div><b>Oggi hai fatto il tuo passo.</b><p>Il tuo diario completo è già conteggiato.</p></div>':phase==='settling'?'<div><b>C’è ancora tempo per sincronizzare.</b><p>Chiusura dei risultati: '+stamp(g.settleMs)+'.</p></div>':g.status==='settled'?button('invite','La rivincita?',peer,'primary'):button('refresh','Aggiorna risultati',null,'primary');
+    return '<section class="gg-card gg-duel"><div class="gg-duel-head"><span class="gg-kicker">'+phaseName+'</span>'+button('rules','Le regole')+'</div><h3>7 giorni, un passo alla volta</h3><p class="gg-period">'+day(g.startDate)+' – '+day(g.endDate)+' · '+esc(g.timezone)+'</p><div class="gg-versus">'+person(uid,ownName,mine,S.profile&&S.profile.equipped,S.profile&&S.profile.title)+'<span class="gg-vs" aria-hidden="true">✦</span>'+person(peer,name,theirs,S.member&&S.member.frame,S.member&&S.member.title)+'</div><p class="gg-result">'+esc(result)+'</p>'+calendar+'<div class="gg-next">'+action+'</div><p class="gg-sync">'+(g.status==='settled'?'Risultato alla chiusura':'Punteggi provvisori')+' · aggiornato '+stamp(g.updatedMs)+(mine.rows.some(function(x){return displayRow(x,true,g).state==='pending';})?' · Diario locale completo: punti in attesa di sincronizzazione.':'')+(g.correctedAfterClose?' · diario corretto dopo la chiusura':'')+'</p></section>'+
+      '<section class="gg-card gg-team"><div class="gg-section-head"><div><span class="gg-kicker">DALLA STESSA PARTE</span><h3>Missione di squadra</h3></div><span class="gg-team-mark" aria-hidden="true">◇</span></div><p>Dieci giornate complete in due, almeno quattro ciascuno.</p><div class="gg-team-count"><b>'+value.teamTotal+'<small> / 10</small></b><span>'+ (value.cooperative?'Obiettivo raggiunto':Math.max(0,10-value.teamTotal)+' al traguardo')+'</span></div><div class="gg-progress"><i style="width:'+Math.min(100,value.teamTotal/10*100)+'%"></i></div><div class="gg-team-contributions"><span>Tu <b>'+mine.days+' / 7</b></span><span>'+esc(name)+' <b>'+theirs.days+' / 7</b></span></div><p class="gg-note">'+(value.teamTotal>=10&&!value.cooperative?'Per sbloccare il premio servono ancora almeno quattro giorni per ciascuno.':value.cooperative?'Alla chiusura: badge Squadra affiatata e +50 XP personali a testa.':'Il contributo di entrambi conta. Premio alla chiusura: badge e +50 XP a testa.')+'</p></section>';
+  }
+  function render(){
+    var e=env(),p=S.profile,friend=e.friends.find(function(x){return x.uid===e.selected;}),html=statusMessage();
+    if(e.friends.length)html+='<div class="gg-friend-strip" aria-label="Scegli un amico">'+e.friends.map(function(x){return '<button type="button" data-friend-action="select" data-key="'+esc(x.uid)+'" class="gg-friend-chip'+(e.selected===x.uid?' is-selected':'')+'">'+avatar(x.name,null,false)+'<span>'+esc(x.name)+'</span></button>';}).join('')+'</div>';
+    var invitations=S.rounds.filter(function(g){return g.status==='pending'&&g.to===e.uid&&!g.participants.includes(e.selected);});
+    invitations.forEach(function(g){html+='<div class="gg-invite-alert"><span>'+esc(g.names[g.from]||'Un amico')+' ti invita a una sfida.</span>'+button('show-invite','Apri invito',g.from)+'</div>';});
+    if(!p||!p.enabled){html+='<section class="gg-card gg-welcome"><span class="gg-kicker">IL PERCORSO SI FA INSIEME</span><div class="gg-welcome-symbol" aria-hidden="true">✦</div><h2>Un piccolo passo.<br>Una bella sfida.</h2><p>Il tuo diario diventa una sfida di costanza con gli amici. Sette giorni, un obiettivo comune e nuovi traguardi da sbloccare.</p><div class="gg-welcome-facts"><span>7 giorni</span><span>100 punti</span><span>Una squadra</span></div><div class="gg-actions">'+button('settings','Attiva le sfide',null,'primary')+button('rules','Scopri come funziona')+'</div></section>';}
+    else if(S.loading)html+='<div class="gg-card gg-loading" role="status">Aggiorno le tue sfide…</div>';
+    else{var g=current();if(g)html+=roundHTML(g);else html+='<section class="gg-card gg-duel gg-new"><span class="gg-kicker">LA PROSSIMA SFIDA TI ASPETTA</span><h2>'+esc(friend?'Tu e '+friend.name:'Trova il tuo compagno di percorso')+'</h2><p>Sette giorni per fare spazio alla costanza. Ogni giornata completa del diario vale dieci punti.</p><div class="gg-actions">'+(friend?button('invite','Sfida '+esc(friend.name),friend.uid,'primary'):button('settings','Aggiungi un amico',null,'primary'))+button('rules','Le regole')+'</div>'+(friend&&S.member&&!S.member.enabled?'<p class="gg-note">'+esc(friend.name)+(S.member.unknown?' non ha ancora reso disponibile la partecipazione alle sfide.':' deve ancora attivare le sfide dalle sue impostazioni.')+'</p>':'')+'</section>';}
+    html+=statCards();if(p&&p.enabled&&p.ready)html+=rewardsSection();
+    return '<div class="gg-root">'+html+'</div>';
+  }
+  function settingsHTML(){var p=S.profile,enabled=p&&p.enabled;return '<section class="gg-card gg-settings"><span class="gg-kicker">FACOLTATIVO, COME PIACE A TE</span><h3>Le tue sfide</h3><p>Gli amici vedono se partecipi e i premi che indossi. Solo i due partecipanti vedono date complete e punteggi della sfida. Calorie e peso seguono le preferenze qui sotto.</p>'+statusMessage()+(enabled?'<div class="gg-setting-active"><span>Partecipazione attiva</span><b>'+esc(p.timezone)+'</b></div>'+button('refresh','Aggiorna punti')+button('disable','Disattiva sfide'):'<label class="gg-consent"><input type="checkbox" data-game-consent'+(S.consent?' checked':'')+'> <span>Attivo le sfide e condivido partecipazione e premi con gli amici; date complete e punti con il mio sfidante.</span></label>'+button('enable','Attiva la partecipazione',null,'primary'))+'<p class="gg-note">Le sfide sono facoltative. Apri l’app online per aggiornare il diario e i punti. Disattivare la partecipazione annulla le sfide ancora aperte.</p></section>';}
+  function closeDialog(){if(!S.dialog)return;var d=S.dialog;S.dialog=null;if(d.open)d.close();d.remove();if(S.opener&&S.opener.isConnected)S.opener.focus({preventScroll:true});}
+  function dialog(title,content){closeDialog();S.opener=document.activeElement;var el=document.createElement('dialog');el.className='gg-dialog';el.innerHTML='<div class="gg-dialog-layout"><header><h2>'+esc(title)+'</h2><button type="button" data-game-action="close" aria-label="Chiudi">×</button></header><div class="gg-dialog-body">'+content+'</div></div>';document.querySelector('#tab-amici').appendChild(el);S.dialog=el;el.addEventListener('cancel',function(e){e.preventDefault();closeDialog();});el.addEventListener('click',function(e){if(e.target===el)closeDialog();});el.showModal();el.querySelector('header button').focus();}
+  function detailsDay(d){var g=current(),e=env(),own=g&&g.progress&&g.progress.people[e.uid],peer=g&&g.participants.find(function(u){return u!==e.uid;}),other=g&&g.progress&&g.progress.people[peer],a=own&&own.rows.find(function(x){return x.date===d;}),b=other&&other.rows.find(function(x){return x.date===d;});return '<div class="gg-day-detail"><h3>'+day(d)+'</h3><dl><div><dt>Tu</dt><dd>'+esc(a?stateLabel(displayRow(a,true,g)):'Apri il diario per i dettagli')+'</dd></div>'+(b?'<div><dt>'+esc(g.names[peer])+'</dt><dd>'+esc(stateLabel(b))+'</dd></div>':'')+'</dl>'+button('open-day','Apri il tuo diario',d,'primary')+'</div>';}
+  function showReward(id){var r=C.REWARDS.find(function(x){return x.id===id;});if(!r)return;var owned=S.profile&&S.profile.badges&&S.profile.badges.includes(id);dialog(r.name,'<div class="gg-prize"><span class="gg-prize-symbol">'+r.symbol+'</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.at?'Si sblocca con '+r.at+(r.at===1?' giorno di diario completo.':' giorni consecutivi di diario completo.'):r.id==='team'?'Completa la missione di squadra alla chiusura della sfida.':'Riparti con tre giorni consecutivi dopo un’interruzione.')+'</p>'+(owned?button('equip','Usa questo premio',id,'primary'):'<p class="gg-note">Il tuo prossimo traguardo ti aspetta.</p>')+'</div>');}
+  document.addEventListener('change',function(ev){if(ev.target.matches('#tab-amici [data-game-consent]'))S.consent=ev.target.checked;});
+  document.addEventListener('click',function(ev){var b=ev.target.closest('#tab-amici [data-game-action]');if(!b)return;var a=b.dataset.gameAction,k=b.dataset.key;if(a==='close'){closeDialog();return;}if(a==='rules'){dialog('Come funziona la sfida',rulesHTML());return;}if(a==='settings'){ctx.settings();return;}if(a==='show-invite'){ctx.select(k);return;}if(a==='rewards'){dialog('La tua collezione',rewardCards(true));return;}if(a==='reward'){showReward(k);return;}if(a==='day'){dialog('Una giornata, due passi',detailsDay(k));return;}if(a==='open-day'){closeDialog();ctx.openDay(k);return;}
+    if(a==='streak'){var keys=[],t=today();for(var i=13;i>=0;i--)keys.push(C.add(t,-i));var days=ctx.days();dialog('I giorni della tua serie','<p class="gg-note">Ultime due settimane. Oggi ancora aperto non interrompe la serie maturata fino a ieri.</p><div class="gg-streak-list">'+keys.map(function(d){var ok=C.eligible(days.get(d));return '<div><span>'+day(d)+'</span><b>'+ (ok?'Completo':d===t?'Oggi in corso':'Da completare')+'</b>'+button('open-day','Apri',d)+'</div>';}).join('')+'</div>');return;}
+    if(a==='score'){var g=current();if(!g||!g.progress)return;var x=g.progress.people[k];dialog('Da dove arrivano i punti','<div class="gg-score-detail"><h3>'+esc(k===S.uid?'Tu':g.names[k])+'</h3><strong>'+x.points+' / 100</strong><dl><div><dt>'+x.days+' giornate complete × 10</dt><dd>'+x.days*10+'</dd></div><div><dt>Bonus cinque giornate</dt><dd>'+(x.days>=5?10:0)+'</dd></div><div><dt>Bonus tutte e sette</dt><dd>'+(x.days===7?20:0)+'</dd></div></dl>'+x.rows.map(function(d){return '<p><b>'+day(d.date)+'</b> · '+stateLabel(displayRow(d,k===S.uid,g))+'</p>';}).join('')+'</div>');return;}
+    if(a==='enable'){var check=document.querySelector('#tab-amici [data-game-consent]');if(!check||!check.checked){S.error='Spunta la partecipazione per attivare le sfide.';changed();return;}run({action:'enable',consent:true,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Rome'});return;}
+    if(a==='disable'){dialog('Disattivare le sfide?','<p>Gli inviti e le sfide aperte verranno annullati. Il diario e il confronto restano disponibili.</p><div class="gg-actions">'+button('disable-confirm','Disattiva partecipazione',null,'primary')+button('close','Resta nelle sfide')+'</div>');return;}
+    if(a==='disable-confirm'){closeDialog();run({action:'disable'});return;}if(a==='invite'){run({action:'invite',peer:k});return;}if(a==='accept'||a==='decline'){run({action:'respond',gameId:k,accept:a==='accept'});return;}if(a==='equip'){closeDialog();run({action:'equip',reward:k});return;}if(a==='refresh'){run({action:'refresh'});return;}
+  });
+  return {render:render,settingsHTML:settingsHTML,connect:connect,disconnect:disconnect,select:select,localChanged:function(){Free.localChanged();},cancelPeer:function(p){return Free.cancelPeer(p);},pendingCount:pendingCount,refresh:function(){if(S.profile&&S.profile.enabled&&!S.busy&&env().opened&&Date.now()-S.lastRefresh>30000){S.lastRefresh=Date.now();try{callable()({action:'refresh'}).catch(function(){});}catch(e){S.error=failure(e);}}}};
+}
+root.GJGameUI={create:create};
+})(typeof window!=='undefined'?window:this);
+
 /* Social data uses separate Firestore paths; the private users/{uid} archive is untouched. */
 function bindFriends() {
-  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',view:'list',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false};
+  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false};
   var FD=window.GJFriendData, fs=null, auth=null;
+  var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){var p=$('#friend-game-content'),s=$('#friends-settings-panel .gg-settings');if(p)p.innerHTML=Games.render();if(s)s.outerHTML=Games.settingsHTML();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
   var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Numero di allenamenti',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
   function defaults(){return {enabled:false,prefs:emptyPrefs(),revision:'initial-not-shared',nickname:F.profile?F.profile.nickname:'Utente'};}
@@ -10183,13 +10440,13 @@ function bindFriends() {
   function incomingRequests(){return F.links.filter(function(x){return x.status==='pending'&&x.to===F.uid&&F.blocks.indexOf(x.from)<0;});}
   var lastRequestCount=null;
   function updateRequestBadge(){
-    var count=F.uid?incomingRequests().length:0,tab=$('.tab[data-tab="amici"]'),badge=$('#friend-request-badge'),status=$('#friend-request-status');
-    var message=count===1?'1 richiesta di amicizia da gestire':count+' richieste di amicizia da gestire';
+    var count=F.uid?incomingRequests().length+Games.pendingCount():0,tab=$('.tab[data-tab="amici"]'),badge=$('#friend-request-badge'),status=$('#friend-request-status');
+    var message=count===1?'1 richiesta da gestire':count+' richieste da gestire';
     if(badge){badge.textContent=count>99?'99+':count?String(count):'';badge.hidden=count===0;}
     var innerBadge=$('#friends-view-requests');if(innerBadge){innerBadge.textContent=count>99?'99+':count?String(count):'';innerBadge.hidden=count===0;}
-    var listTab=$('#friends-tab-list');if(listTab)listTab.setAttribute('aria-label',count?'I tuoi amici, '+message:'I tuoi amici');
+    var listTab=$('#friends-tab-games');if(listTab)listTab.setAttribute('aria-label',count?'Sfide, '+message:'Sfide');
     if(tab){tab.setAttribute('aria-label',count?'Amici, '+message:'Amici');tab.setAttribute('title',count?message:'Amici');}
-    if(status&&lastRequestCount!==count)status.textContent=count?message+'.':F.uid&&lastRequestCount>0?'Nessuna richiesta di amicizia da gestire.':'';
+    if(status&&lastRequestCount!==count)status.textContent=count?message+'.':F.uid&&lastRequestCount>0?'Nessuna richiesta da gestire.':'';
     lastRequestCount=count;
   }
   function friendList(){var seen={};return F.links.filter(function(x){var p=relationPeer(x);if(x.status!=='accepted'||F.blocks.indexOf(p)>=0||seen[p])return false;seen[p]=true;return true;});}
@@ -10201,16 +10458,16 @@ function bindFriends() {
   function profileRef(){return fs.doc('socialProfiles/'+F.uid);}
   function safeName(v){return String(v||'').trim().slice(0,40);}
   function liveProfile(){return F.profile&&F.config;}
-  function panelsHTML(list,settings){
+  function panelsHTML(list,settings,games){
     var intro=$('#friends-intro-template');
-    return '<div id="friends-list-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-list"'+(F.view!=='list'?' hidden':'')+'>'+list+'</div><div id="friends-settings-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-settings"'+(F.view!=='settings'?' hidden':'')+'>'+(intro?intro.innerHTML:'')+settings+'</div>';
+    return '<div id="friends-games-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-games"'+(F.view!=='games'?' hidden':'')+'>'+(games||list)+'</div><div id="friends-list-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-list"'+(F.view!=='list'?' hidden':'')+'>'+list+'</div><div id="friends-settings-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-settings"'+(F.view!=='settings'?' hidden':'')+'>'+(intro?intro.innerHTML:'')+settings+'</div>';
   }
   function setFriendsView(view,focus,animate){
-    F.view=view==='settings'?'settings':'list';
+    F.view=['games','list','settings'].indexOf(view)>=0?view:'games';
     document.querySelectorAll('#tab-amici [data-friends-view]').forEach(function(b){var active=b.dataset.friendsView===F.view;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;if(active&&focus)b.focus({preventScroll:true});});
-    ['list','settings'].forEach(function(v){var p=$('#friends-'+v+'-panel');if(p){p.hidden=v!==F.view;p.classList.remove('friends-pane-enter');if(v===F.view&&animate){void p.offsetWidth;p.classList.add('friends-pane-enter');}}});
+    ['games','list','settings'].forEach(function(v){var p=$('#friends-'+v+'-panel');if(p){p.hidden=v!==F.view;p.classList.remove('friends-pane-enter');if(v===F.view&&animate){void p.offsetWidth;p.classList.add('friends-pane-enter');}}});
   }
-  function fillPanels(list,settings){var box=$('#friends-body');box.innerHTML=panelsHTML(list,settings);setFriendsView(F.view);note();}
+  function fillPanels(list,settings,games){var box=$('#friends-body');box.innerHTML=panelsHTML(list,settings,games);setFriendsView(F.view);note();}
   function render(){
     updateRequestBadge();
     var box=$('#friends-body');if(!box)return;
@@ -10225,7 +10482,7 @@ function bindFriends() {
     if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta o condividi il tuo codice dalle impostazioni. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi un amico</button></div>';
     else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'">'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
-    fillPanels(list+requests,h);
+    fillPanels(list+requests,Games.settingsHTML()+h,'<div id="friend-game-content">'+Games.render()+'</div>'+requests);
   }
   function localRows(){var D=engineD(),E=state.E,t=todayStr(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(t,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
@@ -10258,7 +10515,7 @@ function bindFriends() {
   }
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
-  function subscribePeer(uid){stopPeer();F.selected=uid;if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
+  function subscribePeer(uid){stopPeer();F.selected=uid;Games.select(uid);if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
     F.peerUnsub=fs.doc('friendShares/'+uid).onSnapshot({includeMetadataChanges:true},function(s){
       if(epoch!==F.epoch)return;var read=++readVersion;F.remote=null;refreshComparison();if(s.metadata.fromCache||s.metadata.hasPendingWrites)return;
       var cfg=s.exists?s.data():null;if(!cfg||!cfg.enabled){F.remote={config:cfg,days:[]};refreshComparison();return;}
@@ -10274,10 +10531,10 @@ function bindFriends() {
     F.unsub.push(rootRef().onSnapshot(function(s){if(!s.exists)return;F.config=s.data();render();queuePublish();},function(e){F.error=report(e);note();}));
     F.unsub.push(profileRef().collection('blocks').onSnapshot(function(q){F.blocks=q.docs.map(function(d){return d.id;});applyLinks(outgoing,incoming);},function(e){F.error=report(e);note();}));
   }
-  function clean(){clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='list';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
+  function clean(){Games.disconnect();clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='games';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
   async function load(uid){clean();F.uid=uid;F.error='';if(!uid){render();return;}var expected=uid;
     try{var s=await profileRef().get({source:'server'});if(F.uid!==expected)return;F.profile=s.exists?s.data():null;
-      if(F.profile){var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
+      if(F.profile){Games.connect(uid);var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
       F.ready=true;render();queuePublish();
     }catch(e){if(F.uid!==expected)return;F.ready=true;F.error=report(e);render();}
   }
@@ -10297,7 +10554,7 @@ function bindFriends() {
   async function saveSharing(form){var n=safeName(form.nickname.value);if(!n)problem('Inserisci il nome visibile.');var prefs=emptyPrefs();FD.KEYS.forEach(function(k){prefs[k]=form.elements[k].checked;});var enabled=form.enabled.checked;if(enabled&&!FD.KEYS.some(function(k){return prefs[k];}))problem('Scegli almeno un dato da condividere.');
     var cfg={enabled:enabled,prefs:prefs,revision:randomCode(),nickname:n,updatedAt:stamp()},batch=fs.batch();batch.set(rootRef(),cfg);batch.set(profileRef(),{code:F.profile.code,nickname:n,updatedAt:stamp()});batch.update(fs.doc('friendCodes/'+F.profile.code),{nickname:n,updatedAt:stamp()});await batch.commit();F.profile.nickname=n;F.config=Object.assign({},cfg);F.publishHash='';F.message=enabled?'Condivisione attiva per i soli dati selezionati.':'Condivisione disattivata: gli amici non possono più leggere i riepiloghi.';queuePublish();
   }
-  async function disconnect(uid,block){if(!friendList().some(function(x){return relationPeer(x)===uid;}))problem('Amicizia non trovata.');var refs=[fs.doc('friendships/'+F.uid+'~'+uid),fs.doc('friendships/'+uid+'~'+F.uid)];await fs.runTransaction(async function(tx){var ss=await Promise.all(refs.map(function(r){return tx.get(r);}));ss.forEach(function(s,i){if(s.exists)tx.delete(refs[i]);});if(block)tx.set(profileRef().collection('blocks').doc(uid),{createdAt:stamp()});});stopPeer();F.selected=null;F.message=block?'Utente bloccato.':'Amicizia rimossa e accesso ai riepiloghi revocato.';}
+  async function disconnect(uid,block){await Games.cancelPeer(uid);if(!friendList().some(function(x){return relationPeer(x)===uid;}))problem('Amicizia non trovata.');var refs=[fs.doc('friendships/'+F.uid+'~'+uid),fs.doc('friendships/'+uid+'~'+F.uid)];await fs.runTransaction(async function(tx){var ss=await Promise.all(refs.map(function(r){return tx.get(r);}));ss.forEach(function(s,i){if(s.exists)tx.delete(refs[i]);});if(block)tx.set(profileRef().collection('blocks').doc(uid),{createdAt:stamp()});});stopPeer();F.selected=null;F.message=block?'Utente bloccato.':'Amicizia rimossa e accesso ai riepiloghi revocato.';}
   async function publish(){
     if(F.publishing||!F.uid||!window.GJ_user||GJ_user.uid!==F.uid||!liveProfile()||!F.config.enabled||!loaded2.days||!loaded2.piano||!loaded2.workouts||!window.GJ_sync||!GJ_sync.serverOk()||GJ_sync.status().pending)return;
     var uid=F.uid,cfg=F.config,D=engineD(),E=state.E,rows=[];for(var i=13;i>=0;i--)rows.push(FD.makeDay(D,E,cfg.prefs,FD.add(todayStr(),-i),todayStr(),GJM));
@@ -10305,12 +10562,12 @@ function bindFriends() {
     try{var batch=fs.batch();rows.forEach(function(row){batch.set(fs.doc('friendShares/'+uid+'/days/'+row.date),Object.assign({},row,{revision:cfg.revision,updatedAt:stamp()}));});batch.update(fs.doc('friendShares/'+uid),{updatedAt:stamp()});await batch.commit();if(F.uid===uid&&F.config.revision===cfg.revision)F.publishHash=hash;
     }catch(e){if(F.opened){F.error=report(e);note();}}finally{F.publishing=false;if(F.uid===uid&&F.config&&F.config.enabled&&F.config.revision!==cfg.revision)queuePublish();}
   }
-  function queuePublish(){clearTimeout(F.timer);F.timer=setTimeout(publish,900);if(F.opened)refreshComparison();}
+  function queuePublish(){Games.localChanged();clearTimeout(F.timer);F.timer=setTimeout(publish,900);if(F.opened){refreshComparison();var gamesPane=$('#friend-game-content');if(gamesPane)gamesPane.innerHTML=Games.render();}}
   async function perform(fn){if(F.busy)return;F.busy=true;F.error='';F.message='';note();try{await fn();}catch(e){F.error=report(e);}finally{F.busy=false;render();}}
   document.addEventListener('submit',function(e){if(e.target.id==='friend-request-form'){e.preventDefault();var code=e.target.elements.code.value;perform(function(){return request(code);});}if(e.target.id==='friend-sharing-form'){e.preventDefault();var form=e.target;perform(function(){return saveSharing(form);});}});
   document.addEventListener('click',function(e){var viewButton=e.target.closest('#tab-amici [data-friends-view],#tab-amici [data-friends-view-go]');if(viewButton){setFriendsView(viewButton.dataset.friendsView||viewButton.dataset.friendsViewGo,false,true);return;}var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
     if(a==='select'){subscribePeer(k);render();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
-    if(a==='refresh'){if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
+    if(a==='refresh'){Games.refresh();if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
     perform(async function(){if(a==='activate')return activate();if(a==='copy'){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(F.profile.code);F.message='Codice copiato.';}else{F.message='Il tuo codice: '+F.profile.code;}return;}
       if(a==='accept'){await fs.doc('friendships/'+k).update({status:'accepted',acceptedAt:stamp()});F.message='Amicizia accettata. Scegli cosa condividere nelle impostazioni.';}
       if(a==='decline')await fs.doc('friendships/'+k).delete();
@@ -10318,8 +10575,8 @@ function bindFriends() {
       if(a==='unblock'){await profileRef().collection('blocks').doc(k).delete();F.message='Utente sbloccato. Per tornare amici serve una nuova richiesta.';}
     });
   });
-  document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var v=e.key==='Home'?'list':e.key==='End'?'settings':F.view==='list'?'settings':'list';setFriendsView(v,true,true);});
-  var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='list';render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else stopPeer();};
+  document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var views=['games','list','settings'],i=views.indexOf(F.view),v=e.key==='Home'?views[0]:e.key==='End'?views[2]:views[(i+(e.key==='ArrowLeft'?2:1))%3];setFriendsView(v,true,true);});
+  var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='games';Games.refresh();render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else stopPeer();};
   var originalRender=renderAll;renderAll=function(){originalRender();queuePublish();};
   var originalSync=window.GJ_onSync;window.GJ_onSync=function(st){if(originalSync)originalSync(st);queuePublish();};
   window.GJFriends={open:function(){show('amici');},localChanged:queuePublish};
@@ -10963,12 +11220,12 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
 (function () {
   var G = window.GJ, M = window.GJM, state = G.state, todayStr = G.todayStr;
   var FIELDS = [
-    { k: 'weight', l: 'Peso (kg)', m: 'decimal' },
     { k: 'kcal', l: 'Calorie (kcal)', m: 'numeric' },
-    { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
+    { k: 'weight', l: 'Peso (kg)', m: 'decimal' },
     { k: 'carbs', l: 'Carboidrati (g)', m: 'decimal' },
-    { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
+    { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
     { k: 'steps', l: 'Passi', m: 'numeric' },
+    { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
     { k: 'sleepH', l: 'Sonno (ore, es. 7:30)', m: 'text' }
   ];
   /* sezione 6.1: facoltativi, servono solo a spiegare la differenza fra calorie e 4/4/9 */
@@ -12985,6 +13242,113 @@ body #tab-diario #tmw .bs-key{margin-inline:0;gap:7px 13px;line-height:1.5}
   body #tab-diario #tmw .bs-scale{padding:16px 12px}
   body #tab-diario #tmw .bs-ticks b{font-size:.86rem}
 }
+
+/* A calm arena: neutral surfaces, violet identity, blue/violet players and amber milestones. */
+#tab-amici{--gg-accent:#B49AFF;--gg-own:#64D2FF;--gg-peer:#C4ACFF;--gg-gold:#FFD38A;--gg-surface:#1E1D25}
+body #tab-amici .friends-switch:not(#z):not(#y){grid-template-columns:repeat(3,minmax(0,1fr));padding:5px!important;background:#1E1D25!important;gap:4px;overflow:visible}
+body #tab-amici .friends-switch:not(#z):not(#y){margin-bottom:12px}
+body #tab-amici .friends-switch>button[aria-selected=true]:not(#z):not(#y){background:#A98AFF24!important;color:#DACBFF!important;box-shadow:inset 0 0 0 1px #A98AFF50!important}
+body .tab[data-tab=amici][aria-selected=true]:not(#z):not(#y){color:#B49AFF!important}
+#tab-amici button:focus-visible,#tab-amici summary:focus-visible{outline:2px solid #B49AFF!important;outline-offset:3px}
+#tab-amici .friends-pane{min-width:0}
+#tab-amici .friends-intro{background:radial-gradient(ellipse at 100% 0,#8F72D722,transparent 65%),#201E28;border-color:#A98AFF30}
+#tab-amici .friends-kicker,#tab-amici .friends-code-card>small,#tab-amici .friends-code-card>b{color:#C9B6FF}
+#tab-amici .friends-intro p,#tab-amici .friends-help{color:#B7B0C5}
+#tab-amici .friends-code-card,#tab-amici .friends-add,#tab-amici .friends-settings{background:#211F29;border-color:#A98AFF25}
+#tab-amici .friends-period button[aria-pressed=true],#tab-amici .friends-pill[aria-pressed=true]{background:#A98AFF25;color:#DACBFF;border-color:#A98AFF60}
+#tab-amici .friend-metric-peer .friend-metric-name{color:#C4ACFF}
+#tab-amici .friend-metric{background:#FFFFFF03;border-color:#B49AFF20}
+#tab-amici #friend-comparison{background:radial-gradient(ellipse at 100% 0,#A98AFF0D,transparent 70%),#201E28;border-color:#A98AFF30}
+body #tab-amici .friends-add .btn:not(#z):not(#y),body #tab-amici #friend-sharing-form>.btn:not(#z):not(#y){background:#B49AFF!important;color:#171021!important;-webkit-text-fill-color:#171021!important}
+#tab-amici .friends-master{background:#A98AFF12;border-color:#A98AFF24}#tab-amici input[type=checkbox]{accent-color:#B49AFF}
+.gg-root{display:grid;gap:16px;min-width:0}.gg-root *{box-sizing:border-box}
+body #tab-amici .gg-card:not(#z):not(#y){margin:0!important;min-width:0;padding:24px;border:1px solid #D1BEFF18;border-radius:25px;background:#201E28;overflow:hidden;box-shadow:0 8px 30px #0000000A}
+#tab-amici .gg-kicker{display:block;font-size:.65rem;font-weight:750;letter-spacing:.11em;color:#C1AAFF;line-height:1.6}
+#tab-amici .gg-card h2{font-size:clamp(1.6rem,3vw,2.15rem);line-height:1.2;letter-spacing:-.035em;margin:13px 0 15px;color:#F7F4FF}
+#tab-amici .gg-card h3{font-size:1.2rem;line-height:1.35;letter-spacing:-.02em;margin:5px 0 10px;color:#F4F0FF}
+#tab-amici .gg-card p{font-size:.85rem;line-height:1.7;color:#BDB6CD;margin:8px 0 14px;overflow-wrap:anywhere}
+body #tab-amici button.gg-btn:not(#z):not(#y):not(#x){display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:44px;padding:10px 15px!important;background:#FFFFFF08!important;border:1px solid #D5C5FF23!important;border-radius:12px!important;color:#DED6EE!important;-webkit-text-fill-color:currentColor!important;font:650 .78rem/1.4 var(--f-body);text-align:center;white-space:normal;cursor:pointer;box-shadow:none!important;transition:background .18s ease,transform .18s ease;overflow-wrap:anywhere;max-width:100%}
+body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x){background:#B49AFF!important;border-color:#CBB6FF!important;color:#211432!important}
+body #tab-amici button.gg-btn:not(#z):not(#y):not(#x):hover{background:#FFFFFF12!important}
+body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x):hover{background:#C2ADFF!important}
+#tab-amici .gg-btn:disabled{opacity:.5;cursor:wait}
+.gg-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:19px}
+.gg-section-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;min-width:0}.gg-section-head>div{min-width:0}
+#tab-amici .gg-section-head h3{margin-bottom:0}
+.gg-friend-strip{display:flex;gap:10px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin;scrollbar-color:#635873 transparent}
+#tab-amici .gg-friend-chip{display:flex;gap:10px;align-items:center;flex:none;max-width:100%;min-width:0;min-height:44px;background:#211F29;border:1px solid #FFFFFF0C;padding:6px 13px 6px 6px;border-radius:999px;color:#BFB6CF;font:600 .83rem var(--f-body);cursor:pointer}
+#tab-amici .gg-friend-chip.is-selected{border-color:#B49AFF5C;background:#A98AFF17;color:#E5D9FF}
+.gg-friend-chip>span:last-child{overflow-wrap:anywhere;min-width:0}
+.gg-avatar{display:grid;place-items:center;width:50px;height:50px;border-radius:18px;font-size:1.1rem;line-height:1;font-weight:750;color:#D4F2FF;background:#233641;border:1px solid #64D2FF48;flex:none;box-shadow:0 0 0 4px #64D2FF05}
+.gg-avatar.gg-peer{background:#342945;color:#E4D7FF;border-color:#C4ACFF48;box-shadow:0 0 0 4px #C4ACFF05}
+.gg-friend-chip .gg-avatar{width:32px;height:32px;border-radius:50%;font-size:.8rem;box-shadow:none}
+.gg-avatar.gg-frame-violet{outline:2px solid #A88BFF;outline-offset:3px}.gg-avatar.gg-frame-electric{outline:2px solid #6BD5FF;outline-offset:3px}.gg-avatar.gg-frame-gold{outline:2px solid #FFD38A;outline-offset:3px}.gg-avatar.gg-frame-aurora{outline:2px solid #DFA6FF;outline-offset:3px;box-shadow:0 0 15px #A98AFF35}
+#tab-amici .gg-welcome{position:relative;background:radial-gradient(ellipse at 95% 0,#8F69D32B,transparent 65%),#211E2C!important;padding:30px!important}
+.gg-welcome-symbol{position:absolute;right:38px;top:42px;font-size:7rem;color:#C2A9FF16;pointer-events:none;transform:rotate(12deg)}
+#tab-amici .gg-welcome h2{max-width:75%;position:relative}.gg-welcome>p{max-width:560px}
+.gg-welcome-facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.gg-welcome-facts span{background:#C3ADFF0C;border:1px solid #C3ADFF15;padding:7px 10px;border-radius:9px;font-size:.72rem;color:#D1C3EB}
+#tab-amici .gg-duel{background:radial-gradient(ellipse at 50% 0,#8766CB20,transparent 62%),#211E2B!important;border-color:#B49AFF35!important}
+.gg-duel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.gg-duel-head .gg-btn{min-height:36px!important;padding:7px 11px!important;font-size:.69rem!important}
+#tab-amici .gg-duel>h3{font-size:1.5rem;margin-top:17px;margin-bottom:8px}
+#tab-amici .gg-period{font-size:.76rem;margin-top:0;color:#AFA3C6}
+.gg-versus{display:grid;grid-template-columns:minmax(0,1fr) 35px minmax(0,1fr);align-items:stretch;margin-top:28px;gap:6px}
+#tab-amici .gg-player{display:flex;flex-direction:column;align-items:center;min-width:0;border:0;background:transparent;border-radius:18px;padding:12px 8px;color:#D2F0FF;cursor:pointer;font-family:var(--f-body);transition:background .2s ease}
+#tab-amici .gg-player:hover{background:#FFFFFF04}.gg-player .gg-avatar{margin-bottom:14px}
+.gg-player-name{font-size:.87rem;font-weight:650;line-height:1.5;min-height:1.5em;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow-wrap:anywhere;max-width:100%}.gg-equipped{display:block;font-size:.64rem;color:#A99ABB;font-weight:500;font-style:normal;line-height:1.5;margin-top:4px}
+.gg-player strong{font-size:clamp(2.35rem,5vw,3.25rem);letter-spacing:-.055em;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap;margin:10px 0 16px;color:#84DFFF}
+.gg-player-peer strong{color:#CFB8FF}.gg-player strong small{font-size:.73rem;color:#9E92B2;font-weight:550;letter-spacing:0}
+.gg-player>small{font-size:.73rem;color:#B9AEC9;line-height:1.5;text-align:center;margin-top:9px;white-space:normal}
+.gg-vs{display:grid;place-items:center;color:#BCA4EB;font-size:1.3rem;padding-top:15px}
+@supports not(grid-template-rows:subgrid){.gg-player-name{margin-bottom:10px}.gg-player strong{margin-top:auto;padding-top:10px}}
+@supports(grid-template-rows:subgrid){
+ .gg-versus{grid-template-rows:auto auto auto 7px auto}
+ #tab-amici .gg-player{display:grid;grid-template-rows:subgrid;grid-row:1 / span 5;justify-items:center;align-items:center}
+ .gg-player-own{grid-column:1}.gg-player-peer{grid-column:3}.gg-vs{grid-column:2;grid-row:1 / span 5}
+}
+.gg-progress{display:block;height:7px;width:100%;border-radius:999px;background:#FFFFFF0A;overflow:hidden;min-width:0}
+.gg-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9270ED,#C4ACFF);transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.gg-player-own .gg-progress i{background:linear-gradient(90deg,#378BAD,#78DBFF)}
+#tab-amici .gg-result{text-align:center;color:#DED1F2;margin:13px 0 21px;font-size:.86rem;font-weight:550}
+.gg-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;border-top:1px solid #D1BEFF14;padding-top:20px}
+#tab-amici .gg-day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 3px 8px;border-radius:13px;border:1px solid transparent;background:#FFFFFF03;color:#BAAECF;min-width:0;font-family:var(--f-body);cursor:pointer}
+#tab-amici .gg-day.is-today{border-color:#B49AFF66;background:#B49AFF0E}.gg-day>span{font-size:.64rem;line-height:1.5}.gg-day>b{font-size:.95rem;color:#E1D9EC;margin-bottom:5px}.gg-day>i{display:grid;place-items:center;font-style:normal;width:22px;height:22px;border-radius:7px;font-size:.7rem;background:#FFFFFF06;color:#8D829F}.gg-day .gg-day-own.done{background:#64D2FF25;color:#96E6FF}.gg-day .gg-day-peer.done{background:#B49AFF2B;color:#D4C1FF}
+.gg-next{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#C6ABFF0B;border:1px solid #C6ABFF18;padding:16px;border-radius:16px;margin-top:22px;min-width:0}.gg-next>div{min-width:0}.gg-next b{font-size:.83rem;color:#E4D6F6}#tab-amici .gg-next p{font-size:.76rem;margin:5px 0 0}.gg-next .gg-btn{flex:none}
+#tab-amici .gg-sync{font-size:.66rem;color:#9B8EAF;margin:15px 1px 0;line-height:1.65}
+.gg-spark{display:grid;place-items:center;width:43px;height:43px;font-size:1.6rem;color:#FFD38A;border-radius:15px;background:#FFD38A0A}
+.gg-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.gg-stats>div{padding:13px 10px;background:#FFFFFF03;border:1px solid #FFFFFF06;border-radius:14px;min-width:0}.gg-stats>div>span{display:block;color:#B1A7C1;font-size:.7rem;line-height:1.4;min-height:2.8em}.gg-stats b{font-size:1.65rem;color:#ECE4F8;font-variant-numeric:tabular-nums;line-height:1.3;letter-spacing:-.025em;display:block}.gg-stats b small{font-size:.65rem;letter-spacing:0;color:#A99CB9;font-weight:500}
+#tab-amici .gg-note{font-size:.74rem;line-height:1.7;color:#A89CB9}.gg-personal-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+.gg-level{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:19px 0 0;margin-top:18px;border-top:1px solid #D1BEFF14;color:#DCCAF6;font-size:.81rem}.gg-level>b{font-size:.8rem;color:#BCA6E1}.gg-level>.gg-progress,.gg-level>small{grid-column:1/-1}.gg-level>small{font-size:.7rem;color:#A99ABB;line-height:1.5}
+.gg-team-mark{font-size:2.3rem;color:#FFD38A}.gg-team-count{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:19px 0 12px}.gg-team-count>b{font-size:2.1rem;color:#FFE0AA;font-weight:750;font-variant-numeric:tabular-nums}.gg-team-count>b>small{font-size:.85rem;color:#B7A487;font-weight:500}.gg-team-count>span{font-size:.75rem;color:#C5B594}.gg-team>.gg-progress i{background:linear-gradient(90deg,#C18C4D,#FFD79C)}
+.gg-team-contributions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:14px 0}.gg-team-contributions>span{font-size:.75rem;color:#B6A7C6;line-height:1.6;overflow-wrap:anywhere}.gg-team-contributions b{display:block;color:#EADFF6;font-size:.9rem}
+.gg-reward-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+#tab-amici .gg-reward{min-width:0;display:flex;align-items:center;text-align:center;flex-direction:column;gap:9px;border:1px solid #FFFFFF0A;background:#FFFFFF02;border-radius:17px;padding:18px 10px;color:#B6ADC4;font-family:var(--f-body);cursor:pointer;transition:background .2s ease,transform .2s ease}
+#tab-amici .gg-reward.is-unlocked{border-color:#D3B47745;background:#CFAB610A;color:#E9D8BA}
+.gg-reward-icon{display:grid;place-items:center;width:43px;height:43px;color:#8E819F;font-size:1.8rem;background:#FFFFFF04;border-radius:15px}.is-unlocked .gg-reward-icon{color:#FFD38A;background:#FFD38A0C}
+.gg-reward>b{font-size:.78rem;line-height:1.5;overflow-wrap:anywhere}.gg-reward>small{font-size:.67rem;line-height:1.5;color:#998EA9;overflow-wrap:anywhere}.gg-reward-state{font-size:.65rem;line-height:1.5;margin-top:auto;color:#B8A4D6}.is-unlocked .gg-reward-state{color:#E3BE7C}
+.gg-message,.gg-invite-alert{padding:14px 17px;border:1px solid #B49AFF33;background:#A98AFF12;border-radius:15px;color:#DECEF8;font-size:.81rem;line-height:1.6;margin-bottom:16px;overflow-wrap:anywhere}.gg-message.gg-error{border-color:#F09AAA40;background:#F09AAA0C;color:#F3BAC4}.gg-invite-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0}
+.gg-consent{display:flex;align-items:flex-start;gap:11px;font-size:.82rem;line-height:1.7;color:#C9BCD9;margin:20px 0}.gg-consent input{width:20px;height:20px;margin:3px 0 0;accent-color:#B49AFF;flex:none}.gg-setting-active{display:flex;justify-content:space-between;gap:12px;margin:18px 0;font-size:.78rem;color:#D9C9ED}.gg-setting-active b{color:#A99BBB;font-weight:500;overflow-wrap:anywhere}.gg-settings>.gg-btn{margin-right:9px;margin-bottom:8px}
+body #tab-amici dialog.gg-dialog:not(#z):not(#y){position:fixed;inset:0;box-sizing:border-box;margin:auto;padding:0;width:min(620px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 40px);background:#211E2B;border:1px solid #B49AFF30;border-radius:24px;color:#EEE6F8;box-shadow:0 20px 90px #0008;font-family:var(--f-body);overflow:hidden}
+.gg-dialog::backdrop{background:#0009;backdrop-filter:blur(7px)}.gg-dialog-layout{display:flex;flex-direction:column;max-height:calc(100dvh - 40px)}.gg-dialog header{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:19px 22px;border-bottom:1px solid #D1BEFF16;flex:none}.gg-dialog header h2{font-size:1.1rem;line-height:1.4;letter-spacing:-.02em;margin:0}.gg-dialog header>button{width:42px;height:42px;flex:none;display:grid;place-items:center;font:300 1.6rem var(--f-body);border:1px solid #FFFFFF13;background:#FFFFFF04;color:#CCBDD9;border-radius:50%;cursor:pointer}.gg-dialog-body{padding:22px;overflow:auto;min-height:0;overscroll-behavior:contain}.gg-dialog p{font-size:.84rem;color:#B8ABC9;line-height:1.75}.gg-dialog h3{font-size:1.12rem;line-height:1.45;margin:0 0 13px}.gg-dialog dl{margin:22px 0}.gg-dialog dl>div{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid #FFFFFF0A;padding:14px 0;font-size:.8rem;line-height:1.6}.gg-dialog dt{color:#C7B8D9}.gg-dialog dd{margin:0;color:#DCC3FF;font-weight:700;text-align:right}.gg-dialog-body .gg-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-score-detail>strong{font-size:2.3rem;color:#C8ADFF}.gg-streak-list>div{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #FFFFFF0A;font-size:.76rem;color:#BDAFD0}.gg-streak-list b{font-size:.73rem;color:#D5C6E6}.gg-streak-list .gg-btn{font-size:.7rem!important;min-height:40px!important}.gg-prize{text-align:center;padding:15px 5px 25px}.gg-prize-symbol{display:grid;place-items:center;width:90px;height:90px;margin:0 auto 22px;border-radius:30px;background:#FFD38A0B;border:1px solid #FFD38A25;color:#FFD38A;font-size:3.5rem}
+.gg-celebrate .gg-level{animation:gg-reward-flash .8s ease both}
+@keyframes gg-reward-flash{0%{background:#B49AFF22}100%{background:transparent}}
+@media(max-width:760px){
+ body #tab-amici .gg-card:not(#z):not(#y){padding:20px;border-radius:23px}
+ #tab-amici .gg-welcome{padding:25px 22px!important}
+ #tab-amici .gg-welcome h2{max-width:90%;font-size:1.8rem}.gg-welcome-symbol{right:16px;top:40px;font-size:5rem}
+ .gg-section-head{align-items:flex-start;gap:10px}.gg-section-head .gg-btn{min-height:38px!important;font-size:.67rem!important;padding:8px 10px!important}
+ .gg-versus{grid-template-columns:minmax(0,1fr) 23px minmax(0,1fr);gap:0;margin-top:20px}.gg-player-name{font-size:.78rem}.gg-player strong{font-size:2.5rem}.gg-player strong small{font-size:.6rem}.gg-player>small{font-size:.68rem}
+ .gg-versus{margin-top:12px}.gg-player .gg-avatar{width:43px;height:43px;border-radius:15px;margin-bottom:8px}.gg-player strong{margin:5px 0 10px}
+ #tab-amici .gg-duel .gg-period{font-size:.72rem;line-height:1.5;margin:0}
+ #tab-amici .gg-duel>h3{font-size:1.28rem}.gg-week{gap:4px}.gg-day>span{font-size:.61rem}.gg-day>b{font-size:.84rem}#tab-amici .gg-day{padding-inline:0;border-radius:10px}.gg-day>i{width:20px;height:20px}
+ .gg-next{flex-direction:column;align-items:stretch;gap:13px;padding:14px}.gg-next .gg-btn{width:100%}.gg-stats{gap:7px}.gg-stats>div{padding:12px 8px}.gg-stats>div>span{font-size:.65rem}.gg-stats b{font-size:1.5rem}.gg-stats b small{font-size:.61rem}
+ .gg-reward-grid{gap:7px}#tab-amici .gg-reward{padding:15px 7px;border-radius:14px}.gg-reward>b{font-size:.71rem}.gg-reward>small{font-size:.63rem}.gg-reward-icon{width:37px;height:37px;font-size:1.6rem}.gg-section-head h3{font-size:1.1rem!important}
+ .gg-team-count{flex-wrap:wrap}.gg-invite-alert{align-items:flex-start;flex-direction:column}.gg-setting-active{flex-direction:column;gap:6px}
+}
+@media(max-width:360px){body #tab-amici .gg-card:not(#z):not(#y){padding:17px}.gg-player strong{font-size:2.05rem}.gg-player-name{font-size:.73rem}.gg-player{padding-inline:5px!important}.gg-player>small{font-size:.63rem}.gg-week{gap:2px}.gg-stats{gap:5px}.gg-stats>div{padding:10px 6px}.gg-stats b{font-size:1.35rem}.gg-reward-grid{grid-template-columns:1fr}#tab-amici .gg-reward{display:grid;grid-template-columns:40px minmax(0,1fr) auto;text-align:left;column-gap:12px;padding:13px}.gg-reward-icon{grid-row:1/3}.gg-reward>b{grid-column:2}.gg-reward>small{grid-column:2}.gg-reward-state{grid-column:3;grid-row:1/3;align-self:center;margin:0}.gg-dialog-body .gg-reward-grid{grid-template-columns:1fr}}
+@media(max-width:620px){body #tab-amici dialog.gg-dialog:not(#z):not(#y){width:calc(100vw - 20px);max-height:calc(100dvh - 24px);border-radius:21px}.gg-dialog-layout{max-height:calc(100dvh - 24px)}.gg-dialog header{padding:16px}.gg-dialog-body{padding:18px}.gg-dialog header h2{font-size:1.02rem}}
+#tab-amici dialog.gg-dialog[open]{animation:gg-dialog-in .2s ease both}
+@keyframes gg-dialog-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#tab-amici .gg-root *,#tab-amici .gg-dialog,#tab-amici .gg-dialog *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 </style>
 </body></html>
