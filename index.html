@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-10">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261022-1">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-10">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-10">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-10">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-10">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261022-1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261022-1">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261022-1">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261022-1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2423,7 +2423,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div class="panel" data-cat="storico">
         <div class="panel-head" style="margin-bottom:6px"><h2>Ultimi giorni</h2><span class="hint" id="d-recent-n"></span></div>
         <button type="button" class="rc-tog" id="d-recent-tog" aria-expanded="false" aria-controls="d-recent-box"><span id="d-recent-lbl">Mostra gli ultimi 30 giorni</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-        <div class="rc-box" id="d-recent-box"><div class="rc-in"><div class="tw" id="d-recent"></div></div></div>
+        <div class="rc-box" id="d-recent-box"><div class="rc-in"><p class="recent-scroll-hint">Scorri per confrontare tutti i dati <span aria-hidden="true">↔</span></p><div class="tw" id="d-recent" tabindex="0" role="region" aria-label="Ultimi giorni, tabella a scorrimento orizzontale"></div></div></div>
       </div>
           </div>
       <div class="dsec" data-dsec="peso" hidden>
@@ -7018,9 +7018,9 @@ function renderRecent() {
   var t = todayStr(), from = addDays(t, -29), days = dayList().filter(function (d) { return d >= from && d <= t; }).reverse();
   $('#d-recent-n').textContent = days.length ? days.length + (days.length === 1 ? ' giorno registrato' : ' giorni registrati') + ' negli ultimi 30' : '';
   if (!days.length) { $('#d-recent').innerHTML = '<div class="empty">Appena registri un giorno, lo ritrovi qui.</div>'; return; }
-  $('#d-recent').innerHTML = '<table><thead><tr><th>Giorno</th><th>Peso</th><th>kcal</th><th>Stato</th><th>Bilancio stimato</th><th>P g</th><th>C g</th><th>G g</th><th>Passi</th><th>Sonno</th><th style="text-align:left">Note</th></tr></thead><tbody>' + days.map(function (ds) {
+  $('#d-recent').innerHTML = '<table aria-label="Dati degli ultimi 30 giorni"><thead><tr><th>Giorno<small>apri il diario</small></th><th>Peso<small>kg</small></th><th>Calorie<small>kcal</small></th><th style="text-align:left">Stato<small>calorie del giorno</small></th><th>Bilancio stimato<small>kcal</small></th><th>Proteine<small>g</small></th><th>Carboidrati<small>g</small></th><th>Grassi<small>g</small></th><th>Passi<small>registrati</small></th><th>Sonno<small>ore e minuti</small></th><th style="text-align:left">Note</th></tr></thead><tbody>' + days.map(function (ds) {
     var v = state.days.get(ds), b = balOf(ds);
-    return '<tr data-day="' + ds + '"><td><button class="linkbtn" data-day="' + ds + '">' + fmtShort(ds) + '</button></td><td>' + (v.weight > 0 ? fmt(v.weight) + (wInfo(v) ? '<small class="faint" style="display:block;font-size:.72rem">' + wInfo(v) + '</small>' : '') : '—') + '</td><td>' + (v.kcal > 0 ? fmt(v.kcal, 0) : '—') + '</td><td>' + (v.kcal > 0 ? lb('fstate', GJM.fieldState(v, 'kcal', ds === t)).toLowerCase() : '—') + '</td><td>' + (b ? sgn(b.v, 0) : '—') + '</td><td>' + (v.protein != null ? fmt(v.protein, 0) : '—') + '</td><td>' + (v.carbs != null ? fmt(v.carbs, 0) : '—') + '</td><td>' + (v.fat != null ? fmt(v.fat, 0) : '—') + '</td><td>' + (v.steps > 0 ? fmt(v.steps, 0) : '—') + '</td><td>' + fmtH(v.sleepH) + '</td><td class="note" title="' + esc(v.note || '') + '">' + esc(v.note || '') + '</td></tr>';
+    return '<tr'+(ds===t?' class="recent-today"':'')+' data-day="' + ds + '"><td><button type="button" class="linkbtn recent-date" data-day="' + ds + '" aria-label="Apri il diario del '+esc(fmtDay(ds))+'">' + fmtShort(ds) + '<span aria-hidden="true">›</span></button></td><td>' + (v.weight > 0 ? fmt(v.weight) + (wInfo(v) ? '<small class="recent-weight-note">' + wInfo(v) + '</small>' : '') : '—') + '</td><td>' + (v.kcal > 0 ? fmt(v.kcal, 0) : '—') + '</td><td>' + (v.kcal > 0 ? '<span class="recent-state" data-state="'+esc(GJM.fieldState(v, 'kcal', ds === t))+'">'+lb('fstate', GJM.fieldState(v, 'kcal', ds === t)).toLowerCase()+'</span>' : '—') + '</td><td>' + (b ? sgn(b.v, 0) : '—') + '</td><td>' + (v.protein != null ? fmt(v.protein, 0) : '—') + '</td><td>' + (v.carbs != null ? fmt(v.carbs, 0) : '—') + '</td><td>' + (v.fat != null ? fmt(v.fat, 0) : '—') + '</td><td>' + (v.steps > 0 ? fmt(v.steps, 0) : '—') + '</td><td>' + fmtH(v.sleepH) + '</td><td class="note" title="' + esc(v.note || '') + '">' + esc(v.note || '') + '</td></tr>';
   }).join('') + '</tbody></table>';
 }
 /* ---------- resoconto della settimana ---------- */
@@ -13956,8 +13956,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-10') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-10')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-10') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261022-1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261022-1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261022-1') center/contain no-repeat}
 
 
 
@@ -14277,6 +14277,39 @@ body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration in
 #dayform #day-state-menu [role=option]:focus-visible,#dayform #day-state-trigger:focus-visible{outline:2px solid #ffa3bc;outline-offset:2px}
 @keyframes day-state-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#dayform #day-state-menu{animation:none}#day-state-trigger svg{transition:none}}
+
+/* Daily history: warm diary accents, readable rows, and a pinned date on small screens. */
+#d-recent{padding:4px 8px 10px;border:1px solid #5b49372e;border-radius:18px;background:#1d1a19;isolation:isolate;scrollbar-width:thin;scrollbar-color:#856847 #27221e}
+#d-recent:focus-visible{outline:2px solid #edb66d;outline-offset:3px}
+#d-recent table{width:100%;min-width:1190px;border-collapse:separate;border-spacing:0 8px;font-variant-numeric:tabular-nums}
+#d-recent table th{padding:14px 12px;text-align:right;white-space:nowrap;border:0;color:#d9cabc;background:#1d1a19;font-size:.76rem;font-weight:650;line-height:1.4}
+#d-recent table th small{display:block;color:#9e8e80;font-size:.66rem;font-weight:400;margin-top:3px}
+#d-recent table td{height:auto;padding:16px 12px;text-align:right;white-space:nowrap;background:#26221f;border-top:1px solid #463b333d;border-bottom:1px solid #463b333d;color:#eee5dc;font-weight:550;font-size:.86rem;transition:background .15s}
+#d-recent table tbody tr:hover td{background:#302820}
+#d-recent table td:first-child,#d-recent table th:first-child{position:sticky;left:0;text-align:left;min-width:104px;z-index:2}
+#d-recent table td:first-child{border-left:1px solid #463b333d;border-radius:12px 0 0 12px;box-shadow:10px 0 16px -12px #000}
+#d-recent table td:last-child{border-right:1px solid #463b333d;border-radius:0 12px 12px 0}
+#d-recent .recent-today td{background:#30271f;border-top-color:#b57a3f45;border-bottom-color:#b57a3f45}
+#d-recent .recent-today td:first-child{border-left:3px solid #e7b16e}
+#d-recent .recent-date{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:36px;padding:4px 0;text-decoration:none;font-weight:750;color:#f4d2a5;font-size:.86rem;text-align:left;border:0;background:none;cursor:pointer}
+#d-recent .recent-date span{color:#ab8660;font-size:.95rem}
+#d-recent .recent-date:focus-visible{outline:2px solid #edb66d;border-radius:6px;outline-offset:3px}
+#d-recent table td:nth-child(2){color:#a6c9f4;font-weight:700}
+#d-recent table td:nth-child(3){color:#f7c690;font-weight:750}
+#d-recent table td:nth-child(6){color:#d5d9b2}#d-recent table td:nth-child(7){color:#e5c5a0}#d-recent table td:nth-child(8){color:#d6bbe8}#d-recent table td:nth-child(9){color:#afd4ca}#d-recent table td:nth-child(10){color:#c0b8de}
+#d-recent table td:nth-child(4){text-align:left}
+#d-recent .recent-state{display:inline-flex;align-items:center;gap:6px;max-width:175px;padding:6px 9px;border-radius:9px;border:1px solid #8e82722e;background:#ffffff04;color:#bfb1a2;font-size:.7rem;font-weight:600;line-height:1.35;white-space:normal}
+#d-recent .recent-state::before{content:'';width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:currentColor}
+#d-recent .recent-state[data-state=completo]{color:#b2d7bf;border-color:#94bc9e33;background:#94bc9e0a}
+#d-recent .recent-state[data-state=parziale]{color:#f0c285;border-color:#dba65c38;background:#dba65c0b}
+#d-recent .recent-state[data-state=da_confermare]{color:#dcc0e3;border-color:#bd90c433;background:#bd90c40a}
+#d-recent table td.note{min-width:170px;max-width:230px;color:#bdafa2;font-size:.76rem;font-weight:400;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#d-recent .recent-weight-note{display:block;font-size:.65rem;line-height:1.4;font-weight:400;color:#a59a90;margin-top:4px}
+.recent-scroll-hint{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 3px 6px;color:#ad9a87;font-size:.72rem}.recent-scroll-hint span{color:#e5b57d;font-size:1rem}
+@media(max-width:600px){#d-recent{padding:3px 6px 9px;border-radius:15px}#d-recent table th,#d-recent table td{padding:13px 10px}#d-recent table td:first-child,#d-recent table th:first-child{min-width:90px}#d-recent .recent-date{font-size:.8rem}#d-recent table{min-width:1150px}}
+@media(prefers-reduced-motion:reduce){#d-recent table td{transition:none}}
+
+#d-recent table th{background:#1d1a19!important}#d-recent .recent-date{color:#f4d2a5!important}#d-recent .recent-date span{color:#ab8660!important}
 
 </style>
 </body></html>
