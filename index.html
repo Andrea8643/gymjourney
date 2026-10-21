@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-9">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-10">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-9">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-9">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-9">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-9">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-10">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-10">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-10">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-10">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -11690,6 +11690,25 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
   /* sezione 6.1: facoltativi, servono solo a spiegare la differenza fra calorie e 4/4/9 */
   var XF = [{ k: 'alcohol', l: 'Alcol (g)' }, { k: 'fiber', l: 'Fibre (g)' }, { k: 'polyols', l: 'Polioli (g)' }];
   var COND = { '': 'Non indicato', mattino_digiuno: 'Mattino, a digiuno', mattino: 'Mattino', sera: 'Sera', dopo_pasto: 'Dopo mangiato', altro: 'Altro momento' };
+/* Presentation of the existing day-state select; values and save validation stay unchanged. */
+function installDayStatePicker(form, box) {
+  var select=form.querySelector('select[name="kcalState"]'),trigger=form.querySelector('#day-state-trigger'),menu=form.querySelector('#day-state-menu');
+  var choices=[['','Scegli…','Stato non ancora indicato','○'],['completo','Completa','Ho segnato tutto','✓'],['parziale','Parziale','Manca ancora qualcosa','◔'],['zero_confermato','Digiuno confermato','Zero calorie registrate','0'],['da_confermare','Da confermare','Il totale è da verificare','?']];
+  menu.innerHTML=choices.map(function(x){return '<button type="button" role="option" tabindex="-1" data-day-state="'+x[0]+'" aria-selected="false"><span class="day-state-symbol" aria-hidden="true">'+x[3]+'</span><span class="day-state-copy"><b>'+x[1]+'</b><small>'+x[2]+'</small></span><span class="day-state-check" aria-hidden="true">✓</span></button>';}).join('');
+  var options=Array.from(menu.querySelectorAll('[role=option]'));
+  function sync(){var x=choices.find(function(x){return x[0]===select.value;})||choices[0];trigger.querySelector('[data-day-state-label]').textContent=x[1];trigger.dataset.state=x[0];options.forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.dayState===select.value));});}
+  function close(focus){menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(focus)trigger.focus({preventScroll:true});}
+  function open(focus){sync();menu.hidden=false;trigger.setAttribute('aria-expanded','true');var current=options.find(function(b){return b.dataset.dayState===select.value;})||options[0];if(focus)current.focus();else menu.scrollIntoView({block:'nearest',behavior:'auto'});}
+  trigger.addEventListener('click',function(){if(menu.hidden)open(false);else close(false);});
+  trigger.addEventListener('keydown',function(e){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();open(true);}});
+  menu.addEventListener('click',function(e){var b=e.target.closest('[data-day-state]');if(!b)return;select.value=b.dataset.dayState;sync();close(true);select.dispatchEvent(new Event('change',{bubbles:true}));});
+  menu.addEventListener('keydown',function(e){var i=options.indexOf(document.activeElement),n;if(e.key==='ArrowDown')n=(i+1)%options.length;if(e.key==='ArrowUp')n=(i+options.length-1)%options.length;if(e.key==='Home')n=0;if(e.key==='End')n=options.length-1;if(n!=null){e.preventDefault();options[n].focus();}});
+  document.addEventListener('pointerdown',function(e){if(!menu.contains(e.target)&&!trigger.contains(e.target))close(false);});
+  form.addEventListener('focusout',function(e){if(e.relatedTarget&&!menu.contains(e.relatedTarget)&&!trigger.contains(e.relatedTarget))close(false);});
+  select.addEventListener('change',sync);sync();
+  return {sync:function(){close(false);sync();},close:close,isOpen:function(){return !menu.hidden;}};
+}
+
   var KST = { '': 'Scegli…', completo: 'Completa: ho segnato tutto', parziale: 'Parziale: manca qualcosa', zero_confermato: 'Digiuno confermato (zero calorie)', da_confermare: 'Da confermare' };
   function opts(map, cur) { return Object.keys(map).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + map[k] + '</option>'; }).join(''); }
   var box = document.createElement('div');
@@ -11702,12 +11721,13 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     + '<label class="f"><span>Ora della pesata</span><input name="weightTime" type="time"></label>'
     + '<label class="ped-chk df-rest"><input type="checkbox" name="riposo"><span>Riposo dalla palestra confermato</span></label>'
     + '<label class="f"><span>Condizione della pesata</span><select name="weightCond">' + opts(COND, '') + '</select></label>'
-    + '<label class="f"><span>Calorie del giorno</span><select name="kcalState">' + opts(KST, 'parziale') + '</select></label></div>'
+    + '<div class="f day-state-field"><span id="day-state-label">Calorie del giorno</span><select name="kcalState" aria-label="Calorie del giorno" tabindex="-1" aria-hidden="true">' + opts(KST, 'parziale') + '</select><button type="button" id="day-state-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="day-state-menu" aria-labelledby="day-state-label day-state-value"><span id="day-state-value" data-day-state-label>Parziale</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button></div><div id="day-state-menu" role="listbox" aria-label="Stato delle calorie del giorno" hidden></div></div>'
     + '<label class="f df-notes"><span>Note</span><textarea name="note" rows="2"></textarea></label>'
     + '<details class="more df-extra" data-xf><summary>Alcol, fibre e polioli</summary><div class="in"><div class="df-grid">' + XF.map(function (x) { return '<label class="f"><span>' + x.l + '</span><input name="' + x.k + '" inputmode="decimal" autocomplete="off"></label>'; }).join('') + '</div><p class="muted small">Valori facoltativi per il confronto fra calorie e macronutrienti.</p></div></details></div>'
     + '<div class="df-footer"><p class="small df-message" data-msg role="alert"></p><div class="df-actions"><button class="btn ghost fit" type="button" data-x>Annulla</button><button class="btn fit" type="submit">Salva</button></div></div></form>';
   document.body.appendChild(box);
   var f = box.querySelector('form'), msg = box.querySelector('[data-msg]'), opener = null;
+  var dayStatePicker=installDayStatePicker(f,box);
   function show(v) { return v == null ? '' : String(v).replace('.', ','); }
   function fill(date) {
     var d = state.days.get(date) || {}, t = todayStr();
@@ -11724,7 +11744,7 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     f.weightCond.value = d.weightCond || (d.weight == null ? 'mattino_digiuno' : '');
     XF.forEach(function (x) { f[x.k].value = show(d[x.k]); }); box.querySelector('[data-xf]').open = XF.some(function (x) { return d[x.k] > 0; });
     var ks = d.st && d.st.kcal ? d.st.kcal : d.kcal > 0 ? M.fieldState(d, 'kcal', date === t) : (date === t ? 'parziale' : '');
-    f.kcalState.value = KST[ks] != null ? ks : '';
+    f.kcalState.value = KST[ks] != null ? ks : '';dayStatePicker.sync();
     f.riposo.checked = d.riposo === true;
     var mm = box.querySelector('.df-meals');
     if (d.meals && d.meals.length) { mm.hidden = false; mm.textContent = 'Questo giorno ha ' + d.meals.length + ' voci di pasti: il totale è la loro somma. Se cambi il totale qui, la differenza diventa la voce «Correzione del totale» (visibile e modificabile nel diario).'; } else mm.hidden = true;
@@ -11759,10 +11779,11 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     box.querySelector('.df-content').scrollTop=0;
     requestAnimationFrame(function(){if(!box.hidden)box.querySelector('.df-close').focus({preventScroll:true});});
   };
-  function close(){box.hidden=true;document.documentElement.classList.remove('dayform-open');if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
+  function close(){dayStatePicker.close(false);box.hidden=true;document.documentElement.classList.remove('dayform-open');if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
   box.addEventListener('click',function(e){if(e.target===box||e.target.closest('[data-x]'))close();});
   document.addEventListener('keydown',function(e){
     if(box.hidden)return;
+    if(e.key==='Escape'&&dayStatePicker.isOpen()){e.preventDefault();e.stopPropagation();dayStatePicker.close(true);return;}
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}
     if(e.key!=='Tab')return;
     var items=Array.from(f.querySelectorAll('button,input,select,textarea,summary')).filter(function(el){return !el.disabled&&el.getClientRects().length;}),first=items[0],last=items[items.length-1];
@@ -13935,8 +13956,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-9') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-9')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-9') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-10') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-10')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-10') center/contain no-repeat}
 
 
 
@@ -14233,6 +14254,29 @@ body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration in
 .friend-workout-list{display:grid;gap:10px;min-width:0}.friend-workout-item{display:grid;gap:3px;padding-bottom:8px;border-bottom:1px solid #ffffff12}.friend-workout-item:last-child{border:0;padding-bottom:0}.friend-workout-item b{white-space:normal;overflow-wrap:anywhere;line-height:1.45}.friend-workout-item small{margin:0!important}.friend-rest{font-weight:650}
 @media(max-width:600px){#summary{border-radius:16px;padding:4px 6px 9px}#summary table.sum{min-width:1080px}#summary table.sum td,#summary table.sum th{padding:15px 10px}#summary table.sum td:first-child,#summary table.sum th:first-child{min-width:116px;max-width:130px}#summary .summary-period{font-size:.8rem}}
 @media(prefers-reduced-motion:reduce){#summary table.sum td{transition:none}}
+
+#dayform select[name=kcalState]{display:none!important}
+#dayform .day-state-field{min-width:0;gap:7px}
+#dayform #day-state-trigger{width:100%;min-width:0;min-height:49px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border:1px solid #54414c;border-radius:13px;background:#2c292f;color:#f7f1f4;font:600 .92rem/1.3 var(--f-body);text-align:left;cursor:pointer;box-sizing:border-box}
+#day-state-trigger [data-day-state-label]{min-width:0;overflow-wrap:anywhere}
+#day-state-trigger svg{width:16px;height:16px;flex:0 0 16px;color:#d1a5b8;transition:transform .18s}
+#dayform #day-state-trigger[aria-expanded=true]{border-color:#ef6a8d;background:#382830;box-shadow:0 0 0 3px #ef6a8d13}
+#day-state-trigger[aria-expanded=true] svg{transform:rotate(180deg)}
+#dayform #day-state-menu{grid-column:1/-1;display:grid;gap:5px;max-height:min(300px,38dvh);overflow-y:auto;overscroll-behavior:contain;padding:7px;border:1px solid #6a4453;border-radius:17px;background:#201c22;box-shadow:0 10px 24px #0003;scrollbar-width:thin;scrollbar-color:#765061 #201c22;animation:day-state-reveal .16s ease-out}
+#dayform #day-state-menu[hidden]{display:none!important}
+#dayform #day-state-menu [role=option]{display:grid;grid-template-columns:34px minmax(0,1fr) 22px;gap:10px;align-items:center;min-height:58px;width:100%;padding:10px;border:1px solid transparent;border-radius:11px;text-align:left;background:transparent;color:#eee6ec;font-family:inherit;cursor:pointer;box-sizing:border-box}
+#day-state-menu .day-state-symbol{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#ffffff09;color:#c0a7b4;font-size:1.05rem;font-weight:650}
+#day-state-menu .day-state-copy{display:grid;gap:3px;min-width:0}
+#day-state-menu .day-state-copy b{font-size:.9rem;line-height:1.35;font-weight:650;overflow-wrap:anywhere}
+#day-state-menu .day-state-copy small{font-size:.75rem;line-height:1.35;color:#b7a5b0;white-space:normal}
+#day-state-menu .day-state-check{opacity:0;color:#ff95b0;font-weight:750}
+#dayform #day-state-menu [aria-selected=true]{background:#ee68861c;border-color:#ee68864a}
+#day-state-menu [aria-selected=true] .day-state-check{opacity:1}
+#day-state-menu [aria-selected=true] .day-state-symbol{background:#ee68861c;color:#ffadc2}
+#dayform #day-state-menu [role=option]:hover{background:#ffffff08}
+#dayform #day-state-menu [role=option]:focus-visible,#dayform #day-state-trigger:focus-visible{outline:2px solid #ffa3bc;outline-offset:2px}
+@keyframes day-state-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#dayform #day-state-menu{animation:none}#day-state-trigger svg{transition:none}}
 
 </style>
 </body></html>
