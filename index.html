@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261019-1">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261020-2">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261019-1">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261019-1">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261019-1">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261019-1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261020-2">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261020-2">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261020-2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261020-2">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1673,7 +1673,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
   </div>
   <div class="in-text"><div class="intro-brand">GymJourney</div>
     <div class="in-kick" id="in-kick">Benvenuto</div>
-    <div class="in-title" id="in-title">nel tuo percorso di <em>cut</em></div>
+    <div class="in-title" id="in-title">Il tuo percorso prende forma</div>
     <div class="in-day" id="in-day"></div>
     <div class="in-bar"><i id="in-bar"></i></div>
   </div>
@@ -2613,7 +2613,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
     <!-- RICETTE -->
     <section id="tab-ricette" class="view" hidden>
       <div class="area-lead" style="--area:#ffc67e;--area2:#f49179"><span class="area-kicker">RICETTE</span><strong>Idee da mettere nel piatto.</strong><p>Cerca per nome o ingredienti, poi confronta le ricette con i valori registrati.</p><span class="area-mark" aria-hidden="true">◒</span></div>
-      <div class="panel stack">
+      <div class="panel stack recipe-search-panel">
         <div class="row">
           <label class="f" style="flex:2 1 200px">Cerca<input id="r-search" type="search" placeholder="Nome o ingrediente"></label>
           <label class="f" style="flex:1 1 160px">Ordina per<select id="r-sort"><option value="name">Nome</option><option value="prot">Più proteine</option><option value="ratio">Proteine per kcal</option><option value="kcal">Meno kcal</option></select></label>
@@ -5776,16 +5776,16 @@ function renderWorkouts() {
   list.forEach(function (w) { (byDate[w.date] = byDate[w.date] || []).push(w); if (w.date >= from && w.date <= to) inWin.push(w); });
   var cells = DOW.map(function (x) { return '<div class="dow">' + x + '</div>'; }).join('');
   for (var d = weekStart(from), gEnd = addDays(weekStart(monthEnd), 6); d <= gEnd; d = addDays(d, 1)) {
-    if (d > to && d <= monthEnd) { var pf = parseD(d); cells += '<div class="c fut" aria-hidden="true"><span class="n">' + pf.getDate() + ' ' + MESI[pf.getMonth()] + '</span></div>'; continue; }
+    if (d > to && d <= monthEnd) { var pf = parseD(d); cells += '<div class="c fut" aria-hidden="true"><span class="n"><span class="cal-number">' + pf.getDate() + '</span><span class="cal-month">' + MESI[pf.getMonth()] + '</span></span></div>'; continue; }
     if (d < from || d > to) { cells += '<div class="c out" aria-hidden="true"></div>'; continue; }
     var dw = (byDate[d] || []).slice().sort(function (x, y) { return (x.start || '') < (y.start || '') ? -1 : 1; });
     var pd = parseD(d), num = pd.getDate(), ml = ' ' + MESI[pd.getMonth()], sel = d === state.calSel ? ' sel' : '';
     if (dw.length) {
       var G = GROUP[wGroup(dw[0])];
       dw.forEach(function (w) { var gg = wGroup(w); counts[gg] = (counts[gg] || 0) + 1; });
-      cells += '<button type="button" class="c on' + (d === t ? ' today' : '') + sel + '" data-cal="' + d + '" style="--c:' + G.c + '" aria-label="' + esc(cap(fmtLong(d)) + ': ' + dw.map(function (x) { return x.title; }).join(' e ')) + '"><span class="n">' + num + ml + '</span><span class="t">' + dw.map(function (x) { return GROUP[wGroup(x)].s; }).join('+') + '</span></button>';
+      cells += '<button type="button" class="c on' + (d === t ? ' today' : '') + sel + '" data-cal="' + d + '" style="--c:' + G.c + '" aria-label="' + esc(cap(fmtLong(d)) + ': ' + dw.map(function (x) { return x.title; }).join(' e ')) + '"><span class="n"><span class="cal-number">' + num + '</span><span class="cal-month">' + ml.trim() + '</span></span><span class="t">' + dw.map(function (x) { return GROUP[wGroup(x)].s; }).join('+') + '</span></button>';
     } else {
-      cells += '<button type="button" class="c' + (d === t ? ' today' : '') + sel + '" data-cal="' + d + '" aria-label="' + esc(cap(fmtLong(d))) + ': riposo"><span class="n">' + num + ml + '</span></button>';
+      cells += '<button type="button" class="c' + (d === t ? ' today' : '') + sel + '" data-cal="' + d + '" aria-label="' + esc(cap(fmtLong(d))) + ': riposo"><span class="n"><span class="cal-number">' + num + '</span><span class="cal-month">' + ml.trim() + '</span></span></button>';
     }
   }
   $('#heat').innerHTML = cells;
@@ -8930,6 +8930,7 @@ function renderAll() {
     try { renderLayoutB(); } catch (e) { console.error(e); }
     try { markWideTables(); } catch (e) {}
     decorateHelpControls();
+    if (intro && !intro.gone) { safeR(introText); if (loaded2.main && loaded2.piano && loaded2.migr && loaded2.days && loaded2.workouts) safeR(introData); }
     if (!document.documentElement.classList.contains('intro-on')) setTimeout(revealScan, 30);
   });
 }
@@ -9975,7 +9976,7 @@ function subscribe() {
   db.doc('settings/piano').onSnapshot(function (s) { state.piano = s.exists ? s.data() : null; loaded2.piano = true; maybeMigrate(); renderAll(); }, fail);
   db.doc('settings/migrazioni').onSnapshot(function (s) { state.migr = s.exists ? s.data() : null; loaded2.migr = true; maybeMigrate(); renderAll(); }, fail);
   db.collection('previsioni').onSnapshot(function (q) { var m = new Map(); q.docs.forEach(function (d) { m.set(d.id, d.data()); }); state.prev = m; loaded2.prev = true; renderAll(); }, fail);
-  db.doc('settings/avatar').onSnapshot(function (s) { var d = s.exists ? s.data() : null; state.avatar = d && d.img ? d.img : null; renderAll(); }, fail);
+  db.doc('settings/avatar').onSnapshot(function (s) { var d = s.exists ? s.data() : null; state.avatar = d && d.img ? d.img : null; state.avatarUid = window.GJ_user && GJ_user.uid || null; renderAll(); }, fail);
   db.collection('days').onSnapshot(function (q) {
     var m = new Map(); q.docs.forEach(function (d) { m.set(d.id, d.data()); }); state.days = m; loaded2.days = true; maybeMigrate(); renderAll();
     if (!loaded.days && !q.metadata.fromCache) { loaded.days = true; maybeSync(); }
@@ -10008,11 +10009,14 @@ var intro = { t0: (window.performance && performance.now()) || 0, data: false, g
 function phaseWord() { var p = S().phase; return p === 'mantenimento' ? 'mantenimento' : p === 'surplus' ? 'massa' : 'cut'; }
 function introText() {
   var el = $('#intro'); if (!el || intro.gone) return;
+  var ready = loaded2.main && loaded2.piano && loaded2.migr, v = ready ? activeVersion() : null;
+  if (!ready || !v) { $('#in-kick').textContent = 'Benvenuto in GymJourney'; $('#in-title').textContent = ready ? 'Il tuo prossimo passo inizia qui' : 'Il tuo percorso prende forma'; $('#in-day').textContent = ''; return; }
   var s = S(), t = todayStr(), back = false;
   try { back = !!localStorage.getItem('ml-chat-visited'); } catch (e) {}
   var h = new Date().getHours();
   $('#in-kick').textContent = (back ? 'Bentornato' : 'Benvenuto') + (s.name ? ', ' + s.name : '');
-  $('#in-title').innerHTML = 'nel tuo percorso di <em>' + phaseWord() + '</em>';
+  var phase = v.goal && v.goal.phase, word = phase === 'cut' ? 'cut' : phase === 'surplus' ? 'massa' : phase === 'mantenimento' ? 'mantenimento' : null;
+  if (word) $('#in-title').innerHTML = 'nel tuo percorso di <em>' + word + '</em>'; else $('#in-title').textContent = 'Il tuo prossimo passo inizia qui';
   var okD = function (x) { return typeof x === 'string' && /^\d{4}-\d\d-\d\d$/.test(x); };
   var tot = okD(s.startDate) && okD(s.endDate) ? diffDays(s.startDate, s.endDate) + 1 : 0, n = okD(s.startDate) ? diffDays(s.startDate, t) + 1 : 0;
   $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + (s.goalWeight > 0 ? 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg' + (okD(s.endDate) ? ' entro il ' + fmtDay(s.endDate) : '') : '');
@@ -10036,7 +10040,7 @@ function introStats() {
   $$('#in-stats .in-stat').forEach(function (x, i) { setTimeout(function () { x.classList.add('on'); }, 120 + i * 140); });
 }
 function introData() {
-  if (intro.gone || intro.data) return; intro.data = true;
+  if (intro.gone || intro.data || !(loaded2.main && loaded2.piano && loaded2.migr && loaded2.days && loaded2.workouts)) return; intro.data = true;
   var wait = Math.max(0, 1300 - (performance.now() - intro.t0));
   setTimeout(function () {
     try { introText(); introStats(); } catch (e) { introExit(); return; }
@@ -10617,6 +10621,57 @@ function create(ctx,notify){
 root.GJGameSpark={create:create};
 })(typeof window!=='undefined'?window:this);
 
+/* Personal milestones derived exclusively from recorded data. No competitive points are written. */
+(function(root){'use strict';
+function valid(n){return typeof n==='number'&&Number.isFinite(n)&&n>=0;}
+function evaluate(input,today,personal){
+ var C=root.GJGame,days=input.days||{},dates=Object.keys(days).filter(function(d){return C.date(d)&&d<=today;}).sort(),complete=dates.filter(function(d){return C.eligible(days[d]);}),counts={},targets=input.targets||function(){return {};},sessions=(input.workouts||[]).filter(function(w){return C.date(w.date)&&w.date<=today;}),seen=new Set();
+ sessions=sessions.filter(function(w){var k=w.id||w.date+'|'+w.title+'|'+(w.start||'');if(seen.has(k))return false;seen.add(k);return true;});
+ var week=function(d){var n=new Date(d+'T12:00:00Z').getUTCDay();return C.add(d,-((n+6)%7));},start=week(today),rows={};
+ dates.forEach(function(d){var x=days[d],t=targets(d)||{},ok=C.eligible(x),all=ok&&['protein','carbs','fat'].every(function(k){return valid(x[k]);});
+ function on(k,target){return ok&&valid(x[k])&&valid(target)&&target>0&&Math.abs(x[k]-target)<=target*.1;}
+ var recipe=ok&&(x.meals||[]).some(function(m){return m.recipe&&!m.adj&&!m.adjTotal;});
+ rows[d]={diary:ok,macro:all,protein:on('protein',t.p),carbs:on('carbs',t.c),fat:on('fat',t.f),balanced:all&&on('protein',t.p)&&on('carbs',t.c)&&on('fat',t.f),fiber:ok&&valid(x.fiber),sleep:valid(x.sleepH)&&x.sleepH>0&&x.sleepH<=24,steps:valid(x.steps),weight:valid(x.weight)&&x.weight>0,rest:x.riposo===true,note:typeof x.note==='string'&&x.note.trim().length>=5,recipe:recipe,weekend:ok&&[0,6].includes(new Date(d+'T12:00:00Z').getUTCDay())};
+ Object.keys(rows[d]).forEach(function(k){if(rows[d][k])counts[k]=(counts[k]||0)+1;});});
+ var items=[];function add(id,name,cat,current,goal,desc,symbol,blocked){items.push({id:id,name:name,category:cat,current:Math.min(current||0,goal),total:current||0,goal:goal,done:!blocked&&current>=goal,description:desc,symbol:symbol||'✦',blocked:!!blocked});}
+ [[60,'Due mesi di ritmo'],[90,'Un trimestre insieme'],[180,'La forza dell’abitudine'],[365,'Un anno, un passo alla volta']].forEach(function(v){add('streak-'+v[0],v[1],'Costanza',personal.record,v[0],v[0]+' giornate consecutive di diario completo.','🔥');});
+ [[50,'Cinquanta pagine'],[100,'Cento giorni raccontati'],[250,'Il tuo archivio cresce'],[500,'Cinquecento passi']].forEach(function(v){add('diary-'+v[0],v[1],'Costanza',complete.length,v[0],v[0]+' date diverse con il diario completo.','◈');});
+ var groups=[['macro','Nutrizione',[1,7,30,90],['Macro in chiaro','Sette giornate complete di macro','Un mese a tutto tondo','Macro, che costanza'],'Calorie complete e tutti e tre i macro registrati.','◒'],['protein','Nutrizione',[1,7,30],['Proteine sul tuo piano','Il tuo equilibrio proteico','Trenta giorni sul tuo target'],'Giornate complete con proteine entro il 10% del target personale di quella data. Superarlo di più non dà vantaggi.','✧'],['carbs','Nutrizione',[7,30],['Energia sul tuo piano','Il tuo ritmo dei carboidrati'],'Giornate complete con carboidrati entro il 10% del target personale.','◇'],['fat','Nutrizione',[7,30],['Grassi, il tuo equilibrio','Un mese sul tuo piano'],'Giornate complete con grassi entro il 10% del target personale.','◐'],['balanced','Nutrizione',[1,7,30],['Tre su tre','La tua settimana in equilibrio','Il tuo mese in equilibrio'],'Tutti e tre i macro entro il 10% dei rispettivi target, con calorie complete.','◎'],['fiber','Nutrizione',[1,7,30],['Un dettaglio in più','Fibre nel diario','Il quadro si completa'],'Giornate complete con le fibre annotate: conta registrarle, non aumentarle.','❋'],['sleep','Recupero',[7,30,100],['Sette notti raccontate','Il tuo mese di sonno','Cento notti nel diario'],'Annota il sonno in date diverse. Nessun premio per dormire meno.','☾'],['steps','Movimento',[7,30,100],['Passi in chiaro','Un mese in movimento','Cento giorni di passi'],'Giornate diverse con passi registrati, compreso zero: non serve inseguire numeri alti.','↗'],['weight','Diario',[7,30,100],['La tua linea prende forma','Trenta punti di riferimento','Uno storico che conta'],'Pesate in date diverse: conta il dato, non aumentare o perdere peso.','⌁'],['rest','Recupero',[3,12,30],['Anche riposare conta','Recupero consapevole','Spazio al recupero'],'Giornate con riposo dalla palestra confermato nel diario.','◌'],['note','Diario',[1,7,30],['Una riga per te','Sette pagine personali','Il tuo racconto'],'Note di almeno cinque caratteri in date diverse. Restano private.','✎'],['recipe','Ricette',[1,5,15,30],['Dal ricettario al piatto','La tua cucina prende vita','Quindici giornate in cucina','Un mese di ricette'],'Giornate complete con almeno una ricetta nel diario. Più porzioni non aumentano il conteggio.','◓'],['weekend','Costanza',[4,12,30],['Anche nel weekend','Weekend dopo weekend','Il diario ti accompagna'],'Giornate di sabato o domenica con il diario completo.','✶']];
+ groups.forEach(function(g){var needs=['protein','carbs','fat','balanced'].includes(g[0]),available=!needs||dates.some(function(d){var t=targets(d)||{};return g[0]==='balanced'?['p','c','f'].every(function(k){return valid(t[k])&&t[k]>0;}):valid(t[{protein:'p',carbs:'c',fat:'f'}[g[0]]])&&t[{protein:'p',carbs:'c',fat:'f'}[g[0]]]>0;});g[2].forEach(function(n,i){add(g[0]+'-'+n,g[3][i],g[1],counts[g[0]],n,g[4],g[5],!available);});});
+ [[1,'La prima seduta'],[10,'Dieci appuntamenti con te'],[25,'Venticinque sedute'],[50,'Cinquanta volte presente'],[100,'Un centinaio di sedute'],[250,'Una lunga storia in palestra']].forEach(function(v){add('workouts-'+v[0],v[1],'Movimento',sessions.length,v[0],'Sedute registrate nel tuo storico, senza obiettivi di durata o calorie bruciate.','◆');});
+ var recipes=new Set();complete.forEach(function(d){(days[d].meals||[]).forEach(function(m){if(m.recipe&&!m.adj&&!m.adjTotal)recipes.add(m.recipe);});});[3,5,10].forEach(function(n){add('recipes-'+n,n+' ricette da scoprire','Ricette',recipes.size,n,'Ricette diverse registrate in giornate complete.','◒');});
+ var weekRows=Object.keys(rows).filter(function(d){return d>=start;});var templates=[{key:'macro',name:'Macro in chiaro',goal:3,desc:'Registra tutti e tre i macro in tre giornate complete.'},{key:'sleep',name:'Come hai dormito?',goal:4,desc:'Annota il sonno in quattro date della settimana.'},{key:'steps',name:'Ogni passo ha una storia',goal:4,desc:'Annota i passi in quattro date, qualunque sia il numero.'},{key:'note',name:'Due righe per te',goal:2,desc:'Scrivi una nota in due giornate diverse.'},{key:'recipe',name:'Dal ricettario al diario',goal:1,desc:'Registra una ricetta in una giornata completa.'},{key:'diary',name:'Il filo della settimana',goal:5,desc:'Completa cinque giornate di diario.'}];
+ var t0=targets(today)||{};if(valid(t0.p)&&t0.p>0)templates.push({key:'protein',name:'Proteine, al tuo ritmo',goal:3,desc:'Tre giornate complete entro il 10% del tuo target proteico, senza superarlo per fare punti.'});
+ var rotation=Math.floor(Date.parse(start+'T00:00:00Z')/604800000)%templates.length;var missions=[0,1,2].map(function(i){var m=templates[(rotation+i*2)%templates.length],n=weekRows.filter(function(d){return rows[d][m.key];}).length;return Object.assign({},m,{current:Math.min(n,m.goal),done:n>=m.goal});});
+ return {items:items,missions:missions,weekFrom:start,weekTo:C.add(start,6),unlocked:items.filter(function(x){return x.done;}).length,counts:counts};
+}
+var api={evaluate:evaluate};if(typeof module==='object'&&module.exports)module.exports=api;else root.GJMilestones=api;
+})(typeof window!=='undefined'?window:this);
+
+/* A separate, opt-in friend photo. Private settings/avatar is never readable by friends. */
+(function(root){'use strict';
+var pattern=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+function create(ctx){var uid=null,peer=null,ownOff=null,peerOff=null,enabled=false,remote=null,busy=false,message='',lastSource=null,epoch=0;
+ function db(){return root.firebase&&root.firebase.firestore();}
+ function stamp(){return root.firebase.firestore.FieldValue.serverTimestamp();}
+ function stop(){epoch++;if(ownOff)ownOff();if(peerOff)peerOff();ownOff=peerOff=null;uid=peer=null;enabled=false;remote=null;lastSource=null;busy=false;message='';}
+ function connect(id){if(uid===id)return;stop();uid=id;if(!id||!db())return;var current=epoch;
+  ownOff=db().doc('friendAvatars/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(current!==epoch||s.metadata&&s.metadata.fromCache)return;var v=s.exists?s.data():null;enabled=!!(v&&v.enabled);ctx.changed();if(enabled)refresh();},function(){if(current!==epoch)return;message='La condivisione foto richiede le regole aggiornate.';ctx.changed();});
+ }
+ function select(id){if(peer===id)return;if(peerOff)peerOff();peer=id;remote=null;if(!uid||!id||!db())return;var expected=epoch;
+  peerOff=db().doc('friendAvatars/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(expected!==epoch||peer!==id||s.metadata&&s.metadata.fromCache)return;var d=s.exists?s.data():null;remote=d&&d.enabled&&typeof d.image==='string'&&pattern.test(d.image)?d.image:null;ctx.changed();},function(){if(expected!==epoch||peer!==id)return;remote=null;ctx.changed();});
+ }
+ function image(id){var s=id===uid?ctx.own():id===peer?remote:null;return typeof s==='string'&&pattern.test(s)?s:null;}
+ function smallPhoto(source){return new Promise(function(resolve,reject){if(!source){resolve('');return;}if(!pattern.test(source)){reject(Error('La foto non è valida.'));return;}var im=new Image();im.onload=function(){var canvas=document.createElement('canvas');canvas.width=canvas.height=144;var c=canvas.getContext('2d');c.fillStyle='#231A1D';c.fillRect(0,0,144,144);var n=Math.min(im.naturalWidth,im.naturalHeight);c.drawImage(im,(im.naturalWidth-n)/2,(im.naturalHeight-n)/2,n,n,0,0,144,144);var result=canvas.toDataURL('image/jpeg',.75);if(result.length>80000)reject(Error('La foto è troppo grande.'));else resolve(result);};im.onerror=function(){reject(Error('La foto non si apre.'));};im.src=source;});}
+ async function write(on){if(busy||!uid||!db())return;busy=true;message='';ctx.changed();var current=epoch,source=ctx.own();try{var data=on?await smallPhoto(source):'';if(current!==epoch)return;await db().doc('friendAvatars/'+uid).set({enabled:!!on,image:data,updatedAt:stamp()});if(current!==epoch)return;enabled=!!on;lastSource=source;message=on?'Foto visibile solo agli amici accettati.':'Condivisione della foto disattivata.';}catch(e){if(current===epoch)message=/permission-denied/.test(String(e&&e.code))?'Pubblica le regole Firestore aggiornate per condividere la foto.':e.message||'Foto non sincronizzata. Riprova online.';}finally{if(current===epoch){busy=false;ctx.changed();}}}
+ function refresh(){if(enabled&&!busy&&(!ctx.ready||ctx.ready())&&ctx.own()!==lastSource)write(true);}
+ function settingsHTML(){return '<section class="friends-photo-setting"><div><b>La tua foto nelle sfide</b><p>'+ (enabled?'Visibile agli amici accettati. Si aggiorna con la foto del profilo.':'Scegli se mostrare la foto del profilo ai tuoi amici nelle sfide. La condivisione è facoltativa.')+'</p>'+(message?'<p role="status">'+ctx.esc(message)+'</p>':'')+'</div><button type="button" class="gg-btn" data-photo-share="'+(enabled?'off':'on')+'"'+(busy?' disabled':'')+'>'+(busy?'Salvo…':enabled?'Nascondi foto':'Condividi foto')+'</button></section>';}
+ document.addEventListener('click',function(e){var b=e.target.closest('#tab-amici [data-photo-share]');if(b)write(b.dataset.photoShare==='on');});
+ return {connect:connect,disconnect:stop,select:select,image:image,settingsHTML:settingsHTML,refresh:refresh};
+}
+root.GJFriendAvatars={create:create};
+})(typeof window!=='undefined'?window:this);
+
 /* Opt-in social game. Numerical food/weight sharing remains under its existing preferences. */
 (function(root){
 'use strict';
@@ -10629,7 +10684,7 @@ function create(ctx){
   function day(d){return new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{day:'numeric',month:'short',timeZone:'UTC'});}
   function stamp(ms){return ms?new Date(ms).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'In attesa';}
   function button(a,label,key,extra){return '<button type="button" class="gg-btn'+(extra==='primary'?' gg-primary':'')+'" data-game-action="'+a+'"'+(key?' data-key="'+esc(key)+'"':'')+(S.busy?' disabled':'')+'>'+label+'</button>';}
-  function avatar(name,frame,own){return '<span class="gg-avatar gg-frame-'+esc(frame||'base')+(own?' gg-own':' gg-peer')+'" aria-hidden="true">'+esc(String(name||'?').slice(0,1).toUpperCase())+'</span>';}
+  function avatar(name,frame,own,uid){var image=ctx.avatar&&ctx.avatar(uid);if(typeof image!=='string'||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(image))image=null;return '<span class="gg-avatar gg-frame-'+esc(frame||'base')+(own?' gg-own':' gg-peer')+'" aria-hidden="true">'+(image?'<img src="'+esc(image)+'" alt="" decoding="async">':esc(String(name||'?').slice(0,1).toUpperCase()))+'</span>';}
   function stats(){
     if(S.profile&&S.profile.enabled&&S.profile.ready)return S.profile.stats;
     var rows={};ctx.days().forEach(function(v,k){rows[k]=v;});return C.personal(C.reconcile({},rows,today(),true),today());
@@ -10651,11 +10706,18 @@ function create(ctx){
   function current(){var peer=env().selected;return S.rounds.filter(function(g){return g.participants.includes(peer);}).sort(function(a,b){return (b.createdMs||0)-(a.createdMs||0);})[0]||null;}
   function statCards(){
     var p=stats(),enabled=S.profile&&S.profile.enabled&&S.profile.ready,bounds=C.levelBounds(p.xp||0),progress=enabled?Math.max(0,Math.min(100,(p.xp-bounds.from)/(bounds.to-bounds.from)*100)):0;
-    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div><span class="gg-spark" aria-hidden="true">✦</span></div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi premi'):'')+'</div></section>';
+    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div>'+flame(p.streak)+'</div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi premi'):'')+'</div></section>';
   }
+  function flame(n){return '<span class="gg-fire '+(n?'is-lit':'is-cold')+'" aria-hidden="true"><svg viewBox="0 0 48 60"><defs><linearGradient id="gg-fire-color" x2="0" y2="1"><stop stop-color="#FFCB7A"/><stop offset="1" stop-color="#FA365A"/></linearGradient></defs><path class="flame-outer" fill="url(#gg-fire-color)" d="M25 2c4 15 18 20 18 35a19 19 0 0 1-38 0c0-8 4-15 10-21-1 9 1 13 5 15C27 25 28 14 25 2Z"/><path class="flame-inner" fill="#FFE8B2" d="M25 30c1 7 10 11 9 18-1 5-5 8-10 8s-9-4-9-9c0-6 7-10 10-17Z"/></svg></span>';}
+  function milestones(){var input=ctx.milestones?ctx.milestones():{days:Object.fromEntries(ctx.days()),workouts:[],targets:function(){return {};}};return root.GJMilestones.evaluate(input,today(),stats());}
+  function milestoneCards(items){return '<div class="gg-milestone-grid">'+items.map(function(m){return '<button type="button" class="gg-milestone'+(m.done?' is-unlocked':'')+'" data-game-action="milestone" data-key="'+m.id+'"><i aria-hidden="true">'+m.symbol+'</i><b>'+esc(m.name)+'</b><small>'+esc(m.category)+'</small><span class="gg-progress"><i style="width:'+Math.min(100,m.current/m.goal*100)+'%"></i></span><small>'+ (m.blocked?'Target da impostare':m.done?'Raggiunto':m.current+' / '+m.goal)+'</small></button>';}).join('')+'</div>';}
+  function missionSection(){var m=milestones();return '<section class="gg-card"><div class="gg-section-head"><div><span class="gg-kicker">TRE PICCOLE MISSIONI</span><h3>Questa settimana, per te</h3></div>'+flame(m.missions.filter(function(x){return x.done;}).length)+'</div><p class="gg-mission-period">'+day(m.weekFrom)+' – '+day(m.weekTo)+' · nuove missioni ogni lunedì</p><div class="gg-quests">'+m.missions.map(function(x){return '<div class="gg-quest'+(x.done?' is-done':'')+'"><b aria-hidden="true">'+(x.done?'✓':'✧')+'</b><div><h4>'+esc(x.name)+'</h4><p>'+esc(x.desc)+'</p></div><span>'+x.current+' / '+x.goal+'</span></div>';}).join('')+'</div><p class="gg-note">Contano i tuoi dati reali. Missioni personali: non cambiano i punti della gara e non richiedono di mangiare o allenarti di più.</p></section>';}
+  function collectionHTML(filter){var m=milestones(),owned=S.profile&&S.profile.badges||[],cats=['Tutti','Da scoprire','Costanza','Nutrizione','Movimento','Recupero','Diario','Ricette'],items=m.items.filter(function(x){return filter==='Da scoprire'?!x.done:!filter||filter==='Tutti'||x.category===filter;});return '<p class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi · progressi riletti dal tuo storico</p><div class="gg-collection-toolbar" aria-label="Categorie dei traguardi">'+cats.map(function(c){return '<button type="button" data-game-action="collection-filter" data-key="'+c+'" aria-pressed="'+(c===(filter||'Tutti'))+'">'+c+'</button>';}).join('')+'</div>'+milestoneCards(items)+(!filter||filter==='Tutti'?'<h3>Premi delle sfide da indossare</h3>'+rewardCards(true):'');}
+  function showMilestone(id){var m=milestones().items.find(function(x){return x.id===id;});if(!m)return;dialog(m.name,'<div class="gg-milestone-detail"><i aria-hidden="true">'+m.symbol+'</i><p>'+esc(m.description)+'</p><strong>'+ (m.blocked?'Imposta il target nel piano':m.current+' / '+m.goal)+'</strong><p>'+ (m.done?'Traguardo raggiunto dai dati registrati.':'Il progresso si aggiorna quando registri o correggi i tuoi dati.')+'</p><small>Traguardo personale · nessuna modifica ai punti della gara</small></div>');}
   function rulesHTML(){return '<div class="gg-rules"><h3>Sette giorni. Un passo al giorno.</h3><p>Conferma le calorie del diario quando hai registrato tutto. La quantità mangiata non cambia i punti.</p><dl><div><dt>Ogni giornata completa</dt><dd>+10 punti</dd></div><div><dt>Arrivi a 5 giornate</dt><dd>+10 bonus</dd></div><div><dt>Le completi tutte e 7</dt><dd>+20 bonus</dd></div></dl><p>Massimo 100 punti a testa. Gli XP e i loro moltiplicatori fanno crescere il livello personale e non aumentano il punteggio della gara.</p><p>La sfida inizia alla mezzanotte successiva all’accettazione. Apri l’app online per sincronizzare il diario: dopo l’ultimo giorno hai ancora 48 ore. Le conferme arrivate dopo la scadenza non cambiano la gara.</p></div>';}
   function rewardCards(all){var owned=S.profile&&S.profile.badges||[],stats0=stats(),rewards=all?C.REWARDS:C.REWARDS.slice(0,3);return '<div class="gg-reward-grid">'+rewards.map(function(r){var yes=owned.includes(r.id),desc=r.at?r.at+(r.at===1?' giorno completo':' giorni consecutivi'):r.id==='team'?'Missione di squadra completata':'Tre giorni consecutivi dopo una pausa';return '<button type="button" class="gg-reward'+(yes?' is-unlocked':'')+'" data-game-action="reward" data-key="'+r.id+'"><span class="gg-reward-icon" aria-hidden="true">'+r.symbol+'</span><b>'+esc(r.name)+'</b><small>'+esc(desc)+'</small><span class="gg-reward-state">'+(yes?'Sbloccato':r.at?Math.min(stats0.record,r.at)+' / '+r.at:'Da conquistare')+'</span></button>';}).join('')+'</div>';}
-  function rewardsSection(){return '<section class="gg-card"><div class="gg-section-head"><div><span class="gg-kicker">PICCOLI TRAGUARDI, TUOI</span><h3>Qual è il prossimo?</h3></div>'+button('rewards','Tutti i premi')+'</div>'+rewardCards(false)+'</section>';}
+  function rewardsSection(){var m=milestones(),owned=S.profile&&S.profile.badges||[],next=m.items.filter(function(x){return !x.done&&!x.blocked;}).sort(function(a,b){return b.current/b.goal-a.current/a.goal;}).slice(0,3);return '<section class="gg-card"><div class="gg-milestone-head"><div><span class="gg-kicker">PICCOLI TRAGUARDI, TUOI</span><h3>Una collezione che cresce con te</h3><span class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi</span></div>'+button('rewards','Esplora')+'</div>'+milestoneCards(next)+'</section>';}
+
   function stateLabel(x){return {complete:'Completo',open:'Oggi in corso',partial:'Da completare',unknown:'Dati non disponibili',future:'Deve ancora iniziare',pending:'In attesa di sincronizzazione'}[x.state]||'In attesa';}
   function displayRow(x,own,g){return own&&g&&g.status==='active'&&Date.now()<g.settleMs&&x.date<=C.dayAt(Date.now(),g.timezone)&&!x.complete&&C.eligible(ctx.days().get(x.date))?Object.assign({},x,{state:'pending'}):x;}
   function roundHTML(g){
@@ -10667,7 +10729,7 @@ function create(ctx){
     var phaseName={scheduled:'SI PARTE DOMANI',active:'SFIDA IN CORSO',settling:'ULTIMI AGGIORNAMENTI',finished:'SFIDA CONCLUSA'}[phase],result=phase==='finished'?(value.winner==='tie'?'Stesso impegno, stesso traguardo.':value.winner===uid?'Hai vinto questa sfida.':value.winner?'La sfida va a '+name+'.':'Sfida conclusa senza un confronto completo.'):'Il tuo passo. Il suo passo. Insieme.';
     if(phase==='finished'&&g.status!=='settled'){phaseName='CONFERMA DEI RISULTATI';result='La sfida è terminata. Attendo la sincronizzazione finale.';}
     var dates=C.roundDates(g),ownName='Tu',currentDay=C.dayAt(Date.now(),g.timezone);
-    function person(u,n,p,frame,title){return '<button type="button" class="gg-player'+(u===uid?' gg-player-own':' gg-player-peer')+'" data-game-action="score" data-key="'+u+'">'+avatar(n,frame,u===uid)+'<span class="gg-player-name">'+esc(n)+(title?'<em class="gg-equipped">'+esc(title)+'</em>':'')+'</span><strong>'+p.points+'<small> / 100</small></strong><span class="gg-progress"><i style="width:'+p.points+'%"></i></span><small>'+p.days+'/7 giorni completi</small></button>';}
+    function person(u,n,p,frame,title){return '<button type="button" class="gg-player'+(u===uid?' gg-player-own':' gg-player-peer')+'" data-game-action="score" data-key="'+u+'">'+avatar(n,frame,u===uid,u)+'<span class="gg-player-name">'+esc(n)+(title?'<em class="gg-equipped">'+esc(title)+'</em>':'')+'</span><strong>'+p.points+'<small> / 100</small></strong><span class="gg-progress"><i style="width:'+p.points+'%"></i></span><small>'+p.days+'/7 giorni completi</small></button>';}
     var calendar='<div class="gg-week" aria-label="Giorni della sfida">'+dates.map(function(d,i){var a=displayRow(mine.rows[i],true,g),b=theirs.rows[i];return '<button type="button" data-game-action="day" data-key="'+d+'" class="gg-day'+(d===currentDay?' is-today':'')+'" aria-label="'+esc(day(d)+': tu '+stateLabel(a)+', '+name+' '+stateLabel(b))+'"><span>'+new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{weekday:'short',timeZone:'UTC'})+'</span><b>'+Number(d.slice(-2))+'</b><i class="gg-day-own '+(a.complete?'done':'')+'">'+(a.complete?'✓':a.state==='pending'?'…':d>currentDay?'·':'—')+'</i><i class="gg-day-peer '+(b.complete?'done':'')+'">'+(b.complete?'✓':d>currentDay?'·':'—')+'</i></button>';}).join('')+'</div>';
     var todayRow=mine.rows.find(function(x){return x.date===currentDay;}),action=phase==='scheduled'?'<p>La sfida parte il <b>'+day(g.startDate)+'</b>. Il diario di oggi continua a costruire la tua serie personale.</p>':phase==='active'&&todayRow&&!todayRow.complete?'<div><b>Il prossimo passo è tuo.</b><p>Quando hai registrato tutto, completa il diario di oggi: +10 punti.</p></div>'+button('open-day','Apri il diario',currentDay,'primary'):phase==='active'?'<div><b>Oggi hai fatto il tuo passo.</b><p>Il tuo diario completo è già conteggiato.</p></div>':phase==='settling'?'<div><b>C’è ancora tempo per sincronizzare.</b><p>Chiusura dei risultati: '+stamp(g.settleMs)+'.</p></div>':g.status==='settled'?button('invite','La rivincita?',peer,'primary'):button('refresh','Aggiorna risultati',null,'primary');
     return '<section class="gg-card gg-duel"><div class="gg-duel-head"><span class="gg-kicker">'+phaseName+'</span>'+button('rules','Le regole')+'</div><h3>7 giorni, un passo alla volta</h3><p class="gg-period">'+day(g.startDate)+' – '+day(g.endDate)+' · '+esc(g.timezone)+'</p><div class="gg-versus">'+person(uid,ownName,mine,S.profile&&S.profile.equipped,S.profile&&S.profile.title)+'<span class="gg-vs" aria-hidden="true">✦</span>'+person(peer,name,theirs,S.member&&S.member.frame,S.member&&S.member.title)+'</div><p class="gg-result">'+esc(result)+'</p>'+calendar+'<div class="gg-next">'+action+'</div><p class="gg-sync">'+(g.status==='settled'?'Risultato alla chiusura':'Punteggi provvisori')+' · aggiornato '+stamp(g.updatedMs)+(mine.rows.some(function(x){return displayRow(x,true,g).state==='pending';})?' · Diario locale completo: punti in attesa di sincronizzazione.':'')+(g.correctedAfterClose?' · diario corretto dopo la chiusura':'')+'</p></section>'+
@@ -10675,13 +10737,13 @@ function create(ctx){
   }
   function render(){
     var e=env(),p=S.profile,friend=e.friends.find(function(x){return x.uid===e.selected;}),html=statusMessage();
-    if(e.friends.length)html+='<div class="gg-friend-strip" aria-label="Scegli un amico">'+e.friends.map(function(x){return '<button type="button" data-friend-action="select" data-key="'+esc(x.uid)+'" class="gg-friend-chip'+(e.selected===x.uid?' is-selected':'')+'">'+avatar(x.name,null,false)+'<span>'+esc(x.name)+'</span></button>';}).join('')+'</div>';
+    if(e.friends.length)html+='<div class="gg-friend-strip" aria-label="Scegli un amico">'+e.friends.map(function(x){return '<button type="button" data-friend-action="select" data-key="'+esc(x.uid)+'" class="gg-friend-chip'+(e.selected===x.uid?' is-selected':'')+'">'+avatar(x.name,null,false,x.uid)+'<span>'+esc(x.name)+'</span></button>';}).join('')+'</div>';
     var invitations=S.rounds.filter(function(g){return g.status==='pending'&&g.to===e.uid&&!g.participants.includes(e.selected);});
     invitations.forEach(function(g){html+='<div class="gg-invite-alert"><span>'+esc(g.names[g.from]||'Un amico')+' ti invita a una sfida.</span>'+button('show-invite','Apri invito',g.from)+'</div>';});
     if(!p||!p.enabled){html+='<section class="gg-card gg-welcome"><span class="gg-kicker">IL PERCORSO SI FA INSIEME</span><div class="gg-welcome-symbol" aria-hidden="true">✦</div><h2>Un piccolo passo.<br>Una bella sfida.</h2><p>Il tuo diario diventa una sfida di costanza con gli amici. Sette giorni, un obiettivo comune e nuovi traguardi da sbloccare.</p><div class="gg-welcome-facts"><span>7 giorni</span><span>100 punti</span><span>Una squadra</span></div><div class="gg-actions">'+button('settings','Attiva le sfide',null,'primary')+button('rules','Scopri come funziona')+'</div></section>';}
     else if(S.loading)html+='<div class="gg-card gg-loading" role="status">Aggiorno le tue sfide…</div>';
     else{var g=current();if(g)html+=roundHTML(g);else html+='<section class="gg-card gg-duel gg-new"><span class="gg-kicker">LA PROSSIMA SFIDA TI ASPETTA</span><h2>'+esc(friend?'Tu e '+friend.name:'Trova il tuo compagno di percorso')+'</h2><p>Sette giorni per fare spazio alla costanza. Ogni giornata completa del diario vale dieci punti.</p><div class="gg-actions">'+(friend?button('invite','Sfida '+esc(friend.name),friend.uid,'primary'):button('settings','Aggiungi un amico',null,'primary'))+button('rules','Le regole')+'</div>'+(friend&&S.member&&!S.member.enabled?'<p class="gg-note">'+esc(friend.name)+(S.member.unknown?' non ha ancora reso disponibile la partecipazione alle sfide.':' deve ancora attivare le sfide dalle sue impostazioni.')+'</p>':'')+'</section>';}
-    html+=statCards();if(p&&p.enabled&&p.ready)html+=rewardsSection();
+    html+=statCards()+missionSection()+rewardsSection();
     return '<div class="gg-root">'+html+'</div>';
   }
   function settingsHTML(){var p=S.profile,enabled=p&&p.enabled;return '<section class="gg-card gg-settings"><span class="gg-kicker">FACOLTATIVO, COME PIACE A TE</span><h3>Le tue sfide</h3><p>Gli amici vedono se partecipi e i premi che indossi. Solo i due partecipanti vedono date complete e punteggi della sfida. Calorie e peso seguono le preferenze qui sotto.</p>'+statusMessage()+(enabled?'<div class="gg-setting-active"><span>Partecipazione attiva</span><b>'+esc(p.timezone)+'</b></div>'+button('refresh','Aggiorna punti')+button('disable','Disattiva sfide'):'<label class="gg-consent"><input type="checkbox" data-game-consent'+(S.consent?' checked':'')+'> <span>Attivo le sfide e condivido partecipazione e premi con gli amici; date complete e punti con il mio sfidante.</span></label>'+button('enable','Attiva la partecipazione',null,'primary'))+'<p class="gg-note">Le sfide sono facoltative. Apri l’app online per aggiornare il diario e i punti. Disattivare la partecipazione annulla le sfide ancora aperte.</p></section>';}
@@ -10690,7 +10752,7 @@ function create(ctx){
   function detailsDay(d){var g=current(),e=env(),own=g&&g.progress&&g.progress.people[e.uid],peer=g&&g.participants.find(function(u){return u!==e.uid;}),other=g&&g.progress&&g.progress.people[peer],a=own&&own.rows.find(function(x){return x.date===d;}),b=other&&other.rows.find(function(x){return x.date===d;});return '<div class="gg-day-detail"><h3>'+day(d)+'</h3><dl><div><dt>Tu</dt><dd>'+esc(a?stateLabel(displayRow(a,true,g)):'Apri il diario per i dettagli')+'</dd></div>'+(b?'<div><dt>'+esc(g.names[peer])+'</dt><dd>'+esc(stateLabel(b))+'</dd></div>':'')+'</dl>'+button('open-day','Apri il tuo diario',d,'primary')+'</div>';}
   function showReward(id){var r=C.REWARDS.find(function(x){return x.id===id;});if(!r)return;var owned=S.profile&&S.profile.badges&&S.profile.badges.includes(id);dialog(r.name,'<div class="gg-prize"><span class="gg-prize-symbol">'+r.symbol+'</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.at?'Si sblocca con '+r.at+(r.at===1?' giorno di diario completo.':' giorni consecutivi di diario completo.'):r.id==='team'?'Completa la missione di squadra alla chiusura della sfida.':'Riparti con tre giorni consecutivi dopo un’interruzione.')+'</p>'+(owned?button('equip','Usa questo premio',id,'primary'):'<p class="gg-note">Il tuo prossimo traguardo ti aspetta.</p>')+'</div>');}
   document.addEventListener('change',function(ev){if(ev.target.matches('#tab-amici [data-game-consent]'))S.consent=ev.target.checked;});
-  document.addEventListener('click',function(ev){var b=ev.target.closest('#tab-amici [data-game-action]');if(!b)return;var a=b.dataset.gameAction,k=b.dataset.key;if(a==='close'){closeDialog();return;}if(a==='rules'){dialog('Come funziona la sfida',rulesHTML());return;}if(a==='settings'){ctx.settings();return;}if(a==='show-invite'){ctx.select(k);return;}if(a==='rewards'){dialog('La tua collezione',rewardCards(true));return;}if(a==='reward'){showReward(k);return;}if(a==='day'){dialog('Una giornata, due passi',detailsDay(k));return;}if(a==='open-day'){closeDialog();ctx.openDay(k);return;}
+  document.addEventListener('click',function(ev){var b=ev.target.closest('#tab-amici [data-game-action]');if(!b)return;var a=b.dataset.gameAction,k=b.dataset.key;if(a==='close'){closeDialog();return;}if(a==='rules'){dialog('Come funziona la sfida',rulesHTML());return;}if(a==='settings'){ctx.settings();return;}if(a==='show-invite'){ctx.select(k);return;}if(a==='rewards'){dialog('La tua collezione',collectionHTML('Tutti'));return;}if(a==='collection-filter'){var body=S.dialog&&S.dialog.querySelector('.gg-dialog-body');if(body){body.innerHTML=collectionHTML(k);var f=Array.from(body.querySelectorAll('[data-game-action=collection-filter]')).find(function(x){return x.dataset.key===k;});if(f)f.focus({preventScroll:true});}return;}if(a==='milestone'){showMilestone(k);return;}if(a==='reward'){showReward(k);return;}if(a==='day'){dialog('Una giornata, due passi',detailsDay(k));return;}if(a==='open-day'){closeDialog();ctx.openDay(k);return;}
     if(a==='streak'){var keys=[],t=today();for(var i=13;i>=0;i--)keys.push(C.add(t,-i));var days=ctx.days();dialog('I giorni della tua serie','<p class="gg-note">Ultime due settimane. Oggi ancora aperto non interrompe la serie maturata fino a ieri.</p><div class="gg-streak-list">'+keys.map(function(d){var ok=C.eligible(days.get(d));return '<div><span>'+day(d)+'</span><b>'+ (ok?'Completo':d===t?'Oggi in corso':'Da completare')+'</b>'+button('open-day','Apri',d)+'</div>';}).join('')+'</div>');return;}
     if(a==='score'){var g=current();if(!g||!g.progress)return;var x=g.progress.people[k];dialog('Da dove arrivano i punti','<div class="gg-score-detail"><h3>'+esc(k===S.uid?'Tu':g.names[k])+'</h3><strong>'+x.points+' / 100</strong><dl><div><dt>'+x.days+' giornate complete × 10</dt><dd>'+x.days*10+'</dd></div><div><dt>Bonus cinque giornate</dt><dd>'+(x.days>=5?10:0)+'</dd></div><div><dt>Bonus tutte e sette</dt><dd>'+(x.days===7?20:0)+'</dd></div></dl>'+x.rows.map(function(d){return '<p><b>'+day(d.date)+'</b> · '+stateLabel(displayRow(d,k===S.uid,g))+'</p>';}).join('')+'</div>');return;}
     if(a==='enable'){var check=document.querySelector('#tab-amici [data-game-consent]');if(!check||!check.checked){S.error='Spunta la partecipazione per attivare le sfide.';changed();return;}run({action:'enable',consent:true,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Rome'});return;}
@@ -10706,7 +10768,8 @@ root.GJGameUI={create:create};
 function bindFriends() {
   var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false};
   var FD=window.GJFriendData, fs=null, auth=null;
-  var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){var p=$('#friend-game-content'),s=$('#friends-settings-panel .gg-settings');if(p)p.innerHTML=Games.render();if(s)s.outerHTML=Games.settingsHTML();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
+  var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;var p=$('#friend-game-content'),s=$('.friends-photo-setting');if(p)p.innerHTML=Games.render();if(s)s.outerHTML=Photos.settingsHTML();}});
+  var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){var p=$('#friend-game-content'),s=$('#friends-settings-panel .gg-settings');if(p)p.innerHTML=Games.render();if(s)s.outerHTML=Games.settingsHTML();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
   var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Numero di allenamenti',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
   function defaults(){return {enabled:false,prefs:emptyPrefs(),revision:'initial-not-shared',nickname:F.profile?F.profile.nickname:'Utente'};}
@@ -10737,7 +10800,7 @@ function bindFriends() {
   function safeName(v){return String(v||'').trim().slice(0,40);}
   function liveProfile(){return F.profile&&F.config;}
   function panelsHTML(list,settings,games){
-    var intro=$('#friends-intro-template');
+    var intro=$('#friends-intro-template');settings+=Photos.settingsHTML();
     return '<div id="friends-games-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-games"'+(F.view!=='games'?' hidden':'')+'>'+(games||list)+'</div><div id="friends-list-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-list"'+(F.view!=='list'?' hidden':'')+'>'+list+'</div><div id="friends-settings-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-settings"'+(F.view!=='settings'?' hidden':'')+'>'+(intro?intro.innerHTML:'')+settings+'</div>';
   }
   function setFriendsView(view,focus,animate){
@@ -10792,8 +10855,8 @@ function bindFriends() {
     return head+'<div class="friends-metrics">'+keys.map(function(k){return '<section class="friend-metric" data-metric="'+k+'" aria-label="'+names[k]+'"><h4>'+names[k]+'</h4><div class="friend-metric-pair"><div class="friend-metric-person friend-metric-own"><span class="friend-metric-name">Tu</span><div class="friend-metric-value">'+cell(own,k,true)+'</div></div><div class="friend-metric-person friend-metric-peer"><span class="friend-metric-name">'+esc(name)+'</span><div class="friend-metric-value">'+cell(r.days,k,r.config.prefs[k])+'</div></div></div></section>';}).join('')+'</div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
   }
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
-  function stopPeer(){F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
-  function subscribePeer(uid){stopPeer();F.selected=uid;Games.select(uid);if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
+  function stopPeer(){Photos.select(null);F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
+  function subscribePeer(uid){stopPeer();F.selected=uid;Games.select(uid);Photos.select(uid);if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
     F.peerUnsub=fs.doc('friendShares/'+uid).onSnapshot({includeMetadataChanges:true},function(s){
       if(epoch!==F.epoch)return;var read=++readVersion;F.remote=null;refreshComparison();if(s.metadata.fromCache||s.metadata.hasPendingWrites)return;
       var cfg=s.exists?s.data():null;if(!cfg||!cfg.enabled){F.remote={config:cfg,days:[]};refreshComparison();return;}
@@ -10809,8 +10872,8 @@ function bindFriends() {
     F.unsub.push(rootRef().onSnapshot(function(s){if(!s.exists)return;F.config=s.data();render();queuePublish();},function(e){F.error=report(e);note();}));
     F.unsub.push(profileRef().collection('blocks').onSnapshot(function(q){F.blocks=q.docs.map(function(d){return d.id;});applyLinks(outgoing,incoming);},function(e){F.error=report(e);note();}));
   }
-  function clean(){Games.disconnect();clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='games';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
-  async function load(uid){clean();F.uid=uid;F.error='';if(!uid){render();return;}var expected=uid;
+  function clean(){Photos.disconnect();Games.disconnect();clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='games';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
+  async function load(uid){clean();F.uid=uid;Photos.connect(uid);F.error='';if(!uid){render();return;}var expected=uid;
     try{var s=await profileRef().get({source:'server'});if(F.uid!==expected)return;F.profile=s.exists?s.data():null;
       if(F.profile){Games.connect(uid);var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
       F.ready=true;render();queuePublish();
@@ -10855,7 +10918,7 @@ function bindFriends() {
   });
   document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var views=['games','list','settings'],i=views.indexOf(F.view),v=e.key==='Home'?views[0]:e.key==='End'?views[2]:views[(i+(e.key==='ArrowLeft'?2:1))%3];setFriendsView(v,true,true);});
   var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='games';Games.refresh();render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else stopPeer();};
-  var originalRender=renderAll;renderAll=function(){originalRender();queuePublish();};
+  var originalRender=renderAll;renderAll=function(){originalRender();Photos.refresh();queuePublish();};
   var originalSync=window.GJ_onSync;window.GJ_onSync=function(st){if(originalSync)originalSync(st);queuePublish();};
   window.GJFriends={open:function(){show('amici');},localChanged:queuePublish};
   if(window.firebase&&firebase.apps&&firebase.apps.length){fs=firebase.firestore();auth=firebase.auth();auth.onAuthStateChanged(function(u){load(u?u.uid:null);});}else render();
@@ -13522,62 +13585,62 @@ body #tab-diario #tmw .bs-key{margin-inline:0;gap:7px 13px;line-height:1.5}
   body #tab-diario #tmw .bs-ticks b{font-size:.86rem}
 }
 
-/* A calm arena: neutral surfaces, violet identity, blue/violet players and amber milestones. */
-#tab-amici{--gg-accent:#B49AFF;--gg-own:#64D2FF;--gg-peer:#C4ACFF;--gg-gold:#FFD38A;--gg-surface:#1E1D25}
-body #tab-amici .friends-switch:not(#z):not(#y){grid-template-columns:repeat(3,minmax(0,1fr));padding:5px!important;background:#1E1D25!important;gap:4px;overflow:visible}
+/* A calm arena: warm surfaces, coral identity and amber milestones. */
+#tab-amici{--gg-accent:#ffbf9a;--gg-own:#ff9d64;--gg-peer:#ffcaac;--gg-gold:#FFD38A;--gg-surface:#251f1d}
+body #tab-amici .friends-switch:not(#z):not(#y){grid-template-columns:repeat(3,minmax(0,1fr));padding:5px!important;background:#251f1d!important;gap:4px;overflow:visible}
 body #tab-amici .friends-switch:not(#z):not(#y){margin-bottom:12px}
-body #tab-amici .friends-switch>button[aria-selected=true]:not(#z):not(#y){background:#A98AFF24!important;color:#DACBFF!important;box-shadow:inset 0 0 0 1px #A98AFF50!important}
-body .tab[data-tab=amici][aria-selected=true]:not(#z):not(#y){color:#B49AFF!important}
-#tab-amici button:focus-visible,#tab-amici summary:focus-visible{outline:2px solid #B49AFF!important;outline-offset:3px}
+body #tab-amici .friends-switch>button[aria-selected=true]:not(#z):not(#y){background:#ffb58a24!important;color:#ffdecb!important;box-shadow:inset 0 0 0 1px #ffb58a50!important}
+body .tab[data-tab=amici][aria-selected=true]:not(#z):not(#y){color:#ffbf9a!important}
+#tab-amici button:focus-visible,#tab-amici summary:focus-visible{outline:2px solid #ffbf9a!important;outline-offset:3px}
 #tab-amici .friends-pane{min-width:0}
-#tab-amici .friends-intro{background:radial-gradient(ellipse at 100% 0,#8F72D722,transparent 65%),#201E28;border-color:#A98AFF30}
-#tab-amici .friends-kicker,#tab-amici .friends-code-card>small,#tab-amici .friends-code-card>b{color:#C9B6FF}
-#tab-amici .friends-intro p,#tab-amici .friends-help{color:#B7B0C5}
-#tab-amici .friends-code-card,#tab-amici .friends-add,#tab-amici .friends-settings{background:#211F29;border-color:#A98AFF25}
-#tab-amici .friends-period button[aria-pressed=true],#tab-amici .friends-pill[aria-pressed=true]{background:#A98AFF25;color:#DACBFF;border-color:#A98AFF60}
-#tab-amici .friend-metric-peer .friend-metric-name{color:#C4ACFF}
-#tab-amici .friend-metric{background:#FFFFFF03;border-color:#B49AFF20}
-#tab-amici #friend-comparison{background:radial-gradient(ellipse at 100% 0,#A98AFF0D,transparent 70%),#201E28;border-color:#A98AFF30}
-body #tab-amici .friends-add .btn:not(#z):not(#y),body #tab-amici #friend-sharing-form>.btn:not(#z):not(#y){background:#B49AFF!important;color:#171021!important;-webkit-text-fill-color:#171021!important}
-#tab-amici .friends-master{background:#A98AFF12;border-color:#A98AFF24}#tab-amici input[type=checkbox]{accent-color:#B49AFF}
+#tab-amici .friends-intro{background:radial-gradient(ellipse at 100% 0,#d7977222,transparent 65%),#28201e;border-color:#ffb58a30}
+#tab-amici .friends-kicker,#tab-amici .friends-code-card>small,#tab-amici .friends-code-card>b{color:#ffd1b6}
+#tab-amici .friends-intro p,#tab-amici .friends-help{color:#c5b8b0}
+#tab-amici .friends-code-card,#tab-amici .friends-add,#tab-amici .friends-settings{background:#29211f;border-color:#ffb58a25}
+#tab-amici .friends-period button[aria-pressed=true],#tab-amici .friends-pill[aria-pressed=true]{background:#ffb58a25;color:#ffdecb;border-color:#ffb58a60}
+#tab-amici .friend-metric-peer .friend-metric-name{color:#ffcaac}
+#tab-amici .friend-metric{background:#FFFFFF03;border-color:#ffbf9a20}
+#tab-amici #friend-comparison{background:radial-gradient(ellipse at 100% 0,#ffb58a0D,transparent 70%),#28201e;border-color:#ffb58a30}
+body #tab-amici .friends-add .btn:not(#z):not(#y),body #tab-amici #friend-sharing-form>.btn:not(#z):not(#y){background:#ffbf9a!important;color:#211410!important;-webkit-text-fill-color:#211410!important}
+#tab-amici .friends-master{background:#ffb58a12;border-color:#ffb58a24}#tab-amici input[type=checkbox]{accent-color:#ffbf9a}
 .gg-root{display:grid;gap:16px;min-width:0}.gg-root *{box-sizing:border-box}
-body #tab-amici .gg-card:not(#z):not(#y){margin:0!important;min-width:0;padding:24px;border:1px solid #D1BEFF18;border-radius:25px;background:#201E28;overflow:hidden;box-shadow:0 8px 30px #0000000A}
-#tab-amici .gg-kicker{display:block;font-size:.65rem;font-weight:750;letter-spacing:.11em;color:#C1AAFF;line-height:1.6}
-#tab-amici .gg-card h2{font-size:clamp(1.6rem,3vw,2.15rem);line-height:1.2;letter-spacing:-.035em;margin:13px 0 15px;color:#F7F4FF}
-#tab-amici .gg-card h3{font-size:1.2rem;line-height:1.35;letter-spacing:-.02em;margin:5px 0 10px;color:#F4F0FF}
-#tab-amici .gg-card p{font-size:.85rem;line-height:1.7;color:#BDB6CD;margin:8px 0 14px;overflow-wrap:anywhere}
-body #tab-amici button.gg-btn:not(#z):not(#y):not(#x){display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:44px;padding:10px 15px!important;background:#FFFFFF08!important;border:1px solid #D5C5FF23!important;border-radius:12px!important;color:#DED6EE!important;-webkit-text-fill-color:currentColor!important;font:650 .78rem/1.4 var(--f-body);text-align:center;white-space:normal;cursor:pointer;box-shadow:none!important;transition:background .18s ease,transform .18s ease;overflow-wrap:anywhere;max-width:100%}
-body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x){background:#B49AFF!important;border-color:#CBB6FF!important;color:#211432!important}
+body #tab-amici .gg-card:not(#z):not(#y){margin:0!important;min-width:0;padding:24px;border:1px solid #ffd6be18;border-radius:25px;background:#28201e;overflow:hidden;box-shadow:0 8px 30px #0000000A}
+#tab-amici .gg-kicker{display:block;font-size:.65rem;font-weight:750;letter-spacing:.11em;color:#ffc9aa;line-height:1.6}
+#tab-amici .gg-card h2{font-size:clamp(1.6rem,3vw,2.15rem);line-height:1.2;letter-spacing:-.035em;margin:13px 0 15px;color:#fff8f4}
+#tab-amici .gg-card h3{font-size:1.2rem;line-height:1.35;letter-spacing:-.02em;margin:5px 0 10px;color:#fff6f0}
+#tab-amici .gg-card p{font-size:.85rem;line-height:1.7;color:#cdbeb6;margin:8px 0 14px;overflow-wrap:anywhere}
+body #tab-amici button.gg-btn:not(#z):not(#y):not(#x){display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:44px;padding:10px 15px!important;background:#FFFFFF08!important;border:1px solid #ffdac523!important;border-radius:12px!important;color:#eedfd6!important;-webkit-text-fill-color:currentColor!important;font:650 .78rem/1.4 var(--f-body);text-align:center;white-space:normal;cursor:pointer;box-shadow:none!important;transition:background .18s ease,transform .18s ease;overflow-wrap:anywhere;max-width:100%}
+body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x){background:#ffbf9a!important;border-color:#ffd1b6!important;color:#321b14!important}
 body #tab-amici button.gg-btn:not(#z):not(#y):not(#x):hover{background:#FFFFFF12!important}
-body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x):hover{background:#C2ADFF!important}
+body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x):hover{background:#ffcbad!important}
 #tab-amici .gg-btn:disabled{opacity:.5;cursor:wait}
 .gg-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:19px}
 .gg-section-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;min-width:0}.gg-section-head>div{min-width:0}
 #tab-amici .gg-section-head h3{margin-bottom:0}
-.gg-friend-strip{display:flex;gap:10px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin;scrollbar-color:#635873 transparent}
-#tab-amici .gg-friend-chip{display:flex;gap:10px;align-items:center;flex:none;max-width:100%;min-width:0;min-height:44px;background:#211F29;border:1px solid #FFFFFF0C;padding:6px 13px 6px 6px;border-radius:999px;color:#BFB6CF;font:600 .83rem var(--f-body);cursor:pointer}
-#tab-amici .gg-friend-chip.is-selected{border-color:#B49AFF5C;background:#A98AFF17;color:#E5D9FF}
+.gg-friend-strip{display:flex;gap:10px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin;scrollbar-color:#735e58 transparent}
+#tab-amici .gg-friend-chip{display:flex;gap:10px;align-items:center;flex:none;max-width:100%;min-width:0;min-height:44px;background:#29211f;border:1px solid #FFFFFF0C;padding:6px 13px 6px 6px;border-radius:999px;color:#cfbfb6;font:600 .83rem var(--f-body);cursor:pointer}
+#tab-amici .gg-friend-chip.is-selected{border-color:#ffbf9a5C;background:#ffb58a17;color:#ffe7d9}
 .gg-friend-chip>span:last-child{overflow-wrap:anywhere;min-width:0}
-.gg-avatar{display:grid;place-items:center;width:50px;height:50px;border-radius:18px;font-size:1.1rem;line-height:1;font-weight:750;color:#D4F2FF;background:#233641;border:1px solid #64D2FF48;flex:none;box-shadow:0 0 0 4px #64D2FF05}
-.gg-avatar.gg-peer{background:#342945;color:#E4D7FF;border-color:#C4ACFF48;box-shadow:0 0 0 4px #C4ACFF05}
+.gg-avatar{display:grid;place-items:center;width:50px;height:50px;border-radius:18px;font-size:1.1rem;line-height:1;font-weight:750;color:#ffe4d4;background:#412a23;border:1px solid #ff9d6448;flex:none;box-shadow:0 0 0 4px #ff9d6405}
+.gg-avatar.gg-peer{background:#453029;color:#ffe6d7;border-color:#ffcaac48;box-shadow:0 0 0 4px #ffcaac05}
 .gg-friend-chip .gg-avatar{width:32px;height:32px;border-radius:50%;font-size:.8rem;box-shadow:none}
-.gg-avatar.gg-frame-violet{outline:2px solid #A88BFF;outline-offset:3px}.gg-avatar.gg-frame-electric{outline:2px solid #6BD5FF;outline-offset:3px}.gg-avatar.gg-frame-gold{outline:2px solid #FFD38A;outline-offset:3px}.gg-avatar.gg-frame-aurora{outline:2px solid #DFA6FF;outline-offset:3px;box-shadow:0 0 15px #A98AFF35}
-#tab-amici .gg-welcome{position:relative;background:radial-gradient(ellipse at 95% 0,#8F69D32B,transparent 65%),#211E2C!important;padding:30px!important}
-.gg-welcome-symbol{position:absolute;right:38px;top:42px;font-size:7rem;color:#C2A9FF16;pointer-events:none;transform:rotate(12deg)}
+.gg-avatar.gg-frame-violet{outline:2px solid #ffb68b;outline-offset:3px}.gg-avatar.gg-frame-electric{outline:2px solid #ffa16b;outline-offset:3px}.gg-avatar.gg-frame-gold{outline:2px solid #FFD38A;outline-offset:3px}.gg-avatar.gg-frame-aurora{outline:2px solid #ffc7a6;outline-offset:3px;box-shadow:0 0 15px #ffb58a35}
+#tab-amici .gg-welcome{position:relative;background:radial-gradient(ellipse at 95% 0,#d390692B,transparent 65%),#2c211e!important;padding:30px!important}
+.gg-welcome-symbol{position:absolute;right:38px;top:42px;font-size:7rem;color:#ffc9a916;pointer-events:none;transform:rotate(12deg)}
 #tab-amici .gg-welcome h2{max-width:75%;position:relative}.gg-welcome>p{max-width:560px}
-.gg-welcome-facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.gg-welcome-facts span{background:#C3ADFF0C;border:1px solid #C3ADFF15;padding:7px 10px;border-radius:9px;font-size:.72rem;color:#D1C3EB}
-#tab-amici .gg-duel{background:radial-gradient(ellipse at 50% 0,#8766CB20,transparent 62%),#211E2B!important;border-color:#B49AFF35!important}
+.gg-welcome-facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.gg-welcome-facts span{background:#ffcbad0C;border:1px solid #ffcbad15;padding:7px 10px;border-radius:9px;font-size:.72rem;color:#ebd2c3}
+#tab-amici .gg-duel{background:radial-gradient(ellipse at 50% 0,#cb7e6620,transparent 62%),#2b211e!important;border-color:#ffbf9a35!important}
 .gg-duel-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.gg-duel-head .gg-btn{min-height:36px!important;padding:7px 11px!important;font-size:.69rem!important}
 #tab-amici .gg-duel>h3{font-size:1.5rem;margin-top:17px;margin-bottom:8px}
-#tab-amici .gg-period{font-size:.76rem;margin-top:0;color:#AFA3C6}
+#tab-amici .gg-period{font-size:.76rem;margin-top:0;color:#c6b0a3}
 .gg-versus{display:grid;grid-template-columns:minmax(0,1fr) 35px minmax(0,1fr);align-items:stretch;margin-top:28px;gap:6px}
-#tab-amici .gg-player{display:flex;flex-direction:column;align-items:center;min-width:0;border:0;background:transparent;border-radius:18px;padding:12px 8px;color:#D2F0FF;cursor:pointer;font-family:var(--f-body);transition:background .2s ease}
+#tab-amici .gg-player{display:flex;flex-direction:column;align-items:center;min-width:0;border:0;background:transparent;border-radius:18px;padding:12px 8px;color:#ffe3d2;cursor:pointer;font-family:var(--f-body);transition:background .2s ease}
 #tab-amici .gg-player:hover{background:#FFFFFF04}.gg-player .gg-avatar{margin-bottom:14px}
-.gg-player-name{font-size:.87rem;font-weight:650;line-height:1.5;min-height:1.5em;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow-wrap:anywhere;max-width:100%}.gg-equipped{display:block;font-size:.64rem;color:#A99ABB;font-weight:500;font-style:normal;line-height:1.5;margin-top:4px}
-.gg-player strong{font-size:clamp(2.35rem,5vw,3.25rem);letter-spacing:-.055em;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap;margin:10px 0 16px;color:#84DFFF}
-.gg-player-peer strong{color:#CFB8FF}.gg-player strong small{font-size:.73rem;color:#9E92B2;font-weight:550;letter-spacing:0}
-.gg-player>small{font-size:.73rem;color:#B9AEC9;line-height:1.5;text-align:center;margin-top:9px;white-space:normal}
-.gg-vs{display:grid;place-items:center;color:#BCA4EB;font-size:1.3rem;padding-top:15px}
+.gg-player-name{font-size:.87rem;font-weight:650;line-height:1.5;min-height:1.5em;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow-wrap:anywhere;max-width:100%}.gg-equipped{display:block;font-size:.64rem;color:#bba69a;font-weight:500;font-style:normal;line-height:1.5;margin-top:4px}
+.gg-player strong{font-size:clamp(2.35rem,5vw,3.25rem);letter-spacing:-.055em;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap;margin:10px 0 16px;color:#ffb184}
+.gg-player-peer strong{color:#ffd2b8}.gg-player strong small{font-size:.73rem;color:#b29e92;font-weight:550;letter-spacing:0}
+.gg-player>small{font-size:.73rem;color:#c9b8ae;line-height:1.5;text-align:center;margin-top:9px;white-space:normal}
+.gg-vs{display:grid;place-items:center;color:#ebbea4;font-size:1.3rem;padding-top:15px}
 @supports not(grid-template-rows:subgrid){.gg-player-name{margin-bottom:10px}.gg-player strong{margin-top:auto;padding-top:10px}}
 @supports(grid-template-rows:subgrid){
  .gg-versus{grid-template-rows:auto auto auto 7px auto}
@@ -13585,31 +13648,31 @@ body #tab-amici button.gg-btn.gg-primary:not(#z):not(#y):not(#x):hover{backgroun
  .gg-player-own{grid-column:1}.gg-player-peer{grid-column:3}.gg-vs{grid-column:2;grid-row:1 / span 5}
 }
 .gg-progress{display:block;height:7px;width:100%;border-radius:999px;background:#FFFFFF0A;overflow:hidden;min-width:0}
-.gg-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9270ED,#C4ACFF);transition:width .45s cubic-bezier(.2,.7,.3,1)}
-.gg-player-own .gg-progress i{background:linear-gradient(90deg,#378BAD,#78DBFF)}
-#tab-amici .gg-result{text-align:center;color:#DED1F2;margin:13px 0 21px;font-size:.86rem;font-weight:550}
-.gg-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;border-top:1px solid #D1BEFF14;padding-top:20px}
-#tab-amici .gg-day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 3px 8px;border-radius:13px;border:1px solid transparent;background:#FFFFFF03;color:#BAAECF;min-width:0;font-family:var(--f-body);cursor:pointer}
-#tab-amici .gg-day.is-today{border-color:#B49AFF66;background:#B49AFF0E}.gg-day>span{font-size:.64rem;line-height:1.5}.gg-day>b{font-size:.95rem;color:#E1D9EC;margin-bottom:5px}.gg-day>i{display:grid;place-items:center;font-style:normal;width:22px;height:22px;border-radius:7px;font-size:.7rem;background:#FFFFFF06;color:#8D829F}.gg-day .gg-day-own.done{background:#64D2FF25;color:#96E6FF}.gg-day .gg-day-peer.done{background:#B49AFF2B;color:#D4C1FF}
-.gg-next{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#C6ABFF0B;border:1px solid #C6ABFF18;padding:16px;border-radius:16px;margin-top:22px;min-width:0}.gg-next>div{min-width:0}.gg-next b{font-size:.83rem;color:#E4D6F6}#tab-amici .gg-next p{font-size:.76rem;margin:5px 0 0}.gg-next .gg-btn{flex:none}
-#tab-amici .gg-sync{font-size:.66rem;color:#9B8EAF;margin:15px 1px 0;line-height:1.65}
+.gg-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ed9e70,#ffcaac);transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.gg-player-own .gg-progress i{background:linear-gradient(90deg,#ad5337,#ffaa78)}
+#tab-amici .gg-result{text-align:center;color:#f2ddd1;margin:13px 0 21px;font-size:.86rem;font-weight:550}
+.gg-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;border-top:1px solid #ffd6be14;padding-top:20px}
+#tab-amici .gg-day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:9px 3px 8px;border-radius:13px;border:1px solid transparent;background:#FFFFFF03;color:#cfbaae;min-width:0;font-family:var(--f-body);cursor:pointer}
+#tab-amici .gg-day.is-today{border-color:#ffbf9a66;background:#ffbf9a0E}.gg-day>span{font-size:.64rem;line-height:1.5}.gg-day>b{font-size:.95rem;color:#ece0d9;margin-bottom:5px}.gg-day>i{display:grid;place-items:center;font-style:normal;width:22px;height:22px;border-radius:7px;font-size:.7rem;background:#FFFFFF06;color:#9f8982}.gg-day .gg-day-own.done{background:#ff9d6425;color:#ffbd96}.gg-day .gg-day-peer.done{background:#ffbf9a2B;color:#ffd8c1}
+.gg-next{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#ffcaab0B;border:1px solid #ffcaab18;padding:16px;border-radius:16px;margin-top:22px;min-width:0}.gg-next>div{min-width:0}.gg-next b{font-size:.83rem;color:#f6e2d6}#tab-amici .gg-next p{font-size:.76rem;margin:5px 0 0}.gg-next .gg-btn{flex:none}
+#tab-amici .gg-sync{font-size:.66rem;color:#af9a8e;margin:15px 1px 0;line-height:1.65}
 .gg-spark{display:grid;place-items:center;width:43px;height:43px;font-size:1.6rem;color:#FFD38A;border-radius:15px;background:#FFD38A0A}
-.gg-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.gg-stats>div{padding:13px 10px;background:#FFFFFF03;border:1px solid #FFFFFF06;border-radius:14px;min-width:0}.gg-stats>div>span{display:block;color:#B1A7C1;font-size:.7rem;line-height:1.4;min-height:2.8em}.gg-stats b{font-size:1.65rem;color:#ECE4F8;font-variant-numeric:tabular-nums;line-height:1.3;letter-spacing:-.025em;display:block}.gg-stats b small{font-size:.65rem;letter-spacing:0;color:#A99CB9;font-weight:500}
-#tab-amici .gg-note{font-size:.74rem;line-height:1.7;color:#A89CB9}.gg-personal-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
-.gg-level{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:19px 0 0;margin-top:18px;border-top:1px solid #D1BEFF14;color:#DCCAF6;font-size:.81rem}.gg-level>b{font-size:.8rem;color:#BCA6E1}.gg-level>.gg-progress,.gg-level>small{grid-column:1/-1}.gg-level>small{font-size:.7rem;color:#A99ABB;line-height:1.5}
+.gg-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.gg-stats>div{padding:13px 10px;background:#FFFFFF03;border:1px solid #FFFFFF06;border-radius:14px;min-width:0}.gg-stats>div>span{display:block;color:#c1b1a7;font-size:.7rem;line-height:1.4;min-height:2.8em}.gg-stats b{font-size:1.65rem;color:#f8ebe4;font-variant-numeric:tabular-nums;line-height:1.3;letter-spacing:-.025em;display:block}.gg-stats b small{font-size:.65rem;letter-spacing:0;color:#b9a79c;font-weight:500}
+#tab-amici .gg-note{font-size:.74rem;line-height:1.7;color:#b9a79c}.gg-personal-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+.gg-level{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:19px 0 0;margin-top:18px;border-top:1px solid #ffd6be14;color:#f6daca;font-size:.81rem}.gg-level>b{font-size:.8rem;color:#e1bca6}.gg-level>.gg-progress,.gg-level>small{grid-column:1/-1}.gg-level>small{font-size:.7rem;color:#bba69a;line-height:1.5}
 .gg-team-mark{font-size:2.3rem;color:#FFD38A}.gg-team-count{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:19px 0 12px}.gg-team-count>b{font-size:2.1rem;color:#FFE0AA;font-weight:750;font-variant-numeric:tabular-nums}.gg-team-count>b>small{font-size:.85rem;color:#B7A487;font-weight:500}.gg-team-count>span{font-size:.75rem;color:#C5B594}.gg-team>.gg-progress i{background:linear-gradient(90deg,#C18C4D,#FFD79C)}
-.gg-team-contributions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:14px 0}.gg-team-contributions>span{font-size:.75rem;color:#B6A7C6;line-height:1.6;overflow-wrap:anywhere}.gg-team-contributions b{display:block;color:#EADFF6;font-size:.9rem}
+.gg-team-contributions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:14px 0}.gg-team-contributions>span{font-size:.75rem;color:#c6b2a7;line-height:1.6;overflow-wrap:anywhere}.gg-team-contributions b{display:block;color:#f6e7df;font-size:.9rem}
 .gg-reward-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
-#tab-amici .gg-reward{min-width:0;display:flex;align-items:center;text-align:center;flex-direction:column;gap:9px;border:1px solid #FFFFFF0A;background:#FFFFFF02;border-radius:17px;padding:18px 10px;color:#B6ADC4;font-family:var(--f-body);cursor:pointer;transition:background .2s ease,transform .2s ease}
+#tab-amici .gg-reward{min-width:0;display:flex;align-items:center;text-align:center;flex-direction:column;gap:9px;border:1px solid #FFFFFF0A;background:#FFFFFF02;border-radius:17px;padding:18px 10px;color:#c4b5ad;font-family:var(--f-body);cursor:pointer;transition:background .2s ease,transform .2s ease}
 #tab-amici .gg-reward.is-unlocked{border-color:#D3B47745;background:#CFAB610A;color:#E9D8BA}
-.gg-reward-icon{display:grid;place-items:center;width:43px;height:43px;color:#8E819F;font-size:1.8rem;background:#FFFFFF04;border-radius:15px}.is-unlocked .gg-reward-icon{color:#FFD38A;background:#FFD38A0C}
-.gg-reward>b{font-size:.78rem;line-height:1.5;overflow-wrap:anywhere}.gg-reward>small{font-size:.67rem;line-height:1.5;color:#998EA9;overflow-wrap:anywhere}.gg-reward-state{font-size:.65rem;line-height:1.5;margin-top:auto;color:#B8A4D6}.is-unlocked .gg-reward-state{color:#E3BE7C}
-.gg-message,.gg-invite-alert{padding:14px 17px;border:1px solid #B49AFF33;background:#A98AFF12;border-radius:15px;color:#DECEF8;font-size:.81rem;line-height:1.6;margin-bottom:16px;overflow-wrap:anywhere}.gg-message.gg-error{border-color:#F09AAA40;background:#F09AAA0C;color:#F3BAC4}.gg-invite-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0}
-.gg-consent{display:flex;align-items:flex-start;gap:11px;font-size:.82rem;line-height:1.7;color:#C9BCD9;margin:20px 0}.gg-consent input{width:20px;height:20px;margin:3px 0 0;accent-color:#B49AFF;flex:none}.gg-setting-active{display:flex;justify-content:space-between;gap:12px;margin:18px 0;font-size:.78rem;color:#D9C9ED}.gg-setting-active b{color:#A99BBB;font-weight:500;overflow-wrap:anywhere}.gg-settings>.gg-btn{margin-right:9px;margin-bottom:8px}
-body #tab-amici dialog.gg-dialog:not(#z):not(#y){position:fixed;inset:0;box-sizing:border-box;margin:auto;padding:0;width:min(620px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 40px);background:#211E2B;border:1px solid #B49AFF30;border-radius:24px;color:#EEE6F8;box-shadow:0 20px 90px #0008;font-family:var(--f-body);overflow:hidden}
-.gg-dialog::backdrop{background:#0009;backdrop-filter:blur(7px)}.gg-dialog-layout{display:flex;flex-direction:column;max-height:calc(100dvh - 40px)}.gg-dialog header{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:19px 22px;border-bottom:1px solid #D1BEFF16;flex:none}.gg-dialog header h2{font-size:1.1rem;line-height:1.4;letter-spacing:-.02em;margin:0}.gg-dialog header>button{width:42px;height:42px;flex:none;display:grid;place-items:center;font:300 1.6rem var(--f-body);border:1px solid #FFFFFF13;background:#FFFFFF04;color:#CCBDD9;border-radius:50%;cursor:pointer}.gg-dialog-body{padding:22px;overflow:auto;min-height:0;overscroll-behavior:contain}.gg-dialog p{font-size:.84rem;color:#B8ABC9;line-height:1.75}.gg-dialog h3{font-size:1.12rem;line-height:1.45;margin:0 0 13px}.gg-dialog dl{margin:22px 0}.gg-dialog dl>div{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid #FFFFFF0A;padding:14px 0;font-size:.8rem;line-height:1.6}.gg-dialog dt{color:#C7B8D9}.gg-dialog dd{margin:0;color:#DCC3FF;font-weight:700;text-align:right}.gg-dialog-body .gg-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-score-detail>strong{font-size:2.3rem;color:#C8ADFF}.gg-streak-list>div{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #FFFFFF0A;font-size:.76rem;color:#BDAFD0}.gg-streak-list b{font-size:.73rem;color:#D5C6E6}.gg-streak-list .gg-btn{font-size:.7rem!important;min-height:40px!important}.gg-prize{text-align:center;padding:15px 5px 25px}.gg-prize-symbol{display:grid;place-items:center;width:90px;height:90px;margin:0 auto 22px;border-radius:30px;background:#FFD38A0B;border:1px solid #FFD38A25;color:#FFD38A;font-size:3.5rem}
+.gg-reward-icon{display:grid;place-items:center;width:43px;height:43px;color:#9f8881;font-size:1.8rem;background:#FFFFFF04;border-radius:15px}.is-unlocked .gg-reward-icon{color:#FFD38A;background:#FFD38A0C}
+.gg-reward>b{font-size:.78rem;line-height:1.5;overflow-wrap:anywhere}.gg-reward>small{font-size:.67rem;line-height:1.5;color:#a9988e;overflow-wrap:anywhere}.gg-reward-state{font-size:.65rem;line-height:1.5;margin-top:auto;color:#d6b6a4}.is-unlocked .gg-reward-state{color:#E3BE7C}
+.gg-message,.gg-invite-alert{padding:14px 17px;border:1px solid #ffbf9a33;background:#ffb58a12;border-radius:15px;color:#f8ddce;font-size:.81rem;line-height:1.6;margin-bottom:16px;overflow-wrap:anywhere}.gg-message.gg-error{border-color:#F09AAA40;background:#F09AAA0C;color:#F3BAC4}.gg-invite-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0}
+.gg-consent{display:flex;align-items:flex-start;gap:11px;font-size:.82rem;line-height:1.7;color:#d9c7bc;margin:20px 0}.gg-consent input{width:20px;height:20px;margin:3px 0 0;accent-color:#ffbf9a;flex:none}.gg-setting-active{display:flex;justify-content:space-between;gap:12px;margin:18px 0;font-size:.78rem;color:#edd6c9}.gg-setting-active b{color:#bba79b;font-weight:500;overflow-wrap:anywhere}.gg-settings>.gg-btn{margin-right:9px;margin-bottom:8px}
+body #tab-amici dialog.gg-dialog:not(#z):not(#y){position:fixed;inset:0;box-sizing:border-box;margin:auto;padding:0;width:min(620px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 40px);background:#2b211e;border:1px solid #ffbf9a30;border-radius:24px;color:#f8ede6;box-shadow:0 20px 90px #0008;font-family:var(--f-body);overflow:hidden}
+.gg-dialog::backdrop{background:#0009;backdrop-filter:blur(7px)}.gg-dialog-layout{display:flex;flex-direction:column;max-height:calc(100dvh - 40px)}.gg-dialog header{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:19px 22px;border-bottom:1px solid #ffd6be16;flex:none}.gg-dialog header h2{font-size:1.1rem;line-height:1.4;letter-spacing:-.02em;margin:0}.gg-dialog header>button{width:42px;height:42px;flex:none;display:grid;place-items:center;font:300 1.6rem var(--f-body);border:1px solid #FFFFFF13;background:#FFFFFF04;color:#d9c7bd;border-radius:50%;cursor:pointer}.gg-dialog-body{padding:22px;overflow:auto;min-height:0;overscroll-behavior:contain}.gg-dialog p{font-size:.84rem;color:#c9b6ab;line-height:1.75}.gg-dialog h3{font-size:1.12rem;line-height:1.45;margin:0 0 13px}.gg-dialog dl{margin:22px 0}.gg-dialog dl>div{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid #FFFFFF0A;padding:14px 0;font-size:.8rem;line-height:1.6}.gg-dialog dt{color:#d9c4b8}.gg-dialog dd{margin:0;color:#ffd9c3;font-weight:700;text-align:right}.gg-dialog-body .gg-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-score-detail>strong{font-size:2.3rem;color:#ffcbad}.gg-streak-list>div{display:grid;grid-template-columns:70px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #FFFFFF0A;font-size:.76rem;color:#d0bbaf}.gg-streak-list b{font-size:.73rem;color:#e6d2c6}.gg-streak-list .gg-btn{font-size:.7rem!important;min-height:40px!important}.gg-prize{text-align:center;padding:15px 5px 25px}.gg-prize-symbol{display:grid;place-items:center;width:90px;height:90px;margin:0 auto 22px;border-radius:30px;background:#FFD38A0B;border:1px solid #FFD38A25;color:#FFD38A;font-size:3.5rem}
 .gg-celebrate .gg-level{animation:gg-reward-flash .8s ease both}
-@keyframes gg-reward-flash{0%{background:#B49AFF22}100%{background:transparent}}
+@keyframes gg-reward-flash{0%{background:#ffbf9a22}100%{background:transparent}}
 @media(max-width:760px){
  body #tab-amici .gg-card:not(#z):not(#y){padding:20px;border-radius:23px}
  #tab-amici .gg-welcome{padding:25px 22px!important}
@@ -13754,8 +13817,76 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261019-1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261019-1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261019-1') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261020-2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261020-2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261020-2') center/contain no-repeat}
+
+/* Intro: the illustration and text occupy separate rows, including on short screens. */
+.intro.intro-active{display:flex!important;flex-direction:column;justify-content:center;gap:clamp(12px,2vh,22px);padding:max(62px,env(safe-area-inset-top)) 22px max(24px,env(safe-area-inset-bottom));overflow-y:auto!important}
+.intro.intro-active .in-scene,.intro.intro-active.up .in-scene{flex:none;width:min(56vw,300px)!important;height:clamp(135px,23svh,220px)!important;margin:0!important;transform:none!important;animation:none!important;max-width:100%}
+.intro.intro-active .in-scene svg{width:100%!important;height:100%!important;object-fit:contain}
+.intro.intro-active .in-text{margin:0!important;flex:none;max-width:100%}
+.intro.intro-active .intro-brand{display:flex;align-items:center;justify-content:center;gap:10px;font-size:clamp(24px,6vw,32px);line-height:1.2;margin:0 0 12px}
+.intro.intro-active .intro-brand::before{margin:0;flex:none;width:36px;height:36px}
+.intro.intro-active .in-title{font-size:clamp(29px,7.3vw,39px);line-height:1.08;margin:8px auto 0;max-width:16ch}
+.intro.intro-active #in-day{font-size:.82rem;line-height:1.5;max-width:34ch;margin:12px auto 0}
+.intro.intro-active .in-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(100%,460px);margin:0}
+.intro.intro-active .in-stat{padding:12px 8px;min-width:0}.intro.intro-active .in-stat small{font-size:.66rem}.intro.intro-active .in-stat b{font-size:clamp(17px,4.7vw,24px);white-space:nowrap}
+.intro.intro-active .in-go{margin:0;flex:none;min-height:50px;padding:11px 20px}
+.intro.intro-active .in-bar{margin:16px auto 0}
+/* Calendar dates never share an unbreakable string in a seven-column layout. */
+body #tab-amici .gg-section-head>button.gg-btn:not(#z):not(#y):not(#x){flex:0 0 auto;white-space:nowrap;overflow-wrap:normal}
+#tab-allenamenti #heat{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+#tab-allenamenti #heat .c{box-sizing:border-box;min-width:0;max-width:100%;overflow:hidden}
+#tab-allenamenti #heat .n{display:flex;flex-wrap:wrap;align-items:center;gap:3px;min-width:0;max-width:100%;line-height:1.25;font-variant-numeric:tabular-nums}
+#tab-allenamenti #heat .cal-month{font-size:.88em}
+@media(max-width:600px){
+ #tab-allenamenti #heat{padding:9px!important;gap:4px!important}
+ #tab-allenamenti #heat .c{padding:6px 2px!important;border-radius:11px;min-height:65px;align-items:center}
+ #tab-allenamenti #heat .c .n{display:flex;flex-direction:column;gap:2px;text-align:center;font-size:.71rem!important;white-space:normal!important;width:100%}
+ #tab-allenamenti #heat .c .cal-month{font-size:.53rem;line-height:1}
+ #tab-allenamenti #heat .c .t{font-size:.75rem!important;max-width:100%;overflow-wrap:anywhere}
+ #tab-allenamenti #heat .dow{font-size:.62rem!important;padding:4px 0!important;min-width:0}
+ body #tab-ricette>.area-lead:not(#z):not(#y){display:grid!important;min-height:0!important;padding:16px 17px!important;gap:7px!important;border-radius:21px!important;margin:12px 0 14px!important}
+ #tab-ricette>.area-lead .area-kicker{font-size:.58rem!important;letter-spacing:.12em}
+ body #tab-ricette>.area-lead strong:not(#z):not(#y){font-size:1.15rem!important;line-height:1.15!important;max-width:none!important;padding-right:22px}
+ body #tab-ricette>.area-lead p:not(#z):not(#y){font-size:.72rem!important;line-height:1.45!important;margin:0!important;max-width:none!important}
+ #tab-ricette>.area-lead .area-mark{font-size:2rem!important;opacity:.14}
+ body #tab-ricette .recipe-search-panel{padding:14px!important;gap:9px!important;border-radius:20px!important;margin:0!important}
+ #tab-ricette .recipe-search-panel>.row{display:grid!important;grid-template-columns:minmax(0,1.5fr) minmax(100px,1fr);gap:10px!important;align-items:end}
+ #tab-ricette .recipe-search-panel .f{min-width:0!important;gap:6px;font-size:.68rem}
+ #tab-ricette .recipe-search-panel input,#tab-ricette .recipe-search-panel select{box-sizing:border-box;min-width:0!important;width:100%;height:44px;min-height:44px!important;padding:10px!important;font-size:14px!important}
+ #tab-ricette .recipe-search-panel .tags:empty{display:none}
+ #tab-ricette .recipe-search-panel .tags{gap:5px}#tab-ricette .recipe-search-panel .chip{font-size:.65rem;padding:5px 9px}
+}
+/* Warm challenge identity. Existing fair scoring and XP multipliers are unchanged. */
+#tab-amici{--gg-accent:#FF9E64;--gg-own:#FF647C;--gg-peer:#FFD08A;--gg-gold:#FFD08A;--gg-surface:#211A1C;--section-color:#FF8869;--section-end:#FA114F}
+body #tab-amici .friends-switch>button[aria-selected=true]:not(#z):not(#y){background:#FF936426!important;color:#FFD1B0!important;box-shadow:inset 0 0 0 1px #FF93644A!important}
+body .tab[data-tab=amici][aria-selected=true]:not(#z):not(#y){color:#FF9E64!important}
+#tab-amici button:focus-visible,#tab-amici summary:focus-visible{outline-color:#FFA372!important}
+#tab-amici .gg-card{background:linear-gradient(135deg,#FF785808,transparent 65%),#1D191C;border-color:#FF9C6629}
+#tab-amici .gg-kicker,#tab-amici .gg-note,#tab-amici .gg-sync{color:#C1A7A3}
+#tab-amici .gg-btn{border-color:#FFAC7538;background:#FFAC750A;color:#F8C9AC}
+body #tab-amici .gg-btn.gg-primary{background:linear-gradient(120deg,#FF6579,#FFAD6C)!important;color:#251619!important;border-color:transparent!important}
+#tab-amici .gg-progress{background:#FFB67513}#tab-amici .gg-progress>i{background:linear-gradient(90deg,#FF5677,#FFB765)}
+#tab-amici .gg-player-own{background:#FF526A0B;border-color:#FF526A3C}#tab-amici .gg-player-peer{background:#FFB76509;border-color:#FFB76532}
+#tab-amici .gg-player-own strong{color:#FF8D9B}#tab-amici .gg-player-peer strong{color:#FFD092}
+#tab-amici .gg-avatar{overflow:hidden;background:#32242A;color:#FFB78E}#tab-amici .gg-avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+#tab-amici .gg-friend-chip.is-selected{border-color:#FF9D6B6B;background:#FF9D6B12}
+#tab-amici .gg-personal{position:relative;overflow:hidden}
+.gg-fire{width:42px;height:50px;display:block;flex:none;filter:drop-shadow(0 3px 10px #FF7C3533)}.gg-fire svg{width:100%;height:100%;overflow:visible}
+.gg-fire.is-lit .flame-outer{transform-origin:50% 90%;animation:gg-flame 2.3s ease-in-out infinite alternate}.gg-fire.is-cold{opacity:.43;filter:none}.gg-fire.is-cold .flame-outer{fill:#897876}.gg-fire.is-cold .flame-inner{fill:#AC9692}
+@keyframes gg-flame{from{transform:scale(.95,1)}to{transform:scale(1.04,.93)}}
+#tab-amici .gg-milestone-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+#tab-amici .gg-collection-count{font-size:.75rem;color:#C5A79F}
+#tab-amici .gg-quests{display:grid;gap:10px}.gg-quest{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid #FFAA7022;border-radius:17px;background:#FFAA7006;min-width:0}.gg-quest>b{font-size:1.2rem;color:#FFAD74;text-align:center}.gg-quest h4{font-size:.83rem;margin:0 0 5px;color:#FFE0CD}.gg-quest p{font-size:.72rem;color:#B79E98;line-height:1.5;margin:0}.gg-quest>span{font-size:.8rem;font-weight:700;color:#FFC899;white-space:nowrap}.gg-quest.is-done{border-color:#FFC27150;background:#FFAA700B}
+#tab-amici .gg-mission-period{font-size:.73rem;color:#C4A29B;margin:-5px 0 17px}
+.gg-collection-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 17px}.gg-collection-toolbar button{font:inherit;font-size:.72rem;border:1px solid #FFAD752B;border-radius:20px;background:#FFAD7506;color:#C7A799;padding:8px 11px;cursor:pointer}.gg-collection-toolbar button[aria-pressed=true]{color:#FFDFC7;background:#FF9E6424;border-color:#FF9E6450}
+.gg-milestone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.gg-milestone{font:inherit;text-align:left;min-width:0;display:flex;flex-direction:column;gap:8px;cursor:pointer;padding:15px;border:1px solid #FFAD7520;border-radius:16px;background:#211A1D;color:#BBA29C}.gg-milestone>i{font-style:normal;font-size:1.4rem;color:#C7A58D}.gg-milestone>b{font-size:.78rem;color:#D4BEB4;line-height:1.35}.gg-milestone>small{font-size:.65rem;line-height:1.4}.gg-milestone .gg-progress{width:100%;height:4px;margin-top:auto}.gg-milestone.is-unlocked{border-color:#FFBA7955;background:linear-gradient(145deg,#FF9E6418,#211A1D)}.gg-milestone.is-unlocked>b{color:#FFE2C5}.gg-milestone.is-unlocked>i{color:#FFC98E}
+.gg-milestone-detail{display:grid;justify-items:center;gap:16px;text-align:center;padding:16px}.gg-milestone-detail>i{font-style:normal;font-size:3rem;color:#FFC78F}.gg-milestone-detail p{font-size:.88rem;line-height:1.7;color:#CEB7AE;margin:0}.gg-milestone-detail strong{font-size:1.5rem;color:#FFDBB2}
+.friends-photo-setting{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:18px 0 0;padding:16px;border:1px solid #FFAA702A;border-radius:16px;background:#FFAA7007}.friends-photo-setting p{font-size:.73rem;line-height:1.6;margin:5px 0 0;color:#B8A39A}.friends-photo-setting b{font-size:.86rem}.friends-photo-setting button{flex:none}
+body #tab-amici .gg-dialog{background:#211A1D;border-color:#FFAA7040}.gg-dialog .gg-dialog-layout>header{background:#FFAA7006;border-color:#FFAA7020}.gg-dialog .gg-dialog-layout>header h2{color:#FFE1C6}
+@media(max-width:600px){.gg-milestone-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-quest{grid-template-columns:28px minmax(0,1fr) auto;padding:12px;gap:9px}.gg-quest p{font-size:.68rem}.friends-photo-setting{align-items:flex-start;flex-direction:column}.friends-photo-setting button{width:100%}}
+@media(prefers-reduced-motion:reduce){.gg-fire.is-lit .flame-outer{animation:none}.intro.intro-active{display:none!important}}
 
 </style>
 </body></html>
