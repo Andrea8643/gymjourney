@@ -5024,7 +5024,7 @@ function renderRecipes() {
   });
   recipeMessage(RecipeUI.notice);
   if (!list.length) {
-    $('#r-grid').innerHTML = '<div class="panel empty" style="grid-column:1/-1">' + (all.length ? 'Nessuna ricetta corrisponde ai filtri.' : 'Il ricettario è vuoto. Aggiungi la prima ricetta qui sotto con kcal e macro per porzione, poi la metti nel diario con un tocco.') + '</div>';
+    $('#r-grid').innerHTML = '<div class="panel empty" style="grid-column:1/-1">' + (all.length ? 'Nessuna ricetta corrisponde ai filtri.' : 'Il ricettario è vuoto. Apri «Nuova ricetta» per inserire ingredienti, procedimento e valori nutrizionali. Poi potrai aggiungerla al diario.') + '</div>';
     return;
   }
   $('#r-grid').innerHTML = list.map(function (r) {
@@ -14124,6 +14124,8 @@ body #tab-ricette .recipe-chip{border-color:#FFFFFF1B!important;background:#FFFF
 body #tab-ricette .recipe-chip-kcal{color:#F4F0F2!important;-webkit-text-fill-color:#F4F0F2!important;font-weight:750}
 #tab-ricette .recipe-chip-time{display:inline-flex;align-items:center;gap:4px}
 @media(max-width:600px){#friends-settings-panel .friends-top-grid{grid-template-columns:1fr}#friends-settings-panel:not([hidden]){gap:16px}.friends-date-nav{gap:5px}.friends-date-nav>button{min-width:36px}.friends-date-picker{padding:8px;font-size:12px}body #tab-ricette>.area-lead{padding:14px 17px;margin-bottom:12px}#tab-ricette>.area-lead strong{font-size:19px}#tab-ricette>.area-lead p{display:none}body #tab-ricette .recipe-search-panel{padding:12px}#tab-ricette .recipe-search-panel>.row{grid-template-columns:minmax(0,1fr) 124px;gap:9px}#tab-ricette .recipe-search-panel input,#tab-ricette .recipe-search-panel select{font-size:12px;padding:9px}#gj-game-dialog .gg-reward-grid{grid-template-columns:1fr}#gj-game-dialog .gg-reward{min-height:0;grid-template-columns:46px minmax(0,1fr)!important;grid-template-rows:auto auto auto;gap:5px 12px}#gj-game-dialog .gg-reward>*{grid-column:2!important}#gj-game-dialog .gg-reward .gg-reward-icon{grid-column:1!important;grid-row:1/4!important}#gj-game-dialog .gg-reward-state{margin-top:6px!important}}
+
+#gj-game-dialog .gg-milestone.is-progress{border-color:#FFFFFF25;background:#FFFFFF03}
 
 </style>
 </body></html>
