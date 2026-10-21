@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261020-2">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-3">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261020-2">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261020-2">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261020-2">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261020-2">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-3">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-3">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-3">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-3">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1632,6 +1632,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 </style></head><body>
 <div id="intro" class="intro" role="dialog" aria-label="Benvenuto">
   <button type="button" class="in-skip">Salta</button>
+  <div class="intro-content">
   <div class="in-scene">
     <svg class="lf" id="lf" viewBox="0 0 400 250" aria-hidden="true">
       <defs>
@@ -1679,6 +1680,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
   </div>
   <div class="in-stats" id="in-stats"></div>
   <button type="button" class="in-go" id="in-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span>Ecco i tuoi dati di oggi</span></button>
+  </div>
 </div>
 <script>
 (function(root){
@@ -13817,22 +13819,33 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261020-2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261020-2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261020-2') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-3') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-3')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-3') center/contain no-repeat}
 
-/* Intro: the illustration and text occupy separate rows, including on short screens. */
-.intro.intro-active{display:flex!important;flex-direction:column;justify-content:center;gap:clamp(12px,2vh,22px);padding:max(62px,env(safe-area-inset-top)) 22px max(24px,env(safe-area-inset-bottom));overflow-y:auto!important}
-.intro.intro-active .in-scene,.intro.intro-active.up .in-scene{flex:none;width:min(56vw,300px)!important;height:clamp(135px,23svh,220px)!important;margin:0!important;transform:none!important;animation:none!important;max-width:100%}
-.intro.intro-active .in-scene svg{width:100%!important;height:100%!important;object-fit:contain}
-.intro.intro-active .in-text{margin:0!important;flex:none;max-width:100%}
-.intro.intro-active .intro-brand{display:flex;align-items:center;justify-content:center;gap:10px;font-size:clamp(24px,6vw,32px);line-height:1.2;margin:0 0 12px}
-.intro.intro-active .intro-brand::before{margin:0;flex:none;width:36px;height:36px}
-.intro.intro-active .in-title{font-size:clamp(29px,7.3vw,39px);line-height:1.08;margin:8px auto 0;max-width:16ch}
-.intro.intro-active #in-day{font-size:.82rem;line-height:1.5;max-width:34ch;margin:12px auto 0}
-.intro.intro-active .in-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(100%,460px);margin:0}
-.intro.intro-active .in-stat{padding:12px 8px;min-width:0}.intro.intro-active .in-stat small{font-size:.66rem}.intro.intro-active .in-stat b{font-size:clamp(17px,4.7vw,24px);white-space:nowrap}
-.intro.intro-active .in-go{margin:0;flex:none;min-height:50px;padding:11px 20px}
-.intro.intro-active .in-bar{margin:16px auto 0}
+/* One bounded column keeps every stage on the same horizontal axis. */
+#intro.intro-active{display:flex!important;flex-direction:column;align-items:center;justify-content:flex-start;box-sizing:border-box;padding:max(60px,env(safe-area-inset-top)) 20px max(28px,env(safe-area-inset-bottom));gap:0;overflow-y:auto!important;overflow-x:hidden!important}
+#intro.intro-active::before{position:fixed;inset:0;pointer-events:none}
+#intro .intro-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;flex:0 0 auto;gap:20px;width:min(100%,520px);min-width:0;margin-block:auto;text-align:center}
+#intro .in-skip{position:absolute;z-index:2;align-self:auto}
+#intro.intro-active .in-scene,#intro.intro-active.up .in-scene{flex:none;align-self:center!important;justify-self:center;width:min(100%,360px)!important;height:auto!important;aspect-ratio:8/5;max-width:100%;margin:0!important;transform:none!important;animation:none!important}
+#intro.intro-active .in-scene svg{display:block;width:100%!important;height:100%!important;overflow:visible}
+#intro.intro-active .in-text{flex:none;align-self:center;width:100%;max-width:100%;margin:0!important;text-align:center}
+#intro .intro-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px;font-size:clamp(25px,6vw,34px);line-height:1.2}
+#intro .intro-brand::before{margin:0;flex:none;width:36px;height:36px}
+#intro .in-kick{max-width:100%;overflow-wrap:anywhere;font-size:.74rem;line-height:1.5;letter-spacing:.15em}
+#intro.intro-active .in-title{width:100%;max-width:16ch!important;margin:10px auto 0!important;font-size:clamp(29px,7.6vw,42px)!important;line-height:1.12;text-align:center;text-wrap:balance;overflow-wrap:normal;white-space:normal}
+#intro #in-day{max-width:36ch;margin:12px auto 0;font-size:.82rem;line-height:1.5;text-align:center}
+#intro .in-bar{width:min(100%,390px);margin:16px auto 0}
+#intro.intro-active .in-stats{display:flex;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:10px;width:min(100%,460px);max-width:100%;min-width:0;min-height:0;margin:0;align-self:center}
+#intro .in-stats:empty{display:none}
+#intro .in-stat{box-sizing:border-box;flex:1 1 calc((100% - 20px)/3);max-width:180px;min-width:0;padding:12px 8px;text-align:center}
+#intro .in-stat:first-child:nth-last-child(4),#intro .in-stat:first-child:nth-last-child(4)~.in-stat{flex-basis:calc((100% - 10px)/2);max-width:none}
+#intro .in-stat small{font-size:.67rem;line-height:1.4}
+#intro .in-stat b{display:block;font-size:clamp(15px,4.3vw,22px);line-height:1.3;font-stretch:normal;letter-spacing:-.03em;white-space:nowrap;margin-top:4px}
+#intro.intro-active .in-go{box-sizing:border-box;flex:none;align-self:center;justify-self:center;width:min(100%,380px)!important;min-height:64px;max-width:100%;margin:0!important;padding:12px 18px;font-size:.91rem;line-height:1.4}
+@media(max-height:760px){#intro .intro-content{gap:14px}#intro.intro-active .in-scene,#intro.intro-active.up .in-scene{width:min(100%,270px)!important}#intro .intro-brand{margin-bottom:9px}#intro.intro-active .in-title{font-size:clamp(28px,7.6vw,36px)!important}#intro #in-day{margin-top:9px}#intro .in-bar{margin-top:12px}#intro .in-stat{padding:9px 6px}#intro.intro-active .in-go{min-height:58px;padding:9px 16px}}
+@media(max-height:570px){#intro.intro-active{padding-top:58px;padding-bottom:20px}#intro .intro-content{gap:12px}#intro.intro-active .in-scene,#intro.intro-active.up .in-scene{width:min(100%,220px)!important}}
+
 /* Calendar dates never share an unbreakable string in a seven-column layout. */
 body #tab-amici .gg-section-head>button.gg-btn:not(#z):not(#y):not(#x){flex:0 0 auto;white-space:nowrap;overflow-wrap:normal}
 #tab-allenamenti #heat{grid-template-columns:repeat(7,minmax(0,1fr))!important}
