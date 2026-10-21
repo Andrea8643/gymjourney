@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261022-1">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261022-2">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261022-1">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261022-1">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261022-1">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261022-1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261022-2">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261022-2">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261022-2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261022-2">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -13956,8 +13956,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261022-1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261022-1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261022-1') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261022-2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261022-2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261022-2') center/contain no-repeat}
 
 
 
@@ -14312,6 +14312,18 @@ body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration in
 #d-recent table th{background:#1d1a19!important}#d-recent .recent-date{color:#f4d2a5!important}#d-recent .recent-date span{color:#ab8660!important}
 
 #d-recent:not(#z):not(#y) table th{background:#1d1a19!important}#d-recent:not(#z):not(#y) .recent-date{color:#f4d2a5!important;-webkit-text-fill-color:#f4d2a5!important}#d-recent:not(#z):not(#y) .recent-date span{color:#ab8660!important;-webkit-text-fill-color:#ab8660!important}
+/* Blend pinned cells into their row and round the complete header, including its left edge. */
+#d-recent:not(#z):not(#y){background:#201d1b;border-color:#c3a28012;border-radius:20px;padding:6px 8px 10px}
+#d-recent:not(#z):not(#y) table thead,#d-recent:not(#z):not(#y) table thead tr{background:transparent!important}
+#d-recent:not(#z):not(#y) table th{background:#28231f!important;border:0!important}
+#d-recent:not(#z):not(#y) table th:first-child{border-radius:16px 0 0 16px!important;box-shadow:none!important}
+#d-recent:not(#z):not(#y) table th:last-child{border-radius:0 16px 16px 0!important}
+#d-recent:not(#z):not(#y) table td{background:#27231f!important;border-top-color:#c3a28010;border-bottom-color:#c3a28010}
+#d-recent:not(#z):not(#y) table td:first-child{background:#27231f!important;border-radius:16px 0 0 16px!important;box-shadow:none!important;border-left:1px solid #c3a28010}
+#d-recent:not(#z):not(#y) table td:last-child{border-radius:0 16px 16px 0!important;border-right-color:#c3a28010}
+#d-recent:not(#z):not(#y) table tr:hover td{background:#302922!important}
+#d-recent:not(#z):not(#y) table .recent-today td{background:#30271f!important;border-color:#bc8f5e20}
+#d-recent:not(#z):not(#y) table .recent-today td:first-child{border-left:1px solid #bc8f5e35}
 
 </style>
 </body></html>
