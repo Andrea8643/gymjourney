@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-8">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-9">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-8">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-8">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-8">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-8">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-9">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-9">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-9">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-9">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1695,9 +1695,10 @@ function makeDay(D,E,prefs,date,today,M){
  if(prefs.macros)o.macros={protein:value(x.protein,10000),carbs:value(x.carbs,10000),fat:value(x.fat,10000),state:s};
  if(prefs.steps)o.steps={value:value(x.steps,200000),state:status(x,'steps',date===today,M)};
  if(prefs.weight)o.weight=value(x.weight,1000);
- if(prefs.workouts){var count=(D.workouts||[]).filter(function(w){return w.date===date;}).length;
+ if(prefs.workouts){var sessions=(D.workouts||[]).filter(function(w){return w.date===date;}),count=sessions.length;
    var covered=!!(D.hevy&&D.hevy.ranges&&D.hevy.ranges.some(function(r){return r.complete&&r.from<=date&&r.to>=date;}));
    o.workouts=count?Math.min(count,100):x.riposo===true||covered?0:null;
+   if(o.workouts!=null)o.workoutNames=sessions.slice(0,10).map(function(w){return String(w.title||'Allenamento senza titolo').replace(/\s+/g,' ').trim().slice(0,120)||'Allenamento senza titolo';});
  }
  return o;
 }
@@ -2508,7 +2509,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
             <button type="button" data-range="mese" aria-pressed="false">Mesi</button>
           </div>
         </div>
-        <div class="tw" id="summary"></div>
+        <p class="summary-scroll-hint">Scorri la tabella per vedere tutti i dati <span aria-hidden="true">↔</span></p><div class="tw" id="summary" tabindex="0" role="region" aria-label="Riepilogo settimane e mesi, scorrimento orizzontale"></div>
         <details class="more" data-ibfold><summary>Cosa vogliono dire le colonne</summary><div class="sum-legend in" id="summary-legend"></div></details>
       </div>
 
@@ -7004,10 +7005,10 @@ function renderSummary() {
   var dir = goalDir();
   var body = rows.map(function (r) {
     var dwCls = r.dw == null || !dir ? '' : (r.dw * dir > 0) ? 'neg' : 'pos', balCls = r.bal == null || !dir ? '' : (r.bal * dir > 0) ? 'neg' : 'pos';
-    return '<tr><td><div>' + esc(r.label) + '</div>' + (r.sub ? '<div class="faint" style="font-size:.78rem">' + r.sub + '</div>' : '') + '</td><td>' + (r.w != null ? fmt(r.w, 1) : '—') + '</td><td class="' + dwCls + '">' + (r.dw != null ? sgn(r.dw, 1) : '—') + '</td><td>' + (r.k != null ? fmt(r.k, 0) : '—') + '</td><td class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) + '<small> su ' + r.nb + '</small>' : '—') + '</td><td>' + (r.p != null ? fmt(r.p, 0) : '—') + '</td><td>' + (r.c != null ? fmt(r.c, 0) : '—') + '</td><td>' + (r.f != null ? fmt(r.f, 0) : '—') + '</td><td>' + (r.st != null ? fmt(r.st, 0) : '—') + '</td><td>' + fmtH(r.sl) + '</td><td>' + r.work + '</td><td>' + r.nd + '/' + r.span + '</td></tr>';
+    return '<tr'+(r.label.indexOf('(in corso)')>=0?' class="summary-current"':'')+'><td><div class="summary-period">' + esc(r.label.replace(' (in corso)','')) + (r.label.indexOf('(in corso)')>=0?'<span class="summary-live">In corso</span>':'') + '</div>' + (r.sub ? '<div class="faint" style="font-size:.78rem">' + r.sub + '</div>' : '') + '</td><td>' + (r.w != null ? fmt(r.w, 1) : '—') + '</td><td class="' + dwCls + '">' + (r.dw != null ? sgn(r.dw, 1) : '—') + '</td><td>' + (r.k != null ? fmt(r.k, 0) : '—') + '</td><td class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) + '<small> su ' + r.nb + '</small>' : '—') + '</td><td>' + (r.p != null ? fmt(r.p, 0) : '—') + '</td><td>' + (r.c != null ? fmt(r.c, 0) : '—') + '</td><td>' + (r.f != null ? fmt(r.f, 0) : '—') + '</td><td>' + (r.st != null ? fmt(r.st, 0) : '—') + '</td><td>' + fmtH(r.sl) + '</td><td>' + r.work + '</td><td>' + r.nd + '/' + r.span + '</td></tr>';
   }).join('');
   var th = function (a, b) { return '<th>' + a + (b ? '<small>' + b + '</small>' : '') + '</th>'; };
-  $('#summary').innerHTML = '<table class="sum"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Sonno', 'ore a notte') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
+  $('#summary').innerHTML = '<table class="sum" aria-label="Riepilogo del percorso"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Sonno', 'ore a notte') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
   $('#summary-legend').innerHTML = '<p><b>Bilancio stimato</b>: calorie registrate meno consumo stimato di ciascun giorno, in media, solo sulle giornate dichiarate complete (il numero piccolo dice quante). Negativo = deficit stimato. Non è una misura.</p><p><b>Passi</b>: passi quotidiani, palestra esclusa. <b>Allenamenti</b>: sedute importate da Hevy. <b>Giorni con calorie</b>: giorni con calorie scritte, su quelli del periodo.</p>';
 }
 /* ora e condizione della pesata, quando le hai scritte (sezione 11): restano accanto al valore osservato */
@@ -10866,7 +10867,7 @@ function bindFriends() {
   var FD=window.GJFriendData, fs=null, auth=null;
   var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
-  var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Numero di allenamenti',weight:'Peso (facoltativo)'};
+  var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Allenamenti: nome delle sedute e riposo',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
   function defaults(){return {enabled:false,prefs:emptyPrefs(),revision:'initial-not-shared',nickname:F.profile?F.profile.nickname:'Utente'};}
   function stamp(){return firebase.firestore.FieldValue.serverTimestamp();}
@@ -10950,7 +10951,12 @@ function bindFriends() {
       return ['protein','carbs','fat'].map(function(k,i){var values=ms.map(function(x){return x[k];}).filter(function(v){return v!=null;});return '<span class="friends-macro"><small>'+['P','C','G'][i]+'</small><b>'+val(values.length?values.reduce(function(a,b){return a+b;},0)/values.length:null,'g')+'</b></span>';}).join('')+(F.period==='week'?'<small>medie delle giornate complete</small>':'');
     }
     var values=rows.map(function(x){return x&&x[key];}).filter(function(x){return x!=null;});
-    if(key==='workouts')return '<b>'+val(values.length?values.reduce(function(a,b){return a+b;},0):null,'sedute')+'</b><small>'+(F.period==='week'?values.length+'/7 giorni con attività nota':'solo sedute registrate o riposo confermato')+'</small>';
+    if(key==='workouts'){
+      var known=rows.filter(function(x){return x&&x.workouts!=null;});
+      if(!known.length)return '<b class="friend-muted">Non registrato</b><small>Allenamento o riposo non confermati</small>';
+      var total=known.reduce(function(n,x){return n+x.workouts;},0),lines=known.filter(function(x){return x.workouts>0;}).map(function(x){var names=Array.isArray(x.workoutNames)?x.workoutNames:[],text=names.length?names.join(' · '):'Allenamento registrato';if(x.workouts>names.length&&names.length)text+=' · altri '+(x.workouts-names.length);return '<span class="friend-workout-item">'+(F.period==='week'?'<small>'+esc(fmtShort(x.date))+'</small>':'')+'<b>'+esc(text)+'</b>'+(names.length?'':'<small>Nome non ancora condiviso: si aggiorna quando l’amico apre la nuova versione.</small>')+'</span>';});
+      return (total?'<div class="friend-workout-list">'+lines.join('')+'</div>':'<b class="friend-rest">Riposo</b>')+(F.period==='week'?'<small>'+known.length+'/7 giorni con attività nota</small>':'');
+    }
     return '<b>'+val(values.length?values[values.length-1]:null,'kg')+'</b><small>'+(F.period==='week'?'ultimo peso disponibile':'pesata registrata')+'</small>';
   }
   function comparisonHTML(){
@@ -13929,8 +13935,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-8') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-8')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-8') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-9') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-9')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-9') center/contain no-repeat}
 
 
 
@@ -14200,6 +14206,33 @@ body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration in
 #tab-ricette .recipe-editor-grid{grid-template-columns:minmax(0,1fr) minmax(220px,.9fr)}
 @media(max-width:600px){.recipe-create-box .recipe-duration{flex:1 1 100%}.recipe-editor-grid>.recipe-duration{grid-column:1/-1}.recipe-duration-inputs{gap:10px}.recipe-duration legend{font-size:12px}}
 @media(max-width:600px){#tab-ricette .recipe-editor-grid{grid-template-columns:minmax(0,1fr)}#tab-ricette .recipe-editor-grid>.f{grid-column:1/-1}}
+
+/* Weekly report: keep the comparison table and give each period a clear visual rhythm. */
+#summary{border:1px solid #34323d;border-radius:20px;background:#18171d;padding:8px 10px 12px;scrollbar-color:#666077 #24212b;scrollbar-width:thin;isolation:isolate}
+#summary:focus-visible{outline:2px solid #a8c3e8;outline-offset:3px}
+#summary table.sum{width:100%;min-width:1130px;border-collapse:separate;border-spacing:0 9px;table-layout:auto;font-variant-numeric:tabular-nums}
+#summary table.sum th{padding:12px 11px;color:#e6dff1;font-size:.78rem;font-weight:650;text-align:right;border:0;white-space:nowrap;background:transparent}
+#summary table.sum th small{max-width:none;white-space:nowrap;font-size:.66rem;line-height:1.8;font-weight:400;color:#a49aae}
+#summary table.sum td{padding:18px 11px;background:#232129;border-top:1px solid #34303e;border-bottom:1px solid #34303e;color:#ece8f0;font-size:.86rem;font-weight:550;text-align:right;white-space:nowrap;transition:background .16s}
+#summary table.sum tr:hover td{background:#2b2734}
+#summary table.sum td:first-child,#summary table.sum th:first-child{position:sticky;left:0;text-align:left;z-index:2;min-width:144px}
+#summary table.sum th:first-child{background:#18171d}
+#summary table.sum td:first-child{border-left:1px solid #34303e;border-radius:13px 0 0 13px;box-shadow:10px 0 15px -12px #000}
+#summary table.sum td:last-child{border-right:1px solid #34303e;border-radius:0 13px 13px 0;color:#cbb7e6}
+#summary .summary-period{display:flex;align-items:flex-start;flex-direction:column;gap:5px;font-weight:750;color:#f2ebf9}
+#summary .summary-live{font-size:.61rem;line-height:1.4;padding:3px 7px;border-radius:20px;border:1px solid #9477bd77;background:#a37bd51c;color:#d6bbfa;letter-spacing:.03em}
+#summary .summary-current td{border-top-color:#775a9866;border-bottom-color:#775a9866;background:#2a2434}
+#summary .summary-current td:first-child{border-left:3px solid #b395df}
+#summary table.sum td:nth-child(2){color:#9ec9ff;font-weight:750}
+#summary table.sum td:nth-child(4){color:#ffd09b;font-weight:750}
+#summary table.sum td:nth-child(6){color:#d7dcb3}#summary table.sum td:nth-child(7){color:#e7c7a4}#summary table.sum td:nth-child(8){color:#d8bbec}
+#summary table.sum td:nth-child(9){color:#abd7d4}
+#summary table.sum td small{display:block;font-size:.65rem;color:#aea1ba;font-weight:400;margin-top:4px}
+#summary table.sum td.pos{color:#a9d7be}#summary table.sum td.neg{color:#efb8a2}
+.summary-scroll-hint{display:flex;justify-content:space-between;gap:8px;margin:12px 2px 8px;color:#b3a7c2;font-size:.73rem}.summary-scroll-hint span{font-size:1rem;color:#cbb7e6}
+.friend-workout-list{display:grid;gap:10px;min-width:0}.friend-workout-item{display:grid;gap:3px;padding-bottom:8px;border-bottom:1px solid #ffffff12}.friend-workout-item:last-child{border:0;padding-bottom:0}.friend-workout-item b{white-space:normal;overflow-wrap:anywhere;line-height:1.45}.friend-workout-item small{margin:0!important}.friend-rest{font-weight:650}
+@media(max-width:600px){#summary{border-radius:16px;padding:4px 6px 9px}#summary table.sum{min-width:1080px}#summary table.sum td,#summary table.sum th{padding:15px 10px}#summary table.sum td:first-child,#summary table.sum th:first-child{min-width:116px;max-width:130px}#summary .summary-period{font-size:.8rem}}
+@media(prefers-reduced-motion:reduce){#summary table.sum td{transition:none}}
 
 </style>
 </body></html>
