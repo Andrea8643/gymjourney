@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-6">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-7">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-6">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-6">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-6">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-6">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-7">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-7">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-7">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-7">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2614,11 +2614,11 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
 
     <!-- RICETTE -->
     <section id="tab-ricette" class="view" hidden>
-      <div class="area-lead" style="--area:#ffc67e;--area2:#f49179"><span class="area-kicker">RICETTE</span><strong>Idee da mettere nel piatto.</strong><p>Cerca per nome o ingredienti, poi confronta le ricette con i valori registrati.</p><span class="area-mark" aria-hidden="true">◒</span></div>
-      <div class="panel stack recipe-search-panel">
+      <section class="recipe-workspace" aria-labelledby="recipe-workspace-title"><header class="recipe-workspace-head"><span>IL TUO RICETTARIO</span><h2 id="recipe-workspace-title">Idee da mettere nel piatto.</h2><p>Cerca per nome o ingrediente, confronta i valori e aggiungi le tue ricette.</p></header>
+      <div class="stack recipe-search-panel">
         <div class="row">
           <label class="f" style="flex:2 1 200px">Cerca<input id="r-search" type="search" placeholder="Nome o ingrediente"></label>
-          <label class="f" style="flex:1 1 160px">Ordina per<select id="r-sort"><option value="name">Nome</option><option value="prot">Più proteine</option><option value="ratio">Proteine per kcal</option><option value="kcal">Meno kcal</option></select></label>
+          <div class="recipe-sort-control" id="recipe-sort-control"><span class="recipe-sort-label" id="r-sort-label">Ordina per</span><select id="r-sort" hidden aria-hidden="true" tabindex="-1"><option value="name">Nome</option><option value="prot">Più proteine</option><option value="ratio">Proteine per kcal</option><option value="kcal">Meno kcal</option></select><button type="button" class="recipe-sort-trigger" id="r-sort-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="r-sort-menu" aria-labelledby="r-sort-label r-sort-current"><span data-sort-label id="r-sort-current">Nome</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="recipe-sort-menu" id="r-sort-menu" role="listbox" aria-label="Ordina ricette" hidden><button type="button" role="option" tabindex="-1" data-sort-value="name" aria-selected="true"><span><b>Nome</b><small>In ordine alfabetico</small></span><i aria-hidden="true">✓</i></button><button type="button" role="option" tabindex="-1" data-sort-value="prot" aria-selected="false"><span><b>Più proteine</b><small>Più grammi di proteine per porzione</small></span><i aria-hidden="true">✓</i></button><button type="button" role="option" tabindex="-1" data-sort-value="ratio" aria-selected="false"><span><b>Proteine per kcal</b><small>Più proteine rispetto alle calorie</small></span><i aria-hidden="true">✓</i></button><button type="button" role="option" tabindex="-1" data-sort-value="kcal" aria-selected="false"><span><b>Meno kcal</b><small>Meno calorie per porzione</small></span><i aria-hidden="true">✓</i></button></div></div>
         </div>
         <div class="tags" id="r-tags"></div>
       </div>
@@ -2642,6 +2642,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <div class="row"><button class="btn fit" type="submit">Salva ricetta</button></div>
         </form>
       </details>
+      </section>
       <div class="rgrid" id="r-grid"></div>
 
     </section>
@@ -4917,6 +4918,24 @@ var GJMealReconcile = (function () {
   return { reconcile: reconcile, applyManual: applyManual, excludeKeepingTotals: excludeKeepingTotals, totals: totals, match: match };
 })();
 
+/* Recipe sort popover: native data value, custom accessible presentation. */
+function bindRecipeSortMenu() {
+  var shell = document.getElementById('recipe-sort-control'), trigger = document.getElementById('r-sort-trigger'), menu = document.getElementById('r-sort-menu'), select = document.getElementById('r-sort');
+  if (!shell || !trigger || !menu || !select || shell.dataset.bound) return;
+  shell.dataset.bound = 'true';
+  var options = Array.from(menu.querySelectorAll('[role="option"]'));
+  function sync() { options.forEach(function (b) { var selected = b.dataset.sortValue === select.value; b.setAttribute('aria-selected', String(selected)); if (selected) trigger.querySelector('[data-sort-label]').textContent = b.querySelector('b').textContent; }); }
+  function close(focus) { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); if (focus) trigger.focus({ preventScroll: true }); }
+  function open(focus) { sync(); menu.hidden = false; trigger.setAttribute('aria-expanded', 'true'); if (focus) (options.find(function (b) { return b.dataset.sortValue === select.value; }) || options[0]).focus({ preventScroll: true }); }
+  trigger.addEventListener('click', function () { if (menu.hidden) open(false); else close(false); });
+  trigger.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); open(true); } if (e.key === 'Escape') close(true); });
+  menu.addEventListener('click', function (e) { var b = e.target.closest('[data-sort-value]'); if (!b) return; select.value = b.dataset.sortValue; sync(); close(true); select.dispatchEvent(new Event('change', { bubbles: true })); });
+  menu.addEventListener('keydown', function (e) { var i = options.indexOf(document.activeElement), n; if (e.key === 'Escape') { e.preventDefault(); close(true); return; } if (e.key === 'ArrowDown') n = (i + 1) % options.length; if (e.key === 'ArrowUp') n = (i + options.length - 1) % options.length; if (e.key === 'Home') n = 0; if (e.key === 'End') n = options.length - 1; if (n != null) { e.preventDefault(); options[n].focus(); } });
+  document.addEventListener('pointerdown', function (e) { if (!shell.contains(e.target)) close(false); });
+  shell.addEventListener('focusout', function (e) { if (e.relatedTarget && !shell.contains(e.relatedTarget)) close(false); });
+  select.addEventListener('change', sync); sync();
+}
+
 /* Recipe cards and diary entries share an ID; each meal keeps its original nutrition. */
 var RecipeUI = { dialog: null, recipeId: '', date: '', mode: '', origin: null, notice: '', undo: null, serial: 0 };
 function recipeServings(r) { var n = Number(r.servings); return isFinite(n) && n >= 1 && Math.floor(n) === n ? n : null; }
@@ -5165,6 +5184,7 @@ function recipeUndoRemoval() {
   Promise.resolve(result).catch(function () { recipeMessage('Ripristino in attesa di conferma: controlla la sincronizzazione.'); });
 }
 function bindRecipes() {
+  bindRecipeSortMenu();
   $('#r-form').addEventListener('input', function () { recipeRefreshNutritionForm('rf-'); });
   $('#r-form').addEventListener('change', function () { recipeRefreshNutritionForm('rf-'); });
   $('#r-search').addEventListener('input', renderRecipes); $('#r-sort').addEventListener('change', renderRecipes);
@@ -13898,8 +13918,9 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-6') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-6')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-6') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-7') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-7')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-7') center/contain no-repeat}
+
 
 
 
@@ -14127,8 +14148,37 @@ body #tab-ricette .recipe-chip-kcal{color:#F4F0F2!important;-webkit-text-fill-co
 
 #gj-game-dialog .gg-milestone.is-progress{border-color:#FFFFFF25;background:#FFFFFF03}
 
+/* One workspace holds introduction, discovery and creation controls. */
+body #tab-ricette .recipe-workspace{position:relative;z-index:20;isolation:isolate;display:grid;gap:18px;padding:23px;margin:0 0 22px;border:1px solid #F4B36C40;border-radius:25px;background:radial-gradient(ellipse at 0 0,#F5AD6513,transparent 70%),#221F21;box-sizing:border-box;min-width:0}
+.recipe-workspace-head{min-width:0;padding:0;margin:0}
+.recipe-workspace-head>span{display:block;color:#E9B97D;font-size:10px;font-weight:750;letter-spacing:.13em;margin-bottom:9px}
+.recipe-workspace-head h2{font-size:25px;line-height:1.25;letter-spacing:-.65px;color:#FFF0DF;margin:0 0 7px}
+.recipe-workspace-head p{font-size:12px;line-height:1.6;color:#BCB1AF;margin:0;max-width:680px}
+body #tab-ricette .recipe-workspace .recipe-search-panel{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;border-radius:0}
+#tab-ricette .recipe-workspace .recipe-search-panel>.row{align-items:end;grid-template-columns:minmax(0,1fr) minmax(155px,.4fr)}
+body #tab-ricette .recipe-workspace .recipe-create-box{margin:0!important;padding:12px 0 0!important;border:0!important;border-top:1px solid #FFFFFF13!important;border-radius:0;background:none!important;box-shadow:none!important;min-width:0}
+body #tab-ricette .recipe-workspace .recipe-create-box>summary{padding:10px 12px!important;background:#FFFFFF04!important;border:1px solid #FFFFFF12;border-radius:13px;min-height:47px;color:#EFDFD2;box-sizing:border-box}
+#tab-ricette .recipe-workspace .recipe-create-box>form{padding:18px 0 0}
+.recipe-sort-control{position:relative;min-width:0;display:flex;flex-direction:column;gap:6px}
+.recipe-sort-label{font-size:12px;color:#C5B9B5;font-weight:600}
+body #tab-ricette button.recipe-sort-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0;min-height:44px;padding:11px 13px;background:#302C2E!important;border:1px solid #FFFFFF12!important;border-radius:13px;color:#F0E5DE!important;-webkit-text-fill-color:#F0E5DE!important;font:650 13px/1.35 var(--f-body);cursor:pointer;text-align:left}
+.recipe-sort-trigger svg{flex:none;transition:transform .18s}.recipe-sort-trigger[aria-expanded=true] svg{transform:rotate(180deg)}
+.recipe-sort-trigger:focus-visible,.recipe-sort-menu button:focus-visible{outline:2px solid #F2B36F;outline-offset:3px}
+.recipe-sort-menu[hidden]{display:none!important}
+.recipe-sort-menu{position:absolute;z-index:60;right:0;top:calc(100% + 8px);width:280px;max-width:calc(100vw - 42px);padding:7px;box-sizing:border-box;border:1px solid #D3AB7D50;border-radius:18px;background:#2B2627;box-shadow:0 14px 38px #0009;animation:recipe-sort-in .14s ease-out;transform-origin:top right}
+body #tab-ricette .recipe-sort-menu>button{display:grid;grid-template-columns:minmax(0,1fr) 20px;align-items:center;gap:8px;width:100%;padding:12px;border:1px solid transparent;border-radius:12px;background:transparent!important;color:#F3E9E2!important;-webkit-text-fill-color:#F3E9E2!important;text-align:left;cursor:pointer;font-family:var(--f-body);box-sizing:border-box;min-height:62px}
+.recipe-sort-menu button b{display:block;font-size:13px;line-height:1.4}.recipe-sort-menu button small{display:block;font-size:10px;line-height:1.5;margin-top:4px;color:#B7AAA7}.recipe-sort-menu button>i{font-style:normal;color:#FFCC91;font-size:17px;opacity:0}
+body #tab-ricette .recipe-sort-menu>button[aria-selected=true]{background:#F5B77811!important;border-color:#F5B77835}.recipe-sort-menu button[aria-selected=true]>i{opacity:1}
+body #tab-ricette .recipe-sort-menu>button:hover{background:#FFFFFF08!important}
+@keyframes recipe-sort-in{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+@media(max-width:600px){body #tab-ricette .recipe-workspace{padding:16px;gap:14px;border-radius:22px;margin-bottom:18px}.recipe-workspace-head h2{font-size:20px}.recipe-workspace-head p{font-size:11px;line-height:1.5}.recipe-workspace-head>span{font-size:9px;margin-bottom:7px}#tab-ricette .recipe-workspace .recipe-search-panel>.row{grid-template-columns:minmax(0,1fr) minmax(105px,.65fr);gap:9px}body #tab-ricette button.recipe-sort-trigger{font-size:11px;padding:10px;gap:7px}.recipe-sort-label{font-size:11px}.recipe-sort-menu{max-width:calc(100vw - 60px);width:265px}.recipe-workspace .tags{gap:6px}}
+@media(prefers-reduced-motion:reduce){.recipe-sort-menu{animation:none}.recipe-sort-trigger svg{transition:none}}
+
+.recipe-sort-menu{max-height:min(340px,55dvh);overflow-y:auto;overscroll-behavior:contain}
+
 </style>
 </body></html>
+
 
 
 
