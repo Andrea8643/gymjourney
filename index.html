@@ -14197,7 +14197,9 @@ body #tab-ricette .recipe-sort-menu>button:hover{background:#FFFFFF08!important}
 body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration input{width:100%;min-width:0;max-width:100%;min-height:42px;padding:9px 10px;box-sizing:border-box;text-align:center;font-size:16px;font-variant-numeric:tabular-nums;border-radius:10px}
 .recipe-duration-colon{align-self:end;display:grid;place-items:center;height:42px;color:#BDABA1;font-size:18px;font-weight:650}
 .recipe-editor-grid>.recipe-duration{align-self:end}
+#tab-ricette .recipe-editor-grid{grid-template-columns:minmax(0,1fr) minmax(220px,.9fr)}
 @media(max-width:600px){.recipe-create-box .recipe-duration{flex:1 1 100%}.recipe-editor-grid>.recipe-duration{grid-column:1/-1}.recipe-duration-inputs{gap:10px}.recipe-duration legend{font-size:12px}}
+@media(max-width:600px){#tab-ricette .recipe-editor-grid{grid-template-columns:minmax(0,1fr)}#tab-ricette .recipe-editor-grid>.f{grid-column:1/-1}}
 
 </style>
 </body></html>
