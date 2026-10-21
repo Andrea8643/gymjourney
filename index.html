@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-5">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261021-6">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-5">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-5">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-5">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-5">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261021-6">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261021-6">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261021-6">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261021-6">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -2622,9 +2622,8 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         </div>
         <div class="tags" id="r-tags"></div>
       </div>
-      <div class="rgrid" id="r-grid"></div>
-      <details class="form-box">
-        <summary>Aggiungi una ricetta</summary>
+      <details class="form-box recipe-create-box">
+        <summary>Nuova ricetta</summary>
         <form id="r-form" class="stack">
           <div class="row">
             <label class="f" style="flex:2 1 200px">Nome<input id="rf-name" type="text" required></label>
@@ -2643,6 +2642,8 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <div class="row"><button class="btn fit" type="submit">Salva ricetta</button></div>
         </form>
       </details>
+      <div class="rgrid" id="r-grid"></div>
+
     </section>
 
     <!-- DATI -->
@@ -5028,7 +5029,7 @@ function renderRecipes() {
   }
   $('#r-grid').innerHTML = list.map(function (r) {
     var meals = recipeDiaryMeals(r.id, date), review = recipeDayNeedsReview(date), total = recipeNutrition(r, true), shown = total || recipeNutrition(r, false), preparation = recipePreparationHTML(r);
-    return '<article class="panel rcard recipe-compact" data-recipe-card="' + esc(r.id) + '"><details class="recipe-expand"' + (expanded[r.id] ? ' open' : '') + '><summary class="recipe-summary"><span class="recipe-summary-content"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="recipe-summary-chips" aria-label="' + (total ? 'Valori totali della ricetta' : 'Valori per una porzione; numero di porzioni non indicato') + '">' + (r.time ? '<span class="recipe-chip">' + esc(r.time) + ' min</span>' : '') + recipeMacroChips(shown, !total) + '</span></span></summary><div class="recipe-full">'
+    return '<article class="panel rcard recipe-compact" data-recipe-card="' + esc(r.id) + '"><details class="recipe-expand"' + (expanded[r.id] ? ' open' : '') + '><summary class="recipe-summary"><span class="recipe-summary-content"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="recipe-summary-chips" aria-label="' + (total ? 'Valori totali della ricetta' : 'Valori per una porzione; numero di porzioni non indicato') + '">' + recipeMacroChips(shown, !total) + (r.time ? '<span class="recipe-chip recipe-chip-time"><span aria-hidden="true">◷</span> ' + esc(r.time) + ' min</span>' : '') + '</span></span></summary><div class="recipe-full">'
       + ((r.tags || []).length || r.example ? '<div class="tags">' + (r.tags || []).map(function (t) { return '<span class="chip">' + esc(cap(t)) + '</span>'; }).join('') + (r.example ? '<span class="chip warn">Valori indicativi</span>' : '') + '</div>' : '')
       + recipeNutritionPanels(r, false)
       + (preparation ? '<details class="recipe-prep-details"' + (prepOpen[r.id] ? ' open' : '') + '><summary>Ingredienti e procedimento</summary>' + preparation + '</details>' : '')
@@ -10735,7 +10736,7 @@ function create(ctx){
 
   async function run(data){
     if(S.busy)return;S.busy=true;S.error='';S.errorDiagnostic=null;S.message='';changed();var epoch=S.epoch;
-    try{var fn=callable();await fn(data);if(epoch!==S.epoch)return;S.available=true;S.message=data.action==='enable'?'Sfide attivate. Il tuo diario costruisce il tuo livello.':data.action==='invite'?'Invito inviato. La sfida partirà dopo l’accettazione.':data.action==='equip'?'Premio applicato.':data.action==='disable'?'Partecipazione disattivata.':'Aggiornamento completato.';if(data.action==='respond')closeDialog();}
+    try{var fn=callable();await fn(data);if(epoch!==S.epoch)return;S.available=true;S.message=data.action==='enable'?'Sfide attivate. Il tuo diario costruisce il tuo livello.':data.action==='invite'?'Invito inviato. La sfida partirà dopo l’accettazione.':data.action==='equip'?'Distintivo applicato.':data.action==='disable'?'Partecipazione disattivata.':'Aggiornamento completato.';if(data.action==='respond')closeDialog();}
     catch(e){if(epoch===S.epoch)S.error=failure(e);}
     finally{if(epoch===S.epoch){S.busy=false;changed();}}
   }
@@ -10746,13 +10747,13 @@ function create(ctx){
   function current(){var peer=env().selected;return S.rounds.filter(function(g){return g.participants.includes(peer);}).sort(function(a,b){return (b.createdMs||0)-(a.createdMs||0);})[0]||null;}
   function statCards(){
     var p=stats(),enabled=S.profile&&S.profile.enabled&&S.profile.ready,bounds=C.levelBounds(p.xp||0),progress=enabled?Math.max(0,Math.min(100,(p.xp-bounds.from)/(bounds.to-bounds.from)*100)):0;
-    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div>'+flame(p.streak)+'</div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi premi'):'')+'</div></section>';
+    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div>'+flame(p.streak)+'</div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi distintivi'):'')+'</div></section>';
   }
   function flame(n){return '<span class="gg-fire '+(n?'is-lit':'is-cold')+'" aria-hidden="true"><svg viewBox="0 0 48 60"><defs><linearGradient id="gg-fire-color" x2="0" y2="1"><stop stop-color="#FFCB7A"/><stop offset="1" stop-color="#FA365A"/></linearGradient></defs><path class="flame-outer" fill="url(#gg-fire-color)" d="M25 2c4 15 18 20 18 35a19 19 0 0 1-38 0c0-8 4-15 10-21-1 9 1 13 5 15C27 25 28 14 25 2Z"/><path class="flame-inner" fill="#FFE8B2" d="M25 30c1 7 10 11 9 18-1 5-5 8-10 8s-9-4-9-9c0-6 7-10 10-17Z"/></svg></span>';}
   function milestones(){var input=ctx.milestones?ctx.milestones():{days:Object.fromEntries(ctx.days()),workouts:[],targets:function(){return {};}};return root.GJMilestones.evaluate(input,today(),stats());}
   function milestoneCards(items){return '<div class="gg-milestone-grid">'+items.map(function(m){return '<button type="button" class="gg-milestone'+(m.done?' is-unlocked':!m.blocked&&m.current/m.goal>=0.75?' is-near':' is-progress')+'" data-game-action="milestone" data-key="'+m.id+'"><i aria-hidden="true">'+m.symbol+'</i><b>'+esc(m.name)+'</b><small>'+esc(m.category)+'</small><span class="gg-progress"><i style="width:'+Math.min(100,m.current/m.goal*100)+'%"></i></span><small>'+ (m.blocked?'Target da impostare':m.done?'✓ Raggiunto':m.blocked?'Target da impostare':(m.current/m.goal>=0.75?'Quasi! · ':'In corso · ')+m.current+' / '+m.goal)+'</small></button>';}).join('')+'</div>';}
   function missionSection(){var m=milestones();return '<section class="gg-card"><div class="gg-section-head"><div><span class="gg-kicker">TRE PICCOLE MISSIONI</span><h3>Questa settimana, per te</h3></div>'+flame(m.missions.filter(function(x){return x.done;}).length)+'</div><p class="gg-mission-period">'+day(m.weekFrom)+' – '+day(m.weekTo)+' · nuove missioni ogni lunedì</p><div class="gg-quests">'+m.missions.map(function(x){return '<div class="gg-quest'+(x.done?' is-done':'')+'"><b aria-hidden="true">'+(x.done?'✓':x.current/x.goal>=0.75?'↗':'✧')+'</b><div><small class="gg-quest-state">'+(x.done?'✓ Completata':x.current/x.goal>=0.75?'Quasi completata':'In corso')+' · traguardo personale</small><h4>'+esc(x.name)+'</h4><p>'+esc(x.desc)+'</p></div><span>'+x.current+' / '+x.goal+'</span></div>';}).join('')+'</div><p class="gg-note">Contano i tuoi dati reali. Missioni personali: non cambiano i punti della gara e non richiedono di mangiare o allenarti di più.</p></section>';}
-  function collectionHTML(filter){var m=milestones(),owned=S.profile&&S.profile.badges||[],cats=['Tutti','Raggiunti','Da scoprire','Costanza','Nutrizione','Movimento','Recupero','Diario','Ricette'],items=m.items.filter(function(x){return filter==='Raggiunti'?x.done:filter==='Da scoprire'?!x.done:!filter||filter==='Tutti'||x.category===filter;});return '<p class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi · progressi riletti dal tuo storico</p><div class="gg-collection-toolbar" aria-label="Categorie dei traguardi">'+cats.map(function(c){return '<button type="button" data-game-action="collection-filter" data-key="'+c+'" aria-pressed="'+(c===(filter||'Tutti'))+'">'+c+'</button>';}).join('')+'</div>'+milestoneCards(items)+(!filter||filter==='Tutti'?'<h3>Premi delle sfide da indossare</h3>'+rewardCards(true):'');}
+  function collectionHTML(filter){var m=milestones(),owned=S.profile&&S.profile.badges||[],cats=['Tutti','Raggiunti','Da scoprire','Costanza','Nutrizione','Movimento','Recupero','Diario','Ricette'],items=m.items.filter(function(x){return filter==='Raggiunti'?x.done:filter==='Da scoprire'?!x.done:!filter||filter==='Tutti'||x.category===filter;});return '<p class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi · progressi riletti dal tuo storico</p><div class="gg-collection-toolbar" aria-label="Categorie dei traguardi">'+cats.map(function(c){return '<button type="button" data-game-action="collection-filter" data-key="'+c+'" aria-pressed="'+(c===(filter||'Tutti'))+'">'+c+'</button>';}).join('')+'</div>'+milestoneCards(items)+(!filter||filter==='Tutti'?'<section class="gg-profile-prizes"><header><span class="gg-kicker">PERSONALIZZA IL TUO PROFILO</span><h3>I tuoi distintivi</h3><p>Scegli il titolo da mostrare accanto al tuo nome nelle sfide. Alcuni distintivi aggiungono anche una cornice alla foto. Non cambiano il punteggio.</p></header>'+rewardCards(true)+'</section>':'');}
   function showMilestone(id){var m=milestones().items.find(function(x){return x.id===id;});if(!m)return;dialog(m.name,'<div class="gg-milestone-detail"><i aria-hidden="true">'+m.symbol+'</i><p>'+esc(m.description)+'</p><strong>'+ (m.blocked?'Imposta il target nel piano':m.current+' / '+m.goal)+'</strong><p>'+ (m.done?'Traguardo raggiunto dai dati registrati.':'Il progresso si aggiorna quando registri o correggi i tuoi dati.')+'</p><small>Traguardo personale · nessuna modifica ai punti della gara</small></div>');}
   function rulesHTML(){return '<div class="gg-rules"><h3>Sette giorni. Un passo al giorno.</h3><p>Conferma le calorie del diario quando hai registrato tutto. La quantità mangiata non cambia i punti.</p><dl><div><dt>Ogni giornata completa</dt><dd>+10 punti</dd></div><div><dt>Arrivi a 5 giornate</dt><dd>+10 bonus</dd></div><div><dt>Le completi tutte e 7</dt><dd>+20 bonus</dd></div></dl><p>Massimo 100 punti a testa. Gli XP e i loro moltiplicatori fanno crescere il livello personale e non aumentano il punteggio della gara.</p><p>La sfida inizia alla mezzanotte successiva all’accettazione. Apri l’app online per sincronizzare il diario: dopo l’ultimo giorno hai ancora 48 ore. Le conferme arrivate dopo la scadenza non cambiano la gara.</p></div>';}
   function rewardCards(all){var owned=S.profile&&S.profile.badges||[],stats0=stats(),rewards=all?C.REWARDS:C.REWARDS.slice(0,3);return '<div class="gg-reward-grid">'+rewards.map(function(r){var yes=owned.includes(r.id),desc=r.at?r.at+(r.at===1?' giorno completo':' giorni consecutivi'):r.id==='team'?'Missione di squadra completata':'Tre giorni consecutivi dopo una pausa';return '<button type="button" class="gg-reward'+(yes?' is-unlocked':'')+'" data-game-action="reward" data-key="'+r.id+'"><span class="gg-reward-icon" aria-hidden="true">'+r.symbol+'</span><b>'+esc(r.name)+'</b><small>'+esc(desc)+'</small><span class="gg-reward-state">'+(yes?'Sbloccato':r.at?Math.min(stats0.record,r.at)+' / '+r.at:'Da conquistare')+'</span></button>';}).join('')+'</div>';}
@@ -10804,13 +10805,13 @@ function create(ctx){
     var guide='<section class="gg-personal-guide"><div><span class="gg-reward-tag">XP · livello personale</span><b>'+p.xp+' XP nel tuo percorso</b><p>Ogni giornata completa parte da 20 XP. Il bonus costanza è ×1,10 da 3 giorni, ×1,20 da 7 e ×1,25 da 14. Gli XP già assegnati alla data non aumentano registrandola di nuovo.</p></div><div><span class="gg-reward-tag">Traguardi · collezione</span><b>'+m.unlocked+' obiettivi personali raggiunti</b><p>Missioni settimanali e traguardi raccontano i dati che registri: non assegnano punti gara o XP aggiuntivi. Apri una tessera per leggere il criterio.</p></div></section>';
     return '<div class="gg-hub gg-view-'+S.view+'">'+nav+intro+'<div class="gg-hub-pane"'+(personal?' hidden':'')+'>'+renderSocial()+'</div><div class="gg-hub-pane gg-personal-pane"'+(!personal?' hidden':'')+'>'+statusMessage()+statCards()+guide+missionSection()+rewardsSection()+'</div></div>';
   }
-  function settingsHTML(){var p=S.profile,enabled=p&&p.enabled;return '<section class="gg-card gg-settings"><span class="gg-kicker">FACOLTATIVO, COME PIACE A TE</span><h3>Le tue sfide</h3><p>Gli amici vedono se partecipi e i premi che indossi. Solo i due partecipanti vedono date complete e punteggi della sfida. Calorie e peso seguono le preferenze qui sotto.</p>'+statusMessage()+(enabled?'<div class="gg-setting-active"><span>Partecipazione attiva</span><b>'+esc(p.timezone)+'</b></div>'+button('refresh','Aggiorna punti')+button('disable','Disattiva sfide'):'<label class="gg-consent"><input type="checkbox" data-game-consent'+(S.consent?' checked':'')+'> <span>Attivo le sfide e condivido partecipazione e premi con gli amici; date complete e punti con il mio sfidante.</span></label>'+button('enable','Attiva la partecipazione',null,'primary'))+'<p class="gg-note">Le sfide sono facoltative. Apri l’app online per aggiornare il diario e i punti. Disattivare la partecipazione annulla le sfide ancora aperte.</p></section>';}
+  function settingsHTML(){var p=S.profile,enabled=p&&p.enabled;return '<section class="gg-card gg-settings"><span class="gg-kicker">FACOLTATIVO, COME PIACE A TE</span><h3>Le tue sfide</h3><p>Gli amici vedono se partecipi e i distintivi che mostri. Solo i due partecipanti vedono date complete e punteggi della sfida. Calorie e peso seguono le preferenze qui sotto.</p>'+statusMessage()+(enabled?'<div class="gg-setting-active"><span>Partecipazione attiva</span><b>'+esc(p.timezone)+'</b></div>'+button('refresh','Aggiorna punti')+button('disable','Disattiva sfide'):'<label class="gg-consent"><input type="checkbox" data-game-consent'+(S.consent?' checked':'')+'> <span>Attivo le sfide e condivido partecipazione e premi con gli amici; date complete e punti con il mio sfidante.</span></label>'+button('enable','Attiva la partecipazione',null,'primary'))+'<p class="gg-note">Le sfide sono facoltative. Apri l’app online per aggiornare il diario e i punti. Disattivare la partecipazione annulla le sfide ancora aperte.</p></section>';}
   function closeDialog(){var d=S.dialog,opener=S.opener;S.dialog=null;S.opener=null;document.documentElement.classList.remove('gj-game-modal-open');if(!d)return;if(d.open)d.close();d.remove();if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
   function dialog(title,content){var opener=document.activeElement;closeDialog();S.opener=opener;var el=document.createElement('dialog');el.id='gj-game-dialog';el.className='gg-dialog';el.setAttribute('aria-labelledby','gj-game-dialog-title');el.innerHTML='<div class="gg-dialog-layout"><header><h2 id="gj-game-dialog-title" tabindex="-1">'+esc(title)+'</h2><button type="button" data-game-action="close" aria-label="Chiudi finestra">×</button></header><div class="gg-dialog-body">'+content+'</div></div>';document.body.appendChild(el);S.dialog=el;el.addEventListener('cancel',function(e){e.preventDefault();closeDialog();});el.addEventListener('close',function(){if(S.dialog===el)closeDialog();});el.addEventListener('click',function(e){if(e.target===el){var r=el.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog();}});try{el.showModal();document.documentElement.classList.add('gj-game-modal-open');el.querySelector('header button').focus({preventScroll:true});}catch(e){closeDialog();throw e;}}
 
   function detailsDay(d){var g=current(),e=env();if(!g)return '<p>Questa sfida non è più disponibile.</p>';var dates=C.roundDates(g),i=dates.indexOf(d),own=g.progress&&g.progress.people[e.uid],peer=g.participants.find(function(u){return u!==e.uid;}),other=g.progress&&g.progress.people[peer],a=own&&own.rows.find(function(x){return x.date===d;}),b=other&&other.rows.find(function(x){return x.date===d;}),label=new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});return '<div class="gg-day-detail"><nav class="gg-day-navigation" aria-label="Scorri i giorni della sfida">'+(i>0?button('day','‹ Giorno precedente',dates[i-1]):'<button class="gg-btn" disabled>‹ Giorno precedente</button>')+(i<6?button('day','Giorno successivo ›',dates[i+1]):'<button class="gg-btn" disabled>Giorno successivo ›</button>')+'</nav><h3 class="gg-day-heading">'+esc(label)+'</h3><dl><div><dt>Tu</dt><dd>'+esc(a?stateLabel(displayRow(a,true,g)):'Dati non disponibili')+'</dd></div><div><dt>'+esc(g.names[peer]||'Amico')+'</dt><dd>'+esc(b?stateLabel(b):'Dati non disponibili')+'</dd></div></dl>'+(a&&displayRow(a,true,g).state==='pending'?'<p>Il tuo diario è completo. Attendo la conferma del servizio per assegnare i punti.</p>':'')+button('open-day','Apri il tuo diario',d,'primary')+'</div>';}
 
-  function showReward(id){var r=C.REWARDS.find(function(x){return x.id===id;});if(!r)return;var owned=S.profile&&S.profile.badges&&S.profile.badges.includes(id);dialog(r.name,'<div class="gg-prize"><span class="gg-prize-symbol">'+r.symbol+'</span><h3>'+esc(r.title)+'</h3><p>'+esc(r.at?'Si sblocca con '+r.at+(r.at===1?' giorno di diario completo.':' giorni consecutivi di diario completo.'):r.id==='team'?'Completa la missione di squadra alla chiusura della sfida.':'Riparti con tre giorni consecutivi dopo un’interruzione.')+'</p>'+(owned?button('equip','Usa questo premio',id,'primary'):'<p class="gg-note">Il tuo prossimo traguardo ti aspetta.</p>')+'</div>');}
+  function showReward(id){var r=C.REWARDS.find(function(x){return x.id===id;});if(!r)return;var owned=S.profile&&S.profile.badges&&S.profile.badges.includes(id);dialog(r.name,'<div class="gg-prize"><span class="gg-prize-symbol">'+r.symbol+'</span><h3>'+esc(r.title)+'</h3><p class="gg-prize-purpose">Questo è il titolo che puoi mostrare accanto al tuo nome nelle sfide con gli amici.'+(r.frame?' Include una cornice per la foto.':'')+' Nessun vantaggio nei punti.</p><p>'+esc(r.at?'Si sblocca con '+r.at+(r.at===1?' giorno di diario completo.':' giorni consecutivi di diario completo.'):r.id==='team'?'Completa la missione di squadra alla chiusura della sfida.':'Riparti con tre giorni consecutivi dopo un’interruzione.')+'</p>'+(owned?(S.profile&&S.profile.title===r.title?'<p class="gg-current-prize">✓ Già sul tuo profilo nelle sfide</p>':button('equip','Mostra sul profilo nelle sfide',id,'primary')):'<p class="gg-note">Completa il criterio per sbloccare questo distintivo.</p>')+'</div>');}
   document.addEventListener('change',function(ev){if(ev.target.matches('#tab-amici [data-game-consent]'))S.consent=ev.target.checked;});
   document.addEventListener('click',function(ev){var b=ev.target.closest('#tab-amici [data-game-action], #gj-game-dialog [data-game-action]');if(!b)return;var a=b.dataset.gameAction,k=b.dataset.key;if(a==='view'){if(k!=='friends'&&k!=='personal')return;S.view=k;closeDialog();changed();return;}if(a==='close'){closeDialog();return;}if(a==='rules'){dialog('Come funziona la sfida',rulesHTML());return;}if(a==='settings'){ctx.settings();return;}if(a==='show-invite'){ctx.select(k);return;}if(a==='rewards'){dialog('La tua collezione',collectionHTML('Tutti'));return;}if(a==='collection-filter'){var body=S.dialog&&S.dialog.querySelector('.gg-dialog-body');if(body){body.innerHTML=collectionHTML(k);var f=Array.from(body.querySelectorAll('[data-game-action=collection-filter]')).find(function(x){return x.dataset.key===k;});if(f)f.focus({preventScroll:true});}return;}if(a==='milestone'){showMilestone(k);return;}if(a==='reward'){showReward(k);return;}if(a==='day'){dialog('Una giornata, due passi',detailsDay(k));return;}if(a==='open-day'){closeDialog();ctx.openDay(k);return;}
     if(a==='streak'){var keys=[],t=today();for(var i=13;i>=0;i--)keys.push(C.add(t,-i));var days=ctx.days();dialog('I giorni della tua serie','<p class="gg-note">Ultime due settimane. Oggi ancora aperto non interrompe la serie maturata fino a ieri.</p><div class="gg-streak-list">'+keys.map(function(d){var ok=C.eligible(days.get(d));return '<div><span>'+day(d)+'</span><b>'+ (ok?'Completo':d===t?'Oggi in corso':'Da completare')+'</b>'+button('open-day','Apri',d)+'</div>';}).join('')+'</div>');return;}
@@ -10827,9 +10828,10 @@ root.GJGameUI={create:create};
 
 
 
+
 /* Social data uses separate Firestore paths; the private users/{uid} archive is untouched. */
 function bindFriends() {
-  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
+  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',date:null,view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
   var FD=window.GJFriendData, fs=null, auth=null;
   var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
@@ -10898,7 +10900,10 @@ function bindFriends() {
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
     fillPanels(list+requests,Games.settingsHTML()+h,'<div id="friend-game-content">'+Games.render()+'</div>'+requests);
   }
-  function localRows(){var D=engineD(),E=state.E,t=todayStr(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(t,-i),t,GJM));return out;}
+  function comparisonDate(){return F.date||todayStr();}
+  function setComparisonDate(d){if(!window.GJGame.date(d)||d>todayStr())return;F.date=d;if(F.selected)subscribePeer(F.selected);render();}
+  function comparisonNavigator(){var d=comparisonDate();return '<div class="friends-date-nav"><button type="button" data-friend-action="date-prev" aria-label="Giorno precedente del confronto">‹</button><label class="friends-date-picker"><span>'+esc(fmtDay(d))+'</span><span aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18M8 15h3v3H8z"/></svg></span><input type="date" data-friend-date value="'+d+'" max="'+todayStr()+'" min="1900-01-01" aria-label="Scegli la data del confronto"></label><button type="button" data-friend-action="date-next" aria-label="Giorno successivo del confronto"'+(d>=todayStr()?' disabled':'')+'>›</button>'+(d!==todayStr()?'<button type="button" data-friend-action="date-today">Oggi</button>':'')+'</div>';}
+  function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
   function cell(rows,key,allowed){
     if(!allowed)return '<b class="friend-muted">Non condiviso</b>';
@@ -10920,12 +10925,12 @@ function bindFriends() {
   function comparisonHTML(){
     var link=friendList().find(function(x){return relationPeer(x)===F.selected;});if(!link)return '<div class="friends-empty">Seleziona un amico per confrontare i dati.</div>';
     var r=F.remote,own=localRows(),name=relationName(link),keys=FD.KEYS.filter(function(k){return (F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]);});
-    var head='<div class="friends-comparison-head"><div><h3>Tu e '+esc(name)+'</h3><span>'+ (F.period==='week'?'Ultimi 7 giorni · '+fmtShort(FD.add(todayStr(),-6))+'–'+fmtShort(todayStr()):'Oggi · '+fmtDay(todayStr()))+'</span></div><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></div><div class="friends-period"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Oggi</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">Ultimi 7 giorni</button></div>';
+    var head='<div class="friends-comparison-head"><div><h3>Tu e '+esc(name)+'</h3><span>'+ (F.period==='week'?'7 giorni · '+fmtShort(FD.add(comparisonDate(),-6))+'–'+fmtShort(comparisonDate()):fmtDay(comparisonDate()))+'</span></div><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></div><div class="friends-period"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator();
     if(!r)return head+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div>';
     if(r.error||!r.config||!r.config.enabled)return head+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div>';
     if(!keys.length)return head+'<div class="friends-empty">Nessun dato selezionato per il confronto.</div>';
     var names={calories:F.period==='week'?'Calorie medie':'Calorie',macros:'Macro',steps:F.period==='week'?'Passi medi':'Passi',workouts:'Allenamenti',weight:'Peso'};
-    return head+'<div class="friends-metrics">'+keys.map(function(k){return '<section class="friend-metric" data-metric="'+k+'" aria-label="'+names[k]+'"><h4>'+names[k]+'</h4><div class="friend-metric-pair"><div class="friend-metric-person friend-metric-own"><span class="friend-metric-name">Tu</span><div class="friend-metric-value">'+cell(own,k,true)+'</div></div><div class="friend-metric-person friend-metric-peer"><span class="friend-metric-name">'+esc(name)+'</span><div class="friend-metric-value">'+cell(r.days,k,r.config.prefs[k])+'</div></div></div></section>';}).join('')+'</div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
+    return head+(comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'')+'<div class="friends-metrics">'+keys.map(function(k){return '<section class="friend-metric" data-metric="'+k+'" aria-label="'+names[k]+'"><h4>'+names[k]+'</h4><div class="friend-metric-pair"><div class="friend-metric-person friend-metric-own"><span class="friend-metric-name">Tu</span><div class="friend-metric-value">'+cell(own,k,true)+'</div></div><div class="friend-metric-person friend-metric-peer"><span class="friend-metric-name">'+esc(name)+'</span><div class="friend-metric-value">'+cell(r.days,k,r.config.prefs[k])+'</div></div></div></section>';}).join('')+'</div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
   }
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){Photos.select(null);F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
@@ -10933,7 +10938,7 @@ function bindFriends() {
     F.peerUnsub=fs.doc('friendShares/'+uid).onSnapshot({includeMetadataChanges:true},function(s){
       if(epoch!==F.epoch)return;var read=++readVersion;F.remote=null;refreshComparison();if(s.metadata.fromCache||s.metadata.hasPendingWrites)return;
       var cfg=s.exists?s.data():null;if(!cfg||!cfg.enabled){F.remote={config:cfg,days:[]};refreshComparison();return;}
-      var dates=[];for(var i=F.period==='week'?6:0;i>=0;i--)dates.push(FD.add(todayStr(),-i));
+      var dates=[];for(var i=F.period==='week'?6:0;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
       Promise.all(dates.map(function(d){return fs.doc('friendShares/'+uid+'/days/'+d).get({source:'server'}).then(function(x){return x.exists&&x.data().revision===cfg.revision?x.data():null;});})).then(function(days){if(epoch!==F.epoch||read!==readVersion)return;F.remote={config:cfg,days:days};refreshComparison();}).catch(function(){if(epoch!==F.epoch||read!==readVersion)return;F.remote={error:'Dati non disponibili online o condivisione revocata.'};refreshComparison();});
     },function(){readVersion++;if(epoch!==F.epoch)return;F.peerUnsub=null;F.remote={error:'Condivisione non disponibile o amicizia rimossa.'};refreshComparison();});
   }
@@ -10980,7 +10985,7 @@ function bindFriends() {
   async function perform(fn){if(F.busy)return;F.busy=true;F.error='';F.message='';note();try{await fn();}catch(e){F.error=report(e);}finally{F.busy=false;render();}}
   document.addEventListener('submit',function(e){if(e.target.id==='friend-request-form'){e.preventDefault();var code=e.target.elements.code.value;perform(function(){return request(code);});}if(e.target.id==='friend-sharing-form'){e.preventDefault();var form=e.target;perform(function(){return saveSharing(form);});}});
   document.addEventListener('click',function(e){var viewButton=e.target.closest('#tab-amici [data-friends-view],#tab-amici [data-friends-view-go]');if(viewButton){setFriendsView(viewButton.dataset.friendsView||viewButton.dataset.friendsViewGo,false,true);return;}var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
-    if(a==='select'){subscribePeer(k);render();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
+    if(a==='date-prev'||a==='date-next'||a==='date-today'){setComparisonDate(a==='date-today'?todayStr():FD.add(comparisonDate(),a==='date-prev'?-1:1));return;}if(a==='select'){subscribePeer(k);render();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
     if(a==='refresh'){Games.refresh();if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
     perform(async function(){if(a==='activate')return activate();if(a==='copy'){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(F.profile.code);F.message='Codice copiato.';}else{F.message='Il tuo codice: '+F.profile.code;}return;}
       if(a==='accept'){await fs.doc('friendships/'+k).update({status:'accepted',acceptedAt:stamp()});F.message='Amicizia accettata. Scegli cosa condividere nelle impostazioni.';}
@@ -10989,6 +10994,7 @@ function bindFriends() {
       if(a==='unblock'){await profileRef().collection('blocks').doc(k).delete();F.message='Utente sbloccato. Per tornare amici serve una nuova richiesta.';}
     });
   });
+  document.addEventListener('change',function(e){if(e.target.matches('#tab-amici [data-friend-date]'))setComparisonDate(e.target.value);});
   document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var views=['games','list','settings'],i=views.indexOf(F.view),v=e.key==='Home'?views[0]:e.key==='End'?views[2]:views[(i+(e.key==='ArrowLeft'?2:1))%3];setFriendsView(v,true,true);});
   var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='games';Games.refresh();render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else{Games.leave();stopPeer();}};
   var originalRender=renderAll;renderAll=function(){originalRender();Photos.refresh();queuePublish();};
@@ -10997,6 +11003,8 @@ function bindFriends() {
   if(window.firebase&&firebase.apps&&firebase.apps.length){fs=firebase.firestore();auth=firebase.auth();auth.onAuthStateChanged(function(u){load(u?u.uid:null);});}else render();
   if((location.hash||'')==='#amici')show('amici');
 }
+
+
 
 /* Profile presentation: existing field names, plan rules and save handlers are retained. */
 function pfSection(title,copy,body){return '<fieldset class="pf-fieldset"><legend>'+title+'</legend>'+(copy?'<p class="pf-section-copy">'+copy+'</p>':'')+body+'</fieldset>';}
@@ -13890,8 +13898,9 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-5') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-5')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-5') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261021-6') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261021-6')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261021-6') center/contain no-repeat}
+
 
 
 /* One bounded column keeps every stage on the same horizontal axis. */
@@ -14041,6 +14050,83 @@ body #gj-game-dialog button.gg-primary{background:#FFB88C;color:#2F1C18;border-c
 .gg-personal-pane>.gg-personal-guide{margin:0}
 
 
+/* One coral identity, neutral surfaces, consistent spacing. */
+#tab-amici{--gg-personal:#FFB6A5;--gg-social:#FFB6A5;--gg-done:#FFD1BC;--gg-near:#FFD17D}
+body #tab-amici .gg-hub .gg-card,body #tab-amici .gg-settings{background:linear-gradient(135deg,#FF8B7908,transparent 65%),#232024!important;border-color:#FFFFFF18!important}
+body #tab-amici .gg-hub .gg-team{background:linear-gradient(135deg,#FF8B7910,transparent 70%),#232024!important}
+body #tab-amici .gg-hub .gg-team.is-achieved{border-color:#FFB6A599!important}
+#tab-amici .gg-personal-pane .gg-kicker,#tab-amici .gg-team .gg-kicker,#tab-amici .gg-team .gg-team-mark,#tab-amici .gg-quest-state{color:#FFD0C1!important}
+#tab-amici .gg-hub-switch [aria-pressed=true]{background:linear-gradient(135deg,#583430,#352629)!important;border-color:#FF9B8270!important;color:#FFD7C8!important}
+#tab-amici .gg-personal-guide>div{background:#242226;border-color:#FFFFFF17}#tab-amici .gg-reward-tag{color:#FFCBBC}#tab-amici .gg-personal-guide p{color:#C6BFC3}
+#tab-amici .gg-hub .gg-quest{background:#FFFFFF03;border-left-color:#FFB6A5}#tab-amici .gg-hub .gg-quest.is-done{background:#FFB6A508;border-color:#FFD1BC}
+#tab-amici .gg-hub .gg-milestone.is-progress{border-color:#FFFFFF25;background:#FFFFFF03}
+#tab-amici .gg-hub .gg-milestone.is-unlocked,#gj-game-dialog .gg-milestone.is-unlocked{border-color:#FFB6A56A;background:#FFB6A509}
+#tab-amici .gg-milestone.is-unlocked>small:last-child,#gj-game-dialog .gg-milestone.is-unlocked>small:last-child{color:#FFD4C6!important}
+#tab-amici .gg-milestone.is-unlocked .gg-progress>i,#gj-game-dialog .gg-milestone.is-unlocked .gg-progress>i{background:#FFB6A5!important}
+#tab-amici .gg-team-count>span,#tab-amici .gg-ledger-rows .is-earned>strong,#tab-amici .gg-ledger-rows .is-earned>.gg-state-symbol{color:#FFD1BC!important}
+#tab-amici .gg-ledger-rows .is-earned{background:#FFB6A508;border-color:#FFB6A539}
+/* Settings uses a real flow with gaps; card margins can no longer collapse. */
+#friends-settings-panel:not([hidden]){display:flex;flex-direction:column;gap:20px;min-width:0}
+#friends-settings-panel>*{margin:0!important;min-width:0}
+#friends-settings-panel .friends-top-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+#friends-settings-panel .friends-code-card,#friends-settings-panel .friends-add{min-width:0;margin:0!important;box-sizing:border-box}
+body #tab-amici .btn:not(.danger),body #tab-amici .gg-primary,body #tab-amici #friend-request-form .btn{background:#FFB6A5!important;border:1px solid #FFB6A5!important;color:#2B1819!important;-webkit-text-fill-color:#2B1819!important}
+body #tab-amici button.btn:not(.ghost):not(.danger):not(#z):not(#y),body #tab-amici #friend-request-form button.btn:not(#z):not(#y):not(#x){background:#FFB6A5!important;color:#2B1819!important;-webkit-text-fill-color:#2B1819!important;border-color:#FFB6A5!important}
+body #tab-amici button.btn.ghost:not(#z):not(#y):not(#x){background:#FFFFFF07!important;border-color:#FFFFFF25!important;color:#EDE2E5!important;-webkit-text-fill-color:#EDE2E5!important}
+#tab-amici .friends-period button,#tab-amici .friends-pill{background:#FFFFFF05;color:#D4C8CF;border-color:#FFFFFF22}
+#tab-amici .friends-period button[aria-pressed=true],#tab-amici .friends-pill[aria-pressed=true]{background:#FFB6A51B;color:#FFD8CB;border-color:#FFB6A560}
+#tab-amici .friend-metric-name,#tab-amici .friend-metric-peer .friend-metric-name{color:#FFD1C2}
+#tab-amici .friend-metric h4::before{background:#FFB6A5!important}
+#tab-amici .gg-quest.is-done .gg-quest-state,#tab-amici .gg-hub .gg-quest.is-done>span{color:#FFD1BC}
+body #tab-amici .friends-state{color:#FFD1BC}
+/* Standalone dialog styles: never depend on the friends panel ancestor. */
+#gj-game-dialog .gg-profile-prizes{margin-top:30px;padding-top:26px;border-top:1px solid #FFFFFF20}
+#gj-game-dialog .gg-profile-prizes>header{display:block;padding:0 0 20px;background:none;border:0;min-height:0}
+#gj-game-dialog .gg-profile-prizes h3{margin:7px 0 10px;font-size:20px}
+#gj-game-dialog .gg-profile-prizes header p{margin:0;color:#CFC3C6;font-size:13px;line-height:1.65}
+#gj-game-dialog .gg-reward-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#gj-game-dialog .gg-reward{display:grid!important;grid-template-columns:1fr!important;grid-template-rows:auto auto 1fr auto;gap:10px;align-items:start;text-align:left!important;min-width:0;min-height:220px;padding:18px!important;border:1px solid #FFFFFF24!important;border-radius:20px!important;background:#282528!important;color:#E5DCDF!important;font-family:var(--f-body);cursor:pointer;box-sizing:border-box}
+#gj-game-dialog .gg-reward.is-unlocked{border-color:#FFB6A55C!important;background:linear-gradient(145deg,#FFB6A50A,transparent),#282528!important}
+#gj-game-dialog .gg-reward>*{grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0;overflow-wrap:anywhere}
+#gj-game-dialog .gg-reward>b{display:block;font-size:15px;line-height:1.4;color:#F5E9E8}
+#gj-game-dialog .gg-reward>small{display:block;font-size:12px;line-height:1.6;color:#BDB2B7}
+#gj-game-dialog .gg-reward .gg-reward-icon{display:grid;width:44px;height:44px;place-items:center;border-radius:14px;font-size:26px;background:#FFFFFF08;color:#C9B9BE}
+#gj-game-dialog .gg-reward.is-unlocked .gg-reward-icon{background:#FFB6A510;color:#FFCDBE}
+#gj-game-dialog .gg-reward-state{display:inline-flex;justify-self:start;align-self:end;border:1px solid #FFFFFF19;border-radius:30px;padding:5px 9px;color:#C4B7BD;font-size:11px;line-height:1.3}
+#gj-game-dialog .is-unlocked .gg-reward-state{color:#FFD5C8;border-color:#FFB6A53B;background:#FFB6A50A}
+#gj-game-dialog .gg-prize-purpose{padding:15px;background:#FFFFFF05;border-radius:15px;color:#D5C7CD}
+#gj-game-dialog .gg-current-prize{color:#FFD5C8}
+/* Calendar navigation remains readable at 320px. Native date control is the full central target. */
+.friends-date-nav{display:flex;align-items:center;gap:8px;margin:18px 0 22px;min-width:0}
+.friends-date-nav>button{flex:none;min-width:42px;min-height:46px;border-radius:14px;border:1px solid #FFFFFF22;background:#FFFFFF06;color:#F4DCD5;font-size:20px;cursor:pointer}
+.friends-date-nav>button:last-child:not([data-friend-action=date-next]){font-size:12px;padding:0 12px}
+.friends-date-nav>button:disabled{opacity:.35;cursor:default}
+.friends-date-picker{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;min-height:46px;padding:9px 12px;box-sizing:border-box;border:1px solid #FFB6A535;border-radius:14px;background:#FFB6A509;color:#FFE0D6;font-size:13px;font-weight:650}
+.friends-date-picker>span:first-child{overflow-wrap:anywhere;line-height:1.4}.friends-date-picker>span:nth-child(2){font-size:24px;color:#FFAB98}
+.friends-date-picker input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;box-sizing:border-box;min-width:0}
+.friends-date-picker input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.friends-date-picker:focus-within{outline:2px solid #FFB6A5;outline-offset:3px}
+.friends-history-note{padding:12px;border:1px solid #FFFFFF1B;border-radius:12px;font-size:12px;line-height:1.6;color:#D0C4CA}
+/* Compact recipe workspace: find/create first, browse afterwards. */
+body #tab-ricette>.area-lead{min-height:0;padding:18px 22px;margin-bottom:16px;border-radius:22px}
+#tab-ricette>.area-lead .area-kicker,#tab-ricette>.area-lead .area-mark{display:none}
+#tab-ricette>.area-lead strong{font-size:22px;line-height:1.3;letter-spacing:-.5px;max-width:none;margin:0}
+#tab-ricette>.area-lead p{font-size:12px;line-height:1.5;margin:6px 0 0}
+body #tab-ricette .recipe-search-panel{padding:16px;margin-bottom:10px}
+#tab-ricette .recipe-search-panel>.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.4fr);gap:12px}
+#tab-ricette .recipe-search-panel .f{min-width:0;margin:0;font-size:12px;gap:6px}
+#tab-ricette .recipe-search-panel input,#tab-ricette .recipe-search-panel select{min-width:0;min-height:44px;padding:10px 12px;font-size:14px}
+#tab-ricette .recipe-search-panel .tags:empty{display:none}
+body #tab-ricette .recipe-create-box{margin:0 0 18px;padding:0;border:1px solid #FFBD6926;background:#232124;border-radius:18px}
+#tab-ricette .recipe-create-box>summary{min-height:48px;padding:12px 16px;box-sizing:border-box;font-size:14px}
+#tab-ricette .recipe-create-box>form{padding:16px}
+body #tab-ricette .recipe-chip{border-color:#FFFFFF1B!important;background:#FFFFFF05!important;color:#D6D0D3!important;-webkit-text-fill-color:#D6D0D3!important;font-weight:550}
+body #tab-ricette .recipe-chip-kcal{color:#F4F0F2!important;-webkit-text-fill-color:#F4F0F2!important;font-weight:750}
+#tab-ricette .recipe-chip-time{display:inline-flex;align-items:center;gap:4px}
+@media(max-width:600px){#friends-settings-panel .friends-top-grid{grid-template-columns:1fr}#friends-settings-panel:not([hidden]){gap:16px}.friends-date-nav{gap:5px}.friends-date-nav>button{min-width:36px}.friends-date-picker{padding:8px;font-size:12px}body #tab-ricette>.area-lead{padding:14px 17px;margin-bottom:12px}#tab-ricette>.area-lead strong{font-size:19px}#tab-ricette>.area-lead p{display:none}body #tab-ricette .recipe-search-panel{padding:12px}#tab-ricette .recipe-search-panel>.row{grid-template-columns:minmax(0,1fr) 124px;gap:9px}#tab-ricette .recipe-search-panel input,#tab-ricette .recipe-search-panel select{font-size:12px;padding:9px}#gj-game-dialog .gg-reward-grid{grid-template-columns:1fr}#gj-game-dialog .gg-reward{min-height:0;grid-template-columns:46px minmax(0,1fr)!important;grid-template-rows:auto auto auto;gap:5px 12px}#gj-game-dialog .gg-reward>*{grid-column:2!important}#gj-game-dialog .gg-reward .gg-reward-icon{grid-column:1!important;grid-row:1/4!important}#gj-game-dialog .gg-reward-state{margin-top:6px!important}}
+
 </style>
 </body></html>
+
+
 
