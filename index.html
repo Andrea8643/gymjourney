@@ -2741,7 +2741,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.3.0-filtro' };
+var M = { V: '2.3.1-filtro' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -7730,7 +7730,7 @@ function profilePedSourceHTML() {
     + fld('Quanto cambiano i passi', psel('v.habits.stepsVar', LBL.stepsVar, hb.stepsVar || ''), 'allarga l\'intervallo del consumo; se registri i passi uso la loro dispersione')
     + fld('Allenamenti a settimana', pinp('v.habits.trainPerWeek', hb.trainPerWeek, 'num', ' type="number" step="1" min="0" max="14"'))
     + fld('Tipo di allenamento', psel('v.habits.trainType', LBL.trainType, hb.trainType || ''))
-    + fld('Durata tipica (minuti)', pinp('v.habits.trainMin', hb.trainMin, 'num', ' type="number" step="5" min="0" max="300"'), 'senza durata non stimo l\'energia degli allenamenti abituali')
+    + fld('Durata tipica (minuti)', pinp('v.habits.trainMin', hb.trainMin, 'num', ' type="number" step="5" min="0" max="300"'), 'senza durata uso la tua seduta tipica registrata in Hevy (ultime 8 settimane); senza nemmeno quella non stimo l\'energia degli allenamenti abituali')
     + fld('Passi: obiettivo minimo', pinp('v.steps.min', v.steps && v.steps.min, 'num', ' type="number" step="500" min="0"'))
     + fld('Passi: obiettivo massimo', pinp('v.steps.max', v.steps && v.steps.max, 'num', ' type="number" step="500" min="0"'))
     + fld('Ore di sonno, obiettivo', pinp('v.sleepGoal', v.sleepGoal, 'num', ' type="number" step="0.25" min="4" max="12"'))
