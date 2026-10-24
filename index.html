@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-avviso2">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-traiettoria1">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-avviso2">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-avviso2">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-avviso2">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-avviso2">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-traiettoria1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-traiettoria1">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-traiettoria1">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-traiettoria1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1262,6 +1262,11 @@ p, .ax, .splitnote, .caption, .sum-legend, .fresh span, .sumlines p { text-align
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .chart .draw { stroke-dashoffset: 0; }
 }
+
+.trajectory-context{margin-top:18px;padding:14px 16px;border:1px solid #359bdf36;border-radius:18px;background:linear-gradient(120deg,#2184cb16,#2184cb05)}
+.trajectory-tag{font-size:.78rem;font-weight:800;letter-spacing:.04em;color:#8bceff}.trajectory-context p,.trajectory-impact p,.trajectory-method p{color:var(--muted,#b7b7c0);line-height:1.55;font-size:.87rem;margin:8px 0 0}
+.trajectory-impact{margin-top:12px;border:1px solid #f0b36b42;background:linear-gradient(125deg,#f0b36b12,#f0b36b03);border-radius:18px;padding:16px}.trajectory-impact header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.trajectory-impact header span{font-size:.76rem;color:#d1b99e}.trajectory-impact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}.trajectory-impact-grid>div{display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:13px;padding:12px;background:#ffffff06}.trajectory-impact-grid small{font-size:.77rem;color:#c5bdba;min-height:2.6em}.trajectory-impact-grid strong{font-size:clamp(1.05rem,4vw,1.35rem);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.trajectory-method{margin-top:12px;border:1px solid #ffffff16;border-radius:16px;background:#ffffff03}.trajectory-method summary{padding:14px 16px;font-weight:700;cursor:pointer}.trajectory-method>div{padding:0 16px 16px}.trajectory-method summary:focus-visible{outline:2px solid #79bfff;outline-offset:3px}
+.trajectory-impact-grid strong{margin-top:auto;font-size:clamp(.95rem,4vw,1.35rem)}
 
 </style><style>:root{--bg:#0b1014;--bg-2:#10171b;--surface:#151e23;--surface-2:#1c282e;--surface-3:#26353c;--ink:#f0f5f3;--ink-2:#a4b6b5;--ink-3:#809796;--accent:#b9edce;--accent-2:#d8f6e5;--accent-ink:#12251b;--line:#263339;--line-2:#45605c;--r-lg:20px;--r-md:14px;--r-sm:10px;--steps:#78dcb0}
 body{letter-spacing:0;font-size:14px}body::before,body::after{display:none!important}
@@ -2734,7 +2739,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.1.1' };
+var M = { V: '2.2.0-traiettoria' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -3921,7 +3926,7 @@ M.simulate = simulate; M.arrival = arrival; M.requiredIntake = requiredIntake; M
 /* peso dopo «days» giorni: valore centrale e fascia (consumo ± 1 deviazione, livello di partenza ± il suo errore) */
 function weightBand(base, I, days) {
   var f = base.kSDrel || 0, se = base.se || 0, out = { c: simulate({ w0: base.w0, B0: base.B0, perKg: base.perKg, I: I, days: days })[days] }, v = [];
-  [1 + f, 1 - f].forEach(function (m) { [se, -se].forEach(function (e) { v.push(simulate({ w0: base.w0 + e, B0: base.B0 * m, perKg: base.perKg, I: I, days: days })[days]); }); });
+  [1+f,Math.max(.1,1-f)].forEach(function(m){[1.96*se,-1.96*se].forEach(function(e){[K.RHO_LO,K.RHO_HI].forEach(function(rho){v.push(simulate({w0:base.w0+e,B0:base.B0*m,perKg:base.perKg*m,I:I,rho:rho,days:days})[days]);});});});
   out.lo = Math.min.apply(null, v); out.hi = Math.max.apply(null, v);
   return out;
 }
@@ -3931,9 +3936,11 @@ function weightBand(base, I, days) {
 function arrivalRange(base, I, goal, dir, from) {
   var H = K.ARR_MAX, out = { I: I };
   var c = arrival({ w0: base.w0, B0: base.B0, perKg: base.perKg, I: I }, goal, dir, H);
-  var f = K.ARR_ERR, se = base.se || 0, ks = [];
+  var f = Math.max(K.ARR_ERR,base.kSDrel||0), se = base.se || 0, ks = [];
   /* fabbisogno reale più alto o più basso del 10%: la data più vicina e la più lontana */
-  [1 + f, 1 - f].forEach(function (m) { ks.push(arrival({ w0: base.w0, B0: base.B0 * m, perKg: base.perKg * m, I: I }, goal, dir, H)); });
+  [1+f,Math.max(.1,1-f)].forEach(function(m){[-1.96*se,1.96*se].forEach(function(e){
+    [K.RHO_LO,K.RHO_HI].forEach(function(rho){ks.push(arrival({w0:base.w0+e,B0:base.B0*m,perKg:base.perKg*m,I:I,rho:rho},goal,dir,H));});
+  });});
   out.central = c != null ? dAdd(from, c) : null; out.days = c;
   out.far = c != null && c > K.HORIZON;
   var known = ks.filter(function (x) { return x != null; });
@@ -3941,7 +3948,7 @@ function arrivalRange(base, I, goal, dir, from) {
   out.to = known.length === ks.length ? dAdd(from, Math.max.apply(null, known)) : null;
   out.partial = known.length > 0 && known.length < ks.length;
   out.sens = { from: out.from, to: out.to };
-  out.se = se; out.kSDrel = f;
+  out.se = se; out.kSDrel = f; out.intervalKind = "sensibilita_modello";
   out.rho = {
     5000: arrival({ w0: base.w0, B0: base.B0, perKg: base.perKg, I: I, rho: K.RHO_LO }, goal, dir, H),
     9400: arrival({ w0: base.w0, B0: base.B0, perKg: base.perKg, I: I, rho: K.RHO_HI }, goal, dir, H)
@@ -4329,6 +4336,7 @@ function engine(D, asOf, opts) {
   out.alerts = alertsOf(out, ctx, asOf);
   out.performance = performanceOf(ctx, asOf);
   /* previsioni */
+  out.trajectory = energyTrajectory(ctx, asOf, function(d){return dayInfo(ctx,cfg,d,kAt,targetOf,cfgAt);}, base);
   out.forecast = forecastOf(ctx, v, z, base, tr, asOf, out);
   /* accesso ai singoli giorni (passati: consumo ricostruito; futuri: previsto) con lo stesso motore; non enumerabile,
      così non finisce nei salvataggi */
@@ -4340,6 +4348,7 @@ function engine(D, asOf, opts) {
   Object.defineProperty(out, 'kAt', { enumerable: false, value: kAt });
   out.snapshot = {
     d: asOf, V: M.V, planId: v.id, planFrom: v.from, k: base.ok ? base.k : null, R: base.ok ? base.R : null, T: z ? z.kcal : null,
+    trajectory: out.trajectory&&!out.trajectory.none ? {version:TRAJECTORY.version,start:out.trajectory.start,v:out.trajectory.v,se:out.trajectory.se,temporary:out.trajectory.temporary,missing:out.trajectory.missing,observations:out.trajectory.observations,sim:out.forecast&&out.forecast.sim||null} : null,
     trend: tr.none ? null : { v: tr.v, slope: tr.slope, n: tr.n, last: tr.last, method: tr.method }, tomorrow: tm.none ? null : { lo: tm.lo, c: tm.c, hi: tm.hi },
     arrival: out.forecast && out.forecast.plan ? { central: out.forecast.plan.central, from: out.forecast.plan.from, to: out.forecast.plan.to } : null,
     cal: cal ? { status: cal.status, method: cal.method, kRaw: cal.kRaw, kPost: cal.kPost, dataWeight: cal.wData, window: cal.window, meanConsumption: cal.C, maintenance: cal.maintenance } : null,
@@ -4486,26 +4495,157 @@ function alertsOf(out, ctx, asOf) {
 }
 
 /* previsioni: arrivo all'obiettivo con le calorie del piano e con quelle registrate, data richiesta, bilancia di domani */
+/* Sequential energy/weight estimator. Engineering model, not a body-composition measurement.
+   x = slowly changing, energy-linked reference weight; u = temporary scale deviation.
+   Morning observation y=x+u+e is assimilated BEFORE that day's intake.
+   x(t+1)=x(t)+[(1-TEF)I(t)-B(t)]/rho; u(t+1)=phi*u(t).
+   Existing causal expenditure calibration supplies B; this filter does not invent a second TDEE.
+   Covariance and a robust observation likelihood limit the effect of isolated readings.
+   Noise constants are documented engineering priors, not clinically validated parameters.
+   Every replay starts from raw records, so no stored correction can be counted twice. */
+var TRAJECTORY = { version: '1.0.0', phi: 0.70, scaleSD: 0.45, levelSD: 0.30,
+  measurementSD: 0.15, processKcal: 100, intakeRelSD: 0.10, missingRelSD: 0.50,
+  robustZ: 2.5, maxHistoryDays: 365 };
+function energyTrajectory(ctx, asOf, getDay, base, options) {
+  options = options || {};
+  var limit = dAdd(asOf, -TRAJECTORY.maxHistoryDays), all = ctx.wList.filter(function(p){return p.d >= limit && p.d <= asOf;});
+  var first = null;
+  for(var n=0;n<all.length&&!first;n++) {
+    var accepted = weighIns(ctx,all[n].d).acc;
+    first = accepted.filter(function(p){return p.d === all[n].d;})[0] || null;
+  }
+  var from = first && first.d, initial = first && first.w, initialOrigin = 'pesata';
+  if(!first && ctx.profile && +ctx.profile.weight > 0) {
+    from = ctx.versions.length ? ctx.versions[0].from : asOf;
+    if(from < limit) return {none:true,why:'servono pesate recenti per inizializzare la traiettoria'};
+    initial = +ctx.profile.weight; initialOrigin = 'peso iniziale del profilo';
+  }
+  if(!(initial > 0)||!from||from>asOf) return {none:true,why:'manca un peso iniziale utilizzabile'};
+  var x=initial,u=0,a=Math.pow(first?TRAJECTORY.levelSD:0.8,2),b=0,c=Math.pow(TRAJECTORY.scaleSD,2);
+  var recent=[], rows=[], count=0,missing=0,observations=0,lastWeight=null,lastComplete=null,provisionalToday=false,todayAssumed=null;
+  var sigma=TRAJECTORY.scaleSD, normalized=[], phi=TRAJECTORY.phi, totalCorrection=0;
+  var transitions=weightTransitions(ctx);
+  function snapshot(d){return {d:d,v:x,temporary:u,scale:x+u,se:Math.sqrt(Math.max(0,a)),scaleSE:Math.sqrt(Math.max(0,a+2*b+c)+Math.pow(TRAJECTORY.measurementSD,2))};}
+  function input(d,info) {
+    var day=ctx.days[d]||{},it=intakeOf(day,d===asOf),known=it.usable&&day.kcal!=null&&day.kcal!==''&&isFinite(+day.kcal);
+    if(it.state==='zero_confermato')known=true;
+    var I=known?it.kcal:null,origin=known?'diario completo':null;
+    if(options.replace && options.replace.d===d){I=options.replace.intake;known=true;origin='confronto con il piano';}
+    if(I==null) {
+      var history=recent.slice(-14);I=history.length>=4?median(history):info&&info.target;
+      if(!(I>=0))I=base&&base.ok?base.R:null;
+      // An unfinished log is a lower bound, never a completed low-calorie day.
+      if(day.kcal!=null&&day.kcal!==''&&isFinite(+day.kcal)&&+day.kcal>I)I=+day.kcal;
+      origin=history.length>=4?'ipotesi dalla mediana recente':'ipotesi dal piano o dal mantenimento';
+    }
+    return {I:I,known:known,origin:origin};
+  }
+  function predict(d,info,inpt) {
+    if(!info||info.B==null||!(inpt.I>=0))return false;
+    var I=inpt.I,B=info.B,energy=(1-K.TEF)*I-B;
+    x+=energy/K.RHO;u*=phi;
+    var eSD=Math.sqrt(Math.pow(TRAJECTORY.processKcal,2)+Math.pow((1-K.TEF)*I*(inpt.known?TRAJECTORY.intakeRelSD:TRAJECTORY.missingRelSD),2));
+    var relativeB=base&&base.kSD!=null&&base.k>0?Math.max(.04,Math.abs(base.kSD/base.k)):.15;
+    // Persistent expenditure uncertainty is also propagated by forecast scenarios.
+    var q=Math.pow(eSD/K.RHO,2)+Math.pow(B*Math.min(.25,relativeB)/K.RHO,2);
+    var transition=transitions.some(function(e){return e.d<=d&&dDiff(e.d,d)<K.TRANS_DAYS;});
+    var burst=inpt.known&&info.target>0?Math.min(1,Math.abs(I-info.target)/Math.max(1000,info.target)):0;
+    a+=q;b*=phi;c=phi*phi*c+(1-phi*phi)*sigma*sigma*(transition?2:1)+.16*burst;
+    return {d:d,intake:I,known:inpt.known,origin:inpt.origin,B:B,consumption:B+K.TEF*I,energy:energy,
+      target:info.target,delta:inpt.known&&info.target!=null?I-info.target:null,next:snapshot(dAdd(d,1))};
+  }
+  for(var d=from;d<=asOf;d=dAdd(d,1)) {
+    var measurement=weighIns(ctx,d).acc.filter(function(p){return p.d===d;})[0], correction=0;
+    if(measurement) {
+      observations++;lastWeight=d;
+      if(d!==from||initialOrigin!=='pesata') {
+        var r=Math.pow(TRAJECTORY.measurementSD*(measurement.cond?1:1.5),2),residual=measurement.w-x-u;
+        var S=a+2*b+c+r,z=Math.abs(residual)/Math.sqrt(Math.max(1e-9,S));
+        if(z>TRAJECTORY.robustZ){r+=(S*(Math.pow(z/TRAJECTORY.robustZ,2)-1));S=a+2*b+c+r;}
+        var kt=(a+b)/S,ku=(b+c)/S,aa=a,bb=b,cc=c;
+        correction=kt*residual;x+=correction;u+=ku*residual;totalCorrection+=correction;
+        a=Math.max(1e-8,aa-(aa+bb)*(aa+bb)/S);b=bb-(aa+bb)*(bb+cc)/S;c=Math.max(1e-8,cc-(bb+cc)*(bb+cc)/S);
+        normalized.push(Math.min(2,Math.abs(residual)));if(normalized.length>28)normalized.shift();
+        if(normalized.length>=7)sigma=Math.max(.25,Math.min(1.25,1.2533*median(normalized)));
+      }
+    }
+    var morning=snapshot(d);morning.measured=measurement?measurement.w:null;morning.correction=correction;
+    var info=getDay(d),inpt=input(d,info);
+    // Partial current intake is a lower bound, not a finished low-calorie day.
+    if(d===asOf&&!inpt.known){
+      var current=ctx.days[d]||{};
+      if(current.kcal!=null&&current.kcal!==''&&+current.kcal>0&&info&&info.target>0){
+        inpt.I=Math.max(+current.kcal,info.target);inpt.origin='oggi parziale: almeno il piano o le calorie già registrate';provisionalToday=true;todayAssumed=inpt.I;
+      }else{rows.push({morning:morning,d:d,pending:true});break;}
+    }
+    var step=predict(d,info,inpt);
+    if(!step)return {none:true,why:'consumo o calorie non stimabili per il '+d};
+    count++;if(inpt.known){recent.push(inpt.I);lastComplete=step;}else missing++;
+    rows.push({d:d,morning:morning,step:step});
+  }
+  var advanced=rows.length&&!!rows[rows.length-1].step, date=advanced?dAdd(asOf,1):asOf, final=snapshot(date);
+  var morningNow=rows[rows.length-1].morning,age=lastWeight?dDiff(lastWeight,asOf):null;
+  return {version:TRAJECTORY.version,from:from,asOf:asOf,start:date,v:final.v,se:final.se,temporary:final.temporary,
+    scale:final.scale,scaleSE:final.scaleSE,morning:morningNow,includesToday:advanced,provisionalToday:provisionalToday,todayAssumed:todayAssumed,initialOrigin:initialOrigin,
+    lastWeight:lastWeight,age:age,stale:age==null||age>7,observations:observations,days:count,missing:missing,
+    coverage:count?(count-missing)/count:0,noise:sigma,lastComplete:lastComplete,totalCorrection:totalCorrection,rows:rows};
+}
+M.energyTrajectory=energyTrajectory;M.TRAJECTORY=TRAJECTORY;
+
+/* Retrospective reconstruction from current records, strictly truncated by event date.
+   Import/edit timestamps cannot establish what was actually known then; never label this prospective validation. */
+function trajectoryValidation(D,asOf) {
+  var dates=Object.keys(D.days||{}).filter(function(d){return d<=asOf;}).sort(),rows=[];
+  for(var i=14;i+7<dates.length;i+=7) {
+    var from=dates[i],to=dAdd(from,7),past=M.clone(D);past.days={};
+    Object.keys(D.days).forEach(function(d){if(d<=from)past.days[d]=M.clone(D.days[d]);});
+    if(past.days[from]){past.days[from].kcal=null;past.days[from].st=Object.assign({},past.days[from].st||{},{kcal:'parziale'});}
+    past.workouts=(past.workouts||[]).filter(function(w){return w.date<=from;});
+    var e=engine(past,from),t=trendAt(e.ctx,from);
+    if(!e.forecast||!e.forecast.sim||t.none||t.datato||e.trajectory.stale)continue;
+    var I=[],valid=true;
+    for(var j=0;j<7;j++){var it=intakeOf((D.days||{})[dAdd(from,j)],false);if(!it.usable){valid=false;break;}I.push(it.kcal);}
+    if(!valid)continue;
+    var acceptable=weighIns(prepare(D,to),to).acc,seen=[5,6,7].filter(function(n){return acceptable.some(function(w){return w.d===dAdd(from,n);});});
+    if(seen.length<2)continue;
+    var actual=avg(seen.map(function(n){return acceptable.filter(function(w){return w.d===dAdd(from,n);})[0].w;}));
+    var s=e.forecast.sim,p=simulate({w0:t.v,B0:e.base.Bh,perKg:e.base.perKg,I:function(n){return I[n];},days:7}),q=simulate({w0:s.w0,B0:s.B0,perKg:s.perKg,I:function(n){return I[n];},days:7});
+    var old=avg(seen.map(function(n){return p[n];})),next=avg(seen.map(function(n){return q[n];}));
+    rows.push({from:from,to:to,actual:actual,predictionPrevious:old,predictionNew:next,errorPrevious:old-actual,errorNew:next-actual});
+  }
+  rows=rows.slice(-4);
+  return {n:rows.length,rows:rows,previousMAE:rows.length?avg(rows.map(function(r){return Math.abs(r.errorPrevious);})):null,newMAE:rows.length?avg(rows.map(function(r){return Math.abs(r.errorNew);})):null,
+    mode:'ricostruzione_storica',horizon:7};
+}
+M.trajectoryValidation=trajectoryValidation;
+
 function forecastOf(ctx, v, z, base, tr, asOf, out) {
   var g = v.goal || {}, f = { tomorrow: out.weight.tomorrow };
   if (!base.ok) { f.none = base.why; return f; }
-  if (tr.none) { f.none = 'nessuna pesata'; return f; }
-  if (tr.datato) { f.none = 'ultima pesata di più di 7 giorni fa: previsione non disponibile'; return f; }
+  var trajectory=out.trajectory;
+  if(!trajectory||trajectory.none){f.none=trajectory&&trajectory.why||'traiettoria non disponibile';return f;}
+  if(trajectory.stale&&(trajectory.initialOrigin!=='peso iniziale del profilo'||dDiff(trajectory.from,asOf)>7)){f.none='servono pesate recenti: peso iniziale o ultima pesata di più di 7 giorni fa';return f;}
+  f.trajectory=trajectory;var start=trajectory.start,W0=trajectory.v;
+  f.lastImpact=z&&trajectory.lastComplete&&trajectory.lastComplete.delta!=null?{
+    d:trajectory.lastComplete.d,delta:trajectory.lastComplete.delta,
+    energy:(1-K.TEF)*trajectory.lastComplete.delta,
+    days:g.phase==='cut'&&(base.Bh-(1-K.TEF)*z.kcal)>0?(1-K.TEF)*trajectory.lastComplete.delta/(base.Bh-(1-K.TEF)*z.kcal):g.phase==='surplus'&&((1-K.TEF)*z.kcal-base.Bh)>0?-(1-K.TEF)*trajectory.lastComplete.delta/((1-K.TEF)*z.kcal-base.Bh):null
+  }:null;
   var dir = g.phase === 'cut' ? -1 : g.phase === 'surplus' ? 1 : 0, gw = +g.goalWeight;
-  var sim = { w0: tr.v, B0: base.Bh, perKg: base.perKg, kSDrel: base.kSD || 0, se: tr.se || 0 };
-  f.from = asOf; f.w0 = tr.v; f.w0Se = tr.se || 0; f.sim = sim;
-  if (!dir || !(gw > 0)) { f.maint = true; if (z) { var s = simulate({ w0: tr.v, B0: base.Bh, perKg: base.perKg, I: z.kcal, days: 28 }); f.in28 = { c: s[28], d: dAdd(asOf, 28) }; } return f; }
-  if ((gw - tr.v) * dir <= 0) { f.done = true; return f; }
-  if (z) f.plan = arrivalRange(sim, z.kcal, gw, dir, asOf);
+  var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: Math.max(K.ARR_ERR,base.kSD&&base.k>0?base.kSD/base.k:0), se: trajectory.se };
+  f.from = start; f.w0 = W0; f.w0Se = trajectory.se; f.sim = sim;
+  if (!dir || !(gw > 0)) { f.maint = true; if (z) { var s = simulate({ w0: W0, B0: sim.B0, perKg: base.perKg, I: z.kcal, days: 28 }); f.in28 = { c: s[28], d: dAdd(start, 28) }; } return f; }
+  if ((gw - W0) * dir <= 0) { f.done = true; return f; }
+  if (z) f.plan = arrivalRange(sim, z.kcal, gw, dir, start);
   var lg = [];
   for (var i = 1; i <= 14; i++) { var it = intakeOf(ctx.days[dAdd(asOf, -i)], false); if (it.usable) lg.push(it.kcal); }
-  if (lg.length >= 7) { f.logged = arrivalRange(sim, avg(lg), gw, dir, asOf); f.logged.n = lg.length; }
+  if (lg.length >= 7) { f.logged = arrivalRange(sim, avg(lg), gw, dir, start); f.logged.n = lg.length; }
   else f.loggedWhy = 'servono almeno 7 giornate complete nelle ultime 2 settimane (ora ' + lg.length + ')';
-  if (g.endDate && g.endDate > asOf) {
-    var days = dDiff(asOf, g.endDate), req = requiredIntake(sim, gw, days);
+  if (g.endDate && g.endDate > start) {
+    var days = dDiff(start, g.endDate), req = requiredIntake(sim, gw, days);
     f.required = { kcal: req, days: days, date: g.endDate, beyondHorizon: days > K.HORIZON };
     /* stessi limiti del piano automatico (sezione 14): fuori dai limiti è un conflitto con alternative, non un introito da mostrare */
-    var W = tr.v, R = base.R, rest = out.rmr && out.rmr.v, pct = Math.abs(gw - W) / (days / 7) / W * 100;
+    var W = W0, R = base.R, rest = out.rmr && out.rmr.v, pct = Math.abs(gw - W) / (days / 7) / W * 100;
     var maxPct = dir < 0 ? K.CUT_PCT : K.SUR_PCT, maxFrac = dir < 0 ? K.CUT_FRAC : K.SUR_FRAC, why = [];
     if (pct > maxPct + 1e-9) why.push('servirebbe ' + nf(pct, 1) + '% del peso a settimana, oltre il limite del ' + maxPct + '%');
     if ((1 - K.TEF) * Math.abs(req - R) > maxFrac * ((1 - K.TEF) * R + K.TEF * req) + 1e-9) why.push('servirebbero ' + nf((1 - K.TEF) * Math.abs(req - R)) + ' kcal ' + (dir < 0 ? 'sotto' : 'sopra') + ' il consumo di riferimento, oltre il ' + nf(maxFrac * 100) + '%');
@@ -4513,7 +4653,7 @@ function forecastOf(ctx, v, z, base, tr, asOf, out) {
     if (why.length) {
       var maxKgW = Math.min(maxPct / 100 * W, maxDailyGap(R, maxFrac, dir) * 7 / K.RHO), alt = [];
       if (maxKgW > 0) {
-        alt.push({ tipo: 'data', date: dAdd(asOf, Math.ceil(Math.abs(gw - W) / maxKgW * 7)), msg: 'spostare la data al ' + dIt(dAdd(asOf, Math.ceil(Math.abs(gw - W) / maxKgW * 7))) + ' o dopo' });
+        alt.push({ tipo: 'data', date: dAdd(start, Math.ceil(Math.abs(gw - W) / maxKgW * 7)), msg: 'spostare la data al ' + dIt(dAdd(start, Math.ceil(Math.abs(gw - W) / maxKgW * 7))) + ' o dopo' });
         alt.push({ tipo: 'obiettivo', w: r(W + dir * maxKgW * days / 7, 1), msg: 'per quella data un obiettivo entro i limiti è circa ' + nf(W + dir * maxKgW * days / 7, 1) + ' kg' });
       }
       alt.push({ tipo: 'modalita', msg: 'oppure un piano manuale o professionale' });
@@ -6491,7 +6631,7 @@ function arrText(a, short) {
   return 'il ' + fmtDay(a.central) + (a.far ? ', oltre 12 settimane: indicativa' : '');
 }
 function sensText(a) { return a && a.sens && a.sens.from ? fmtDay(a.sens.from) + (a.sens.to ? ' e il ' + fmtDay(a.sens.to) : ' e oltre 3 anni') : '—'; }
-function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Se il tuo fabbisogno reale fosse diverso del ' + fmt(GJM.K.ARR_ERR * 100, 0) + '%, arriveresti fra il ' + sensText(a) + '.' : ''; }
+function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia di sensibilità del modello, fra il ' + sensText(a) + '. Non è una probabilità garantita.' : ''; }
 function renderSummaryBox() {
   var E = state.E, NW = weightNow(), al = state.alerts || [], f = E && E.forecast, s = S();
   $('#sum-head').textContent = 'Il percorso in breve';
@@ -6522,7 +6662,7 @@ function summaryExplanationHTML() {
   cards.push(explainBlock('checks', 'check', '3 · Controlli dei dati', al.length + ' ' + (al.length === 1 ? 'segnalazione' : 'segnalazioni'), 'Controlli del diario e delle tendenze che l\'app esegue davvero.', al.length ? al.map(function (a) { return '<b>' + esc(a.t) + '.</b> ' + esc(a.x); }) : ['Nessuna segnalazione.'], '«Nessun avviso» non significa salute certificata né consumo esatto.'));
   cards.push(explainBlock('last', 'weight', '4 · Ultima pesata', n ? fmt(n.last.w, 1) + ' kg' : 'Nessuna pesata', 'L\'osservazione più recente accettata.', [esc(wCountsText())], 'Una pesata da sola non dice quanta parte sia acqua, contenuto intestinale o tessuto.'));
   cards.push(explainBlock('goal', 'goal', '5 · Arrivo con le calorie del piano', f && f.plan ? arrText(f.plan, false) : '—', 'Simulazione giorno per giorno con le calorie del piano e il consumo stimato che cambia con il peso.', f && f.plan ? [
-    'Parto dalla tendenza di <b>' + fmt(f.w0, 1) + ' kg</b> al ' + fmtDay(f.from) + ', incerta di circa ±' + fmt(f.w0Se, 1) + ' kg (acqua, sale e orario spostano la bilancia).',
+    'Parto dal riferimento aggiornato con calorie e pesate di <b>' + fmt(f.w0, 1) + ' kg</b> al ' + fmtDay(f.from) + ', incerta di circa ±' + fmt(f.w0Se, 1) + ' kg (acqua, sale e orario spostano la bilancia).',
     winText(f.plan),
     'Con 5.000 kcal/kg: ' + (f.plan.rho[5000] ? fmtDay(f.plan.rho[5000]) : 'non raggiunto') + '; con 9.400: ' + (f.plan.rho[9400] ? fmtDay(f.plan.rho[9400]) : 'non raggiunto') + '.'
   ] : [f && f.none ? esc(f.none) : 'Serve un obiettivo di peso.'], 'Non è una probabilità né una scadenza. L\'intervallo non comprende i giorni diversi dal piano, gli errori del diario e l\'acqua dopo un cambio di routine: con questi è più largo. Oltre 12 settimane la previsione non è disponibile.'));
@@ -6870,10 +7010,31 @@ function renderPlanImpact() {
   box.innerHTML = h;
 }
 
+function trajectoryExplanationHTML(f) {
+  var t=f.trajectory;if(!t)return '';
+  var last=f.lastImpact, h='<div class="trajectory-context"><span class="trajectory-tag">Calorie + pesate</span><p>'+
+    (t.observations?'La traiettoria usa '+t.observations+' pesate confrontabili.':'Partenza dal peso inserito nel profilo: la stima deve ancora essere corretta dalle pesate.')+
+    (t.missing?' '+t.missing+' giornate senza calorie complete: sono ipotizzate, con incertezza maggiore.':t.days?' Le giornate trascorse hanno calorie complete.':'')+'</p></div>';
+  if(last&&Math.abs(last.delta)>.5)h+='<div class="trajectory-impact"><header><b>La giornata del '+fmtDay(last.d)+'</b><span>Rispetto al piano</span></header><div class="trajectory-impact-grid"><div><small>Calorie registrate in '+(last.delta>0?'più':'meno')+'</small><strong>'+kc(Math.abs(last.delta))+'</strong></div><div><small>Equivalenza al ritmo stimato</small><strong>'+(last.days!=null?sgn(last.days,1)+' giorni':'Non disponibile')+'</strong></div></div><p>Confronto energetico della singola giornata, già incluso nel calcolo. Non aggiungere questi giorni alla data prevista e non usarli come giorni di restrizione da recuperare.</p></div>';
+  h+='<details class="trajectory-method"><summary>Come calorie e pesate aggiornano la previsione</summary><div><p>Le calorie complete di un giorno e il suo consumo stimato aggiornano il riferimento del mattino successivo. La pesata mattutina corregge la stima prima di applicare le calorie di quel giorno.</p><p>Il filtro distingue un livello di fondo dalle oscillazioni temporanee della bilancia. Non misura grasso, acqua o metabolismo. Una pesata isolata pesa meno di una serie coerente; le pesate da verificare restano escluse fino alla conferma.</p><p>Le calorie parziali e mancanti non sono digiuni: per lo storico uso un’ipotesi dichiarata, allargando l’incertezza. Oggi senza calorie è simulato con il piano. Con calorie parziali già inserite, l’ipotesi per oggi è almeno il maggiore fra piano e calorie registrate, con incertezza maggiore. Una giornata completa di oggi è inclusa una volta sola e la simulazione successiva parte domani.</p><p>Il consumo conserva la calibrazione del diario già presente nell’app. Errori sistematici nel diario e nel consumo non si possono separare con la sola bilancia. Questa previsione non certifica l’esattezza del fabbisogno.</p><p>Modello sequenziale a due componenti, con correzione robusta delle pesate. Le fasce sono scenari di sensibilità, non probabilità garantite. La verifica sullo storico controlla errori di previsione; non equivale a una validazione clinica.</p></div></details>';
+  h+='<details class="trajectory-method"><summary>Controllo sul tuo storico</summary><div><p>Ricostruisce fino a quattro finestre di 7 giorni, usando alla partenza solo le pesate precedenti. Le calorie successive sono fornite a entrambi i metodi per il confronto; la previsione non usa le pesate successive.</p><button type="button" class="btn ghost" id="trajectory-validate">Calcola il confronto</button><div id="trajectory-validation-result" aria-live="polite"></div></div></details>';
+  return h;
+}
+function bindTrajectoryValidation(){
+  var button=$('#trajectory-validate');if(!button)return;
+  button.onclick=function(){button.disabled=true;button.textContent='Calcolo…';
+    requestAnimationFrame(function(){try{var r=GJM.trajectoryValidation(engineD(),todayStr()),box=$('#trajectory-validation-result');
+      if(!box)return;
+      box.innerHTML=r.n?'<p><b>'+r.n+' finestre settimanali confrontabili.</b></p><div class="trajectory-impact-grid"><div><small>Errore medio assoluto · metodo precedente</small><strong>'+fmt(r.previousMAE,2)+' kg</strong></div><div><small>Errore medio assoluto · nuovo metodo</small><strong>'+fmt(r.newMAE,2)+' kg</strong></div></div><p>Confronto con la media di 2–3 pesate finali, non con tessuto misurato. È una ricostruzione dai dati attuali: importazioni e modifiche tardive non consentono di ricreare tutto ciò che era noto allora. Poche finestre non dimostrano affidabilità generale né futura; un errore basso non è garantito.</p>':'<p>Storico ancora insufficiente: servono almeno due settimane iniziali, poi 7 giornate con calorie complete e almeno due pesate confrontabili nei tre giorni finali. Nessun punteggio di accuratezza viene inventato.</p>';
+      button.textContent='Confronto calcolato';
+    }catch(e){button.disabled=false;button.textContent='Riprova';var box=$('#trajectory-validation-result');if(box)box.textContent='Il confronto non è disponibile con questi dati.';}});
+  };
+}
+
 function renderForecast() {
   renderPlanImpact();
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
-  $('#fc-origin').textContent = f && f.w0 != null ? 'Peso di riferimento: ' + fmt(f.w0, 1) + ' kg, ricavato dalle tue pesate recenti. La data qui sotto ipotizza di seguire il piano da oggi.' : 'La previsione sarà disponibile con un piano attivo e pesate recenti.';
+  $('#fc-origin').textContent = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg al '+fmtDay(f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
   $('#fc-title').textContent = s.goalWeight > 0 ? 'Quando potresti arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'Peso nelle prossime settimane';
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
@@ -6883,17 +7044,18 @@ function renderForecast() {
   big.textContent = rng(f.plan);
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
   var rows = '<div class="fc-grid">'
-    + line('Se segui il piano da oggi', (f.plan ? fmt(f.plan.I, 0) + ' kcal al giorno' : '—') + ', dal peso di riferimento di ' + fmt(f.w0, 1) + ' kg', rng(f.plan), winText(f.plan))
+    + line(f.trajectory&&f.trajectory.includesToday?'Se segui il piano dal '+fmtDay(f.from):'Se segui il piano da oggi', (f.plan ? fmt(f.plan.I, 0) + ' kcal al giorno' : '—') + ', dal peso di riferimento di ' + fmt(f.w0, 1) + ' kg', rng(f.plan), winText(f.plan))
     + line('Se mantieni la media recente', f.logged ? fmt(f.logged.I, 0) + ' kcal al giorno: media delle giornate complete nelle ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
     + (f.required ? (f.required.conflict
       ? line('Per arrivare entro il ' + fmtDay(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
       : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
-    + '</div><p class="caption">' + (f.logged ? '<b>Calorie registrate:</b> media di ' + fmt(f.logged.I, 0) + ' kcal su ' + f.logged.n + ' giornate complete delle ultime 2 settimane, comprese le più abbondanti. ' : f.loggedWhy ? '<b>Calorie registrate:</b> ' + esc(f.loggedWhy) + '. ' : '') + (f.required && !f.required.conflict ? '<b>Per la data:</b> calorie costanti da oggi con la stessa simulazione' + (f.required.beyondHorizon ? ', oltre 12 settimane quindi solo indicativo' : '') + '. ' : '') + '</p><p class="caption"><b>Come lo calcolo:</b> ogni giorno peso − (consumo − calorie) ÷ 7.700, con il consumo che cambia col peso e la digestione calcolata sulle calorie dello scenario. I giorni sopra l\'obiettivo sono già dentro la media registrata: non aggiungo «giorni di ritardo». La data in grande è il giorno esatto in cui il calcolo arriva all\'obiettivo con il tuo fabbisogno stimato; la finestra sotto mostra dove cadrebbe se il fabbisogno reale fosse il ' + fmt(GJM.K.ARR_ERR * 100, 0) + '% più alto o più basso. Con nuove pesate e giornate complete il fabbisogno stimato si affina e la data si aggiorna. Non quantificati: giorni diversi dallo scenario, errori del diario, acqua dopo un cambio di routine.</p>';
+    + '</div>'+trajectoryExplanationHTML(f);
+
   if (f.required && f.required.conflict) rows += '<p class="p2-warn" id="fc-conflict">' + (f.required.impossible
     ? 'Arrivare all\'obiettivo entro il ' + fmtDay(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
     : 'Per arrivarci entro il ' + fmtDay(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(f.required.why) + '.')
     + ' Meglio ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data al ' + fmtDay(a.date) + ' o dopo' : a.msg); }).join('; ') + '.</p>';
-  $('#fc-rows').innerHTML = rows;
+  $('#fc-rows').innerHTML = rows; bindTrajectoryValidation();
 }
 function renderProjection() {
   var E = state.E, f = E && E.forecast, s = S(), box = $('#proj-cards');
@@ -6903,7 +7065,7 @@ function renderProjection() {
     $('#proj-context').innerHTML = ''; $('#proj-more').innerHTML = ''; $('#proj-note').textContent = ''; return;
   }
   var T = E.today.target ? E.today.target.v : null, Il = f.logged ? f.logged.I : null, B = E.base, dir = goalDir(), gw = s.goalWeight;
-  var kd = B.kSD || 0, marks = [14, 28, 56, 84];
+  var kd = f.sim.kSDrel || 0, marks = [14, 28, 56, 84];
   function result(I, k, name, tone) {
     if (I == null) return '<div class="projection-result '+tone+'"><small>'+name+'</small><b class="projection-unavailable">Non disponibile</b><span>Servono giornate complete sufficienti.</span></div>';
     var b = GJM.weightBand(f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
@@ -6912,11 +7074,12 @@ function renderProjection() {
   }
   var dateText = function(d) { return d.split('-').reverse().join('/'); };
   var startText = dateText(f.from);
-  $('#proj-context').innerHTML = '<div class="projection-scenarios"><span class="projection-plan"><i></i><span class="projection-scenario-copy"><span>Seguendo il piano da oggi, '+startText+'</span><b>'+(T!=null?kc(T)+'/giorno':'non disponibile')+'</b></span></span><span class="projection-diary"><i></i><span class="projection-scenario-copy"><span>Mantenendo la media recente delle ultime due settimane, da oggi</span><b>'+(Il!=null?kc(Il)+'/giorno':'non disponibile')+'</b></span></span></div>';
+  $('#proj-context').innerHTML = '<div class="projection-scenarios"><span class="projection-plan"><i></i><span class="projection-scenario-copy"><span>Seguendo il piano dal '+startText+'</span><b>'+(T!=null?kc(T)+'/giorno':'non disponibile')+'</b></span></span><span class="projection-diary"><i></i><span class="projection-scenario-copy"><span>Mantenendo la media recente delle ultime due settimane</span><b>'+(Il!=null?kc(Il)+'/giorno':'non disponibile')+'</b></span></span></div>';
   box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan')+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
-  $('#proj-text').textContent = 'Simulazioni dal peso di riferimento attuale, con lo stesso modello del riquadro di arrivo. Gli intervalli includono consumo e peso di partenza incerti.';
+  $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, dal '+fmtDay(f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
   $('#proj-note').textContent = 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
-  $('#proj-more').innerHTML = '<p>Consumo senza digestione all’inizio: '+kc(B.Bh)+', che cambia di '+fmt(B.perKg,1)+' kcal per kg di peso. Digestione: 10% delle calorie dello scenario. Energia per kg: 7.700 kcal (approssimazione). Incertezza del consumo: ±'+fmt(kd*100,1)+'%. Gli intervalli usano un consumo di una deviazione più alto o più basso e il livello di partenza ±'+fmt(f.w0Se,1)+' kg. Non sono probabilità garantite.</p>';
+  $('#proj-more').innerHTML = '<p>La partenza usa la traiettoria energetica corretta dalle pesate. Le oscillazioni temporanee non sono una misura di acqua o grasso. Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Valore centrale: 7.700 kcal/kg; sensibilità: 5.000–9.400. La fascia combina questi scenari con consumo ±'+fmt(kd*100,0)+'% e livello iniziale ±'+fmt(1.96*f.w0Se,1)+' kg. Non è un intervallo clinicamente validato né una probabilità garantita.</p>';
+
 }
 
 /* ---------- calorie ---------- */
@@ -8049,14 +8212,14 @@ function rulesData() {
 
   /* ---------- previsioni ---------- */
   add({ id: 'arrivo', g: 'previsione', t: 'Quando potresti arrivare all\'obiettivo', w: 'Progressi › Previsioni, Oggi',
-    what: 'Una simulazione giorno per giorno dalla tendenza di oggi: con le calorie del piano, con la media delle giornate complete delle ultime 2 settimane e, se c\'è una data, le calorie costanti necessarie. Oltre ' + K.HORIZON + ' giorni la data è indicativa.',
-    how: fx(L(O('Ogni giorno'), 'peso − (consumo − calorie) ÷ ' + C(F(K.RHO, 0))), L('Consumo', 'consumo di riferimento senza digestione + variazione per kg di peso + ' + C(pct(K.TEF)) + ' delle calorie dello scenario'), L('Data', 'primo giorno in cui la simulazione tocca l\'obiettivo'), L('Finestra', 'stessa simulazione con il fabbisogno ' + C(pct(K.ARR_ERR)) + ' più alto e più basso: la data più vicina e la più lontana'), L('Non quantificati', 'giorni diversi dallo scenario, errori del diario, acqua'), L('Sensibilità', 'stesse date con ' + C(F(K.RHO_LO, 0)) + ' e ' + C(F(K.RHO_HI, 0)) + ' kcal/kg')) + rg('livello') + rg('orizzonte'),
-    why: 'Sono scenari condizionati, non promesse: la data si aggiorna con ogni pesata, man mano che la stima del consumo si affina. I giorni abbondanti sono già nella media registrata: non sottraggo «giorni di ritardo».',
+    what: 'Una simulazione dalla traiettoria aggiornata con calorie, attività e pesate: con le calorie del piano, con la media delle giornate complete delle ultime 2 settimane e, se c\'è una data, le calorie costanti necessarie. Oltre ' + K.HORIZON + ' giorni la data è indicativa.',
+    how: fx(L(O('Ogni giorno'), 'peso − (consumo − calorie) ÷ ' + C(F(K.RHO, 0))), L('Consumo', 'consumo di riferimento senza digestione + variazione per kg di peso + ' + C(pct(K.TEF)) + ' delle calorie dello scenario'), L('Stato iniziale', 'riferimento energetico corretto da un filtro delle pesate; componente temporanea distinta dal livello di fondo'), L('Ordine', 'pesata mattutina, poi calorie del giorno, poi stato del mattino successivo'), L('Data', 'primo giorno in cui la simulazione tocca l\'obiettivo'), L('Finestra', 'scenari con consumo e livello iniziale incerti, e 5.000–9.400 kcal/kg: sensibilità del modello, non probabilità garantite'), L('Non quantificati', 'giorni diversi dallo scenario, errori del diario, acqua'), L('Sensibilità', 'stesse date con ' + C(F(K.RHO_LO, 0)) + ' e ' + C(F(K.RHO_HI, 0)) + ' kcal/kg')) + rg('livello') + rg('orizzonte'),
+    why: 'Sono scenari condizionati: le calorie aggiornano la traiettoria, le pesate la correggono e la calibrazione esistente aggiorna il consumo. Ogni giornata entra una volta sola. Non aggiungere i giorni equivalenti alla data già aggiornata.',
     ex: function () { if (!f || f.none) return row('Previsione', f && f.none || '—'); return (f.plan ? row('Con le calorie del piano', arrText(f.plan, false)) : '') + (f.logged ? row('Con le calorie registrate', arrText(f.logged, false)) : row('Con le calorie registrate', esc(f.loggedWhy || '—'))) + (f.required ? row('Calorie per la data', f.required.conflict ? (f.required.impossible ? 'impossibile' : F(f.required.kcal, 0) + ', sconsigliato: ' + esc(f.required.why)) : F(f.required.kcal, 0)) : ''); } });
   add({ id: 'prospetto', g: 'previsione', t: 'Prospetto a 12 settimane', w: 'Progressi › Previsioni',
     what: 'La stessa simulazione, letta a 2, 4, 8 e 12 settimane, con le calorie del piano e con quelle registrate. Si ferma all\'obiettivo.',
     how: fx(L(O('Peso alla settimana n'), 'simulazione giorno per giorno fino a 7 × n giorni')),
-    why: 'Mostro i valori fra parentesi con il consumo una deviazione più alto e più basso.' });
+    why: 'La fascia combina incertezza del consumo, del livello iniziale e della densità energetica. Non è una probabilità garantita.' });
   add({ id: 'per-scadenza', g: 'previsione', t: 'Calorie per arrivare a una data', w: 'Progressi › Previsioni, Profilo',
     what: 'Le calorie costanti che, con la stessa simulazione, portano all\'obiettivo esattamente alla data. Se sono fuori dai limiti del piano automatico, mostro comunque il numero, con un avviso chiaro che lo sconsiglio, e propongo alternative.',
     how: fx(L(O('Calorie'), 'ricerca per bisezione sulla simulazione')),
@@ -13995,8 +14158,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-avviso2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-avviso2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-avviso2') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-traiettoria1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria1') center/contain no-repeat}
 
 
 
