@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-traiettoria1">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-traiettoria2">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-traiettoria1">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-traiettoria1">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-traiettoria1">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-traiettoria1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-traiettoria2">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-traiettoria2">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-traiettoria2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-traiettoria2">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -7010,25 +7010,13 @@ function renderPlanImpact() {
   box.innerHTML = h;
 }
 
+/* One production forecast. Development comparisons remain in audit tools only. */
 function trajectoryExplanationHTML(f) {
   var t=f.trajectory;if(!t)return '';
-  var last=f.lastImpact, h='<div class="trajectory-context"><span class="trajectory-tag">Calorie + pesate</span><p>'+
-    (t.observations?'La traiettoria usa '+t.observations+' pesate confrontabili.':'Partenza dal peso inserito nel profilo: la stima deve ancora essere corretta dalle pesate.')+
-    (t.missing?' '+t.missing+' giornate senza calorie complete: sono ipotizzate, con incertezza maggiore.':t.days?' Le giornate trascorse hanno calorie complete.':'')+'</p></div>';
-  if(last&&Math.abs(last.delta)>.5)h+='<div class="trajectory-impact"><header><b>La giornata del '+fmtDay(last.d)+'</b><span>Rispetto al piano</span></header><div class="trajectory-impact-grid"><div><small>Calorie registrate in '+(last.delta>0?'più':'meno')+'</small><strong>'+kc(Math.abs(last.delta))+'</strong></div><div><small>Equivalenza al ritmo stimato</small><strong>'+(last.days!=null?sgn(last.days,1)+' giorni':'Non disponibile')+'</strong></div></div><p>Confronto energetico della singola giornata, già incluso nel calcolo. Non aggiungere questi giorni alla data prevista e non usarli come giorni di restrizione da recuperare.</p></div>';
-  h+='<details class="trajectory-method"><summary>Come calorie e pesate aggiornano la previsione</summary><div><p>Le calorie complete di un giorno e il suo consumo stimato aggiornano il riferimento del mattino successivo. La pesata mattutina corregge la stima prima di applicare le calorie di quel giorno.</p><p>Il filtro distingue un livello di fondo dalle oscillazioni temporanee della bilancia. Non misura grasso, acqua o metabolismo. Una pesata isolata pesa meno di una serie coerente; le pesate da verificare restano escluse fino alla conferma.</p><p>Le calorie parziali e mancanti non sono digiuni: per lo storico uso un’ipotesi dichiarata, allargando l’incertezza. Oggi senza calorie è simulato con il piano. Con calorie parziali già inserite, l’ipotesi per oggi è almeno il maggiore fra piano e calorie registrate, con incertezza maggiore. Una giornata completa di oggi è inclusa una volta sola e la simulazione successiva parte domani.</p><p>Il consumo conserva la calibrazione del diario già presente nell’app. Errori sistematici nel diario e nel consumo non si possono separare con la sola bilancia. Questa previsione non certifica l’esattezza del fabbisogno.</p><p>Modello sequenziale a due componenti, con correzione robusta delle pesate. Le fasce sono scenari di sensibilità, non probabilità garantite. La verifica sullo storico controlla errori di previsione; non equivale a una validazione clinica.</p></div></details>';
-  h+='<details class="trajectory-method"><summary>Controllo sul tuo storico</summary><div><p>Ricostruisce fino a quattro finestre di 7 giorni, usando alla partenza solo le pesate precedenti. Le calorie successive sono fornite a entrambi i metodi per il confronto; la previsione non usa le pesate successive.</p><button type="button" class="btn ghost" id="trajectory-validate">Calcola il confronto</button><div id="trajectory-validation-result" aria-live="polite"></div></div></details>';
-  return h;
-}
-function bindTrajectoryValidation(){
-  var button=$('#trajectory-validate');if(!button)return;
-  button.onclick=function(){button.disabled=true;button.textContent='Calcolo…';
-    requestAnimationFrame(function(){try{var r=GJM.trajectoryValidation(engineD(),todayStr()),box=$('#trajectory-validation-result');
-      if(!box)return;
-      box.innerHTML=r.n?'<p><b>'+r.n+' finestre settimanali confrontabili.</b></p><div class="trajectory-impact-grid"><div><small>Errore medio assoluto · metodo precedente</small><strong>'+fmt(r.previousMAE,2)+' kg</strong></div><div><small>Errore medio assoluto · nuovo metodo</small><strong>'+fmt(r.newMAE,2)+' kg</strong></div></div><p>Confronto con la media di 2–3 pesate finali, non con tessuto misurato. È una ricostruzione dai dati attuali: importazioni e modifiche tardive non consentono di ricreare tutto ciò che era noto allora. Poche finestre non dimostrano affidabilità generale né futura; un errore basso non è garantito.</p>':'<p>Storico ancora insufficiente: servono almeno due settimane iniziali, poi 7 giornate con calorie complete e almeno due pesate confrontabili nei tre giorni finali. Nessun punteggio di accuratezza viene inventato.</p>';
-      button.textContent='Confronto calcolato';
-    }catch(e){button.disabled=false;button.textContent='Riprova';var box=$('#trajectory-validation-result');if(box)box.textContent='Il confronto non è disponibile con questi dati.';}});
-  };
+  var notes=[];
+  if(!t.observations)notes.push('Stima iniziale dal peso del profilo: si affina con le tue pesate e le calorie registrate.');
+  if(t.missing)notes.push(t.missing+' giornate senza calorie complete: il calcolo usa ipotesi con incertezza maggiore.');
+  return notes.length?'<p class="caption">'+notes.join(' ')+'</p>':'';
 }
 
 function renderForecast() {
@@ -7055,7 +7043,7 @@ function renderForecast() {
     ? 'Arrivare all\'obiettivo entro il ' + fmtDay(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
     : 'Per arrivarci entro il ' + fmtDay(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(f.required.why) + '.')
     + ' Meglio ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data al ' + fmtDay(a.date) + ' o dopo' : a.msg); }).join('; ') + '.</p>';
-  $('#fc-rows').innerHTML = rows; bindTrajectoryValidation();
+  $('#fc-rows').innerHTML = rows;
 }
 function renderProjection() {
   var E = state.E, f = E && E.forecast, s = S(), box = $('#proj-cards');
@@ -14158,8 +14146,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-traiettoria1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria1') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-traiettoria2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria2') center/contain no-repeat}
 
 
 
