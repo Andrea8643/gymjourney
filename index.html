@@ -2741,7 +2741,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.3.1-filtro' };
+var M = { V: '2.4.0-surplus' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -2834,14 +2834,14 @@ var REG = [
   { id: 'corsa', nome: 'Costo netto della corsa', valore: 1.0, unita: 'kcal per kg per km', tipo: 'convenzione', fonte: SRC.acsm, misura: '0,2 mL O₂/kg/m × 5 kcal per litro', ipotesi: 'solo sopra 8 km/h con durata e distanza note' },
   { id: 'met', nome: 'Attività di palestra e fuori palestra', unita: 'MET', tipo: 'convenzione', fonte: SRC.compendium, misura: 'valori convenzionali per tipo di attività, non il consumo del singolo', ipotesi: 'uso MET − 1 (netti), perché il riposo è già contato' },
   { id: 'forza', nome: 'Allenamento con i pesi', valore: 3.5, unita: 'MET (02054)', tipo: 'convenzione', fonte: SRC.compendium, misura: '«multiple exercises, 8–15 reps at varied resistance», pause comprese', ipotesi: 'intervallo d\'incertezza da 3,0 (02056) a 6,0 MET (02050); niente calorie dal tonnellaggio né dall\'e1RM' },
-  { id: 'rho', nome: 'Energia per kg di variazione di peso', valore: 7700, unita: 'kcal/kg', tipo: 'convenzione', fonte: SRC.hall, misura: 'approssimazione; la densità reale cambia con acqua, glicogeno e composizione', ipotesi: 'uso locale su poche settimane; sensibilità mostrata con 5.000 e 9.400 kcal/kg; non la estendo a previsioni lunghe' },
+  { id: 'rho', nome: 'Energia per kg di variazione di peso', valore: [7700, 6300], unita: 'kcal/kg (perdita, aumento)', tipo: 'convenzione', fonte: SRC.hall, misura: 'perdendo peso con allenamento e proteine adeguate si perde soprattutto grasso: 7.700 kcal/kg. In surplus con allenamento circa un terzo del peso preso è massa magra (circa 1.800 kcal/kg con la sua acqua), il resto grasso: 6.300 kcal/kg', ipotesi: 'la composizione reale varia da persona a persona: il calcolo è rifatto con 5.000 e 9.400 kcal/kg (circa 4.100 e 7.700 in aumento) e l\'incertezza entra nel margine e nelle date' },
   { id: 'errore_diario', nome: 'Errore casuale del diario', valore: 300, unita: 'kcal per giorno', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'componente casuale dell’incertezza; si aggiungono autocorrelazione delle pesate, sensibilità energetica, discordanza delle finestre e pavimento di 75 kcal o 4%', ipotesi: 'riguarda solo l\'errore casuale; l\'errore sistematico non è separabile (vedi limite di identificazione)' },
   { id: 'identif', nome: 'Limite di identificazione', tipo: 'scientifico', fonte: SRC.lichtman, misura: 'calorie scritte e peso non separano introito reale e consumo reale', ipotesi: 'se mancano sempre 300 kcal al diario, il consumo ricostruito tende a essere più basso di circa 300 kcal, non più alto' },
   { id: 'finestra', nome: 'Filtro del bilancio energetico', tipo: 'ingegneria', fonte: 'filtro di Kalman sul bilancio energetico (scelta del prodotto)', misura: 'usa tutte le calorie e le pesate dall\'inizio della stima adattiva; il fattore personale può cambiare lentamente (0,5% al giorno), così i dati recenti contano di più. Diventa operativo con almeno 6 pesate su 13 giorni', ipotesi: 'l\'acqua di oggi somiglia a quella di ieri; il tessuto cambia solo con il bilancio fra calorie e consumo' },
   { id: 'rappr', nome: 'Giornate mancanti o incomplete', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'una giornata non completa entra con la mediana delle ultime 4 settimane e un\'incertezza più che doppia (±700 kcal invece di ±300): non blocca il calcolo, ma conta meno', ipotesi: 'le giornate non registrate somigliano alle altre; più sono, meno la stima si stringe' },
-  { id: 'revisione', nome: 'Frequenza e passo delle revisioni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'mantenimento aggiornato ogni giorno, a ogni pesata; calorie del piano aggiornate separatamente con le loro regole', ipotesi: 'ogni giornata e ogni pesata entrano una volta sola nel calcolo' },
+  { id: 'revisione', nome: 'Frequenza e passo delle revisioni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'mantenimento aggiornato ogni giorno, a ogni pesata; calorie del piano rivalutate ogni 7 giorni e cambiate quando la differenza supera il 15% del deficit o surplus in corso (fra 20 e 50 kcal; in mantenimento 20)', ipotesi: 'in un surplus piccolo anche 40 kcal sono una parte importante: la soglia segue la fase. Ogni giornata e ogni pesata entrano una volta sola nel calcolo' },
   { id: 'limite_k', nome: 'Fattore di calibrazione plausibile', valore: [0.4, 2.5], tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'limiti ingegneristici ampi per incompatibilità estreme; non una misura fisiologica né un vincolo vicino alla stima teorica', ipotesi: 'il valore non troncato resta visibile nei dettagli' },
-  { id: 'transizione', nome: 'Transizioni', unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto, basata sui tempi tipici di riequilibrio di glicogeno e acqua', misura: 'cambio di fase 7 giorni (circa 1 kg); creatina con carico 7 giorni, senza carico o alla sospensione 28 giorni (circa 1,5 kg); malattia: durata più 7 giorni. In questi giorni il peso si può spostare senza che lo spostamento venga contato come grasso. Un cambio di lavoro o di routine rende il fattore personale meno certo finché non arrivano dati nuovi', ipotesi: 'nessuna massa d\'acqua sottratta in automatico: il calcolo non si ferma, attribuisce lo sbalzo all\'acqua finché i dati non dicono altro' },
+  { id: 'transizione', nome: 'Transizioni', unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto, basata sui tempi tipici di riequilibrio di glicogeno e acqua', misura: 'inizio del percorso 14 giorni (circa 1 kg); cambio di fase 14 giorni (circa 1,2 kg); creatina con carico 7 giorni, senza carico o alla sospensione 28 giorni (circa 1,5 kg); malattia: durata più 7 giorni. In questi giorni il peso si può spostare senza che lo spostamento venga contato come grasso. Dopo un cambio di fase, dal decimo giorno e per sei settimane, anche il consumo può cambiare più del solito (adattamento che rientra, movimento spontaneo). Un cambio di lavoro o di routine rende il fattore personale meno certo finché non arrivano dati nuovi', ipotesi: 'nessuna massa d\'acqua sottratta in automatico: il calcolo non si ferma, attribuisce lo sbalzo all\'acqua finché i dati non dicono altro' },
   { id: 'outlier', nome: 'Controllo di plausibilità delle pesate', valore: 0.045, unita: 'frazione della mediana delle vicine (almeno 2 kg)', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'le oscillazioni normali crescono con il peso (3 kg a 65 kg, 4,5 kg a 100 kg); controllo, non legge del corpo umano: la pesata resta e si può confermare', ipotesi: 'vicine = 7 giorni prima e dopo, solo fino alla data di calcolo; con meno di 3 vicine, nei primi 14 giorni del piano, confronto con il peso di partenza del profilo' },
   { id: 'tendenza', nome: 'Tendenza del peso', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'retta robusta (Theil–Sen) sulle pesate degli ultimi 14 giorni fino alla data; con meno di 4 pesate, mediana degli ultimi 7 giorni', ipotesi: 'confrontata con ultima pesata e media semplice nella validazione' },
   { id: 'ritmo_cut', nome: 'Ritmo massimo del piano automatico in cut', valore: 1.0, unita: '% del peso a settimana, e deficit ≤ 25% del consumo', tipo: 'prodotto', fonte: 'vincolo del prodotto', misura: 'oltre, il piano automatico non viene generato: si propone di cambiare data, obiettivo o modalità', ipotesi: 'non è una soglia di sicurezza personale' },
@@ -2923,15 +2923,22 @@ var K = {
   ALC: 7, FIB: 2, POLY: 2.4,
   STEPS_UNK: [2000, 5000, 10000], DUR_EST: 0.33, PERF_TOL: 0.025, STEPS_VAR: { poco: 1000, medio: 3000, molto: 5000 }, GYM_UNK: { perWeek: 3, min: 60 },
   BASE: 0.15, TEF: 0.10, STRIDE: 0.415, WALK: 0.0005 /* kcal per kg per metro */, RUN: 0.001, KCAL_L: 5.0,
-  RHO: 7700, RHO_LO: 5000, RHO_HI: 9400,
+  RHO: 7700, RHO_LO: 5000, RHO_HI: 9400, RHO_GAIN: 6300,
   PRIOR_SD: 0.25, CAL_FLOOR_KCAL: 75, CAL_FLOOR_FRAC: 0.04, WIN: 42, MIN_SPAN: 13, MIN_W: 6, COMPLETE_MIN: 0.8, TYPE_MIN: 0.6, GAP_MAX: 3, IMPUTE_MAX: 100, IMPUTE_UP: 0.30,
-  K_LO: 0.4, K_HI: 2.5, REV_EVERY: 7, REV_MIN: 50, REV_MAX: 150, TRANS_DAYS: 21,
+  K_LO: 0.4, K_HI: 2.5, REV_EVERY: 7, REV_MIN: 50, REV_MIN_FLOOR: 20, REV_MIN_FRAC: 0.15, REV_MAX: 150, TRANS_DAYS: 21,
   OUTLIER_KG: 2, OUTLIER_FRAC: 0.045, START_DAYS: 14, TREND_DAYS: 14, TREND_MIN: 4,
   CUT_PCT: 1.0, CUT_FRAC: 0.25, SUR_PCT: 0.5, SUR_FRAC: 0.15, BAND: 1.0, HORIZON: 84, ARR_MAX: 1095, ARR_ERR: 0.10,
   STRENGTH_MET: 3.5, STRENGTH_LO: 3.0, STRENGTH_HI: 6.0, SIG_DAY: 200, TOL_KCAL: 2, DAY_SHIFT: 0.2,
   LEVEL_MIN: 0.2, LEVEL_ONE: 0.6
 };
 M.K = K;
+/* Energia per kg di variazione del peso. Perdendo peso con allenamento e proteine adeguate si perde soprattutto grasso:
+   7.700 kcal/kg. Prendendo peso in surplus con allenamento una parte è massa magra (circa 1.800 kcal/kg con la sua
+   acqua) e il resto grasso (9.400 kcal/kg di lipidi): con circa il 35% di magra, 6.300 kcal/kg. Fascia di sensibilità
+   proporzionale (5.000–9.400 in perdita, circa 4.100–7.700 in aumento). La fase decide quale vale. */
+function rhoScale(dir) { return dir > 0 ? K.RHO_GAIN / K.RHO : 1; }
+function rhoAt(ctx, d) { var v = versionAt(ctx.versions, d); return v && v.goal && v.goal.phase === 'surplus' ? K.RHO_GAIN : K.RHO; }
+M.rhoScale = rhoScale; M.rhoAt = rhoAt;
 /* Limite del bilancio energetico come frazione del consumo allo stesso introito. */
 function maxDailyGap(R, frac, dir) { return frac * (1 - K.TEF) * R / ((1 - K.TEF) - dir * K.TEF * frac); }
 
@@ -3516,6 +3523,9 @@ function weightTransitions(ctx) {
     (s.events || []).forEach(function (e) { if (/^(avvio|carico|sospensione|ripresa)$/.test(e.type) && dValid(e.date)) out.push({ d: e.date, kind: 'creatina_' + e.type, label: 'creatina: ' + e.type }); });
   });
   var prev = null;
+  /* inizio del percorso: chi comincia un piano di solito cambia dieta, e glicogeno e acqua si riequilibrano */
+  var v0 = (ctx.versions || []).filter(function (v) { return v.status !== 'annullata'; })[0];
+  if (v0 && dValid(v0.from)) out.push({ d: v0.from, kind: 'inizio', label: 'inizio del percorso' });
   (ctx.versions || []).forEach(function (v) {
     var ph = v.goal && v.goal.phase;
     if (prev != null && ph && ph !== prev) out.push({ d: v.from, kind: 'fase', label: 'cambio di fase (' + prev + ' → ' + ph + ')' });
@@ -3699,7 +3709,7 @@ M.kHistoryWindow = kHistoryWindow;
    quanto in tutto (kg, una deviazione). La varianza si distribuisce sui giorni: kg² / giorni al giorno.
    Cambio di fase: glicogeno e acqua si riequilibrano in circa una settimana. Creatina con carico: circa una settimana;
    senza carico (avvio, ripresa) o alla sospensione: circa quattro settimane. Malattia: la sua durata più una settimana. */
-var TRANS = { fase: { days: 7, kg: 1.0 }, creatina_carico: { days: 7, kg: 1.5 }, creatina_avvio: { days: 28, kg: 1.5 }, creatina_ripresa: { days: 28, kg: 1.5 }, creatina_sospensione: { days: 28, kg: 1.5 }, malattia: { days: 7, kg: 1.0 } };
+var TRANS = { inizio: { days: 14, kg: 1.0 }, fase: { days: 14, kg: 1.2 }, creatina_carico: { days: 7, kg: 1.5 }, creatina_avvio: { days: 28, kg: 1.5 }, creatina_ripresa: { days: 28, kg: 1.5 }, creatina_sospensione: { days: 28, kg: 1.5 }, malattia: { days: 7, kg: 1.0 } };
 M.TRANS = TRANS;
 function transitionWindows(ctx) {
   if (ctx.memo.tw) return ctx.memo.tw;
@@ -3727,7 +3737,7 @@ M.transitionWindows = transitionWindows;
    previsione ha peso ridotto, mai scartata in silenzio.
    Oltre alla stima del giorno (filtro, che usa solo i dati fino a quel giorno) calcola la stima «a posteriori» (kS, LS)
    con tutti i dati disponibili oggi: è quella giusta per ricostruire i giorni passati. */
-var KF = { DRIFT: 0.005, PHI: 0.65, WATER: 0.40, SD_I: 300, SD_IMP: 700, SD_EXC: 500, STRUCT_K: 0.08, GATE: 4, BINGE_KG: 0.6, BINGE_DECAY: 0.5, BINGE_X: 1.3, L0: 0.3 };
+var KF = { PHASE_K: 0.10, PHASE_DAYS: 42, PHASE_DELAY: 10, DRIFT: 0.005, PHI: 0.65, WATER: 0.40, SD_I: 300, SD_IMP: 700, SD_EXC: 500, STRUCT_K: 0.08, GATE: 4, BINGE_KG: 0.6, BINGE_DECAY: 0.5, BINGE_X: 1.3, L0: 0.3 };
 M.KF = KF;
 function inv3(m) {
   var a = m[0][0], b = m[0][1], c = m[0][2], d = m[1][0], e = m[1][1], f = m[1][2], g = m[2][0], h = m[2][1], i = m[2][2];
@@ -3743,20 +3753,27 @@ function kalmanRun(ctx, cfg, rho) {
   acc.forEach(function (p) { if (p.d >= cfg.anchor) { byD[p.d] = p.w; if (!first) first = p.d; } });
   var res = { days: {}, list: [], start: first, rho: rho };
   if (!first) return (ctx.memo[key] = res);
-  var lvl = transitionWindows(ctx), kn = {};
-  structuralChanges(ctx).forEach(function (c) { if (c.d > first) kn[c.d] = c.label; });
+  var lvl = transitionWindows(ctx), kn = {}, kv = {};
+  structuralChanges(ctx).forEach(function (c) { if (c.d > first) { kn[c.d] = c.label; kv[c.d] = (kv[c.d] || 0) + KF.STRUCT_K * KF.STRUCT_K; } });
+  /* cambio di fase: anche il consumo può cambiare (adattamento che rientra dopo un cut, movimento spontaneo che cresce
+     in surplus o cala in deficit). Il fattore può muoversi di più per sei settimane: varianza distribuita sui giorni. */
+  /* la finestra parte dopo quella del glicogeno: i due effetti avvengono in tempi diversi e così non si confondono */
+  weightTransitions(ctx).forEach(function (t) { if (t.kind === 'fase' && t.d > first) dRange(dAdd(t.d, KF.PHASE_DELAY), dAdd(t.d, KF.PHASE_DELAY + KF.PHASE_DAYS - 1)).forEach(function (d) { kv[d] = (kv[d] || 0) + KF.PHASE_K * KF.PHASE_K / KF.PHASE_DAYS; }); });
   var exc = function (d) { return (ctx.events || []).some(function (e) { return EXCEPT[e.kind] && d >= e.from && d <= (e.to || e.from); }); };
   var x = null, P = null, prevI = null, prevA = null, excess = 0, logged = [], nW = 0, firstW = null, seq = [];
   var med = function () { if (!logged.length) return null; var a = logged.slice(-28).sort(function (p, q) { return p - q; }); return a[a.length >> 1]; };
+  /* riferimento per riconoscere una giornata abbondante: la più alta fra la mediana di 4 settimane e quella dell'ultima
+     settimana, così dopo un cambio di fase le giornate del nuovo piano non vengono scambiate per abbuffate */
+  var ref = function () { var m4 = med(); if (m4 == null) return null; var b = logged.slice(-7).sort(function (p, q) { return p - q; }); return Math.max(m4, b.length >= 3 ? b[b.length >> 1] : m4); };
   dRange(first, to).forEach(function (d) {
     var F = null, xp = null, Pp = null;
     if (x) {
-      var a = prevA / rho;
+      var rd = rho * (rhoAt(ctx, dAdd(d, -1)) / K.RHO), a = prevA / rd;
       F = [[1, -a, 0], [0, 1, 0], [0, 0, KF.PHI]];
-      x = [x[0] + (0.9 * prevI.v - x[1] * prevA) / rho, x[1], KF.PHI * x[2]];
+      x = [x[0] + (0.9 * prevI.v - x[1] * prevA) / rd, x[1], KF.PHI * x[2]];
       var p00 = P[0][0] - 2 * a * P[0][1] + a * a * P[1][1], p01 = P[0][1] - a * P[1][1], p02 = KF.PHI * (P[0][2] - a * P[1][2]);
       var p11 = P[1][1], p12 = KF.PHI * P[1][2], p22 = KF.PHI * KF.PHI * P[2][2];
-      var qL = Math.pow(0.9 * prevI.sd / rho, 2) + (lvl[d] ? lvl[d].v : 0), qK = KF.DRIFT * KF.DRIFT + (kn[d] ? KF.STRUCT_K * KF.STRUCT_K : 0);
+      var qL = Math.pow(0.9 * prevI.sd / rd, 2) + (lvl[d] ? lvl[d].v : 0), qK = KF.DRIFT * KF.DRIFT + (kv[d] || 0);
       P = [[p00 + qL, p01, p02], [p01, p11 + qK, p12], [p02, p12, p22 + KF.WATER * KF.WATER]];
       xp = x.slice(); Pp = P.map(function (r) { return r.slice(); });
     }
@@ -3774,7 +3791,7 @@ function kalmanRun(ctx, cfg, rho) {
       }
     }
     /* calorie e attività di oggi, usate dalla previsione di domani */
-    var it = intakeOf(ctx.days[d], false), m0 = med(), ex = exc(d);
+    var it = intakeOf(ctx.days[d], false), m0 = ref(), ex = exc(d);
     excess = excess * KF.BINGE_DECAY + (it.usable && m0 != null ? Math.max(0, it.kcal - KF.BINGE_X * m0) : 0);
     if (it.usable) logged.push(it.kcal);
     var m1 = med();
@@ -4091,8 +4108,8 @@ M.simulate = simulate; M.arrival = arrival; M.requiredIntake = requiredIntake; M
    è diverso (base.rhoK), quindi i due effetti in parte si compensano. Gli spostamenti si combinano in quadratura e
    la fascia è il valore centrale ± due deviazioni (circa 95%, se le ipotesi del modello reggono). */
 function scenarioOf(base, I, m, e, rho) {
-  var r = base.rhoK && rho !== K.RHO && base.rhoK[rho] ? base.rhoK[rho] : 1;
-  return { w0: base.w0 + e, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: I, rho: rho };
+  var r = base.rhoK && rho !== K.RHO && base.rhoK[rho] ? base.rhoK[rho] : 1, sc = base.rhoScale || 1;
+  return { w0: base.w0 + e, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: I, rho: rho * sc };
 }
 function spreadOf(central, pairs) {
   var early = 0, late = 0, open = false;
@@ -4126,7 +4143,7 @@ function arrivalRange(base, I, goal, dir, from) {
   }
   out.sens = { from: out.from, to: out.to };
   out.se = se; out.kSDrel = f; out.intervalKind = 'circa_95';
-  out.rho = {}; out.rho[K.RHO_LO] = lo != null ? dAdd(from, lo) : null; out.rho[K.RHO_HI] = hi != null ? dAdd(from, hi) : null;
+  out.rho = {}; out.rho[K.RHO_LO] = lo != null ? dAdd(from, lo) : null; out.rho[K.RHO_HI] = hi != null ? dAdd(from, hi) : null; out.rhoScale = base.rhoScale || 1;
   return out;
 }
 M.arrivalRange = arrivalRange;
@@ -4281,7 +4298,7 @@ function resolveVersion(ctx, v, at, base) {
         if (!goal.endDate || !(gw > 0)) err('dati_obiettivo', 'per un piano con data servono peso obiettivo e data');
         else {
           days = dDiff(at, goal.endDate);
-          var sim = { w0: W, B0: base.Bh, perKg: base.perKg };
+          var sim = { w0: W, B0: base.Bh, perKg: base.perKg, rho: K.RHO * rhoScale(dir) };
           T = requiredIntake(sim, gw, days);
           pct = Math.abs(gw - W) / (days / 7) / W * 100;
         }
@@ -4289,16 +4306,16 @@ function resolveVersion(ctx, v, at, base) {
         /* Bilancio energetico richiesto: I = R ± deficit/(1-TEF), coerente con simulate(). */
         var dl = +goal.kcalDelta;
         if (!(dl >= 1 && dl <= 3000)) err('dati_obiettivo', 'per un ritmo in kcal serve ' + (dir < 0 ? 'un deficit' : 'un surplus') + ' fra 1 e 3.000 kcal al giorno');
-        else { T = R + dir * dl / (1 - K.TEF); pct = dl * 7 / K.RHO / W * 100; }
+        else { T = R + dir * dl / (1 - K.TEF); pct = dl * 7 / (K.RHO * rhoScale(dir)) / W * 100; }
       } else {
         pct = (PACE[phase] || {})[goal.paceMode || 'standard'] || PACE[phase].standard;
-        T = R + dir * (pct / 100 * W / 7) * K.RHO / (1 - K.TEF);
+        T = R + dir * (pct / 100 * W / 7) * K.RHO * rhoScale(dir) / (1 - K.TEF);
       }
       if (T != null) {
         out.pace = { pct: pct, kgWeek: pct / 100 * W, mode: goal.paceMode || 'standard', days: days, kcal: (1 - K.TEF) * Math.abs(R - T) };
         var maxPct = dir < 0 ? K.CUT_PCT : K.SUR_PCT, maxFrac = dir < 0 ? K.CUT_FRAC : K.SUR_FRAC, gap = (1 - K.TEF) * Math.abs(T - R), plannedC = (1 - K.TEF) * R + K.TEF * T;
         if (pct > maxPct + 1e-9 || gap > maxFrac * plannedC + 1e-9) {
-          var maxKgW = Math.min(maxPct / 100 * W, maxDailyGap(R, maxFrac, dir) * 7 / K.RHO), alt = [];
+          var maxKgW = Math.min(maxPct / 100 * W, maxDailyGap(R, maxFrac, dir) * 7 / (K.RHO * rhoScale(dir))), alt = [];
           if (gw > 0 && maxKgW > 0) {
             var wk = Math.abs(gw - W) / maxKgW; alt.push({ tipo: 'data', date: dAdd(at, Math.ceil(wk * 7)), msg: 'spostare la data al ' + dIt(dAdd(at, Math.ceil(wk * 7))) + ' o dopo' });
             if (days) alt.push({ tipo: 'obiettivo', w: r(W + dir * maxKgW * days / 7, 1), msg: 'per quella data un obiettivo entro i limiti è circa ' + nf(W + dir * maxKgW * days / 7, 1) + ' kg' });
@@ -4598,6 +4615,8 @@ function confidenceOf(cal, base, tr, origine, cfg, vo) {
   return { level: level, kSD: sdk, factorRelativeSD: factorRelativeSD, activityRelativeSD: activityRelativeSD, relativeSD: relativeSD, maintenanceSD: base && base.ok && relativeSD != null ? base.R * relativeSD : null, why: why.join('; ') };
 }
 
+function revMin(R, T) { var gap = R != null && T != null ? Math.abs(R - T) : 0; return Math.min(K.REV_MIN, Math.max(K.REV_MIN_FLOOR, K.REV_MIN_FRAC * gap)); }
+M.revMin = revMin;
 /* revisione atomica: calorie e macro insieme, validati prima; se non fattibile resta la versione attiva */
 function planRevision(ctx, v, z, res, asOf, kh, base) {
   var kc = v.kcal || {}, mc = v.macros || {};
@@ -4620,7 +4639,9 @@ function planRevision(ctx, v, z, res, asOf, kh, base) {
     }
   }
   if (res.macros && res.macros.shown) MK.forEach(function (k) { if (isNum(res.macros.shown[k]) && isNum(z[k])) dm = Math.max(dm, Math.abs(res.macros.shown[k] - z[k])); });
-  if (Math.abs(dk) < K.REV_MIN && dm < 5) return { kind: 'nessuna', next: next, why: 'differenza sotto ' + K.REV_MIN + ' kcal: piano invariato' };
+  /* soglia proporzionata al deficit o surplus in corso: 15% del suo valore, fra 20 e 50 kcal (in mantenimento 20) */
+  var thr = revMin(res.R, z.kcal);
+  if (Math.abs(dk) < thr && dm < 5) return { kind: 'nessuna', next: next, why: 'differenza sotto ' + nf(thr) + ' kcal: piano invariato' };
   var cand = M.clone(v); cand.from = asOf; cand.origin = 'revisione_automatica'; cand.previous = v.id; cand.resolved = freeze(res); cand.reason = (dk ? 'calorie ' + (dk > 0 ? '+' : '') + Math.round(dk) + ' kcal' : 'macro aggiornati al peso di riferimento') + ' (consumo di riferimento ' + nf(res.R) + ' kcal)';
   delete cand.id; delete cand.created;
   return { kind: kc.update === 'automatico' ? 'da_applicare' : 'proposta', date: asOf, candidate: cand, dk: dk, why: cand.reason, locked: lockedOf(v) };
@@ -4751,11 +4772,11 @@ function energyTrajectory(ctx, asOf, getDay, base, options) {
   function predict(d,info,inpt) {
     if(!info||info.B==null||!(inpt.I>=0))return false;
     var I=inpt.I,B=info.B,energy=(1-K.TEF)*I-B;
-    x+=energy/K.RHO;u*=phi;
+    var rhoD=rhoAt(ctx,d);x+=energy/rhoD;u*=phi;
     var eSD=Math.sqrt(Math.pow(TRAJECTORY.processKcal,2)+Math.pow((1-K.TEF)*I*(inpt.known?TRAJECTORY.intakeRelSD:TRAJECTORY.missingRelSD),2));
     var relativeB=base&&base.kSD!=null&&base.k>0?Math.max(.04,Math.abs(base.kSD/base.k)):.15;
     // Persistent expenditure uncertainty is also propagated by forecast scenarios.
-    var q=Math.pow(eSD/K.RHO,2)+Math.pow(B*Math.min(.25,relativeB)/K.RHO,2);
+    var q=Math.pow(eSD/rhoD,2)+Math.pow(B*Math.min(.25,relativeB)/rhoD,2);
     var transition=!!transitions[d];
     var burst=inpt.known&&info.target>0?Math.min(1,Math.abs(I-info.target)/Math.max(1000,info.target)):0;
     a+=q;b*=phi;c=phi*phi*c+(1-phi*phi)*sigma*sigma*(transition?2:1)+.16*burst;
@@ -4847,7 +4868,7 @@ function forecastOf(ctx, v, z, base, tr, asOf, out) {
   /* incertezza del consumo a una deviazione: dopo la calibrazione quella del filtro (l'energia per kg è un'altra voce,
      accoppiata); prima, almeno la metà di ARR_ERR (±10% come due deviazioni) */
   var rk = calF && base.rhoK ? (function () { var o = {}; o[K.RHO_LO] = base.rhoK[K.RHO_LO] / base.k; o[K.RHO_HI] = base.rhoK[K.RHO_HI] / base.k; return o; })() : null;
-  var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: calF ? base.kSDf / base.k : Math.max(K.ARR_ERR / 2, base.kSD&&base.k>0?base.kSD/base.k/2:0), se: W0se, rhoK: rk };
+  var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: calF ? base.kSDf / base.k : Math.max(K.ARR_ERR / 2, base.kSD&&base.k>0?base.kSD/base.k/2:0), se: W0se, rhoK: rk, rhoScale: rhoScale(g.phase === 'surplus' ? 1 : g.phase === 'cut' ? -1 : 0), rho: K.RHO * rhoScale(g.phase === 'surplus' ? 1 : -1) };
   f.from = start; f.w0 = W0; f.w0Se = W0se; f.sim = sim; f.startOrigin = calF ? 'filtro' : 'traiettoria';
   if (!dir || !(gw > 0)) { f.maint = true; if (z) { var s = simulate({ w0: W0, B0: sim.B0, perKg: base.perKg, I: z.kcal, days: 28 }); f.in28 = { c: s[28], d: dAdd(start, 28) }; } return f; }
   if ((gw - W0) * dir <= 0) { f.done = true; return f; }
@@ -4932,20 +4953,21 @@ function planImpact(ctx, out, v, z, base, asOf) {
     var wp = initial, wr = initial, crossed = false, rr = rho !== K.RHO && base.rhoK && base.rhoK[rho] ? base.rhoK[rho] / base.k : 1;
     p.rows.forEach(function (x) {
       var bp = rr * (x.B + slope * (wp - x.W)), br = rr * (x.B + slope * (wr - x.W));
-      wp -= (bp - (1 - K.TEF) * x.target) / rho;
-      wr -= (br - (1 - K.TEF) * x.intake) / rho;
+      wp -= (bp - (1 - K.TEF) * x.target) / (rho * rs);
+      wr -= (br - (1 - K.TEF) * x.intake) / (rho * rs);
       if ((wp - p.goalWeight) * dir >= 0 || (wr - p.goalWeight) * dir >= 0) crossed = true;
     });
     if (crossed) return { why: 'Almeno uno scenario attraversa già il traguardo nel periodo storico: non mostro uno spostamento cumulativo della data.' };
     var futureFrom = dAdd(end, 1), futureB = base.Bh, refW = base.W;
     function arrive(w) {
-      var n = arrival({ w0: w, B0: rr * (futureB + slope * (w - refW)), perKg: rr * slope, I: z.kcal, rho: rho }, p.goalWeight, dir, K.ARR_MAX);
+      var n = arrival({ w0: w, B0: rr * (futureB + slope * (w - refW)), perKg: rr * slope, I: z.kcal, rho: rho * rs }, p.goalWeight, dir, K.ARR_MAX);
       return n == null ? null : dAdd(futureFrom, n);
     }
     var planned = arrive(wp), recorded = arrive(wr);
     return { planned: planned, recorded: recorded, shift: planned && recorded ? dDiff(planned, recorded) : null,
       weightPlanned: wp, weightRecorded: wr, futureFrom: futureFrom };
   }
+  var rs = rhoScale(dir);
   p.comparison = run(K.RHO);
   if (p.comparison.shift == null) p.why = p.comparison.why || 'Almeno uno scenario non raggiunge il traguardo entro tre anni: spostamento non disponibile.';
   p.sensitivity = [K.RHO_LO, K.RHO_HI].map(function (rho) { var r = run(rho); return { rho: rho, shift: r.shift == null ? null : r.shift }; });
@@ -7291,7 +7313,7 @@ function renderProjection() {
   box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan')+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
   $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, dal '+fmtDay(f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
   $('#proj-note').textContent = 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
-  $('#proj-more').innerHTML = '<p>'+(f.startOrigin==='filtro'?'La partenza è il peso stimato dallo stesso calcolo del mantenimento, senza le oscillazioni d\'acqua.':'La partenza usa la traiettoria energetica corretta dalle pesate.')+' Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Valore centrale: 7.700 kcal/kg. La fascia unisce tre incertezze: il consumo (±'+fmt(kd*100,1)+'%), il peso di partenza (±'+fmt(f.w0Se,1)+' kg) e l\'energia per kg (5.000–9.400 kcal/kg'+(f.sim.rhoK?', ricalcolando ogni volta anche il mantenimento':'')+'). È circa il 95% se le ipotesi del modello reggono; non è una garanzia.</p>';
+  $('#proj-more').innerHTML = '<p>'+(f.startOrigin==='filtro'?'La partenza è il peso stimato dallo stesso calcolo del mantenimento, senza le oscillazioni d\'acqua.':'La partenza usa la traiettoria energetica corretta dalle pesate.')+' Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Energia per kg: '+fmt(f.sim.rho||7700,0)+' kcal/kg'+((f.sim.rho||7700)<7700?' (in surplus una parte del peso preso è muscolo)':'')+'. La fascia unisce tre incertezze: il consumo (±'+fmt(kd*100,1)+'%), il peso di partenza (±'+fmt(f.w0Se,1)+' kg) e l\'energia per kg (5.000–9.400 kcal/kg'+(f.sim.rhoK?', ricalcolando ogni volta anche il mantenimento':'')+'). È circa il 95% se le ipotesi del modello reggono; non è una garanzia.</p>';
 
 }
 
@@ -8359,7 +8381,7 @@ function rulesData() {
     how: fx(L('Punti', P('pesate') + ' del diario'), L('Tratteggio verso il futuro', 'scenario con le calorie del piano, non una misura'), L('Eventi', 'creatina, cambi di fase, lavoro: segnalano che il peso è meno leggibile, senza correggerlo')),
     why: 'La distanza fra un punto e la linea non misura acqua o grasso.' });
   add({ id: 'acqua', g: 'peso', t: 'Acqua, glicogeno e creatina', w: 'Oggi, Peso, Calorie',
-    what: 'Non sottraggo una quantità d\'acqua o glicogeno calcolata in automatico. Dopo questi eventi la bilancia si può spostare per acqua e glicogeno: per qualche giorno le sue variazioni vengono attribuite soprattutto all\'acqua, non al grasso, e il calcolo del mantenimento non si ferma. Cambio di fase: ' + TRANS.fase.days + ' giorni. Creatina con carico: ' + TRANS.creatina_carico.days + ' giorni; senza carico (inizio o ripresa) e alla sospensione: ' + TRANS.creatina_avvio.days + ' giorni, perché l\'acqua si accumula o si perde più lentamente. Malattia: la sua durata più ' + TRANS.malattia.days + ' giorni.',
+    what: 'Non sottraggo una quantità d\'acqua o glicogeno calcolata in automatico. Dopo questi eventi la bilancia si può spostare per acqua e glicogeno: per qualche giorno le sue variazioni vengono attribuite soprattutto all\'acqua, non al grasso, e il calcolo del mantenimento non si ferma. Inizio del percorso e cambio di fase: ' + TRANS.fase.days + ' giorni (il glicogeno si riempie o si svuota in circa due settimane). Creatina con carico: ' + TRANS.creatina_carico.days + ' giorni; senza carico (inizio o ripresa) e alla sospensione: ' + TRANS.creatina_avvio.days + ' giorni, perché l\'acqua si accumula o si perde più lentamente. Malattia: la sua durata più ' + TRANS.malattia.days + ' giorni.',
     how: fx(L('Durata', 'diversa per ogni evento (vedi sopra)'), L('Ampiezza', 'fino a circa ' + F(TRANS.fase.kg, 1) + ' kg per un cambio di fase, ' + F(TRANS.creatina_avvio.kg, 1) + ' kg per la creatina, distribuiti sui giorni della transizione'), L('Effetto', 'nessuna massa sottratta; nel mantenimento lo sbalzo non viene scambiato per grasso')) + rg('transizione') + rg('integratori'),
     why: '«3 g al giorno» non dice quanta acqua trattiene una persona: ogni numero sarebbe inventato.' });
 
@@ -8379,7 +8401,7 @@ function rulesData() {
   add({ id: 'calibrazione', g: 'energia', t: 'Calibrazione sul diario', w: 'Progressi › Calorie',
     what: 'Ogni giorno confronto le calorie registrate con l\'andamento delle pesate e correggo il fattore personale che moltiplica la stima delle attività. Uso tutto lo storico dall\'inizio della stima adattiva, con più peso ai dati recenti. Separo il tessuto (grasso e muscolo) dall\'acqua: le oscillazioni della bilancia non spostano il mantenimento quanto un cambiamento che dura.',
     how: fx(ST('1', 'Requisiti', '', [L('Pesate', 'almeno ' + C(K.MIN_W) + ' accettate su almeno ' + C(K.MIN_SPAN) + ' giorni; prima vale la stima dal profilo'), L('Diario', 'più giornate complete registri, più la stima si stringe; quelle incomplete vengono stimate e contano meno')]),
-      ST('2', 'Calcolo', '', [L(O('Ogni giorno'), 'tessuto(oggi) = tessuto(ieri) + [calorie di ieri senza digestione − fattore × attività di ieri] ÷ ' + C(F(K.RHO, 0))), L(O('Pesata'), 'tessuto + acqua; l\'acqua oscilla attorno a zero e somiglia a quella del giorno prima'), L(O('Fattore'), 'aggiornato a ogni pesata in base alla differenza fra peso previsto e peso osservato; può cambiare lentamente nel tempo'), L('Pesate lontane', 'dopo giornate molto sopra il solito, o se molto distanti dalla previsione, contano meno; non vengono scartate')])) + rg('finestra') + rg('rappr') + rg('identif') + rg('revisione'),
+      ST('2', 'Calcolo', '', [L(O('Ogni giorno'), 'tessuto(oggi) = tessuto(ieri) + [calorie di ieri senza digestione − fattore × attività di ieri] ÷ ' + C(F(K.RHO, 0)) + ' (' + C(F(K.RHO_GAIN, 0)) + ' in surplus)'), L(O('Pesata'), 'tessuto + acqua; l\'acqua oscilla attorno a zero e somiglia a quella del giorno prima'), L(O('Fattore'), 'aggiornato a ogni pesata in base alla differenza fra peso previsto e peso osservato; può cambiare lentamente nel tempo'), L('Pesate lontane', 'dopo giornate molto sopra il solito, o se molto distanti dalla previsione, contano meno; non vengono scartate')])) + rg('finestra') + rg('rappr') + rg('identif') + rg('revisione'),
     why: 'Calorie scritte e peso non separano introito reale e consumo reale: se il diario omette sempre 300 kcal, il consumo calibrato risulta più basso di circa 300 kcal. È «calibrato sul diario», non misurato.',
     ex: function () { if (!cal) return row('Calibrazione', 'non applicabile (consumo fisso)'); return row('Stato', lb('qualita', cal.status)) + (cal.window ? row('Periodo', fmtShort(cal.window.from) + '–' + fmtShort(cal.window.to)) : '') + (cal.completeness ? row('Giornate complete', pct(cal.completeness.frac || 0)) : '') + (B ? row('Mantenimento', F(B.R, 0) + ' kcal') : '') + (cal.reasons && cal.reasons.length ? row('Perché', esc(cal.reasons.join('; '))) : ''); } });
   add({ id: 'obiettivo-kcal', g: 'energia', t: 'Calorie del piano', w: 'Oggi, Profilo',
