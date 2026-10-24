@@ -2833,13 +2833,13 @@ var REG = [
   { id: 'met', nome: 'Attività di palestra e fuori palestra', unita: 'MET', tipo: 'convenzione', fonte: SRC.compendium, misura: 'valori convenzionali per tipo di attività, non il consumo del singolo', ipotesi: 'uso MET − 1 (netti), perché il riposo è già contato' },
   { id: 'forza', nome: 'Allenamento con i pesi', valore: 3.5, unita: 'MET (02054)', tipo: 'convenzione', fonte: SRC.compendium, misura: '«multiple exercises, 8–15 reps at varied resistance», pause comprese', ipotesi: 'intervallo d\'incertezza da 3,0 (02056) a 6,0 MET (02050); niente calorie dal tonnellaggio né dall\'e1RM' },
   { id: 'rho', nome: 'Energia per kg di variazione di peso', valore: 7700, unita: 'kcal/kg', tipo: 'convenzione', fonte: SRC.hall, misura: 'approssimazione; la densità reale cambia con acqua, glicogeno e composizione', ipotesi: 'uso locale su poche settimane; sensibilità mostrata con 5.000 e 9.400 kcal/kg; non la estendo a previsioni lunghe' },
-  { id: 'errore_diario', nome: 'Errore casuale del diario', valore: 200, unita: 'kcal per giorno', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'componente casuale dell’incertezza; si aggiungono autocorrelazione delle pesate, sensibilità energetica, discordanza delle finestre e pavimento di 75 kcal o 4%', ipotesi: 'riguarda solo l\'errore casuale; l\'errore sistematico non è separabile (vedi limite di identificazione)' },
+  { id: 'errore_diario', nome: 'Errore casuale del diario', valore: 300, unita: 'kcal per giorno', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'componente casuale dell’incertezza; si aggiungono autocorrelazione delle pesate, sensibilità energetica, discordanza delle finestre e pavimento di 75 kcal o 4%', ipotesi: 'riguarda solo l\'errore casuale; l\'errore sistematico non è separabile (vedi limite di identificazione)' },
   { id: 'identif', nome: 'Limite di identificazione', tipo: 'scientifico', fonte: SRC.lichtman, misura: 'calorie scritte e peso non separano introito reale e consumo reale', ipotesi: 'se mancano sempre 300 kcal al diario, il consumo ricostruito tende a essere più basso di circa 300 kcal, non più alto' },
-  { id: 'finestra', nome: 'Finestra della calibrazione', valore: 42, unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'almeno 6 pesate accettate su almeno 13 giorni, dopo l\'ultima transizione', ipotesi: 'il periodo deve rappresentare le abitudini attuali' },
-  { id: 'rappr', nome: 'Rappresentatività del diario', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'giorni completi ≥ 80%, fine settimana e feriali ≥ 60% ciascuno, nessun buco oltre 3 giorni, peso delle calorie stimate ≤ 100 kcal/giorno', ipotesi: 'la sola copertura percentuale non basta' },
-  { id: 'revisione', nome: 'Frequenza e passo delle revisioni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'consumo rivalutato ogni giorno disponibile, senza soglia di 50 kcal; calorie del piano aggiornate separatamente', ipotesi: 'bilancio cumulativo robusto fino a 42 giorni; prior iniziale riutilizzata una volta per valutazione, senza sommare come indipendenti finestre sovrapposte' },
+  { id: 'finestra', nome: 'Filtro del bilancio energetico', tipo: 'ingegneria', fonte: 'filtro di Kalman sul bilancio energetico (scelta del prodotto)', misura: 'usa tutte le calorie e le pesate dall\'inizio della stima adattiva; il fattore personale può cambiare lentamente (0,5% al giorno), così i dati recenti contano di più. Diventa operativo con almeno 6 pesate su 13 giorni', ipotesi: 'l\'acqua di oggi somiglia a quella di ieri; il tessuto cambia solo con il bilancio fra calorie e consumo' },
+  { id: 'rappr', nome: 'Giornate mancanti o incomplete', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'una giornata non completa entra con la mediana delle ultime 4 settimane e un\'incertezza più che doppia (±700 kcal invece di ±300): non blocca il calcolo, ma conta meno', ipotesi: 'le giornate non registrate somigliano alle altre; più sono, meno la stima si stringe' },
+  { id: 'revisione', nome: 'Frequenza e passo delle revisioni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'mantenimento aggiornato ogni giorno, a ogni pesata; calorie del piano aggiornate separatamente con le loro regole', ipotesi: 'ogni giornata e ogni pesata entrano una volta sola nel calcolo' },
   { id: 'limite_k', nome: 'Fattore di calibrazione plausibile', valore: [0.4, 2.5], tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'limiti ingegneristici ampi per incompatibilità estreme; non una misura fisiologica né un vincolo vicino alla stima teorica', ipotesi: 'il valore non troncato resta visibile nei dettagli' },
-  { id: 'transizione', nome: 'Transizioni', valore: 21, unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'finestra prudenziale di 21 giorni dopo eventi sulla creatina, malattia o cambi di fase; convenzione del prodotto, non durata individuale misurata. I cambi di lavoro fanno ripartire la finestra dei dati confrontabili', ipotesi: 'nessuna massa d\'acqua sottratta: solo minore fiducia e finestra che riparte' },
+  { id: 'transizione', nome: 'Transizioni', valore: 7, unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'dopo eventi sulla creatina, malattia o cambi di fase, per 7 giorni il peso può spostarsi di più senza che lo spostamento venga contato come grasso; un cambio di lavoro o di routine rende il fattore personale meno certo finché non arrivano dati nuovi', ipotesi: 'nessuna massa d\'acqua sottratta in automatico: il calcolo non si ferma, attribuisce lo sbalzo all\'acqua finché i dati non dicono altro' },
   { id: 'outlier', nome: 'Controllo di plausibilità delle pesate', valore: 3, unita: 'kg dalla mediana delle vicine', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'controllo, non legge del corpo umano: la pesata resta e si può confermare', ipotesi: 'vicine = 7 giorni prima e dopo, solo fino alla data di calcolo; con meno di 3 vicine, nei primi 14 giorni del piano, confronto con il peso di partenza del profilo' },
   { id: 'tendenza', nome: 'Tendenza del peso', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'retta robusta (Theil–Sen) sulle pesate degli ultimi 14 giorni fino alla data; con meno di 4 pesate, mediana degli ultimi 7 giorni', ipotesi: 'confrontata con ultima pesata e media semplice nella validazione' },
   { id: 'ritmo_cut', nome: 'Ritmo massimo del piano automatico in cut', valore: 1.0, unita: '% del peso a settimana, e deficit ≤ 25% del consumo', tipo: 'prodotto', fonte: 'vincolo del prodotto', misura: 'oltre, il piano automatico non viene generato: si propone di cambiare data, obiettivo o modalità', ipotesi: 'non è una soglia di sicurezza personale' },
@@ -2878,13 +2878,13 @@ var REG_META = {
   met: { versione: 'Compendium 2024', popolazione: 'adulti (valori di riferimento, non misure individuali)', unita: 'MET (1 MET ≈ 1 kcal per kg all\'ora)' },
   forza: { versione: 'Compendium 2024, codice 02054', popolazione: 'adulti' },
   rho: { versione: 'Hall 2011 (approssimazione lineare, non il modello dinamico)', popolazione: 'adulti; la densità cambia con la fase e la composizione' },
-  errore_diario: { versione: 'motore 2.0', popolazione: 'tutti gli utenti' },
+  errore_diario: { versione: 'motore 2.3', popolazione: 'tutti gli utenti' },
   identif: { versione: 'studio 1992', popolazione: 'adulti con obesità nello studio; il limite logico vale per tutti', unita: 'nessuna (limite logico)' },
-  finestra: { versione: 'motore 2.0', popolazione: 'tutti gli utenti' },
-  rappr: { versione: 'motore 2.0', popolazione: 'tutti gli utenti', unita: '% delle giornate' },
-  revisione: { versione: 'motore 2.0', popolazione: 'tutti gli utenti', unita: 'giorni e kcal' },
+  finestra: { versione: 'motore 2.3', popolazione: 'tutti gli utenti' },
+  rappr: { versione: 'motore 2.3', popolazione: 'tutti gli utenti', unita: '% delle giornate' },
+  revisione: { versione: 'motore 2.3', popolazione: 'tutti gli utenti', unita: 'giorni e kcal' },
   limite_k: { versione: 'motore 2.0', popolazione: 'tutti gli utenti', unita: 'fattore (senza unità)' },
-  transizione: { versione: 'motore 2.0', popolazione: 'tutti gli utenti' },
+  transizione: { versione: 'motore 2.3', popolazione: 'tutti gli utenti' },
   outlier: { versione: 'motore 2.0', popolazione: 'tutti gli utenti' },
   tendenza: { versione: 'motore 2.0', popolazione: 'tutti gli utenti', unita: 'kg e kg al giorno' },
   ritmo_cut: { versione: 'motore 2.0', popolazione: 'adulti nell\'ambito del piano automatico' },
@@ -3758,11 +3758,11 @@ function kHistory(ctx, asOf, cfg) {
     var hm = habitMean(ctx, r.d, cfg);
     rec.step = rec.delta = hm ? (rec.kAfter - rec.kBefore) * hm.A : 0;
     rec.applied = r.ready && Math.abs(rec.kAfter - rec.kBefore) > 1e-9;
-    rec.why = !r.ready ? 'Il filtro sta raccogliendo dati: servono almeno ' + K.MIN_W + ' pesate su ' + K.MIN_SPAN + ' giorni; fino ad allora vale la stima dal profilo.'
+    rec.why = !r.ready ? 'Servono almeno ' + K.MIN_W + ' pesate su ' + K.MIN_SPAN + ' giorni: fino ad allora vale la stima dal profilo.'
       : r.weight != null && r.weight < 1 ? 'Pesata lontana dalla previsione: contata con peso ridotto.'
       : r.excessKcal > 300 ? 'Dopo una giornata molto sopra il solito: la pesata conta meno (cibo e acqua di passaggio).'
-      : r.transition ? 'Periodo di transizione (' + r.transition + '): lo sbalzo di acqua e glicogeno non viene contato come grasso.'
-      : 'Filtro aggiornato con la pesata e le calorie dei giorni precedenti.';
+      : r.transition ? 'Periodo di transizione («' + r.transition + '»): lo sbalzo di acqua e glicogeno non viene contato come grasso.'
+      : 'Aggiornato con la pesata e le calorie dei giorni precedenti.';
     if (r.ready) lastCal = rec;
     kPrev = rec.kAfter; out.push(rec);
   });
@@ -4332,6 +4332,20 @@ function dayInfo(ctx, cfg0, d, kAt, targetOf, cfgAt) {
   return o;
 }
 
+/* descrizione del filtro per l'interfaccia: periodo usato, pesate, completezza del diario, stato e motivo */
+function filterSummary(ctx, kh, asOf) {
+  var fl = kh.last, res = { asOf: asOf, method: 'filtro_bilancio_v1', status: !fl ? 'dati_insufficienti' : fl.status, reasons: [fl ? fl.why : 'Il calcolo parte dalla prima pesata.'], kPost: kh.k, kSD: kh.kSDlast };
+  if (!kh.start) return res;
+  var used = kh.list.filter(function (x) { return x.d <= asOf; }), lastW = used.length ? used[used.length - 1].d : kh.start;
+  res.window = { from: kh.start, to: lastW, nW: used.length, nDays: dDiff(kh.start, lastW) };
+  var days = dRange(kh.start, dAdd(asOf, -1)), g = [{ n: 0, c: 0 }, { n: 0, c: 0 }], gap = 0, maxGap = 0, nC = 0;
+  days.forEach(function (d) { var it = intakeOf(ctx.days[d], false), x = g[dWd(d) >= 5 ? 1 : 0]; x.n++; if (it.usable) { x.c++; nC++; gap = 0; } else { gap++; maxGap = Math.max(maxGap, gap); } });
+  if (days.length) res.completeness = { frac: nC / days.length, weekday: g[0].n ? g[0].c / g[0].n : 1, weekend: g[1].n ? g[1].c / g[1].n : 1, maxGap: maxGap, nComplete: nC, nDays: days.length };
+  var tr = trendAt(ctx, asOf); res.slope = tr && !tr.none ? tr.slope : null;
+  return res;
+}
+M.filterSummary = filterSummary;
+
 /* ---------- motore completo ---------- */
 function engine(D, asOf, opts) {
   opts = opts || {};
@@ -4350,12 +4364,14 @@ function engine(D, asOf, opts) {
   /* v2.3: lo stato di qualità viene dal filtro; il bilancio a finestra (cal) resta visibile come controllo incrociato */
   var qcal = cal;
   if (cal && kh.method === 'filtro') {
-    var fl = kh.last, fst = !fl ? 'dati_insufficienti' : fl.status;
-    qcal = Object.assign({}, cal, { status: fst, reasons: fl ? [fl.why] : ['Il filtro parte alla prima pesata.'], method: 'filtro_bilancio_v1' });
+    /* l'interfaccia riceve solo la descrizione del filtro: il calcolo a finestra resta interno (legacyCalibration) */
+    qcal = filterSummary(ctx, kh, asOf);
+    cal = qcal;
   }
   var cmp = null;
   if (cfg.mode === 'manuale_fisso' && v.tdee && v.tdee.compare && cfg.useProfile) { var pc = tdeeCfg(ctx, { from: v.from, tdee: { mode: 'profilo_adattivo' } }); pc.anchor = v.from; pc.key += '|cmp'; cmp = calibrate(ctx, asOf, pc); }
   out.cfg = { mode: cfg.mode, manual: cfg.manual, anchor: cfg.anchor, ok: cfg.ok, why: cfg.why, k0: cfg.k0, useProfile: cfg.useProfile, origin: cfg.origin };
+  Object.defineProperty(out, 'legacyCalibration', { enumerable: false, value: cfg.ok && cfg.adaptive ? function () { return calibrate(ctx, asOf, cfg); } : null });
   out.calibration = cal; out.filterQuality = qcal; out.compare = cmp; out.kHistory = kh;
   /* stima iniziale dal profilo, sempre distinguibile */
   var hmP = cfg.useProfile ? habitMean(ctx, asOf, { useProfile: true }) : null;
@@ -6421,8 +6437,8 @@ function confidenceDetail(E) {
   var calibrated = cal && cal.status === 'calibrato', u = cal && cal.uncertainty;
   o.summary = level === 'bassa' ? (calibrated ? 'Il diario è utilizzabile, ma il consumo ricostruito conserva abbastanza incertezza da restare nel livello Bassa.' : 'La stima del fabbisogno ha ancora pochi riscontri utilizzabili oppure riscontri non abbastanza stabili.') : level === 'media' ? 'Lo storico restringe l’incertezza del fabbisogno, ma rimangono differenze fra le ricostruzioni e limiti dei dati.' : 'Secondo i controlli interni, lo storico sostiene una stima del fabbisogno più stabile. Non è una misura esatta delle calorie bruciate.';
   var w = cal && cal.window, c = cal && cal.completeness;
-  if (w) o.data.push((calibrated ? 'Calibrazione attuale' : 'Finestra esaminata') + ': ' + date(w.from) + '–' + date(w.to) + (w.nW != null ? ', ' + w.nW + ' pesate accettate' : '') + (w.nDays != null ? ', ' + w.nDays + ' giorni fra le pesate' : '') + '.');
-  if (c && c.nDays > 0) o.data.push('Alimentazione: ' + c.nComplete + ' giornate complete su ' + c.nDays + ' (' + num(c.frac * 100) + '%)' + (c.nComplete === c.nDays ? '. In questa finestra non mancano giornate alimentari complete.' : '; le giornate mancanti rendono la ricostruzione meno certa.'));
+  if (w) o.data.push((calibrated ? 'Dati usati' : 'Periodo esaminato') + ': ' + date(w.from) + '–' + date(w.to) + (w.nW != null ? ', ' + w.nW + ' pesate accettate' : '') + (w.nDays != null ? ', ' + w.nDays + ' giorni fra le pesate' : '') + '.');
+  if (c && c.nDays > 0) o.data.push('Alimentazione: ' + c.nComplete + ' giornate complete su ' + c.nDays + ' (' + num(c.frac * 100) + '%)' + (c.nComplete === c.nDays ? '. Nel periodo usato non mancano giornate alimentari complete.' : '; le giornate mancanti rendono la ricostruzione meno certa.'));
   var vo = E.verifiedOn;
   if (vo && vo.d) o.data.push('Ultimo controllo utilizzabile del fabbisogno: ' + date(vo.d) + '.');
   if (cal && cal.since) add('Non viene usato automaticamente tutto il diario: la finestra riparte dopo «' + cal.since.label + '» (' + date(cal.since.d) + '). I dati precedenti restano salvati.');
@@ -6561,7 +6577,7 @@ function renderNeed() {
   } else if (rv.alternatives && rv.alternatives.length) rx = '<ul class="p2-alt">' + rv.alternatives.map(function (a) { return '<li>' + esc(a.msg) + '</li>'; }).join('') + '</ul>';
   /* giornate migrate o importate «da confermare» nel periodo: sono il motivo più comune del diario incompleto, e si sistemano in un tocco */
   var tcN = typeof toConfirm === 'function' ? toConfirm().filter(function (d) { return d >= addDays(todayStr(), -GJM.K.WIN); }).length : 0;
-  if (tcN && E.calibration && E.calibration.status === 'diario_incompleto') {
+  if (tcN && E.calibration && (E.calibration.status === 'diario_incompleto' || E.kHistory && E.kHistory.method === 'filtro')) {
     rx += '<p>' + tcN + (tcN === 1 ? ' giornata degli ultimi ' : ' giornate degli ultimi ') + GJM.K.WIN + ' giorni ' + (tcN === 1 ? 'ha' : 'hanno') + ' le calorie «da confermare» (dati della versione precedente o importati). Se le hai segnate per intero, confermale: entreranno nel calcolo.</p>';
     rvis += '<div class="p2-note p2-act"><span>' + tcN + (tcN === 1 ? ' giornata' : ' giornate') + ' da confermare</span><button type="button" class="linkbtn small" data-goto-confirm>Conferma le giornate</button></div>';
   }
@@ -6812,14 +6828,18 @@ function calibrationHTML(E) {
     h = '<p class="muted small">Consumo manuale fisso: non viene calibrato.' + (E.compare ? ' Confronto secondario con la stima dal diario: ' + (E.compare.status === 'calibrato' ? kc(E.compare.C) + ' (solo informativo, non cambia il piano)' : lb('qualita', E.compare.status).toLowerCase()) : '') + '</p>';
     return '<details class="more" data-ibfold><summary>Confronto con il diario</summary><div class="in">' + h + '</div></details>';
   }
-  var fq = E.filterQuality;
   if (kh.method === 'filtro') {
-    var fl = kh.last;
-    h += '<p><b>Come viene calcolato:</b> un filtro aggiorna ogni giorno il fattore personale con tutte le calorie e le pesate dall\'inizio' + (kh.start ? ' (' + fmtDay(kh.start) + ')' : '') + ', dando più peso a quelle recenti. Separa il grasso dall\'acqua: dopo un cambio di fase, con la creatina o dopo una giornata molto sopra il solito, gli sbalzi della bilancia contano meno.</p>';
-    h += '<p><b>Oggi:</b> ' + lb('qualita', fq ? fq.status : 'dati_insufficienti') + '. Fattore ' + fmt(kh.k, 3) + ' ± ' + fmt(kh.kSDlast, 3) + '. ' + esc(fl ? fl.why : '') + '</p>';
+    var fq = E.filterQuality || c || {}, w = fq.window, cp = fq.completeness, R = E.base && E.base.ok ? E.base.R : null, sdR = E.confidence && E.confidence.maintenanceSD;
+    h += '<p><b>Come si adatta a te:</b> ogni giorno il calcolo confronta le calorie che registri con l\'andamento delle tue pesate. Se il peso scende più (o meno) di quanto le calorie farebbero prevedere, il mantenimento viene corretto. Usa tutto il tuo storico, dando più peso ai dati recenti, così segue anche i cambiamenti del tuo corpo.</p>';
+    h += '<p class="muted small">Gli sbalzi della bilancia dovuti ad acqua e cibo non vengono scambiati per grasso: dopo un cambio di fase, con la creatina, in malattia o dopo una giornata molto sopra il solito, le pesate dei giorni seguenti contano meno. Le giornate non registrate per intero vengono stimate e contano con più incertezza.</p>';
+    if (w) h += '<p class="muted small"><b>Dati usati:</b> dal ' + fmtDay(w.from) + ', ' + w.nW + ' pesate' + (cp ? ', giornate alimentari complete ' + Math.round(cp.frac * 100) + '%' : '') + '.' + (R ? ' Mantenimento attuale ' + kc(R) + (sdR ? ' (± ' + fmt(sdR, 0) + ')' : '') + '. ' : ' ') + lb('qualita', fq.status) + ': ' + esc(fq.reasons && fq.reasons[0] || '') + '</p>';
+    var rows = kh.list.filter(function (x) { return x.evidence; }).slice(-14).reverse();
+    if (rows.length) h += '<div class="tw"><table class="p2-parts"><thead><tr><th>Pesata</th><th>Mantenimento</th><th>Nota</th></tr></thead><tbody>' + rows.map(function (x) { return '<tr><td>' + fmtShort(x.d) + '</td><td>' + (Math.abs(x.step) >= 1 ? sgn(x.step, 0) + ' kcal' : 'invariato') + '</td><td>' + esc(x.why || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    else h += '<p class="muted small">Servono almeno ' + GJM.K.MIN_W + ' pesate su ' + GJM.K.MIN_SPAN + ' giorni: fino ad allora vale la stima dal profilo.</p>';
+    return '<details class="more" data-ibfold><summary>Come si adatta ai tuoi dati</summary><div class="in">' + h + '</div></details>';
   }
   if (c) {
-    h += '<p>' + (kh.method === 'filtro' ? '<b>Controllo incrociato con il metodo precedente</b> (solo le ultime 6 settimane, ' + fmtDay(c.asOf) + '): ' : '<b>Ultimo controllo (' + fmtDay(c.asOf) + '):</b> ') + lb('qualita', c.status) + '. ' + esc((c.reasons || []).join('; ')) + '</p>';
+    h += '<p><b>Ultimo controllo (' + fmtDay(c.asOf) + '):</b> ' + lb('qualita', c.status) + '. ' + esc((c.reasons || []).join('; ')) + '</p>';
     if (c.window) h += '<p class="muted small">Periodo: ' + (c.window.from ? fmtDay(c.window.from) : '—') + ' – ' + (c.window.to ? fmtDay(c.window.to) : '—') + ', ' + c.window.nW + ' pesate' + (c.completeness ? ', giornate complete ' + Math.round(c.completeness.frac * 100) + '% (fine settimana ' + Math.round(c.completeness.weekend * 100) + '%, feriali ' + Math.round(c.completeness.weekday * 100) + '%), buco massimo ' + c.completeness.maxGap + ' giorni' : '') + '.</p>';
     if (c.C != null) h += '<p class="muted small"><b>Bilancio integrato robusto:</b> collega ogni pesata alle calorie e alle attività cumulative dei giorni precedenti, inclusi quelli più abbondanti. Consumo medio ricostruito durante il periodo: <b>' + kc(c.C) + '</b>; equivalente di mantenimento nello stesso periodo: ' + kc(c.maintenance) + '. Sensibilità a 5.000 e 9.400 kcal/kg: ' + kc(c.sens.rho5000) + '–' + kc(c.sens.rho9400) + ' di consumo medio (non intervallo di probabilità). Fattore grezzo ' + fmt(c.kRaw, 3) + ', fattore applicato ' + fmt(c.kPost, 3) + '; peso statistico del diario ' + fmt(100 * c.wData, 0) + '%. Le finestre sovrapposte non sono prove indipendenti. L’intervallo comprende rumore del peso, discordanza fra finestre e ipotesi energetiche; non certifica una precisione individuale. Se mancano sistematicamente calorie nel diario, il consumo ricostruito sarà distorto.</p>';
   }
@@ -7784,7 +7804,7 @@ function eventsHTML() {
   var h = es.length ? '<div class="pl-list">' + es.map(function (e) {
     return plItem({ t: (e.to ? 'Dal ' + fmtDay(e.from) + ' al ' + fmtDay(e.to) : 'Dal ' + fmtDay(e.from)), v: esc(cap(EV_KIND[e.kind] || e.kind)), s: e.label ? esc(e.label) : '', act: '<button type="button" class="linkbtn small" data-pa="ev-del" data-id="' + esc(e.id || e.from + e.kind) + '">Togli</button>' });
   }).join('') + '</div>' : '<p class="pl-empty">Nessun evento.</p>';
-  return h + '<p class="muted small">Un cambiamento strutturale (lavoro, turni, attività, infortunio, ripresa, dieta, modo di registrare) fa ripartire la calibrazione dai dati dopo l\'evento. Ferie, viaggio e malattia sono eccezioni brevi: quei giorni pesano meno, senza azzerare nulla.</p>'
+  return h + '<p class="muted small">Un cambiamento strutturale (lavoro, turni, attività, infortunio, ripresa, dieta, modo di registrare) rende il mantenimento meno certo finché non arrivano dati nuovi, senza azzerare nulla. Ferie, viaggio e malattia sono eccezioni brevi: quei giorni pesano meno.</p>'
     + '<h3 class="pl-h">Aggiungi un evento</h3><div class="settings-fields" id="ev-new"><label class="f">Tipo<select name="kind">' + opts(EV_KIND, 'lavoro') + '</select></label><label class="f">Dal<input name="from" type="date" value="' + todayStr() + '"></label><label class="f">Al<input name="to" type="date"><small class="muted">solo per ferie, viaggi e malattia</small></label><label class="f">Descrizione<input name="label" type="text" maxlength="60"></label></div><div class="row"><button type="button" class="btn ghost fit small" data-pa="ev-add">Aggiungi</button><span class="muted small" id="ev-msg"></span></div>';
 }
 function suppHTML() {
@@ -8178,7 +8198,7 @@ function rulesData() {
     ex: function () { var dd = dayList(), nk = dd.filter(function (d) { return state.days.get(d).kcal > 0; }).length; return row('Giorni nel diario', dd.length + ' (' + nk + ' con calorie)') + row('Sedute da Hevy', wl.length) + row('Versioni del piano', planVersions().length) + row('Previsioni salvate', state.prev.size); } });
   add({ id: 'stati', g: 'fonti', t: 'Giornata completa, parziale, da confermare', w: 'Diario, calibrazione, bilancio',
     what: 'Ogni giornata con calorie ha uno stato: completa, parziale, digiuno confermato o da confermare. Solo le complete (e i digiuni confermati) entrano nel confronto fra calorie e peso.',
-    how: fx(L('Completa', 'hai segnato tutto: entra nei calcoli'), L('Parziale', 'manca qualcosa: non entra nel bilancio né nella calibrazione'), L('Digiuno confermato', 'zero calorie dichiarate: entra come zero'), L('Da confermare', 'calorie scritte prima di questa versione, senza stato: restano fuori finché non le confermi'), L('Giorno senza calorie', 'non è un digiuno: è un dato mancante')),
+    how: fx(L('Completa', 'hai segnato tutto: entra nei calcoli'), L('Parziale', 'manca qualcosa: non entra nel bilancio; nella calibrazione viene stimata e conta meno'), L('Digiuno confermato', 'zero calorie dichiarate: entra come zero'), L('Da confermare', 'calorie scritte prima di questa versione, senza stato: contano come giornate incomplete finché non le confermi'), L('Giorno senza calorie', 'non è un digiuno: è un dato mancante')),
     why: 'Una giornata da 500 kcal scritte fino a pranzo non è una giornata da 500 kcal. Non deduco «completa» dalla data passata né da un numero maggiore di zero.',
     ex: function () { var c = { completo: 0, parziale: 0, zero_confermato: 0, da_confermare: 0 }; state.days.forEach(function (v, d) { if (d < t && (v.kcal > 0 || (v.st && v.st.kcal === 'zero_confermato'))) { var st = GJM.fieldState(v, 'kcal', false); if (c[st] != null) c[st]++; } }); return row('Complete', c.completo) + row('Parziali', c.parziale) + row('Digiuni confermati', c.zero_confermato) + row('Da confermare', c.da_confermare); } });
   add({ id: 'pasti', g: 'fonti', t: 'Pasti e totale del giorno', w: 'Diario, ricette, import',
@@ -8244,8 +8264,8 @@ function rulesData() {
     how: fx(L('Punti', P('pesate') + ' del diario'), L('Tratteggio verso il futuro', 'scenario con le calorie del piano, non una misura'), L('Eventi', 'creatina, cambi di fase, lavoro: segnalano che il peso è meno leggibile, senza correggerlo')),
     why: 'La distanza fra un punto e la linea non misura acqua o grasso.' });
   add({ id: 'acqua', g: 'peso', t: 'Acqua, glicogeno e creatina', w: 'Oggi, Peso, Calorie',
-    what: 'Non sottraggo più una quantità d\'acqua o glicogeno calcolata in automatico. Inizio, carico, sospensione o ripresa della creatina, un cambio di fase e i cambi strutturali aprono un periodo di transizione di ' + K.TRANS_DAYS + ' giorni: il peso è meno leggibile, la calibrazione riparte dai dati dopo l\'evento e la fiducia è più bassa.',
-    how: fx(L('Transizione', K.TRANS_DAYS + ' giorni dopo l\'evento'), L('Effetto', 'nessuna massa sottratta; solo minore fiducia e finestra di calibrazione che riparte')) + rg('transizione') + rg('integratori'),
+    what: 'Non sottraggo più una quantità d\'acqua o glicogeno calcolata in automatico. Inizio, carico, sospensione o ripresa della creatina, un cambio di fase e i cambi strutturali aprono un periodo di transizione di ' + K.TRANS_DAYS + ' giorni: il peso è meno leggibile: per ' + K.TRANS_DAYS + ' giorni le variazioni della bilancia vengono attribuite soprattutto all\'acqua, non al grasso. Il calcolo del mantenimento non si ferma.',
+    how: fx(L('Transizione', K.TRANS_DAYS + ' giorni dopo l\'evento'), L('Effetto', 'nessuna massa sottratta; le pesate di quei giorni contano meno nel mantenimento')) + rg('transizione') + rg('integratori'),
     why: '«3 g al giorno» non dice quanta acqua trattiene una persona: ogni numero sarebbe inventato.' });
 
   /* ---------- energia ---------- */
@@ -8262,11 +8282,11 @@ function rulesData() {
     why: 'Un consumo manuale fisso non viene aggirato da una stima nascosta: per usare la stima devi cambiare modalità. Se cammini o ti alleni molto più (o meno) di quanto avevi dichiarato, la previsione di attività lo segue subito, perché è un dato osservato; il fattore personale invece viene rivalutato con il bilancio integrato; dati rumorosi ricevono meno peso. Dopo un cambiamento strutturale (nuovo lavoro, turni, infortunio, ripresa, dieta diversa) il fattore calcolato prima resta, ma conta meno: la sua incertezza torna quella dell\'inizio finché non ci sono dati nuovi. Un\'eccezione breve (ferie, viaggio, malattia) non lo cambia.',
     ex: function () { return B ? row(esc(B.label), F(B.R, 0) + ' kcal') + row('Fattore personale', F(B.k, 3)) + (B.kSD ? row('Incertezza', '±' + F(B.kSD * 100, 1) + '%') : '') + (B.transfer ? row('Conta meno', esc(B.transfer.why)) : '') + (E.initial ? row('Stima iniziale dal profilo', F(E.initial.R, 0) + ' (' + F(E.initial.lo, 0) + '–' + F(E.initial.hi, 0) + ')') : '') : row('Consumo', (E && E.cfg && E.cfg.why) || 'non disponibile'); } });
   add({ id: 'calibrazione', g: 'energia', t: 'Calibrazione sul diario', w: 'Progressi › Calorie',
-    what: 'Ogni giorno disponibile collego le pesate alle calorie e alle attività cumulative dei giorni precedenti, su un massimo di ' + K.WIN / 7 + ' settimane confrontabili. La regressione robusta stima il fattore personale; lo combino con la prior iniziale in base all’incertezza, senza ricontare finestre sovrapposte.',
-    how: fx(ST('1', 'Requisiti', '', [L('Pesate', 'almeno ' + C(K.MIN_W) + ' accettate su almeno ' + C(K.MIN_SPAN) + ' giorni, dopo l\'ultima transizione'), L('Diario', 'giornate complete ≥ ' + C(pct(K.COMPLETE_MIN)) + ', fine settimana e feriali ≥ ' + C(pct(K.TYPE_MIN)) + ' ciascuno, nessun buco oltre ' + C(K.GAP_MAX) + ' giorni')]),
-      ST('2', 'Calcolo', '', [L(O('Bilancio'), 'peso(t) = intercetta + [somma delle calorie senza digestione − fattore × somma delle attività] ÷ ' + C(F(K.RHO, 0))), L(O('Fattore'), 'regressione robusta sui valori cumulativi, poi combinazione con la prior iniziale; peso del diario mostrato nei dettagli'), L('Aggiornamento', 'consumo rivalutato ogni giorno; nessuna soglia di 50 kcal. Il piano alimentare mantiene le proprie regole di revisione. Fattore fuori ' + C(K.K_LO + '–' + K.K_HI) + ': verifica dei dati')])) + rg('finestra') + rg('rappr') + rg('identif') + rg('revisione'),
+    what: 'Ogni giorno confronto le calorie registrate con l\'andamento delle pesate e correggo il fattore personale che moltiplica la stima delle attività. Uso tutto lo storico dall\'inizio della stima adattiva, con più peso ai dati recenti. Separo il tessuto (grasso e muscolo) dall\'acqua: le oscillazioni della bilancia non spostano il mantenimento quanto un cambiamento che dura.',
+    how: fx(ST('1', 'Requisiti', '', [L('Pesate', 'almeno ' + C(K.MIN_W) + ' accettate su almeno ' + C(K.MIN_SPAN) + ' giorni; prima vale la stima dal profilo'), L('Diario', 'più giornate complete registri, più la stima si stringe; quelle incomplete vengono stimate e contano meno')]),
+      ST('2', 'Calcolo', '', [L(O('Ogni giorno'), 'tessuto(oggi) = tessuto(ieri) + [calorie di ieri senza digestione − fattore × attività di ieri] ÷ ' + C(F(K.RHO, 0))), L(O('Pesata'), 'tessuto + acqua; l\'acqua oscilla attorno a zero e somiglia a quella del giorno prima'), L(O('Fattore'), 'aggiornato a ogni pesata in base alla differenza fra peso previsto e peso osservato; può cambiare lentamente nel tempo'), L('Pesate lontane', 'dopo giornate molto sopra il solito, o se molto distanti dalla previsione, contano meno; non vengono scartate')])) + rg('finestra') + rg('rappr') + rg('identif') + rg('revisione'),
     why: 'Calorie scritte e peso non separano introito reale e consumo reale: se il diario omette sempre 300 kcal, il consumo calibrato risulta più basso di circa 300 kcal. È «calibrato sul diario», non misurato.',
-    ex: function () { if (!cal) return row('Calibrazione', 'non applicabile (consumo fisso)'); return row('Stato', lb('qualita', cal.status)) + (cal.window ? row('Periodo', fmtShort(cal.window.from) + '–' + fmtShort(cal.window.to)) : '') + (cal.completeness ? row('Giornate complete', pct(cal.completeness.frac || 0)) : '') + (cal.C != null ? row('Consumo calibrato', F(cal.C, 0) + ' kcal') : '') + (cal.reasons && cal.reasons.length ? row('Perché', esc(cal.reasons.join('; '))) : ''); } });
+    ex: function () { if (!cal) return row('Calibrazione', 'non applicabile (consumo fisso)'); return row('Stato', lb('qualita', cal.status)) + (cal.window ? row('Periodo', fmtShort(cal.window.from) + '–' + fmtShort(cal.window.to)) : '') + (cal.completeness ? row('Giornate complete', pct(cal.completeness.frac || 0)) : '') + (B ? row('Mantenimento', F(B.R, 0) + ' kcal') : '') + (cal.reasons && cal.reasons.length ? row('Perché', esc(cal.reasons.join('; '))) : ''); } });
   add({ id: 'obiettivo-kcal', g: 'energia', t: 'Calorie del piano', w: 'Oggi, Profilo',
     what: 'Le calorie da mangiare vengono dalla versione attiva del piano: manuali (restano le tue), dal consumo manuale fisso, oppure dalla stima adattiva. Nei piani automatici: consumo di riferimento ± il ritmo scelto, entro i limiti del prodotto.',
     how: fx(L(O('Calorie automatiche'), KC('consumo di riferimento') + ' ± ' + PF('ritmo') + ' × ' + P('peso') + ' × ' + C(F(K.RHO, 0)) + ' ÷ 7 ÷ (1 − ' + C(pct(K.TEF)) + ')'), L('Con una data', 'calorie costanti che portano all\'obiettivo alla data, con la stessa simulazione delle previsioni'), L('In kcal', 'scrivi tu il deficit o il surplus al giorno: ' + KC('consumo di riferimento') + ' − deficit ÷ (1 − digestione) = calorie del piano (in cut); un piano già scritto in calorie non riceve un secondo deficit'), L('Limiti in cut', 'al massimo ' + C(K.CUT_PCT + '%') + ' del peso a settimana e ' + C(pct(K.CUT_FRAC)) + ' del consumo; mai sotto il dispendio a riposo stimato'), L('Limiti in surplus', 'al massimo ' + C(K.SUR_PCT + '%') + ' a settimana e ' + C(pct(K.SUR_FRAC)) + ' del consumo'), L('Obiettivo entro ±' + K.BAND + ' kg', 'mantenimento: nessun deficit o surplus automatico'), L('Fuori limite', 'nessun piano automatico: ti propongo di spostare la data, l\'obiettivo o di inserire un piano manuale')) + rg('ritmo_cut') + rg('ritmo_surplus') + rg('sotto_riposo') + rg('fascia'),
