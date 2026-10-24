@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261023-pesata1">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-avviso1">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261023-pesata1">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261023-pesata1">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261023-pesata1">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261023-pesata1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-avviso1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-avviso1">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-avviso1">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-avviso1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -8684,7 +8684,24 @@ function wCheckAlerts() {
   if (o.length > 3) out.push({ lvl: 'warn', t: 'Altre pesate da controllare', x: 'Ci sono altre ' + (o.length - 3) + (o.length - 3 === 1 ? ' pesata messa' : ' pesate messe') + ' da parte: ' + o.slice(3).map(function (x) { return fmtShort(x.d) + ' ' + fmt(x.w, 1) + ' kg'; }).join(', ') + '. Controllale una alla volta: dopo le prime tre compaiono qui.', short: 'altre pesate da controllare' });
   return out;
 }
+/* Presentation only: keep the existing outlier and confirmation rules. */
+function weightCheckNoticeHTML(a) {
+  var x = a.wchk, delta = x.w - x.med;
+  var icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="17" rx="4"/><path d="M8 11a4 4 0 0 1 8 0M12 11l2-3M9 17h6"/></svg>';
+  return '<section class="alert wcheck-notice" aria-label="Pesata da controllare del ' + esc(fmtDay(x.d)) + '">'
+    + '<header class="wcheck-heading"><span class="wcheck-icon">' + icon + '</span><div><h3>Pesata da controllare</h3><p>' + esc(fmtDay(x.d)) + '</p></div><span class="wcheck-badge">Da verificare</span></header>'
+    + '<div class="wcheck-content"><div class="wcheck-readings">'
+    + '<div class="wcheck-reading wcheck-entered"><span>Peso inserito</span><strong>' + fmt(x.w, 1) + '<small>kg</small></strong></div>'
+    + '<div class="wcheck-reading"><span>' + (x.start ? 'Peso iniziale' : 'Riferimento vicino') + '</span><strong>' + fmt(x.med, 1) + '<small>kg</small></strong></div>'
+    + '<div class="wcheck-reading wcheck-delta"><span>Differenza</span><strong>' + (delta > 0 ? '+' : delta < 0 ? '−' : '') + fmt(Math.abs(delta), 1) + '<small>kg</small></strong></div></div>'
+    + '<div class="wcheck-decision"><p>Per ora questa pesata è <b>esclusa dai calcoli</b>. Confermala se è corretta, oppure modifica il valore.</p>'
+    + '<div class="wcheck-actions"><button type="button" class="btn fit wcheck-confirm" data-wok="' + esc(x.d) + '" data-w="' + x.w + '"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-8"/></svg>È giusta</button>'
+    + '<button type="button" class="btn fit wcheck-correct" data-wfix="' + esc(x.d) + '"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 4 4M3 17l4-1L17 6a2.8 2.8 0 0 0-4-4L3 12Z"/></svg>Correggi</button></div></div></div>'
+    + '<details class="wcheck-method"><summary>Perché questo avviso?<span class="disclosure-cue" aria-hidden="true"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 8 4 4 4-4"/></svg></span></summary><div><p>' + esc(a.x) + '</p></div></details></section>';
+}
+
 function alertHTML(a) {
+  if (a.wchk) return weightCheckNoticeHTML(a);
   return '<div class="alert" style="--c:' + LVL_C[a.lvl] + '"><i></i><div><div class="at">' + esc(a.t) + '</div><div class="ax">' + esc(a.x) + '</div>'
     + (a.wchk ? '<div class="row al-act"><button type="button" class="btn ghost fit small" data-wok="' + esc(a.wchk.d) + '" data-w="' + a.wchk.w + '">È giusta</button><button type="button" class="btn ghost fit small" data-wfix="' + esc(a.wchk.d) + '">Correggi</button></div>' : '')
     + '</div></div>';
@@ -8695,7 +8712,10 @@ function renderWCheckToday(al) {
   var box = $('#wchk-today');
   if (!box) { box = document.createElement('div'); box.id = 'wchk-today'; box.className = 'stack'; oggi.insertBefore(box, oggi.firstChild); }
   var w = al.filter(function (a) { return a.wchk || a.t === 'Altre pesate da controllare'; });
-  box.innerHTML = w.map(alertHTML).join(''); box.hidden = !w.length;
+  var html = w.map(alertHTML).join('');
+  if (box._noticeHTML !== html) { box.innerHTML = html; box._noticeHTML = html; }
+  box.hidden = !w.length; oggi.classList.toggle('has-weight-check', !!w.length);
+  box.setAttribute('aria-label', 'Pesate da verificare');
 }
 function renderAlerts() {
   var al = state.alerts = wCheckAlerts().concat(computeAlerts());
@@ -13975,8 +13995,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261023-pesata1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261023-pesata1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261023-pesata1') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-avviso1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-avviso1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-avviso1') center/contain no-repeat}
 
 
 
@@ -14371,6 +14391,59 @@ body #tab-ricette .recipe-duration input,body #recipe-dialog .recipe-duration in
 #d-recent:not(#z):not(#y) table .recent-today td:first-child{border-left:1px solid #bc8f5e35}
 
 #d-recent:not(#z):not(#y){background:#201d1b!important;border-color:#c3a28012!important}
+
+/* Outlier review: prominent in Oggi, same presentation in Progressi. */
+body #tab-oggi>#wchk-today:not(#z):not(#y){order:-10;min-width:0;grid-column:1/-1;gap:12px}
+body #wchk-today[hidden]{display:none!important}
+body .alert.wcheck-notice:not(#z):not(#y){--wc:#F4B76D;box-sizing:border-box;display:block;min-width:0;width:100%;margin:0;padding:22px!important;border:1px solid #F4B76D45!important;border-radius:24px!important;background:radial-gradient(ellipse at 0 0,#D68B3420,transparent 66%),linear-gradient(130deg,#292320,#201E21)!important;box-shadow:inset 0 1px 0 #FFFFFF06,0 10px 28px #00000018!important;color:#F3ECE8;animation:wcheck-reveal .24s ease-out both}
+body #alerts .alert.wcheck-notice:not(#z):not(#y){padding:22px!important;border-radius:24px!important}
+.wcheck-heading{display:flex;align-items:center;gap:12px;min-width:0;margin-bottom:18px}
+.wcheck-icon{display:grid;place-items:center;width:44px;height:44px;flex:none;border-radius:14px;background:#F4B76D14;border:1px solid #F4B76D33;color:var(--wc)}
+.wcheck-icon svg{width:24px;height:24px}
+.wcheck-heading>div{min-width:0;flex:1}
+.wcheck-heading h3{margin:0;font:750 1.1rem/1.3 var(--f-display);letter-spacing:-.02em;color:#FFF5EC}
+.wcheck-heading p{margin:3px 0 0;color:#BFAEA0;font-size:.78rem;line-height:1.4}
+.wcheck-badge{flex:none;align-self:center;border:1px solid #F4B76D30;border-radius:999px;background:#F4B76D0C;padding:6px 10px;font-size:.68rem;font-weight:650;color:#EBC79D;white-space:nowrap}
+.wcheck-content{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.wcheck-readings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+.wcheck-reading{min-width:0;padding:12px 14px;border:1px solid #FFFFFF09;border-radius:15px;background:#FFFFFF03;display:flex;flex-direction:column;gap:7px}
+.wcheck-reading>span{font-size:.72rem;line-height:1.35;color:#BCAEA6;min-height:1.35em}
+.wcheck-reading strong{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;font:750 clamp(1.35rem,2.3vw,1.8rem)/1.1 var(--f-display);letter-spacing:-.035em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:#ECE7E3}
+.wcheck-reading small{font:550 .68rem/1.2 var(--f-body);letter-spacing:0;color:#BCAEA6}
+.wcheck-entered{background:#F4B76D0A;border-color:#F4B76D24}
+.wcheck-entered strong{color:#FFDAAC}
+.wcheck-delta strong{color:#EEC293}
+.wcheck-decision{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:12px}
+.wcheck-decision p{margin:0;font-size:.85rem;line-height:1.65;color:#C4B8B0}
+.wcheck-decision b{font-weight:650;color:#EAE0D7}
+.wcheck-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;min-width:0}
+body .wcheck-actions>.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;width:100%;min-height:46px;padding:10px 14px!important;border-radius:13px!important;font:700 .83rem/1.3 var(--f-body);text-align:center;cursor:pointer;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.wcheck-actions svg{width:17px;height:17px;flex:none}
+body .wcheck-actions>.wcheck-confirm{color:#2B2118!important;background:#F0B675!important;border:1px solid #F7C58B!important;box-shadow:inset 0 1px 0 #FFFFFF1A!important}
+body .wcheck-actions>.wcheck-correct{color:#E8D5C4!important;background:#FFFFFF05!important;border:1px solid #D5A67D42!important;box-shadow:none!important}
+body .wcheck-actions>.btn:hover{filter:brightness(1.08)}
+body .wcheck-actions>.btn:active{transform:translateY(1px)}
+body .wcheck-actions>.btn:focus-visible,.wcheck-method>summary:focus-visible{outline:2px solid #FFE0B8;outline-offset:4px}
+body .wcheck-actions>.btn:disabled{opacity:.55;cursor:wait}
+.wcheck-method{margin-top:14px;border-top:1px solid #F4B76D18;padding-top:11px}
+.wcheck-method>summary{display:flex;align-items:center;gap:7px;width:fit-content;min-height:30px;list-style:none;cursor:pointer;font-size:.75rem;font-weight:550;color:#CEB69F;border-radius:6px}
+.wcheck-method>summary::-webkit-details-marker{display:none}
+.wcheck-method>summary::before,.wcheck-method>summary::after{display:none!important;content:none!important}
+.wcheck-method>summary svg{width:15px;height:15px;transition:transform .2s ease}
+.wcheck-method[open]>summary svg{transform:rotate(180deg)}
+.wcheck-method>div{padding-top:8px}
+.wcheck-method p{margin:0;font-size:.8rem;line-height:1.7;color:#BBABA0;max-width:100ch}
+@media(min-width:900px){.wcheck-content{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:center}.wcheck-actions{width:min(100%,340px)}.wcheck-reading{padding:14px 16px}.wcheck-method{margin-top:16px}}
+@media(min-width:1280px){body #tab-oggi.has-weight-check>#wchk-today:not(#z):not(#y){grid-row:1}body #tab-oggi.has-weight-check>.hero-today:not(#z):not(#y){grid-row:2}body #tab-oggi.has-weight-check>.hero-row:not(#z):not(#y){grid-row:2}body #tab-oggi.has-weight-check>.need-card:not(#z):not(#y){grid-row:3}}
+@media(max-width:600px){body .alert.wcheck-notice:not(#z):not(#y),body #alerts .alert.wcheck-notice:not(#z):not(#y){padding:17px!important;border-radius:21px!important}.wcheck-heading{gap:10px;margin-bottom:14px}.wcheck-heading h3{font-size:1.02rem}.wcheck-icon{width:38px;height:38px;border-radius:12px}.wcheck-icon svg{width:21px;height:21px}.wcheck-badge{display:none}.wcheck-content{gap:12px}.wcheck-reading{padding:10px 9px;gap:7px;border-radius:12px}.wcheck-reading>span{font-size:.65rem}.wcheck-reading strong{font-size:1.38rem;gap:3px}.wcheck-reading small{font-size:.62rem}.wcheck-decision{gap:12px}.wcheck-decision p{font-size:.79rem;line-height:1.55}.wcheck-method{margin-top:12px;padding-top:8px}.wcheck-method>summary{font-size:.72rem}.wcheck-actions>.btn{min-height:46px}.wcheck-method p{font-size:.76rem}}
+@media(max-width:359px){.wcheck-readings{gap:6px}.wcheck-reading{padding:10px 7px}.wcheck-reading>span{min-height:2.7em}.wcheck-reading strong{font-size:1.22rem}}
+@keyframes wcheck-reveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){body .alert.wcheck-notice:not(#z):not(#y){animation:none}.wcheck-actions>.btn,.wcheck-method>summary svg{transition:none!important}}
+/* Match specificity of the app-wide button and disclosure theme. */
+body .alert.wcheck-notice .wcheck-actions>.btn:not(#z):not(#y):not(#x){border-radius:13px!important;font-size:.83rem!important;min-height:46px!important}
+body .alert.wcheck-notice .wcheck-actions>.wcheck-confirm:not(#z):not(#y):not(#x){color:#2B2118!important;-webkit-text-fill-color:#2B2118!important;background:#F0B675!important;border:1px solid #F7C58B!important;box-shadow:inset 0 1px 0 #FFFFFF1A!important}
+body .alert.wcheck-notice .wcheck-actions>.wcheck-correct:not(#z):not(#y):not(#x){color:#E8D5C4!important;-webkit-text-fill-color:#E8D5C4!important;background:#FFFFFF05!important;border:1px solid #D5A67D42!important;box-shadow:none!important}
+body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inline-flex!important;align-items:center;justify-content:center;min-width:0!important;width:18px!important;height:20px!important;min-height:0!important;padding:0!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;color:inherit!important}
 
 </style>
 </body></html>
