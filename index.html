@@ -3238,9 +3238,21 @@ function hevyCovered(ctx, d) {
   return false;
 }
 function habitsOf(ctx, d) { return (ctx.habitsAt ? ctx.habitsAt(d) : ctx.habits) || {}; }
+/* seduta tipica dalle sedute registrate prima di d (ultime 8 settimane, almeno 3): mediana di durata ed energia */
+function recentSessions(ctx, W, d) {
+  var key = 'rs:' + d + ':' + Math.round(W * 10); if (ctx.memo[key] !== undefined) return ctx.memo[key];
+  var from = dAdd(d, -56), ks = [], los = [], his = [], mins = [];
+  (ctx.workouts || []).forEach(function (w) { if (w.date < d && w.date >= from) { var se = sessionEnergy(w, W, ctx, w.date); if (se.k > 0) { ks.push(se.k); los.push(se.lo); his.push(se.hi); if (se.countedMin > 0) mins.push(se.countedMin); } } });
+  if (ks.length < 3) return (ctx.memo[key] = null);
+  /* frequenza osservata se Hevy copre almeno 3 settimane del periodo: è più fedele dell'abitudine dichiarata */
+  var cov = 0, nCov = 0; dRange(from, dAdd(d, -1)).forEach(function (x) { if (hevyCovered(ctx, x)) { cov++; nCov += dayWorkouts(ctx, x).list.length; } });
+  return (ctx.memo[key] = { n: ks.length, k: median(ks), lo: median(los), hi: median(his), min: mins.length ? median(mins) : null, perWeek: cov >= 21 ? nCov * 7 / cov : null });
+}
 function habitSession(ctx, W, d) {
   var hb = habitsOf(ctx, d), min = hb.trainMin > 0 ? hb.trainMin : null;
   if (!(hb.trainPerWeek >= 0) || hb.trainPerWeek == null) return null;
+  /* durata abituale non indicata: se ci sono sedute registrate di recente uso la seduta tipica, non zero */
+  if (!min && hb.trainPerWeek > 0) { var rs = recentSessions(ctx, W, d); if (rs) return { perWeek: rs.perWeek != null ? rs.perWeek : hb.trainPerWeek, perWeekObserved: rs.perWeek != null, min: rs.min, type: 'registrate', k: rs.k, lo: rs.lo, hi: rs.hi, typical: rs.n }; }
   if (!min) { if (hb.trainPerWeek === 0) min = 0; else return { perWeek: hb.trainPerWeek, k: null, note: 'durata abituale non indicata' }; }
   /* tipo dichiarato (registro: allenamento_tipo): pesi, cardio generico del Compendium, o metà e metà */
   var cg = EXC[EXC.length - 1], ty = hb.trainType, fc = ty === 'cardio' ? 1 : ty === 'misto' ? 0.5 : 0;
@@ -3315,7 +3327,7 @@ function dayActivity(ctx, d, opts) {
     if (hs && hs.k != null) {
       var f = plannedDay === true ? 1 : plannedDay === false ? 0 : hs.perWeek / 7;
       g.k = hs.k * f; g.lo = hs.lo * f; g.hi = hs.hi * f;
-      g.orig = plannedDay != null ? (plannedDay ? 'giorno di allenamento previsto' : 'giorno senza allenamento previsto') + (hs.observed ? ' (seduta media da Hevy)' : '') : hs.observed ? hs.orig : 'abitudine dichiarata (' + hs.perWeek + ' a settimana)';
+      g.orig = plannedDay != null ? (plannedDay ? 'giorno di allenamento previsto' : 'giorno senza allenamento previsto') + (hs.observed ? ' (seduta media da Hevy)' : hs.typical ? ' (seduta tipica registrata)' : '') : hs.observed ? hs.orig : hs.typical ? nf(hs.perWeek, 1) + ' sedute a settimana ' + (hs.perWeekObserved ? 'registrate' : 'dichiarate') + ', seduta tipica dalle ' + hs.typical + ' registrate nelle ultime 8 settimane' : 'abitudine dichiarata (' + hs.perWeek + ' a settimana)';
     } else {
       /* nessun dato (o abitudine senza durata): non è zero e non è riposo; valore centrale 0, intervallo fino a
          «perWeek» sedute di pesi da 60 minuti a settimana (registro: allenamenti_ignoti) */
