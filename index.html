@@ -2457,7 +2457,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div class="grid2">
         <div class="panel mcard" data-cat="prev">
           <div class="panel-head"><div class="ph-t"><h2 id="fc-title">Quando arrivi all'obiettivo</h2><button type="button" class="rq" data-rule="arrivo" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
-          <div class="forecast-kicker">Previsione da oggi</div><div id="fc-origin" class="forecast-origin"></div><div class="big2"><span id="fc-v">—</span></div>
+          <div class="forecast-kicker" id="fc-kicker">Data di arrivo prevista</div><div class="big2"><span id="fc-v">—</span></div><p class="fc-sub" id="fc-sub"></p><div id="fc-origin" class="forecast-origin"></div>
           <div class="chips" id="fc-chips"></div>
           <div id="fc-rows" style="margin-top:14px"></div>
           <p class="caption">Scenari condizionati al peso di tendenza, alle calorie registrate e al consumo stimato. Le date possono cambiare.</p>
@@ -7447,30 +7447,31 @@ function renderPlanImpact() {
   if (!p) { box.innerHTML = '<p class="muted">Crea un piano e registra le tue giornate per confrontarle con i rispettivi obiettivi.</p>'; return; }
   if (!p.complete) { box.innerHTML = '<p class="muted">' + esc(p.why || 'Registra e conferma completa almeno una giornata con un target attivo.') + '</p><p class="muted small">Le giornate mancanti o parziali non vengono contate come digiuni.</p>'; return; }
   var c = p.comparison, shift = c && c.shift, hasShift = shift != null;
-  var title = !hasShift ? 'Confronto delle date non disponibile' : shift > 0 ? 'Spostamento stimato: +' + shift + (shift === 1 ? ' giorno' : ' giorni') : shift < 0 ? 'Spostamento stimato: ' + shift + (shift === -1 ? ' giorno' : ' giorni') : 'Nessuno spostamento di un giorno intero';
+  var gg = function (n) { n = Math.abs(n); return n + (n === 1 ? ' giorno' : ' giorni'); };
+  var title = !hasShift ? 'Effetto non ancora calcolabile' : shift > 0 ? '+' + gg(shift) : shift < 0 ? '−' + gg(shift) : 'Nessun ritardo';
+  var F = E.forecast, arrival = F && !F.none && !F.done && F.plan && F.plan.central ? F.plan.central : null;
+  var heroText = !hasShift ? '' : (shift > 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sopra il target hanno spostato in avanti l’arrivo all’obiettivo di circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
+      : shift < 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sotto il target ti hanno fatto guadagnare circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
+      : 'Dal ' + fmtDay(p.from) + ' a oggi, gli scostamenti dal target si compensano: l’arrivo non si è spostato.')
+    + (arrival ? ' <b>È già compreso nella tua data di arrivo prevista, il ' + fmtDay(arrival) + '.</b>' : '');
   var tile = function (name, value, sub, tone) { return '<div class="impact-tile impact-' + (tone || 'blue') + '"><small>' + name + '</small><b>' + value + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>'; };
   var h = '<p class="impact-period">Dal ' + fmtDay(p.from) + ' al ' + fmtDay(p.to) + ' · ' + p.complete + ' giornate complete' + (p.includesToday ? ' · oggi incluso' : '') + '</p>'
-    + '<div class="impact-hero"><small>Confronto dall’inizio del percorso</small><b>' + title + '</b><span>' + (p.partial ? 'Confronto parziale.' : 'Differenza tra due percorsi teorici.') + '</span></div>'
+    + '<div class="impact-hero impact-hero2"><small>' + (hasShift && shift < 0 ? 'Tempo guadagnato rispetto al piano' : 'Tempo perso rispetto al piano') + '</small><b>' + title + '</b><span>' + heroText + (p.partial ? ' Calcolo parziale: alcune giornate non hanno calorie complete.' : '') + '</span></div>'
     + '<div class="impact-grid">'
     + tile('Giorni sopra il target', p.above + ' su ' + p.complete, 'giornate complete', 'blue')
-    + tile(p.net < 0 ? 'Calorie sotto il target' : 'Calorie sopra il target', kc(Math.abs(p.net)), 'saldo complessivo del periodo', 'orange')
-    + tile('Equivalente energetico netto', sgn(p.energyKg, 2) + ' kg', 'non grasso misurato', 'purple')
-    + tile('Equivalenza energetica in giorni', p.equivalentDays != null ? sgn(p.equivalentDays, 1) + ' giorni' : '—', 'non si somma alla data desiderata', 'mint')
+    + tile(p.net < 0 ? 'Calorie in meno del target' : 'Calorie in più del target', kc(Math.abs(p.net)), 'in tutto il periodo · come circa ' + fmt(Math.abs(p.energyKg), 1) + ' kg di peso', 'orange')
     + '</div>';
-  if (hasShift) h += '<details class="impact-details impact-reconstruction"><summary><span class="impact-summary-copy"><b>Confronto dall’inizio</b><small>Due percorsi teorici, la stessa partenza</small></span></summary><div class="impact-reconstruction-body" data-ib-keep>'
-    + '<div class="impact-setup"><div><small>Partenza comune</small><b>' + fmt(p.initialWeight, 1) + ' kg</b><span>' + fmtDay(p.from) + '</span></div><div><small>Traguardo comune</small><b>' + fmt(p.goalWeight, 1) + ' kg</b><span>stesso obiettivo</span></div></div>'
-    + '<div class="impact-dates">' + tile('Sempre secondo il piano', fmtDay(c.planned), 'Ricostruzione senza scostamenti dal target.', 'blue')
-    + tile('Con il diario registrato', fmtDay(c.recorded), 'Ricostruzione che include gli scostamenti.', 'mint') + '</div>'
-    + '<div class="impact-comparison-result"><span>Differenza fra le ricostruzioni</span><b>' + sgn(shift, 0) + ' giorni</b></div>'
-    + '<div class="impact-common-future"><small>Stessa ipotesi futura</small><span>Dal ' + fmtDay(c.futureFrom) + ': <b>' + kc(p.futureTarget) + ' al giorno</b> in entrambi i percorsi.</span></div>'
-    + '<p class="impact-comparison-note">Queste date spiegano lo scostamento dall’inizio. Per la previsione da oggi, usa il riquadro sopra.</p></div></details>';
+  if (hasShift) h += '<details class="impact-details impact-reconstruction"><summary><span class="impact-summary-copy"><b>Come calcoliamo ' + (shift === 0 ? 'l’effetto' : 'i ' + title.replace('−', '') ) + '</b><small>Due simulazioni a confronto, non previsioni</small></span></summary><div class="impact-reconstruction-body" data-ib-keep>'
+    + '<p class="impact-how">Rifacciamo il tuo percorso sulla carta due volte, partendo entrambe le volte da <b>' + fmt(p.initialWeight, 1) + ' kg il ' + fmtDay(p.from) + '</b> e da oggi con le stesse <b>' + kc(p.futureTarget) + ' al giorno</b>:</p>'
+    + '<ol class="impact-sim"><li><span>Mangiando ogni giorno esattamente il target</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.planned) + '</b></li><li><span>Mangiando quello che hai registrato nel diario</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.recorded) + '</b></li></ol>'
+    + '<p class="impact-how">La distanza fra le due date, <b>' + sgn(shift, 0) + ' giorni</b>, è l’effetto degli scostamenti. Le due date servono solo a questo confronto: non sono la tua data di arrivo, perché non partono dal peso che hai oggi sulla bilancia.' + (arrival ? ' La data da guardare è il <b>' + fmtDay(arrival) + '</b>, nel riquadro «Quando potresti arrivare».' : '') + '</p></div></details>';
   else h += '<p class="muted small">' + esc(p.why || '') + '</p>';
-  h += moreHTML('Cosa misura', '<p>La differenza tra due percorsi teorici dalla stessa partenza, non una seconda previsione da oggi.</p>' + (p.partial ? '<p>' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>' : ''));
+  h += moreHTML('Cosa misura', '<p>Quanto le giornate sopra o sotto il target hanno spostato l’arrivo all’obiettivo. Non è una seconda previsione: la data di arrivo è una sola, nel riquadro «Quando potresti arrivare».</p>' + (p.partial ? '<p>' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>' : ''));
   h += '<details class="impact-details"><summary>Come si calcola</summary>'
     + (p.desiredDate ? '<p>Data desiderata: ' + fmtDay(p.desiredDate) + '. È un obiettivo scelto, distinto dalle date simulate.</p>' : '')
     + '<p>Ogni giornata usa il target attivo in quella data. Entrambi gli scenari partono dallo stesso peso iniziale e condividono attività, stima del consumo e piano futuro. Le pesate successive non riavviano i due percorsi.</p>'
     + '<p>Scostamento netto: ' + kc(p.excess) + ' − ' + kc(p.under) + ' = ' + sgn(p.net, 0) + ' kcal. Con il ' + fmt(p.tef * 100, 0) + '% di digestione del modello: ' + sgn(p.effectiveEnergy, 0) + ' kcal ÷ ' + fmt(p.rho, 0) + ' = ' + sgn(p.energyKg, 2) + ' kg equivalenti. Non è una misura di grasso guadagnato o perso.</p>'
-    + '<p>Le date derivano dalla simulazione giorno per giorno, con consumo che varia col peso. I giorni equivalenti dividono invece lo scostamento energetico per il deficit o surplus atteso al ritmo attuale: le due quantità possono differire. Le date sono arrotondate al giorno; oltre 12 settimane restano particolarmente indicative.</p>'
+    + '<p>Le date derivano dalla simulazione giorno per giorno, con consumo che varia col peso. Le date sono arrotondate al giorno; oltre 12 settimane restano particolarmente indicative.</p>'
     + (p.initialWeight ? '<p>Peso iniziale comune: ' + fmt(p.initialWeight, 1) + ' kg (' + esc(p.initialOrigin) + ').</p>' : '')
     + '<p>Questo confronto isola gli scostamenti registrati rispetto al piano. Non certifica il fabbisogno, non sostituisce la tendenza reale e non prescrive giorni aggiuntivi di restrizione. Se cambi fase, il periodo riparte dalla nuova fase.</p></details>';
   box.innerHTML = h;
@@ -7497,9 +7498,9 @@ function renderForecast() {
   if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg il ' + fmtDay(f.in28.d) + (f.in28.lo != null ? ' (fascia probabile ' + fmt(f.in28.lo, 1) + '–' + fmt(f.in28.hi, 1) + ' kg' + (f.planUpdates ? ', con le revisioni settimanali delle calorie' : '') + ')' : '') : '—') + '.' + (f.glycogen ? ' Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua: non è grasso.' : '') + ' È una simulazione, non una misura.</p>'; return; }
   if (f.done) { big.textContent = 'Obiettivo raggiunto'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">La tendenza è già oltre l\'obiettivo: il piano andrebbe portato al mantenimento (Profilo).</p>'; return; }
   big.textContent = rng(f.plan);
+  (function(){var sub=$('#fc-sub');if(!sub)return;var w=winText(f.plan);sub.innerHTML=f.plan&&f.plan.central?'Se da oggi segui il piano: <b>'+kc(f.plan.I)+' al giorno</b>.'+(w?' '+esc(w.replace('Fascia probabile (95%): fra il ','Quasi sicuramente fra il ')):'')+' Tiene già conto di tutto quello che hai fatto finora, perché parte dal tuo peso di oggi.':'';})();
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
-  var rows = '<div class="fc-grid">'
-    + line(f.trajectory&&f.trajectory.includesToday?'Se segui il piano dal '+fmtDay(f.from):'Se segui il piano da oggi', (f.plan ? fmt(f.plan.I, 0) + ' kcal al giorno' : '—') + ', dal peso di riferimento di ' + fmt(f.w0, 1) + ' kg', rng(f.plan), winText(f.plan))
+  var rows = '<h3 class="fc-alt-h">E se invece…</h3><div class="fc-grid">'
     + line('Se mantieni la media recente', f.logged ? fmt(f.logged.I, 0) + ' kcal al giorno: media delle giornate complete nelle ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
     + (f.required ? (f.required.conflict
       ? line('Per arrivare entro il ' + fmtDay(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
@@ -16223,6 +16224,32 @@ html body #tab-oggi .hero-top .hero-lbl:not(#a):not(#b):not(#c){flex:1 1 auto!im
 html body #tab-oggi .hero-top .rq:not(#a):not(#b):not(#c){flex:0 0 auto!important;margin-left:auto!important}
 html body #tab-oggi #streak-card .sk-head:not(#a):not(#b){flex-wrap:wrap}
 html body #tab-oggi #streak-card .sk-head h2:not(#a):not(#b){flex:1 1 100%;min-width:0}
+
+/* Data di arrivo: una sola data grande, spiegata */
+html body #tab-diario .forecast-kicker:not(#a):not(#b){font-size:.8rem;font-weight:700;letter-spacing:.02em;color:#64D2FF;text-transform:none;margin-top:4px}
+html body #tab-diario .fc-sub:not(#a):not(#b){margin:6px 0 10px;font-size:.92rem;line-height:1.45;color:#D1D1D6}
+html body #tab-diario .fc-sub b{color:#fff}
+html body #tab-diario .fc-alt-h:not(#a):not(#b){margin:16px 0 8px;font-size:.95rem;color:#AEAEB2;font-weight:700}
+/* Impatto degli scostamenti: il numero e cosa significa */
+html body #tab-diario .impact-hero2:not(#a):not(#b) b{font-size:2.1rem;line-height:1.1;margin:4px 0 6px}
+html body #tab-diario .impact-hero2:not(#a):not(#b) span{display:block;font-size:.9rem;line-height:1.5;color:#D1D1D6}
+html body #tab-diario .impact-hero2 span b{font-size:inherit!important;color:#fff;display:inline!important;margin:0!important}
+html body #tab-diario .impact-how{font-size:.88rem;line-height:1.5;color:#C7C7CC;margin:6px 0}
+html body #tab-diario .impact-sim{list-style:none;padding:0;margin:10px 0;display:grid;gap:8px}
+html body #tab-diario .impact-sim li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#FFFFFF0A;font-size:.85rem;color:#C7C7CC}
+html body #tab-diario .impact-sim li b{color:#fff;white-space:nowrap;font-size:.88rem}
+@media(max-width:380px){html body #tab-diario .impact-sim li{flex-direction:column;align-items:flex-start}}
+
+html body #tab-diario .impact-sim li{flex-direction:column!important;align-items:flex-start!important;gap:3px!important}
+html body #tab-diario .impact-sim li b{white-space:normal!important}
+html body #tab-diario #fc-chips:empty{display:none}
+
+html body #tab-diario #fc-chips:not(#a):not(#b):empty{display:none!important}
+html body #tab-diario #fc-rows:not(#a):not(#b){margin-top:2px!important}
+html body #tab-diario .fc-alt-h:not(#a):not(#b):not(#c){margin:10px 0 8px!important}
+
+html body #tab-diario #fc-chips:not(#a):not(#b):not(#c):not(#d):not(#e){margin:0!important}
+html body #tab-diario #fc-origin.forecast-origin:not(#a):not(#b):not(#c){margin-bottom:0!important}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
