@@ -2454,7 +2454,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div class="grid2">
         <div class="panel mcard" data-cat="prev">
           <div class="panel-head"><div class="ph-t"><h2 id="fc-title">Quando arrivi all'obiettivo</h2><button type="button" class="rq" data-rule="arrivo" aria-label="Come si calcola" title="Come si calcola">?</button></div></div>
-          <div class="forecast-kicker">Previsione da oggi</div><p id="fc-origin" class="forecast-origin"></p><div class="big2"><span id="fc-v">—</span></div>
+          <div class="forecast-kicker">Previsione da oggi</div><div id="fc-origin" class="forecast-origin"></div><div class="big2"><span id="fc-v">—</span></div>
           <div class="chips" id="fc-chips"></div>
           <div id="fc-rows" style="margin-top:14px"></div>
           <p class="caption">Scenari condizionati al peso di tendenza, alle calorie registrate e al consumo stimato. Le date possono cambiare.</p>
@@ -6923,7 +6923,7 @@ function renderTomorrow() {
   }
   var mattina = past ? 'quella mattina' : 'stamattina', ieri = past ? 'il giorno prima' : 'ieri';
   var html = '<div class="bs-hero"><small>Dove ci aspettavamo la bilancia ' + mattina + '</small><div class="bs-big bs-range-main"><b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + '</b><span>kg</span></div>'
-    + '<p class="bs-range">Peso atteso prima della pesata: <b>' + fmt(tm.c, 1) + ' kg</b><br><small>' + (tm.by === 'calorie' ? 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio (' + fmt(tm.base, 1) + ' kg), più l\'effetto di quello che hai mangiato ' + ieri + ' (' + fmt(tm.kcal, 0) + ' kcal)' : 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio, con l\'andamento recente') + '</small></p><p class="bs-context">La fascia è l\'oscillazione normale della bilancia attorno al peso atteso (acqua, intestino, ora della pesata). Non è un obiettivo.</p></div>';
+    + '<p class="bs-range">Peso atteso prima della pesata: <b>' + fmt(tm.c, 1) + ' kg</b></p>' + moreHTML('Come lo calcoliamo', '<p>Il peso atteso è ' + (tm.by === 'calorie' ? 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio (' + fmt(tm.base, 1) + ' kg), più l\'effetto di quello che hai mangiato ' + ieri + ' (' + fmt(tm.kcal, 0) + ' kcal)' : 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio, con l\'andamento recente') + '.</p><p>La fascia è l\'oscillazione normale della bilancia attorno al peso atteso (acqua, intestino, ora della pesata). Non è un obiettivo.</p>') + '</div>';
   // A symmetric display scale keeps the trend at the center, including outlying weigh-ins.
   var radius = Math.max(tm.c - tm.lo, tm.hi - tm.c, mw != null ? Math.abs(mw - tm.c) : 0, 0.3);
   var extent = radius + Math.max(0.25, radius * 0.18), lo = tm.c - extent, hi = tm.c + extent;
@@ -6943,7 +6943,7 @@ function renderTomorrow() {
     html += '<div class="bs-res bs-neutral"><div class="bs-res-h"><b>Il tuo confronto</b><span class="bs-badge">' + word + '</span></div>'
       + '<div class="bs-nums"><div><small>Atteso</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Differenza</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
       + (moved != null ? '<p class="bs-say">Dopo aver letto questa pesata, la tendenza del peso è <b>' + fmt(after.w, 1) + ' kg</b>' + (Math.abs(moved) < 0.05 ? ': quasi uguale al peso atteso' : ' (' + sgn(moved, 2) + ' kg rispetto al peso atteso)') + (!inside ? '. La pesata è fuori dall\'oscillazione normale: il calcolo la attribuisce soprattutto ad acqua e cibo di passaggio e le dà poco peso' : '') + '.</p>' : '')
-      + '<p class="bs-say">Una singola pesata non stabilisce se il piano sta funzionando: conta l’andamento nel tempo.</p></div>';
+      + '<p class="bs-say bs-say-note">Conta l’andamento nel tempo, non la singola pesata.</p></div>';
   }
   html += '<div class="weigh-explain"><b>Peso atteso e tendenza: che differenza c\'è</b>Sono lo stesso peso «di fondo», senza acqua e cibo di passaggio, in due momenti. Il <b>peso atteso</b> è calcolato prima della pesata, con i dati fino al ' + fmtDay(asOf) + ': serve a giudicare la pesata, quindi non può contenerla. La <b>tendenza del peso</b> è lo stesso calcolo dopo aver letto la pesata: di solito si sposta di pochi grammi.</div>'
     + '<div class="weigh-explain"><b>Come leggere la fascia</b>È l\'oscillazione tipica delle tue pesate nelle ultime ' + (GJM.K.TREND_DAYS / 7) + ' settimane attorno al tuo andamento, almeno ±0,3 kg. Non è una probabilità né un limite di peso normale.</div>'
@@ -6966,7 +6966,9 @@ function arrText(a, short) {
   return 'il ' + fmtDay(a.central) + (a.far ? ', oltre 12 settimane: indicativa' : '');
 }
 function sensText(a) { return a && a.sens && a.sens.from ? fmtDay(a.sens.from) + (a.sens.to ? ' e il ' + fmtDay(a.sens.to) : ' e oltre 3 anni') : '—'; }
-function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia probabile, fra il ' + sensText(a) + ': circa il 95% se le ipotesi del modello reggono, non una garanzia.' : ''; }
+/* G3 · spiegazioni dietro un tocco: una riga sotto il numero, il resto si apre */
+function moreHTML(label, inner) { return '<details class="g3-more"><summary>' + label + '<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary><div class="g3-more-body">' + inner + '</div></details>'; }
+function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia probabile (95%): fra il ' + sensText(a) + '.' : ''; }
 function renderSummaryBox() {
   var E = state.E, NW = weightNow(), al = state.alerts || [], f = E && E.forecast, s = S();
   $('#sum-head').textContent = 'Il percorso in breve';
@@ -7128,19 +7130,21 @@ function gymDayText(date) {
 }
 function dayStatsHTML(date) {
   var d = state.days.get(date) || {}, has = d.kcal > 0 || d.weight > 0 || d.steps > 0, x = dayInfoOf(date);
-  var st = function (l, v, u, c, sub) { var txt = /[a-z]{3}/i.test(String(v).replace(/<[^>]+>/g, '')); return '<div class="ds' + (txt ? ' ds-txt' : '') + '" style="--c:' + c + '"><div class="l"><i></i>' + l + '</div><div class="v">' + v + (u && v !== '—' ? '<small>' + u + '</small>' : '') + '</div>' + '<div class="s">' + (sub || '&nbsp;') + '</div></div>'; };
+  var st = function (l, v, u, c, sub) { var txt = /[a-z]{3}/i.test(String(v).replace(/<[^>]+>/g, '')); return '<div class="ds' + (txt ? ' ds-txt' : '') + '" style="--c:' + c + '"><div class="l"><i></i>' + l + '</div><div class="v">' + v + (u && v !== '—' && String(v).indexOf('ds-add') < 0 ? '<small>' + u + '</small>' : '') + '</div>' + '<div class="s">' + (sub || '&nbsp;') + '</div></div>'; };
+  /* G7 · un dato mancante si aggiunge da qui, con il campo giusto già selezionato */
+  var add = function (k) { return date <= todayStr() ? '<button type="button" class="ds-add" data-addfield="' + k + '" data-adddate="' + date + '"><span aria-hidden="true">+</span> Aggiungi</button>' : '—'; };
   var w0 = Array.from(state.workouts.values()).filter(function (w) { return w.date === date; }), g0 = w0.length ? wGroup(w0[0]) : null;
   var wTile = st('Allenamento', w0.length ? (w0.length > 1 ? w0.length + ' sedute' : esc(g0)) : gymDayText(date), '', g0 ? GROUP[g0].c : '#6F7793');
-  if (!has) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Il diario non contiene ancora calorie, peso e passi per questo giorno. Toccando «Modifica i dati» li aggiungi quando vuoi.</div>';
+  if (!has && date > todayStr()) return wTile + '<div class="empty" style="grid-column:1/-1;padding:12px 6px">Giorno futuro: i dati si aggiungono quando arriva.</div>';
   var ks = GJM.fieldState(d, 'kcal', date === todayStr()), b = balOf(date), T = dayTarget(date);
   var kSub = lb('fstate', ks) + (T.kcal ? ' · obiettivo ' + fmt(T.kcal, 0) : '');
   var bSub = b ? 'su ' + fmt(b.C, 0) + ' di consumo stimato' : x && x.C != null ? (ks === 'completo' ? '' : 'giornata non completa') : 'consumo non stimabile';
   var sSem = d.steps > 0 ? lb('stepsSem', GJM.steps.sem(d, date, planDoc() || {})) : '';
-  return st('Peso', d.weight > 0 ? fmt(d.weight, 1) : '—', 'kg', HEX.accent, d.weight > 0 ? wInfo(d) : '')
-    + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : '—', 'kcal', HEX.kcal, d.kcal > 0 ? kSub : '')
+  return st('Peso', d.weight > 0 ? fmt(d.weight, 1) : add('weight'), 'kg', HEX.accent, d.weight > 0 ? wInfo(d) : '')
+    + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : add('kcal'), 'kcal', HEX.kcal, d.kcal > 0 ? kSub : '')
     + st('Bilancio stimato', b ? sgn(b.v, 0) : '—', 'kcal', b && b.v > 0 ? HEX.warn : HEX.good, bSub)
-    + st('Passi', d.steps > 0 ? fmt(d.steps, 0) : '—', '', HEX.steps, sSem)
-    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : '—', 'h', HEX.sleep, d.sleepH > 0 && S().sleepGoal > 0 ? 'obiettivo ' + fmtH(S().sleepGoal) + ' h' : '')
+    + st('Passi', d.steps > 0 ? fmt(d.steps, 0) : add('steps'), '', HEX.steps, sSem)
+    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : add('sleepH'), 'h', HEX.sleep, d.sleepH > 0 && S().sleepGoal > 0 ? 'obiettivo ' + fmtH(S().sleepGoal) + ' h' : '')
     + wTile;
 }
 function dayWorkHTML(date, compact) {
@@ -7329,7 +7333,7 @@ function renderPlanImpact() {
   var title = !hasShift ? 'Confronto delle date non disponibile' : shift > 0 ? 'Spostamento stimato: +' + shift + (shift === 1 ? ' giorno' : ' giorni') : shift < 0 ? 'Spostamento stimato: ' + shift + (shift === -1 ? ' giorno' : ' giorni') : 'Nessuno spostamento di un giorno intero';
   var tile = function (name, value, sub, tone) { return '<div class="impact-tile impact-' + (tone || 'blue') + '"><small>' + name + '</small><b>' + value + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>'; };
   var h = '<p class="impact-period">Dal ' + fmtDay(p.from) + ' al ' + fmtDay(p.to) + ' · ' + p.complete + ' giornate complete' + (p.includesToday ? ' · oggi incluso' : '') + '</p>'
-    + '<div class="impact-hero"><small>Confronto dall’inizio del percorso</small><b>' + title + '</b><span>' + (p.partial ? 'Confronto parziale: mancano giornate complete o target. ' : '') + 'Misura la differenza tra due percorsi teorici, non una seconda previsione da oggi.</span></div>'
+    + '<div class="impact-hero"><small>Confronto dall’inizio del percorso</small><b>' + title + '</b><span>' + (p.partial ? 'Confronto parziale.' : 'Differenza tra due percorsi teorici.') + '</span></div>'
     + '<div class="impact-grid">'
     + tile('Giorni sopra il target', p.above + ' su ' + p.complete, 'giornate complete', 'blue')
     + tile(p.net < 0 ? 'Calorie sotto il target' : 'Calorie sopra il target', kc(Math.abs(p.net)), 'saldo complessivo del periodo', 'orange')
@@ -7344,7 +7348,7 @@ function renderPlanImpact() {
     + '<div class="impact-common-future"><small>Stessa ipotesi futura</small><span>Dal ' + fmtDay(c.futureFrom) + ': <b>' + kc(p.futureTarget) + ' al giorno</b> in entrambi i percorsi.</span></div>'
     + '<p class="impact-comparison-note">Queste date spiegano lo scostamento dall’inizio. Per la previsione da oggi, usa il riquadro sopra.</p></div></details>';
   else h += '<p class="muted small">' + esc(p.why || '') + '</p>';
-  if (p.partial) h += '<p class="impact-partial">' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>';
+  h += moreHTML('Cosa misura', '<p>La differenza tra due percorsi teorici dalla stessa partenza, non una seconda previsione da oggi.</p>' + (p.partial ? '<p>' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>' : ''));
   h += '<details class="impact-details"><summary>Come si calcola</summary>'
     + (p.desiredDate ? '<p>Data desiderata: ' + fmtDay(p.desiredDate) + '. È un obiettivo scelto, distinto dalle date simulate.</p>' : '')
     + '<p>Ogni giornata usa il target attivo in quella data. Entrambi gli scenari partono dallo stesso peso iniziale e condividono attività, stima del consumo e piano futuro. Le pesate successive non riavviano i due percorsi.</p>'
@@ -7367,7 +7371,8 @@ function trajectoryExplanationHTML(f) {
 function renderForecast() {
   renderPlanImpact();
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
-  $('#fc-origin').textContent = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg al '+fmtDay(f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
+  var fcOrigin = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg al '+fmtDay(f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
+  (function () { var o = $('#fc-origin'); if (!o) return; if (f && f.w0 != null) o.innerHTML = 'Parte da <b>' + fmt(f.w0, 1) + ' kg</b> al ' + esc(fmtDay(f.from)) + '.' + moreHTML('Da dove parte', '<p>' + esc(fcOrigin) + '</p>'); else o.textContent = fcOrigin; })();
   $('#fc-title').textContent = s.goalWeight > 0 ? 'Quando potresti arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'Peso nelle prossime settimane';
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
@@ -12018,7 +12023,7 @@ function maintenanceHeroHTML(view,options) {
   var latest=state.E&&state.E.asOf||todayStr(),cutoff=view.referenceAsOf||E&&E.asOf||latest,range=fmtShort(view.from)+' – '+fmtShort(view.to),current=view.referenceCurrent!=null?view.referenceCurrent:view.from<=latest&&view.to>=latest;
   var changeText=change?'Rispetto al riferimento di fine settimana scorsa: '+(change.total>=0?'+':'−')+fmt(Math.abs(change.total),0)+' kcal/giorno.':'Primo riferimento disponibile: non c’è ancora una settimana precedente confrontabile.';
   if(change&&change.routine!=null)changeText+=' Routine e peso di riferimento: '+sgn(change.routine,0)+'; aggiornamento della calibrazione: '+sgn(change.calibration,0)+' kcal/giorno. È una scomposizione del modello, non una misura delle cause fisiologiche.';
-  return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato della settimana selezionata"><div class="maintenance-top"><span>SETTIMANA '+range+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Mantenimento medio della settimana</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media giornaliera della routine</small></span></div><p class="maintenance-cutoff">'+(current?'Aggiornato':'Ricostruito')+' con i dati fino al <b>'+fmtDay(cutoff)+'</b>. Lo stesso riferimento per tutti i giorni del '+range+'.</p><div class="maintenance-bottom"><span><small>Mantenimento × 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel({confidence:view.confidence||E&&E.confidence}))+'</b></span></div>'+routineEnergyHTML(r)
+  return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato della settimana selezionata"><div class="maintenance-top"><span>SETTIMANA '+range+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Mantenimento medio della settimana</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media giornaliera della routine</small></span></div><p class="maintenance-cutoff">'+(current?'Aggiornato':'Ricostruito')+' al <b>'+fmtDay(cutoff)+'</b> · vale per tutta la settimana.</p><div class="maintenance-bottom"><span><small>Mantenimento × 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel({confidence:view.confidence||E&&E.confidence}))+'</b></span></div>'+routineEnergyHTML(r)
     +(r.unknown.length?'<div class="maintenance-missing"><b>Stima da completare</b><p>'+r.unknown.map(esc).join(' ')+'</p></div>':'')
     +'<details class="maintenance-details"><summary>Totali della settimana e metodo di calcolo</summary><p>Il riferimento usa peso, routine e calibrazione disponibili fino al '+fmtDay(cutoff)+'. Per le settimane concluse la data è la domenica; per la settimana in corso è oggi. Non uso dati successivi a questa data. Nuove registrazioni o correzioni possono aggiornare il valore: non è un numero congelato.</p>'+maintenanceWeekDetailsHTML(view)+'<p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
 }
@@ -12416,11 +12421,11 @@ function installWeightConditionPicker(form, box) {
     box.style.setProperty('--df-vh',(v?v.height:window.innerHeight)+'px');
     box.style.setProperty('--df-top',(v?v.offsetTop:0)+'px');
   }
-  window.openDayForm = function (date) {
+  window.openDayForm = function (date, field) {
     opener=document.activeElement;fill(date || todayStr());box.hidden=false;
     document.documentElement.classList.add('dayform-open');fitViewport();
     box.querySelector('.df-content').scrollTop=0;
-    requestAnimationFrame(function(){if(!box.hidden)box.querySelector('.df-close').focus({preventScroll:true});});
+    requestAnimationFrame(function(){if(box.hidden)return;var el=field&&f[field]&&f[field].focus?f[field]:null;if(el){el.focus({preventScroll:true});try{el.scrollIntoView({block:'center'});}catch(e){}if(el.select)el.select();}else box.querySelector('.df-close').focus({preventScroll:true});});
   };
   function close(){weightConditionPicker.close(false);dayStatePicker.close(false);box.hidden=true;document.documentElement.classList.remove('dayform-open');if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
   box.addEventListener('click',function(e){if(e.target===box||e.target.closest('[data-x]'))close();});
@@ -12456,6 +12461,7 @@ function installWeightConditionPicker(form, box) {
     G.setSel(date);
   });
   document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-addfield]'); if (a) { e.preventDefault(); openDayForm(a.dataset.adddate || todayStr(), a.dataset.addfield); return; }
     var b = e.target.closest('[data-adddata]'); if (!b) return;
     e.preventDefault();
     openDayForm(b.dataset.adddata === 'sel' ? state.sel : todayStr());
@@ -15292,6 +15298,50 @@ html body .recipe-workspace-head:not(#z) > h2{position:absolute!important;width:
 #tab-amici .friends-invite{display:inline-flex;align-items:center;gap:7px}
 #tab-amici .friends-code-card .friends-invite-row{margin-top:4px}
 #tab-amici .friends-empty .friends-invite-row{margin-top:16px}
+
+/* ===== G1 · Un colore, un significato =====
+   Superfici neutre uguali in tutte le sezioni; il colore resta solo ai dati
+   (calorie rosa, proteine lime, carboidrati arancio, grassi viola, passi azzurro, sonno indaco, peso blu).
+   Pulsanti principali bianchi, barra in basso con la voce attiva bianca. */
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d),html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .recipe-workspace:not(#a):not(#b):not(#c):not(#d),html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .cu-story:not(#a):not(#b):not(#c):not(#d){background:#1C1C1E!important;background-image:none!important;border:1px solid #FFFFFF12!important;box-shadow:none!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d)::before,html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d)::after{background-image:none!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) :is(.p2-tile,.hs,.ds,.wk-t,.wk-hero,.impact-hero,.impact-tile,.impact-details,.impact-comparison-result,.impact-comparison-note,.projection-card,.bs-hero,.ms,.note,.pv-hero,.figs,.cal30,.sp,.wk-day):not(#a):not(#b):not(#c):not(#d){background:#FFFFFF08!important;background-image:none!important;box-shadow:none!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) :is(.p2-tile,.hs,.ds,.wk-t,.wk-hero,.impact-hero,.impact-details,.impact-comparison-result,.impact-comparison-note,.projection-card,.bs-hero,.ms,.note,.pv-hero,.figs,.cal30):not(#a):not(#b):not(#c):not(#d){border-color:#FFFFFF12!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .maintenance-hero:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF06!important;background-image:none!important;border-color:#FFFFFF14!important}
+/* lo stato resta leggibile: la striscia a sinistra dei giorni (in target, sopra, sotto) e il bordo colorato delle sedute fatte */
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile:not(#a):not(#b):not(#c):not(#d){border-color:#FFFFFF12!important;border-top-width:2px!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-blue:not(#a):not(#b):not(#c):not(#d){border-top-color:#64D2FF!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-orange:not(#a):not(#b):not(#c):not(#d){border-top-color:#FF9F0A!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-purple:not(#a):not(#b):not(#c):not(#d){border-top-color:#BF5AF2!important}
+html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-mint:not(#a):not(#b):not(#c):not(#d){border-top-color:#30D5A3!important}
+/* Amici: niente più fondo pesca */
+html body #tab-amici :is(#friend-comparison,.friends-code-card,.friends-add,.friends-settings,.friends-requests,.friends-empty,.friends-onboarding,.gg-card,.gg-panel,.gg-hub,.gg-quest,.gg-milestone,.gg-player,.friends-photo-setting):not(#a):not(#b):not(#c):not(#d){background:#1C1C1E!important;background-image:none!important;border-color:#FFFFFF14!important}
+html body #tab-amici .friend-metric:not(#a):not(#b):not(#c):not(#d){background:transparent!important}
+/* pulsanti principali: bianchi ovunque */
+html body .btn:not(.ghost):not(.danger):not(.linkbtn):not(#a):not(#b):not(#c):not(#d),html body #tab-amici button.btn:not(.ghost):not(.danger):not(#a):not(#b):not(#c):not(#d),html body .gg-primary:not(#a):not(#b):not(#c):not(#d){background:#F2F2F7!important;background-image:none!important;border-color:#F2F2F7!important;color:#141216!important;-webkit-text-fill-color:#141216!important;box-shadow:none!important}
+html body .btn:not(.ghost):not(.danger):not(.linkbtn):not(#a):not(#b):not(#c):not(#d):hover{background:#FFFFFF!important}
+/* barra di navigazione: voce attiva bianca */
+html body .tab[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d){color:#FFFFFF!important}
+html body .nav .tab[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF14!important;border-radius:16px}
+html body main .recent-today td:not(#a):not(#b):not(#c):not(#d),html body main .projection-card header:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF0D!important;background-image:none!important}
+html body main #tab-oggi .hs:not(#a):not(#b):not(#c):not(#d):not(#e){background:#FFFFFF08!important;background-image:none!important;border-color:#FFFFFF12!important}
+
+/* ===== G3 · spiegazioni dietro un tocco ===== */
+.g3-more{margin-top:10px;border-top:1px solid #FFFFFF12}
+.g3-more>summary{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 2px!important;list-style:none;cursor:pointer;font-size:.8rem;font-weight:650;color:#C7C7CC;min-height:0}
+.g3-more>summary::-webkit-details-marker{display:none}
+.g3-more>summary>.disclosure-cue{position:static!important;transform:none!important;flex:none;margin:0!important}
+.g3-more-body{padding-top:6px}
+.g3-more-body p{margin:6px 0 0!important;font-size:.82rem!important;line-height:1.55!important;color:#AEAEB2!important;text-align:left}
+.bs-hero .g3-more{text-align:left}
+#fc-origin .g3-more{margin-top:8px}
+.bs-say-note{color:#8E8E93!important;font-size:.82rem!important}
+
+/* ===== G7 · riquadri vuoti che invitano a riempirli ===== */
+.ds .ds-add{display:inline-flex;align-items:center;gap:6px;margin-top:2px;padding:7px 12px;border-radius:999px;border:1px dashed color-mix(in srgb,var(--c) 60%,transparent);background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;line-height:1.2}
+.ds .ds-add span{font-size:1.05rem;line-height:1}
+.ds .ds-add:hover{background:color-mix(in srgb,var(--c) 20%,transparent)}
+.ds .ds-add:focus-visible{outline:2px solid #fff;outline-offset:2px}
 </style>
 </body></html>
 
