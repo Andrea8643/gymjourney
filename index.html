@@ -11497,7 +11497,7 @@ function create(ctx){
     if(a==='disable'){dialog('Disattivare le sfide?','<p>Gli inviti e le sfide aperte verranno annullati. Il diario e il confronto restano disponibili.</p><div class="gg-actions">'+button('disable-confirm','Disattiva partecipazione',null,'primary')+button('close','Resta nelle sfide')+'</div>');return;}
     if(a==='disable-confirm'){closeDialog();run({action:'disable'});return;}if(a==='invite'){run({action:'invite',peer:k});return;}if(a==='accept'||a==='decline'){run({action:'respond',gameId:k,accept:a==='accept'});return;}if(a==='equip'){closeDialog();run({action:'equip',reward:k});return;}if(a==='refresh'){run({action:'refresh'});return;}
   });
-  return {leave:closeDialog,render:render,settingsHTML:settingsHTML,connect:connect,disconnect:disconnect,select:select,localChanged:function(){Free.localChanged();},cancelPeer:function(p){return Free.cancelPeer(p);},pendingCount:pendingCount,refresh:function(){if(S.profile&&S.profile.enabled&&!S.busy&&env().opened&&Date.now()-S.lastRefresh>30000){S.lastRefresh=Date.now();try{callable()({action:'refresh'}).catch(function(){});}catch(e){S.error=failure(e);}}}};
+  return {stats:stats,milestones:milestones,owned:function(){return S.profile&&S.profile.badges||[];},collection:function(){dialog('La tua collezione',collectionHTML('Tutti'));},milestone:showMilestone,leave:closeDialog,render:render,settingsHTML:settingsHTML,connect:connect,disconnect:disconnect,select:select,localChanged:function(){Free.localChanged();},cancelPeer:function(p){return Free.cancelPeer(p);},pendingCount:pendingCount,refresh:function(){if(S.profile&&S.profile.enabled&&!S.busy&&env().opened&&Date.now()-S.lastRefresh>30000){S.lastRefresh=Date.now();try{callable()({action:'refresh'}).catch(function(){});}catch(e){S.error=failure(e);}}}};
 }
 root.GJGameUI={create:create};
 })(typeof window!=='undefined'?window:this);
@@ -11512,6 +11512,7 @@ function bindFriends() {
   var FD=window.GJFriendData, fs=null, auth=null;
   var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();refreshAvatars();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
+  try{window.GJGameAPI=Games;}catch(e){}
   var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Allenamenti: nome delle sedute e riposo',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
   function defaults(){return {enabled:false,prefs:emptyPrefs(),revision:'initial-not-shared',nickname:F.profile?F.profile.nickname:'Utente'};}
@@ -11789,19 +11790,56 @@ PATHS.so_calorie.t='Conosco le calorie';PATHS.so_calorie.s='Scegli le calorie; l
 PATHS.so_mantenimento.t='Conosco il mantenimento';PATHS.so_mantenimento.s='Parti da un consumo che conosci e scegli il tuo obiettivo.';
 PATHS.aiutami.t='Voglio una guida';PATHS.aiutami.s='Parti dai tuoi dati per costruire calorie e macro.';
 
+function profileGameData(){
+  var A=window.GJGameAPI,C=window.GJGame,t=todayStr(),p=null,m=null;
+  try{p=A&&A.stats?A.stats():null;}catch(e){}
+  if(!p&&C&&C.personal){var rows={};state.days.forEach(function(v,k){rows[k]=v;});try{p=C.personal(C.reconcile({},rows,t,true),t);}catch(e){}}
+  try{m=A&&A.milestones?A.milestones():null;}catch(e){}
+  if(!m&&window.GJMilestones&&p){try{m=GJMilestones.evaluate({days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}},t,p);}catch(e){}}
+  var owned=[];try{owned=A&&A.owned?A.owned():[];}catch(e){}
+  return {p:p,m:m,owned:owned||[]};
+}
+function profileLevelHTML(p){
+  var C=window.GJGame;if(!p||!C||!C.levelBounds)return '';
+  var xp=Math.max(0,Math.round(p.xp||0)),b=C.levelBounds(xp),pct=Math.max(0,Math.min(100,(xp-b.from)/(b.to-b.from)*100)),title='';
+  (C.REWARDS||[]).forEach(function(r){if(r.at&&(p.record||0)>=r.at)title=r.title;});
+  return '<div class="pe-level"><span class="pe-lv" aria-hidden="true">'+b.level+'</span><div class="pe-lv-main"><b>Livello '+b.level+(title?' · '+esc(title):'')+'</b><div class="pe-lv-bar" role="progressbar" aria-label="Avanzamento verso il livello '+(b.level+1)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div><small>'+xp.toLocaleString('it-IT')+' / '+b.to.toLocaleString('it-IT')+' XP al livello '+(b.level+1)+'</small></div></div>';
+}
+function profileShelfHTML(m,owned){
+  if(!m||!m.items)return '';
+  var C=window.GJGame,total=m.items.length+((C&&C.REWARDS)||[]).length,got=m.unlocked+owned.length;
+  var done=m.items.filter(function(x){return x.done;}),seen={},pick=[];
+  done.slice().sort(function(a,b){return b.goal-a.goal;}).forEach(function(x){if(pick.length<3&&!seen[x.category]){seen[x.category]=1;pick.push(x);}});
+  done.slice().sort(function(a,b){return b.goal-a.goal;}).forEach(function(x){if(pick.length<3&&pick.indexOf(x)<0)pick.push(x);});
+  var next=m.items.filter(function(x){return !x.done&&!x.blocked;}).sort(function(a,b){return b.current/b.goal-a.current/a.goal;})[0];
+  var ICO={streak:'🔥',diary:'📒',workouts:'🏋️',recipes:'🍳',macro:'🥗',balanced:'🥗',protein:'🍗',carbs:'🍝',fat:'🥑',fiber:'🥦',sleep:'🌙',rest:'🛋️',steps:'👟',weight:'⚖️',note:'✍️',weekend:'📅'},ico=function(x){return ICO[String(x.id).split('-')[0]]||esc(x.symbol||'✦');},medal=function(x,on){return '<button type="button" class="pe-medal'+(on?' is-on':' is-next')+'" data-pe-milestone="'+esc(x.id)+'" aria-label="'+esc(x.name+(on?', raggiunto':', prossimo traguardo: '+x.current+' su '+x.goal))+'"><span class="pe-coin" aria-hidden="true"><em>'+ico(x)+'</em>'+(on?'':'<i style="--p:'+Math.round(Math.min(1,x.current/x.goal)*100)+'"></i>')+'</span><b>'+esc(x.name)+'</b><small>'+(on?esc(x.category):x.current+' / '+x.goal)+'</small></button>';};
+  var h=pick.map(function(x){return medal(x,true);}).join('')+(next?medal(next,false):'');
+  if(!h)h='<p class="pe-empty">Il primo traguardo arriva con la prima giornata completa del diario.</p>';
+  return '<div class="pe-shelf-head"><h3>Traguardi</h3><button type="button" class="pe-count" data-pe-collection>'+got+' / '+total+' <span aria-hidden="true">›</span></button></div><div class="pe-shelf">'+h+'</div>';
+}
 function renderProfileIdentity(){
   var card=$('#pf-card');if(!card)return;
-  var p=profileDoc(),s=S(),v=activeVersion(),g=v&&v.goal||{},lw=null,name=(p.name||s.name||'Il tuo profilo').trim();
-  state.days.forEach(function(day,date){if(date<=todayStr()&&day&&day.weight>0&&(!lw||date>lw.d))lw={d:date,w:day.weight};});
+  var p=profileDoc(),s=S(),v=activeVersion(),g=v&&v.goal||{},lw=null,name=(p.name||s.name||'Il tuo profilo').trim(),t=todayStr();
+  state.days.forEach(function(day,date){if(date<=t&&day&&day.weight>0&&(!lw||date>lw.d))lw={d:date,w:day.weight};});
   var start=g.startWeight>0?g.startWeight:p.weight>0?p.weight:null,goal=g.goalWeight>0?g.goalWeight:null;
   var phase=v?profilePhase(g.phase||'mantenimento'):'Piano da completare',from=g.startDate||v&&v.from;
-  var photo='<span class="pf-photo-acts"><button type="button" class="linkbtn small" data-photo>'+(state.avatar?'Cambia foto':'Aggiungi foto')+'</button><button type="button" class="linkbtn small" data-profile-open="tu">Dati personali</button>'+(state.avatar?'<button type="button" class="linkbtn small" data-photo-del>Rimuovi foto</button>':'')+'</span>';
-  var h='<div class="pf-head"><button type="button" class="pf-av" data-photo aria-label="Cambia la foto del profilo">'+avatarHTML(name)+'</button><div class="pf-who"><span class="profile-eyebrow">IL TUO PROFILO</span><b>'+esc(name)+'</b><span class="profile-phase">'+esc(phase)+(from?' · dal '+fmtDay(from):'')+'</span>'+photo+'</div></div>';
-  h+='<div class="pf-overview">'+pfMini('Partenza',start!=null?fmt(start,1)+' <small>kg</small>':'Da inserire',from?'Inizio fase: '+fmtDay(from):'Peso del profilo')+pfMini(lw?'Ultima pesata':'Peso registrato',lw?fmt(lw.w,1)+' <small>kg</small>':'Nessuna pesata',lw?fmtDay(lw.d):'Aggiungila dal diario')+pfMini('Obiettivo',goal!=null?fmt(goal,1)+' <small>kg</small>':g.phase==='mantenimento'?'Mantenimento':'Da definire',g.endDate?'Entro il '+fmtDay(g.endDate):'Dal tuo piano')+'</div>';
+  var G=profileGameData(),ses=0,seen={};(state.workouts||new Map()).forEach(function(w){if(w&&w.date&&w.date<=t){var k=w.id||w.date+'|'+w.title+'|'+(w.start||'');if(!seen[k]){seen[k]=1;ses++;}}});
+  var now=null;try{now=weightNow();}catch(e){}var dlt=now&&now.w!=null&&start?now.w-start:null;
+  var tile=function(v2,l){return '<div class="pe-num"><b>'+v2+'</b><small>'+l+'</small></div>';};
+  var h='<div class="pe-top"><button type="button" class="pe-av" data-photo aria-label="Cambia la foto del profilo">'+avatarHTML(name)+'</button><b class="pe-name">'+esc(name)+'</b><span class="pe-phase">'+esc(phase)+(from?' · dal '+fmtDay(from):'')+'</span>';
+  h+='<span class="pe-acts"><button type="button" class="pe-link" data-photo>'+(state.avatar?'Cambia foto':'Aggiungi foto')+'</button><button type="button" class="pe-link" data-profile-open="tu">Dati personali</button>'+(state.avatar?'<button type="button" class="pe-link" data-photo-del>Rimuovi foto</button>':'')+'</span></div>';
+  h+=profileLevelHTML(G.p);
+  h+='<div class="pe-nums">'+tile(G.p?fmt(G.p.complete||0,0):'—','giorni completi')+tile(fmt(ses,0),ses===1?'seduta':'sedute')+tile(dlt!=null?(dlt>0.05?'+':dlt<-0.05?'−':'')+fmt(Math.abs(dlt),1):'—','kg di tendenza')+'</div>';
   if(v)h+=profileJourneyHTML(start,goal,lw,g.phase,from);
+  h+=profileShelfHTML(G.m,G.owned);
   if(state.photoMsg)h+='<p class="pf-photo-msg" role="status">'+esc(state.photoMsg)+'</p>';
   if(card._h!==h){card._h=h;card.innerHTML=h;}
 }
+document.addEventListener('click',function(e){
+  var c=e.target.closest('#pf-card [data-pe-collection]'),m=e.target.closest('#pf-card [data-pe-milestone]'),A=window.GJGameAPI;
+  if(c&&A&&A.collection){A.collection();return;}
+  if(m&&A&&A.milestone){A.milestone(m.dataset.peMilestone);}
+});
 
 function planNowHTML(){
   var E=state.E,v=activeVersion();if(!v)return '<div class="pf-empty"><b>Costruiamo il tuo primo piano</b><p>Parti dai valori che conosci oppure lascia che l’app ti guidi.</p><button type="button" class="btn fit" data-profile-edit>Crea il piano</button></div>';
@@ -16053,6 +16091,47 @@ html body #tab-ricette .recipe-create-box[open]:not(#a):not(#b):not(#c){border-s
 .rf-photo-row{display:flex;align-items:center;gap:10px;margin-top:6px}
 .rf-photo-prev{width:72px;height:54px;border-radius:12px;background:#FFFFFF0C center/cover no-repeat;border:1px dashed #FFFFFF2A;flex:none}
 .rf-photo-prev.on{border-style:solid}
+
+/* E · profilo con livello e traguardi */
+html body #tab-dati #pf-card:not(#a):not(#b):not(#c):not(#d){border:1px solid #2C2C2E!important;background:#1C1C1E!important;padding:24px 20px 20px!important}
+#tab-dati .pe-top{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
+html body #tab-dati .pe-av:not(#a):not(#b){width:96px;height:96px;padding:0;border:0;border-radius:28px;overflow:hidden;background:#2C2C2E;cursor:pointer;margin-bottom:10px;display:grid;place-items:center}
+html body #tab-dati .pe-av:not(#a):not(#b) > *{width:100%!important;height:100%!important;border-radius:0!important;font-size:38px!important}
+html body #tab-dati .pe-av:not(#a):not(#b) img{object-fit:cover;display:block}
+#tab-dati .pe-name{font-size:26px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.15}
+#tab-dati .pe-phase{color:#98989F;font-size:14px}
+#tab-dati .pe-acts{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:6px}
+#tab-dati .pe-acts .linkbtn{color:#98989F!important;font-size:12.5px!important;padding:2px 0!important}
+#tab-dati .pe-level{display:flex;align-items:center;gap:14px;margin-top:22px}
+#tab-dati .pe-lv{flex:0 0 auto;width:48px;height:48px;border-radius:15px;display:grid;place-items:center;font-size:21px;font-weight:800;color:#fff;background:linear-gradient(145deg,#FF3B6B,#FA114F)}
+#tab-dati .pe-lv-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+#tab-dati .pe-lv-main b{font-size:15px;color:#fff}
+#tab-dati .pe-lv-bar{height:8px;border-radius:99px;background:#2C2C2E;overflow:hidden}
+#tab-dati .pe-lv-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#FA114F,#FF9F0A)}
+#tab-dati .pe-lv-main small{color:#98989F;font-size:12.5px;font-variant-numeric:tabular-nums}
+#tab-dati .pe-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}
+#tab-dati .pe-num{background:#2C2C2E;border-radius:16px;padding:14px 6px 12px;text-align:center;display:flex;flex-direction:column;gap:3px;min-width:0}
+#tab-dati .pe-num b{font-size:24px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+#tab-dati .pe-num small{color:#98989F;font-size:12px;line-height:1.2}
+html body #tab-dati #pf-card .pf-journey:not(#a):not(#b){margin-top:18px}
+#tab-dati .pe-shelf-head{display:flex;align-items:center;justify-content:space-between;margin:22px 0 10px}
+#tab-dati .pe-shelf-head h3{margin:0;font-size:17px;color:#fff}
+html body #tab-dati .pe-count:not(#a):not(#b){background:none;border:0;color:#98989F;font-size:14px;font-weight:600;padding:4px 0;cursor:pointer;font-variant-numeric:tabular-nums}
+#tab-dati .pe-shelf{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+html body #tab-dati .pe-medal:not(#a):not(#b){background:none;border:0;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;cursor:pointer;min-width:0;color:inherit}
+#tab-dati .pe-coin{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:24px;color:#5A3A00;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F5C451 55%,#C9922A);box-shadow:inset 0 -3px 0 #0003}
+#tab-dati .pe-medal.is-next .pe-coin{background:#2C2C2E;color:#6E6E73;box-shadow:inset 0 0 0 1.5px #3A3A3C}
+#tab-dati .pe-medal b{font-size:12px;line-height:1.25;color:#fff;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#tab-dati .pe-medal small{font-size:10.5px;color:#8E8E93;line-height:1.2}
+#tab-dati .pe-medal.is-next b{color:#AEAEB2}
+#tab-dati .pe-empty{grid-column:1/-1;color:#98989F;font-size:13px;margin:0}
+@media(min-width:700px){html body #tab-dati #pf-card:not(#a):not(#b):not(#c):not(#d){padding:30px 32px 26px!important}#tab-dati .pe-shelf{gap:14px}#tab-dati .pe-coin{width:62px;height:62px;font-size:27px}}
+
+html body #tab-dati #pf-card .pe-acts .pe-link:not(#a):not(#b):not(#c):not(#d){cursor:pointer;color:#98989F!important;text-decoration:none!important;font-size:12.5px!important;font-weight:600!important;padding:2px 0!important;background:none!important;border:0!important;min-height:0!important}
+#tab-dati .pe-coin{position:relative}
+#tab-dati .pe-coin em{font-style:normal;line-height:1}#tab-dati .pe-medal.is-next .pe-coin em{filter:grayscale(1);opacity:.6}
+#tab-dati .pe-medal.is-next .pe-coin i{position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(#FA114F calc(var(--p)*1%),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
+@media(max-width:359px){#tab-dati .pe-coin{width:46px;height:46px;font-size:20px}#tab-dati .pe-medal b{font-size:11px}#tab-dati .pe-lv{width:42px;height:42px;font-size:19px}}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
