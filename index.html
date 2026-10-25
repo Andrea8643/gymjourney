@@ -2741,7 +2741,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.4.0-surplus' };
+var M = { V: '2.5.0-fasi' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -2925,7 +2925,7 @@ var K = {
   BASE: 0.15, TEF: 0.10, STRIDE: 0.415, WALK: 0.0005 /* kcal per kg per metro */, RUN: 0.001, KCAL_L: 5.0,
   RHO: 7700, RHO_LO: 5000, RHO_HI: 9400, RHO_GAIN: 6300,
   PRIOR_SD: 0.25, CAL_FLOOR_KCAL: 75, CAL_FLOOR_FRAC: 0.04, WIN: 42, MIN_SPAN: 13, MIN_W: 6, COMPLETE_MIN: 0.8, TYPE_MIN: 0.6, GAP_MAX: 3, IMPUTE_MAX: 100, IMPUTE_UP: 0.30,
-  K_LO: 0.4, K_HI: 2.5, REV_EVERY: 7, REV_MIN: 50, REV_MIN_FLOOR: 20, REV_MIN_FRAC: 0.15, REV_MAX: 150, TRANS_DAYS: 21,
+  LEARN_DAYS: 28, K_LO: 0.4, K_HI: 2.5, REV_EVERY: 7, REV_MIN: 50, REV_MIN_FLOOR: 20, REV_MIN_FRAC: 0.15, REV_MAX: 150, TRANS_DAYS: 21,
   OUTLIER_KG: 2, OUTLIER_FRAC: 0.045, START_DAYS: 14, TREND_DAYS: 14, TREND_MIN: 4,
   CUT_PCT: 1.0, CUT_FRAC: 0.25, SUR_PCT: 0.5, SUR_FRAC: 0.15, BAND: 1.0, HORIZON: 84, ARR_MAX: 1095, ARR_ERR: 0.10,
   STRENGTH_MET: 3.5, STRENGTH_LO: 3.0, STRENGTH_HI: 6.0, SIG_DAY: 200, TOL_KCAL: 2, DAY_SHIFT: 0.2,
@@ -3751,14 +3751,20 @@ function kalmanRun(ctx, cfg, rho) {
   var key = 'kf:' + cfg.key + ':' + rho; if (ctx.memo[key]) return ctx.memo[key];
   var to = ctx.asOf, acc = weighIns(ctx, to).acc, byD = {}, first = null;
   acc.forEach(function (p) { if (p.d >= cfg.anchor) { byD[p.d] = p.w; if (!first) first = p.d; } });
-  var res = { days: {}, list: [], start: first, rho: rho };
+  var res = { days: {}, list: [], start: first, rho: rho, phases: {} };
   if (!first) return (ctx.memo[key] = res);
   var lvl = transitionWindows(ctx), kn = {}, kv = {};
   structuralChanges(ctx).forEach(function (c) { if (c.d > first) { kn[c.d] = c.label; kv[c.d] = (kv[c.d] || 0) + KF.STRUCT_K * KF.STRUCT_K; } });
   /* cambio di fase: anche il consumo può cambiare (adattamento che rientra dopo un cut, movimento spontaneo che cresce
      in surplus o cala in deficit). Il fattore può muoversi di più per sei settimane: varianza distribuita sui giorni. */
   /* la finestra parte dopo quella del glicogeno: i due effetti avvengono in tempi diversi e così non si confondono */
-  weightTransitions(ctx).forEach(function (t) { if (t.kind === 'fase' && t.d > first) dRange(dAdd(t.d, KF.PHASE_DELAY), dAdd(t.d, KF.PHASE_DELAY + KF.PHASE_DAYS - 1)).forEach(function (d) { kv[d] = (kv[d] || 0) + KF.PHASE_K * KF.PHASE_K / KF.PHASE_DAYS; }); });
+  /* Quanto può cambiare dipende dal percorso: un deficit grande adatta di più il consumo (e lo fa rientrare di più
+     quando finisce), un surplus grande aumenta di più il movimento spontaneo. Ampiezza = la maggiore fra il bilancio
+     delle 4 settimane prima (deficit rispetto al 25%, surplus rispetto al 10% del mantenimento) e quello del nuovo
+     piano, fra 0,25 e 1,5 volte PHASE_K. Calcolata quando il filtro arriva alla data, con le stime di quel momento. */
+  var phaseAt = {};
+  weightTransitions(ctx).forEach(function (t) { if (t.kind === 'fase' && t.d > first) { var v = versionAt(ctx.versions, t.d), z0 = v && v.resolved, T = z0 && z0.kcal > 0 ? +z0.kcal : v && v.kcal && v.kcal.manual && +v.kcal.manual.v > 0 ? +v.kcal.manual.v : null; phaseAt[t.d] = { T: T }; } });
+  var gapMag = function (g) { return g < 0 ? -g / 0.25 : g / 0.10; }, histI = [], histB = [], kvPh = {};;
   var exc = function (d) { return (ctx.events || []).some(function (e) { return EXCEPT[e.kind] && d >= e.from && d <= (e.to || e.from); }); };
   var x = null, P = null, prevI = null, prevA = null, excess = 0, logged = [], nW = 0, firstW = null, seq = [];
   var med = function () { if (!logged.length) return null; var a = logged.slice(-28).sort(function (p, q) { return p - q; }); return a[a.length >> 1]; };
@@ -3767,6 +3773,13 @@ function kalmanRun(ctx, cfg, rho) {
   var ref = function () { var m4 = med(); if (m4 == null) return null; var b = logged.slice(-7).sort(function (p, q) { return p - q; }); return Math.max(m4, b.length >= 3 ? b[b.length >> 1] : m4); };
   dRange(first, to).forEach(function (d) {
     var F = null, xp = null, Pp = null;
+    if (x && phaseAt[d]) {
+      var bs = histB.slice(-28), is = histI.slice(-28).filter(function (v) { return v != null; });
+      var Rm = bs.length ? avg(bs) / (1 - K.TEF) : null, Im = is.length >= 7 ? avg(is) : null;
+      var mag = Rm > 0 ? Math.max(Im != null ? gapMag((Im - Rm) / Rm) : 0, phaseAt[d].T ? gapMag((phaseAt[d].T - Rm) / Rm) : 0) : 1;
+      mag = clamp(mag, 0.25, 1.5); phaseAt[d].mag = mag;
+      dRange(dAdd(d, KF.PHASE_DELAY), dAdd(d, KF.PHASE_DELAY + KF.PHASE_DAYS - 1)).forEach(function (q) { var add1 = Math.pow(KF.PHASE_K * mag, 2) / KF.PHASE_DAYS; kv[q] = (kv[q] || 0) + add1; kvPh[q] = (kvPh[q] || 0) + add1; });
+    }
     if (x) {
       var rd = rho * (rhoAt(ctx, dAdd(d, -1)) / K.RHO), a = prevA / rd;
       F = [[1, -a, 0], [0, 1, 0], [0, 0, KF.PHI]];
@@ -3794,9 +3807,11 @@ function kalmanRun(ctx, cfg, rho) {
     var it = intakeOf(ctx.days[d], false), m0 = ref(), ex = exc(d);
     excess = excess * KF.BINGE_DECAY + (it.usable && m0 != null ? Math.max(0, it.kcal - KF.BINGE_X * m0) : 0);
     if (it.usable) logged.push(it.kcal);
+    histI.push(it.usable ? it.kcal : null);
     var m1 = med();
     prevI = it.usable ? { v: it.kcal, sd: ex ? KF.SD_EXC : KF.SD_I } : { v: m1 != null ? m1 : 0, sd: KF.SD_IMP, imputed: true };
     var A = shapeAt(ctx, d, cfg, 'osservato'); if (A > 0) prevA = A; else if (prevA == null) prevA = 0;
+    if (x) histB.push(x[1] * prevA);
     if (x) {
       var ready = nW >= K.MIN_W && dDiff(firstW, d) >= K.MIN_SPAN;
       var r = { d: d, k: x[1], kSD: Math.sqrt(Math.max(0, P[1][1])), L: x[0], LSD: Math.sqrt(Math.max(0, P[0][0])), u: x[2], z: z, weight: used, imputed: !it.usable, transition: lvl[d] ? lvl[d].labels.join(', ') : null, excessKcal: excess, ready: ready };
@@ -3804,6 +3819,10 @@ function kalmanRun(ctx, cfg, rho) {
       seq.push({ r: r, x: x.slice(), P: P.map(function (q) { return q.slice(); }), F: F, xp: xp, Pp: Pp });
     }
   });
+  Object.keys(phaseAt).forEach(function (d) { if (phaseAt[d].mag != null) res.phases[d] = phaseAt[d].mag; });
+  /* varianza del cambio di fase ancora da venire dopo una data: il margine di oggi la include già, così la fiducia non
+     sale per poi scendere quando il consumo comincia davvero a riassestarsi */
+  res.pending = function (d) { var v = 0; Object.keys(kvPh).forEach(function (q) { if (q > d) v += kvPh[q]; }); return v; };
   /* stima a posteriori (Rauch–Tung–Striebel): ogni giorno passato rivisto con i dati successivi */
   var xs = seq.length ? seq[seq.length - 1].x : null;
   if (seq.length) { var lastR = seq[seq.length - 1].r; lastR.kS = xs[1]; lastR.LS = xs[0]; }
@@ -3851,7 +3870,8 @@ function kHistory(ctx, asOf, cfg) {
     var lo = kalmanRun(ctx, cfg, K.RHO_LO).days[asOf], hi = kalmanRun(ctx, cfg, K.RHO_HI).days[asOf];
     if (lo && hi) { rhoK = {}; rhoK[K.RHO_LO] = lo.k; rhoK[K.RHO_HI] = hi.k; sdR = Math.abs(hi.k - lo.k) / 4; }
   }
-  return (ctx.memo[key] = { k: k, list: out, last: out.length ? out[out.length - 1] : null, lastCal: lastCal, kSDlast: Math.sqrt(sdF * sdF + sdR * sdR), kSDf: sdF, kSDrho: sdR, rhoK: rhoK, next: dAdd(asOf, 1), method: 'filtro', start: run.start, ready: ok,
+  var pend = ok && run.pending ? run.pending(asOf) : 0;
+  return (ctx.memo[key] = { k: k, list: out, last: out.length ? out[out.length - 1] : null, lastCal: lastCal, kSDlast: Math.sqrt(sdF * sdF + sdR * sdR + pend), kSDf: Math.sqrt(sdF * sdF + pend), kSDpend: Math.sqrt(pend), kSDrho: sdR, rhoK: rhoK, next: dAdd(asOf, 1), method: 'filtro', start: run.start, ready: ok,
     /* fattore a posteriori di un giorno passato (stima migliore con tutti i dati di oggi) */
     smooth: function (d) { if (!ok) return cfg.k0; var x = run.days[d]; return x && x.kS != null ? x.kS : d < run.start ? (run.days[run.start] ? run.days[run.start].kS : k) : k; },
     level: ok && now ? { v: now.L, se: now.LSD } : null });
@@ -4116,10 +4136,16 @@ function spreadOf(central, pairs) {
   pairs.forEach(function (p) { [p[0], p[1]].forEach(function (x) { if (x == null) { open = true; return; } var d = (x - central) * p[2]; if (d < 0) early += d * d; else late += d * d; }); });
   return { early: 2 * Math.sqrt(early), late: 2 * Math.sqrt(late), open: open };
 }
+/* Con il piano che si aggiorna (revisioni automatiche o proposte accettate) un errore del consumo non dura: le pesate
+   lo rivelano e le calorie vengono corrette. In questo caso l'incertezza del consumo e dell'energia per kg conta solo
+   per i primi K.LEARN_DAYS giorni (tempo tipico perché il calcolo se ne accorga e il piano lo corregga); dopo, lo
+   scostamento accumulato resta ma non cresce. Con un piano manuale (calorie fisse) l'errore cresce per tutta la durata. */
 function weightBand(base, I, days) {
-  var f = base.kSDrel || 0, se = base.se || 0, at = function (m, e, rho) { return simulate(Object.assign(scenarioOf(base, I, m, e, rho), { days: days }))[days]; };
-  var c = at(1, 0, K.RHO), s = spreadOf(c, [[at(1 + f, 0, K.RHO), at(Math.max(.1, 1 - f), 0, K.RHO), 1], [at(1, se, K.RHO), at(1, -se, K.RHO), 1], [at(1, 0, K.RHO_LO), at(1, 0, K.RHO_HI), 0.5]]);
-  return { c: c, lo: c - s.early, hi: c + s.late };
+  var f = base.kSDrel || 0, se = base.se || 0, cl = base.closed ? Math.min(days, K.LEARN_DAYS) : days;
+  var at = function (m, e, rho, n) { return simulate(Object.assign(scenarioOf(base, I, m, e, rho), { days: n }))[n]; };
+  var c = at(1, 0, K.RHO, days), cc = at(1, 0, K.RHO, cl);
+  var s = spreadOf(cc, [[at(1 + f, 0, K.RHO, cl), at(Math.max(.1, 1 - f), 0, K.RHO, cl), 1], [cc + se, cc - se, 1], [at(1, 0, K.RHO_LO, cl), at(1, 0, K.RHO_HI, cl), 0.5]]);
+  return { c: c, lo: c - s.early, hi: c + s.late, closed: !!base.closed };
 }
 /* data di arrivo: il giorno esatto in cui la simulazione tocca l'obiettivo (fabbisogno stimato che scende col peso,
    digestione sulle calorie dello scenario, ÷ ρ kcal/kg), con la fascia descritta sopra. La ricerca va fino a ARR_MAX
@@ -4131,6 +4157,14 @@ function arrivalRange(base, I, goal, dir, from) {
   var pairs = [[at(1 + f, 0, K.RHO), at(Math.max(.1, 1 - f), 0, K.RHO), 1], [at(1, se, K.RHO), at(1, -se, K.RHO), 1], [lo, hi, 0.5]];
   out.central = c != null ? dAdd(from, c) : null; out.days = c;
   out.far = c != null && c > K.HORIZON;
+  /* piano che si aggiorna: lo scostamento del peso dopo K.LEARN_DAYS giorni, convertito in giorni al ritmo medio */
+  if (c != null && base.closed && c > K.LEARN_DAYS) {
+    var n = K.LEARN_DAYS, wAt = function (m, e, rho) { return simulate(Object.assign(scenarioOf(base, I, m, e, rho), { days: n }))[n]; };
+    var wc = wAt(1, 0, K.RHO), pace = Math.abs(goal - base.w0) / c, toD = function (w) { return (w - wc) * (-dir) / pace; };
+    pairs = [[toD(wAt(1 + f, 0, K.RHO)), toD(wAt(Math.max(.1, 1 - f), 0, K.RHO)), 1], [toD(wc + se), toD(wc - se), 1], [toD(wAt(1, 0, K.RHO_LO)), toD(wAt(1, 0, K.RHO_HI)), 0.5]];
+    pairs = pairs.map(function (p) { return [c + p[0], c + p[1], p[2]]; });
+    out.closed = true;
+  }
   if (c != null) {
     var s = spreadOf(c, pairs);
     out.from = dAdd(from, Math.max(1, Math.round(c - s.early)));
@@ -4338,6 +4372,11 @@ function resolveVersion(ctx, v, at, base) {
   }
   out.T = T;
   out.deficit = T != null && R != null ? (1 - K.TEF) * (R - T) : null;
+  /* deficit o surplus più piccolo dell'incertezza del mantenimento: la direzione non è ancora sicura */
+  if (T != null && R != null && dir && !out.reached && base && base.ok && base.kSD != null && base.k > 0) {
+    var sdR = base.kSD / base.k * R, gapK = Math.abs(T - R);
+    if (gapK < 1.5 * sdR) out.warnings.push({ code: 'ritmo_sotto_margine', msg: 'Il ' + (dir < 0 ? 'deficit' : 'surplus') + ' del piano (' + nf(gapK) + ' kcal) è più piccolo dell\'incertezza attuale del mantenimento (±' + nf(sdR) + ' kcal): nelle prime settimane il peso potrebbe ' + (dir < 0 ? 'scendere' : 'salire') + ' meno del previsto o restare fermo. Con pesate e diario completi il calcolo se ne accorge e le revisioni settimanali correggono le calorie.' });
+  }
   /* macro */
   var wr = mc.weightRef || { mode: 'tendenza' }, wrv = wr.mode === 'manuale' && +wr.v > 0 ? +wr.v : wr.mode === 'obiettivo' && gw > 0 ? gw : W;
   out.weightRef = { mode: wr.mode || 'tendenza', v: wrv };
@@ -4415,7 +4454,7 @@ function dayInfo(ctx, cfg0, d, kAt, targetOf, cfgAt) {
   if (hist) hist.list.forEach(function (x) { if (x.d <= hd && x.evidence && x.kSD != null) accepted = x; });
   var sk = cfg.adaptive ? (accepted ? accepted.kSD : cfg.sd0) : 0;
   var fr = hist && hist.method === 'filtro' ? kalmanRun(ctx, cfg).days[hd] : null;
-  if (fr && accepted) sk = Math.sqrt(fr.kSD * fr.kSD + Math.pow(hist.kSDrho || 0, 2));
+  if (fr && accepted) sk = Math.sqrt(fr.kSD * fr.kSD + Math.pow(hist.kSDrho || 0, 2) + Math.pow(hist.kSDpend || 0, 2));
   else if (accepted) { var age = Math.max(0, dDiff(accepted.d, hd) - 7); sk = Math.sqrt(sk * sk + Math.pow(Math.min(0.25, age * 0.005), 2)); structuralChanges(ctx).forEach(function (x) { if (x.d > accepted.d && x.d <= hd) sk = Math.max(sk, cfg.sd0); }); }
   var activitySD = A && A.ok ? Math.abs(k) * (A.hi - A.lo) / 4 : 0;
   var daySD = B != null ? Math.sqrt(Math.pow(sk / Math.max(0.01, Math.abs(k)) * B, 2) + activitySD * activitySD) : null;
@@ -4712,6 +4751,8 @@ function alertsOf(out, ctx, asOf) {
     if (pw < -K.CUT_PCT) a.push({ id: 'calo_rapido', livello: 'attenzione', titolo: 'Calo più rapido del limite del piano automatico', testo: 'Nelle ultime due settimane la tendenza scende di ' + nf(-tr.slope * 7, 1) + ' kg a settimana (' + nf(-pw, 1) + '% del peso), oltre l\'1% usato come limite del prodotto. Acqua e contenuto intestinale possono pesare molto su periodi brevi; se il calo continua, considera di parlarne con un professionista. Non è una diagnosi.' });
     if (pw > 1) a.push({ id: 'aumento_rapido', livello: 'attenzione', titolo: 'Aumento più rapido del previsto', testo: 'La tendenza sale di ' + nf(tr.slope * 7, 1) + ' kg a settimana (' + nf(pw, 1) + '% del peso). Non dice quanto sia grasso, muscolo o acqua.' });
   }
+  var vg = versionAt(ctx.versions, asOf), gs = vg && out.base && out.base.ok ? glycogenShift(ctx, vg, out.base, asOf, W || ctx.weightAt(asOf), out.plan && out.plan.active && out.plan.active.kcal) : null;
+  if (gs) a.push({ id: 'glicogeno', livello: 'info', titolo: gs.dir > 0 ? 'La bilancia può salire nei primi giorni' : 'La bilancia può scendere più in fretta nei primi giorni', testo: (gs.start ? 'All\'inizio del percorso' : 'Dopo il cambio di fase') + ' le calorie sono ' + (gs.dir > 0 ? 'salite' : 'scese') + ' di circa ' + nf(Math.abs(gs.dk)) + ' kcal: glicogeno e acqua ' + (gs.dir > 0 ? 'si ricaricano' : 'si svuotano') + ' e fino ' + delIt(gs.to).replace(/^del /, 'al ').replace(/^dell'/, 'all\'') + ' la bilancia può ' + (gs.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + nf(gs.lo, 1) + '–' + nf(gs.hi, 1) + ' kg in più rispetto al grasso. Non è ' + (gs.dir > 0 ? 'grasso preso' : 'grasso perso') + ': il mantenimento non lo conta come tale e le previsioni mostrano il peso senza questo effetto.' });
   var rest = out.rmr && out.rmr.v, last7 = [];
   for (var i = 1; i <= 7; i++) { var d = dAdd(asOf, -i), it = intakeOf(ctx.days[d], false); if (it.usable) last7.push(it.kcal); }
   if (rest && last7.length >= 4 && avg(last7) < rest) a.push({ id: 'introito_basso', livello: 'attenzione', titolo: 'Calorie registrate sotto il dispendio a riposo stimato', testo: 'Media delle giornate complete degli ultimi 7 giorni: ' + nf(avg(last7)) + ' kcal, sotto il dispendio a riposo stimato (' + nf(rest) + ' kcal). Superare il riposo non garantisce l\'adeguatezza; scendere sotto per settimane è una situazione da valutare con un professionista.' });
@@ -4848,6 +4889,25 @@ function trajectoryValidation(D,asOf) {
 }
 M.trajectoryValidation=trajectoryValidation;
 
+/* Spostamento atteso della bilancia nelle prime due settimane di una fase nuova (o del percorso): glicogeno e acqua
+   si riempiono quando le calorie salgono rispetto a prima, si svuotano quando scendono. Ampiezza tipica 1–2% del peso,
+   proporzionata alla variazione delle calorie (piena da circa 1.000 kcal di differenza). Non è grasso; le previsioni
+   del peso di riferimento non lo includono, la bilancia sì. */
+function glycogenShift(ctx, v, base, asOf, W, Tz) {
+  if (!v || !dValid(v.from) || !(W > 0)) return null;
+  var prev = null; ctx.versions.forEach(function (x) { if (x.from < v.from && x.status !== 'annullata') prev = x; });
+  var phase = v.goal && v.goal.phase, isStart = !prev, changed = isStart || (prev.goal && prev.goal.phase) !== phase;
+  if (!changed) return null;
+  var end = dAdd(v.from, TRANS.fase.days - 1); if (asOf > end) return null;
+  var T = Tz > 0 ? +Tz : v.resolved && v.resolved.kcal > 0 ? +v.resolved.kcal : v.kcal && v.kcal.manual && +v.kcal.manual.v > 0 ? +v.kcal.manual.v : null;
+  var before = []; for (var i = 1; i <= 21; i++) { var it = intakeOf(ctx.days[dAdd(v.from, -i)], false); if (it.usable) before.push(it.kcal); }
+  var Ib = before.length >= 7 ? avg(before) : base && base.ok ? base.R : null;
+  if (T == null || Ib == null) return null;
+  var dk = T - Ib, frac = clamp(Math.abs(dk) / 1000, 0, 1);
+  if (frac < 0.15) return null;
+  return { from: v.from, to: end, dir: dk > 0 ? 1 : -1, lo: 0.01 * W * frac, hi: 0.02 * W * frac, start: isStart, dk: dk };
+}
+M.glycogenShift = glycogenShift;
 function forecastOf(ctx, v, z, base, tr, asOf, out) {
   var g = v.goal || {}, f = { tomorrow: out.weight.tomorrow };
   if (!base.ok) { f.none = base.why; return f; }
@@ -4870,9 +4930,13 @@ function forecastOf(ctx, v, z, base, tr, asOf, out) {
   var rk = calF && base.rhoK ? (function () { var o = {}; o[K.RHO_LO] = base.rhoK[K.RHO_LO] / base.k; o[K.RHO_HI] = base.rhoK[K.RHO_HI] / base.k; return o; })() : null;
   var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: calF ? base.kSDf / base.k : Math.max(K.ARR_ERR / 2, base.kSD&&base.k>0?base.kSD/base.k/2:0), se: W0se, rhoK: rk, rhoScale: rhoScale(g.phase === 'surplus' ? 1 : g.phase === 'cut' ? -1 : 0), rho: K.RHO * rhoScale(g.phase === 'surplus' ? 1 : -1) };
   f.from = start; f.w0 = W0; f.w0Se = W0se; f.sim = sim; f.startOrigin = calF ? 'filtro' : 'traiettoria';
-  if (!dir || !(gw > 0)) { f.maint = true; if (z) { var s = simulate({ w0: W0, B0: sim.B0, perKg: base.perKg, I: z.kcal, days: 28 }); f.in28 = { c: s[28], d: dAdd(start, 28) }; } return f; }
+  /* le calorie del piano si aggiornano da sole o con proposte: la previsione «con il piano» tiene conto delle correzioni */
+  var updating = !!(v.kcal && v.kcal.mode !== 'manuale'), simPlan = Object.assign({}, sim, { closed: updating });
+  f.planUpdates = updating; f.simPlan = simPlan;
+  f.glycogen = glycogenShift(ctx, v, base, asOf, W0, z && z.kcal);
+  if (!dir || !(gw > 0)) { f.maint = true; if (z) { var s = weightBand(simPlan, z.kcal, 28); f.in28 = { c: s.c, lo: s.lo, hi: s.hi, d: dAdd(start, 28) }; } return f; }
   if ((gw - W0) * dir <= 0) { f.done = true; return f; }
-  if (z) f.plan = arrivalRange(sim, z.kcal, gw, dir, start);
+  if (z) f.plan = arrivalRange(simPlan, z.kcal, gw, dir, start);
   var lg = [];
   for (var i = 1; i <= 14; i++) { var it = intakeOf(ctx.days[dAdd(asOf, -i)], false); if (it.usable) lg.push(it.kcal); }
   if (lg.length >= 7) { f.logged = arrivalRange(sim, avg(lg), gw, dir, start); f.logged.n = lg.length; }
@@ -7274,7 +7338,7 @@ function renderForecast() {
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
   var rng = function (a) { return !a ? '—' : arrText(a, true); };
-  if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg il ' + fmtDay(f.in28.d) : '—') + '. È una simulazione, non una misura.</p>'; return; }
+  if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg il ' + fmtDay(f.in28.d) + (f.in28.lo != null ? ' (fascia probabile ' + fmt(f.in28.lo, 1) + '–' + fmt(f.in28.hi, 1) + ' kg' + (f.planUpdates ? ', con le revisioni settimanali delle calorie' : '') + ')' : '') : '—') + '.' + (f.glycogen ? ' Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua: non è grasso.' : '') + ' È una simulazione, non una misura.</p>'; return; }
   if (f.done) { big.textContent = 'Obiettivo raggiunto'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">La tendenza è già oltre l\'obiettivo: il piano andrebbe portato al mantenimento (Profilo).</p>'; return; }
   big.textContent = rng(f.plan);
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
@@ -7284,7 +7348,9 @@ function renderForecast() {
     + (f.required ? (f.required.conflict
       ? line('Per arrivare entro il ' + fmtDay(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
       : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
-    + '</div>'+trajectoryExplanationHTML(f);
+    + '</div>'+trajectoryExplanationHTML(f)
+    + (f.planUpdates && f.plan && f.plan.closed ? '<p class="caption">La fascia «con il piano» considera che le calorie vengono corrette ogni settimana con le tue pesate.</p>' : '')
+    + (f.glycogen ? '<p class="caption">Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua, oltre al peso previsto: non è grasso.</p>' : '');
 
   if (f.required && f.required.conflict) rows += '<p class="p2-warn" id="fc-conflict">' + (f.required.impossible
     ? 'Arrivare all\'obiettivo entro il ' + fmtDay(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
@@ -7301,18 +7367,18 @@ function renderProjection() {
   }
   var T = E.today.target ? E.today.target.v : null, Il = f.logged ? f.logged.I : null, B = E.base, dir = goalDir(), gw = s.goalWeight;
   var kd = f.sim.kSDrel || 0, marks = [14, 28, 56, 84];
-  function result(I, k, name, tone) {
+  function result(I, k, name, tone, sim) {
     if (I == null) return '<div class="projection-result '+tone+'"><small>'+name+'</small><b class="projection-unavailable">Non disponibile</b><span>Servono giornate complete sufficienti.</span></div>';
-    var b = GJM.weightBand(f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
+    var b = GJM.weightBand(sim || f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
     return '<div class="projection-result '+tone+'"><small>'+name+'</small>'
       + (done ? '<b class="projection-achieved">Traguardo raggiunto</b><span>in questo scenario</span>' : '<b>'+fmt(b.c,1)+'<em> kg</em></b><span>'+fmt(b.lo,1)+' – '+fmt(b.hi,1)+' kg · intervallo del modello</span>') + '</div>';
   }
   var dateText = function(d) { return d.split('-').reverse().join('/'); };
   var startText = dateText(f.from);
   $('#proj-context').innerHTML = '<div class="projection-scenarios"><span class="projection-plan"><i></i><span class="projection-scenario-copy"><span>Seguendo il piano dal '+startText+'</span><b>'+(T!=null?kc(T)+'/giorno':'non disponibile')+'</b></span></span><span class="projection-diary"><i></i><span class="projection-scenario-copy"><span>Mantenendo la media recente delle ultime due settimane</span><b>'+(Il!=null?kc(Il)+'/giorno':'non disponibile')+'</b></span></span></div>';
-  box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan')+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
+  box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan',f.simPlan)+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
   $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, dal '+fmtDay(f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
-  $('#proj-note').textContent = 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
+  $('#proj-note').textContent = (f.planUpdates ? 'Con il piano la fascia considera che le calorie vengono corrette ogni settimana con le tue pesate: un errore del mantenimento non si accumula. Con la media recente le calorie restano fisse, quindi la fascia si allarga col tempo. ' : 'Il piano ha calorie fisse: la fascia si allarga col tempo perché un errore del mantenimento non viene corretto. ') + (f.glycogen ? 'Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'stare sopra' : 'stare sotto') + ' questi valori di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua. ' : '') + 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
   $('#proj-more').innerHTML = '<p>'+(f.startOrigin==='filtro'?'La partenza è il peso stimato dallo stesso calcolo del mantenimento, senza le oscillazioni d\'acqua.':'La partenza usa la traiettoria energetica corretta dalle pesate.')+' Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Energia per kg: '+fmt(f.sim.rho||7700,0)+' kcal/kg'+((f.sim.rho||7700)<7700?' (in surplus una parte del peso preso è muscolo)':'')+'. La fascia unisce tre incertezze: il consumo (±'+fmt(kd*100,1)+'%), il peso di partenza (±'+fmt(f.w0Se,1)+' kg) e l\'energia per kg (5.000–9.400 kcal/kg'+(f.sim.rhoK?', ricalcolando ogni volta anche il mantenimento':'')+'). È circa il 95% se le ipotesi del modello reggono; non è una garanzia.</p>';
 
 }
@@ -7785,6 +7851,8 @@ function pedPrevHTML(pv) {
   var h = '<h3 class="ped-h">Effetto della modifica, dal ' + fmtDay(pv.v.from) + '</h3><div class="kvl">' + rows.join('') + '</div>';
   if (r.errors.length) h += r.errors.map(function (e) { return '<p class="p2-warn"><b>Da risolvere:</b> ' + esc(e.msg) + (e.alternatives && e.alternatives.length ? '<br>Alternative: ' + e.alternatives.map(function (a) { return esc(a.msg); }).join('; ') : '') + '</p>'; }).join('');
   if (r.warnings.length) h += r.warnings.map(function (w) { return '<p class="p2-note">' + esc(w.msg) + '</p>'; }).join('');
+  var gsh = E2 && E2.forecast && E2.forecast.glycogen;
+  if (gsh) h += '<p class="p2-note">Nelle prime due settimane la bilancia può ' + (gsh.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(gsh.lo, 1) + '–' + fmt(gsh.hi, 1) + ' kg per glicogeno e acqua (calorie ' + (gsh.dir > 0 ? '+' : '−') + fmt(Math.abs(gsh.dk), 0) + ' rispetto alle ultime settimane). Non è ' + (gsh.dir > 0 ? 'grasso preso' : 'grasso perso') + ' e il calcolo del mantenimento lo sa.</p>';
   if (r.scope && !r.scope.ok) h += '<p class="p2-note">Fuori dall\'ambito del piano automatico (' + esc(r.scope.why.join(', ')) + '): restano diario, registrazioni, grafici e un piano manuale o indicato da un professionista.</p>';
   var bl = pedBlocked(pv);
   h += bl ? '<p class="p2-warn">Per salvare: ' + esc(bl) + '.</p>' : '<p class="muted small">Salvando, questi valori vengono fissati in una nuova versione con la data di entrata in vigore. Le versioni precedenti restano e puoi ripristinarle.</p>';
