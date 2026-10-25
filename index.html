@@ -2294,6 +2294,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <button class="tab" role="tab" data-tab="amici" data-group="amici" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2"/></svg><span>Amici</span><i class="friend-request-badge" id="friend-request-badge" aria-hidden="true" hidden></i></button>
       <button class="tab" role="tab" data-tab="dati" data-group="dati regole" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg><span>Profilo</span></button>
     </nav>
+
     <span class="friend-request-status" id="friend-request-status" role="status" aria-live="polite" aria-atomic="true"></span>
   </div>
 
@@ -12301,6 +12302,70 @@ requestAnimationFrame(moveInd);
 var rzT = 0;
 window.addEventListener('resize', function () { moveInd(); clearTimeout(rzT); rzT = setTimeout(renderAll, 180); });
 try { document.fonts.ready.then(moveInd); } catch (e) {}
+/* G6 · piccole feste: giornata completa, nuovo traguardo, serie di settimane in palestra.
+   La prima volta salva solo il punto di partenza; poi festeggia ciò che è nuovo, una cosa alla volta. */
+(function () {
+  if (typeof renderAll !== 'function') return;
+  var RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = Date.now(), busy = false, timer = 0;
+  var COLORS = ['#FA114F', '#A6FF00', '#FF9F0A', '#BF5AF2', '#00E0FF', '#0A84FF', '#FFD60A'];
+  function key() { return 'gj-feste-' + (window.GJ_user && GJ_user.uid || 'local'); }
+  function readBase() { try { return JSON.parse(localStorage.getItem(key()) || 'null'); } catch (e) { return null; } }
+  function writeBase(b) { try { localStorage.setItem(key(), JSON.stringify(b)); } catch (e) {} }
+  function confetti() {
+    if (RM) return;
+    var c = document.createElement('canvas'), x = c.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+    c.className = 'gj-confetti'; c.width = W * dpr; c.height = H * dpr; x.scale(dpr, dpr); document.body.appendChild(c);
+    var P = [], n = W < 500 ? 90 : 140;
+    for (var i = 0; i < n; i++) P.push({ x: W / 2 + (Math.random() - .5) * 60, y: H * .62, vx: (Math.random() - .5) * 11, vy: -7 - Math.random() * 9, r: 3 + Math.random() * 4, a: Math.random() * 6.28, va: (Math.random() - .5) * .35, c: COLORS[i % COLORS.length], sq: Math.random() < .5 });
+    var start = performance.now();
+    (function frame(now) {
+      var t = (now - start) / 1000; x.clearRect(0, 0, W, H);
+      P.forEach(function (p) { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; x.save(); x.globalAlpha = Math.max(0, 1 - t / 1.9); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; if (p.sq) x.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); else { x.beginPath(); x.arc(0, 0, p.r * .7, 0, 6.28); x.fill(); } x.restore(); });
+      if (t < 1.9) requestAnimationFrame(frame); else c.remove();
+    })(start);
+  }
+  function show(o) {
+    busy = true;
+    var el = document.createElement('div'); el.className = 'gj-cheer'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = '<span class="gj-cheer-sym" style="--c:' + (o.color || '#FFD60A') + '" aria-hidden="true">' + o.symbol + '</span><span class="gj-cheer-t"><b></b><small></small></span>';
+    el.querySelector('b').textContent = o.title; el.querySelector('small').textContent = o.sub || '';
+    document.body.appendChild(el); requestAnimationFrame(function () { el.classList.add('on'); });
+    confetti(); try { if (navigator.vibrate) navigator.vibrate(25); } catch (e) {}
+    var done = function () { el.classList.remove('on'); setTimeout(function () { el.remove(); busy = false; }, 260); };
+    var tm = setTimeout(done, 3600); el.addEventListener('click', function () { clearTimeout(tm); done(); });
+  }
+  function streakNow() {
+    try { var t = todayStr(), ws = weekStart(t), n = 0, k = splitWeek(ws).n ? 0 : 1; while (splitWeek(addDays(ws, -7 * k)).n) { n++; k++; } return n; } catch (e) { return 0; }
+  }
+  function doneMilestones() {
+    try {
+      if (!window.GJMilestones) return null;
+      var input = { days: Object.fromEntries(Array.from(state.days.entries()).map(function (x) { return [x[0], typeof recipeReconciledView === 'function' ? recipeReconciledView(x[1]).day : x[1]]; })), workouts: Array.from((state.workouts || new Map()).values()), targets: function (d) { return typeof dayTarget === 'function' ? dayTarget(d) : {}; } };
+      var rows = {}; state.days.forEach(function (v, k) { rows[k] = v; }); var C = window.GJGame, personal = C && C.personal && C.reconcile ? C.personal(C.reconcile({}, rows, todayStr(), true), todayStr()) : { record: 0 };
+      return GJMilestones.evaluate(input, todayStr(), personal).items.filter(function (m) { return m.done; });
+    } catch (e) { return null; }
+  }
+  function todayComplete() {
+    try { var d = state.days.get(todayStr()); if (!d || !(d.kcal > 0)) return false; return GJM.fieldState(d, 'kcal', true) === 'completo'; } catch (e) { return false; }
+  }
+  function check() {
+    if (busy || !loaded2.days || !loaded2.workouts || Date.now() - t0 < 3500 || document.documentElement.classList.contains('intro-on')) return;
+    var ms = doneMilestones(); if (!ms) return;
+    var t = todayStr(), now = { ms: ms.map(function (m) { return m.id; }), streak: streakNow(), day: todayComplete() ? t : null };
+    var b = readBase();
+    if (!b) { writeBase({ ms: now.ms, streak: now.streak, day: now.day }); return; }
+    var fresh = ms.filter(function (m) { return b.ms.indexOf(m.id) < 0; }), cheer = null;
+    if (fresh.length) cheer = { symbol: fresh[0].symbol || '★', title: 'Nuovo traguardo: ' + fresh[0].name, sub: fresh.length > 1 ? 'e altri ' + (fresh.length - 1) + ' sbloccati' : 'Lo trovi in Amici › Il mio percorso', color: '#FFD60A' };
+    else if (now.streak > (b.streak || 0) && now.streak >= 2) cheer = { symbol: '🔥', title: now.streak + ' settimane di fila in palestra', sub: 'La serie continua', color: '#FF9F0A' };
+    else if (now.day && b.day !== now.day) cheer = { symbol: '✓', title: 'Giornata completa', sub: 'Il diario di oggi è chiuso', color: '#30D158' };
+    writeBase({ ms: Array.from(new Set(b.ms.concat(now.ms))), streak: Math.max(now.streak, b.streak || 0), day: now.day || b.day });
+    if (cheer) show(cheer);
+  }
+  var prev = renderAll;
+  renderAll = function () { var r = prev.apply(this, arguments); clearTimeout(timer); timer = setTimeout(check, 600); return r; };
+  setTimeout(check, 4000);
+  window.GJCheer = show;
+})();
 })();
 </script>
 <script>
@@ -15342,7 +15407,93 @@ html body main #tab-oggi .hs:not(#a):not(#b):not(#c):not(#d):not(#e){background:
 .ds .ds-add span{font-size:1.05rem;line-height:1}
 .ds .ds-add:hover{background:color-mix(in srgb,var(--c) 20%,transparent)}
 .ds .ds-add:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* ===== G9 · pulsante «+» al centro della barra ===== */
+.qa-fab{position:fixed;z-index:9990;left:50%;bottom:calc(17px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:52px;height:52px;border-radius:50%;border:0;display:grid;place-items:center;background:#F2F2F7;color:#141216;box-shadow:0 6px 18px #0008,0 0 0 4px #000;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.2,1),background .2s}
+.qa-fab:active{transform:translateX(-50%) scale(.92)}
+.qa-fab:focus-visible{outline:2px solid #fff;outline-offset:4px}
+.qa-fab svg{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+html.qa-open .qa-fab svg{transform:rotate(45deg)}
+html.dayform-open .qa-fab,html.intro-on .qa-fab{display:none}
+@media (max-width:1023px){
+  html body .tabs:not(#a):not(#b):not(#c):not(#d){grid-template-columns:repeat(3,minmax(0,1fr)) 58px repeat(3,minmax(0,1fr))!important}
+  html body .tabs .tab[data-tab="ricette"]:not(#a):not(#b):not(#c):not(#d){grid-column:5!important}
+  html body .tabs .tab[data-tab="amici"]:not(#a):not(#b):not(#c):not(#d){grid-column:6!important}
+  html body .tabs .tab[data-tab="dati"]:not(#a):not(#b):not(#c):not(#d){grid-column:7!important}
+  html body .tabs .tab[data-tab="oggi"]:not(#a):not(#b):not(#c):not(#d){grid-column:1!important}
+  html body .tabs .tab[data-tab="diario"]:not(#a):not(#b):not(#c):not(#d){grid-column:2!important}
+  html body .tabs .tab[data-tab="allenamenti"]:not(#a):not(#b):not(#c):not(#d){grid-column:3!important}
+}
+@media (max-width:359px){html body .tabs:not(#a):not(#b):not(#c):not(#d){grid-template-columns:repeat(3,minmax(0,1fr)) 46px repeat(3,minmax(0,1fr))!important} html body .tabs .tab:not(#a):not(#b):not(#c):not(#d) span{font-size:9px!important;letter-spacing:-.02em!important;white-space:nowrap} html body .tabs .tab:not(#a):not(#b):not(#c):not(#d){padding-left:0!important;padding-right:0!important} .qa-fab{width:44px;height:44px;bottom:calc(21px + env(safe-area-inset-bottom,0px))}}
+@media (min-width:1024px){.qa-fab{left:auto;right:32px;bottom:32px;transform:none;width:56px;height:56px} .qa-fab:active{transform:scale(.92)}}
+.qa-sheet{position:fixed;inset:0;z-index:9995;display:flex;align-items:flex-end;justify-content:center}
+.qa-sheet[hidden]{display:none!important}
+.qa-back{position:absolute;inset:0;background:#0009;opacity:0;transition:opacity .2s}
+.qa-panel{position:relative;width:min(100%,520px);box-sizing:border-box;padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px));border-radius:26px 26px 0 0;background:#1C1C1E;border:1px solid #FFFFFF14;border-bottom:0;transform:translateY(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.qa-sheet.on .qa-back{opacity:1}
+.qa-sheet.on .qa-panel{transform:none}
+@media (min-width:1024px){.qa-sheet{align-items:center} .qa-panel{border-radius:26px;border-bottom:1px solid #FFFFFF14;padding-bottom:22px;transform:translateY(16px) scale(.98);opacity:0;transition:transform .2s,opacity .2s} .qa-sheet.on .qa-panel{opacity:1}}
+.qa-grab{display:block;width:40px;height:5px;border-radius:9px;background:#FFFFFF2A;margin:0 auto 10px}
+.qa-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.qa-head h2{margin:0;font-size:1.2rem;color:#fff}
+.qa-x{width:34px;height:34px;border-radius:50%;border:0;background:#FFFFFF12;color:#fff;display:grid;place-items:center;cursor:pointer}
+.qa-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.qa-item{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;border:1px solid #FFFFFF12;background:#FFFFFF07;color:#fff;font:inherit;text-align:left;cursor:pointer;min-height:64px}
+.qa-item b{font-size:.95rem;font-weight:700;line-height:1.25}
+.qa-ico{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
+.qa-item:hover,.qa-all:hover{background:#FFFFFF10}
+.qa-item:focus-visible,.qa-all:focus-visible,.qa-x:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.qa-all{display:block;width:100%;margin-top:10px;padding:14px;border-radius:16px;border:0;background:#F2F2F7;color:#141216;font:inherit;font-weight:750;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.qa-panel,.qa-back,.qa-fab,.qa-fab svg{transition:none!important}}
+
+/* ===== G6 · piccole feste ===== */
+.gj-confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9998}
+.gj-cheer{position:fixed;z-index:9999;left:50%;bottom:calc(104px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px) scale(.96);opacity:0;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;padding:12px 18px 12px 12px;border-radius:20px;background:#2C2C2E;border:1px solid #FFFFFF1C;box-shadow:0 14px 40px #000a;transition:transform .3s cubic-bezier(.2,.9,.2,1.2),opacity .25s;cursor:pointer}
+.gj-cheer.on{transform:translate(-50%,0) scale(1);opacity:1}
+.gj-cheer-sym{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;font-weight:900;color:var(--c);background:color-mix(in srgb,var(--c) 20%,transparent)}
+.gj-cheer-t{display:flex;flex-direction:column;min-width:0}
+.gj-cheer-t b{font-size:.98rem;color:#fff;line-height:1.3}
+.gj-cheer-t small{font-size:.78rem;color:#AEAEB2;line-height:1.35}
+@media (min-width:1024px){.gj-cheer{bottom:40px}}
+@media (prefers-reduced-motion:reduce){.gj-cheer{transition:opacity .2s}}
 </style>
+
+<!-- G9 · registrare in un tocco da ogni sezione -->
+<button type="button" class="qa-fab" id="qa-fab" aria-haspopup="dialog" aria-controls="qa-sheet" aria-expanded="false" aria-label="Registra un dato di oggi"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<div class="qa-sheet" id="qa-sheet" role="dialog" aria-modal="true" aria-labelledby="qa-title" hidden>
+  <div class="qa-back" data-qa-close></div>
+  <div class="qa-panel">
+    <span class="qa-grab" aria-hidden="true"></span>
+    <div class="qa-head"><h2 id="qa-title">Registra oggi</h2><button type="button" class="qa-x" data-qa-close aria-label="Chiudi"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="qa-grid"><button type="button" class="qa-item" data-qa-field="weight" style="--c:#0A84FF"><span class="qa-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/></svg></span><b>Peso</b></button><button type="button" class="qa-item" data-qa-field="kcal" style="--c:#FA114F"><span class="qa-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/></svg></span><b>Calorie e macro</b></button><button type="button" class="qa-item" data-qa-field="steps" style="--c:#00E0FF"><span class="qa-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/></svg></span><b>Passi</b></button><button type="button" class="qa-item" data-qa-field="sleepH" style="--c:#7D7AFF"><span class="qa-ico"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span><b>Sonno</b></button></div>
+    <button type="button" class="qa-all" data-qa-field="">Tutti i dati di oggi</button>
+  </div>
+</div>
+<script>
+/* G9 · pannello rapido: sceglie cosa registrare e apre il modulo del giorno sul campo giusto */
+(function () {
+  var fab = document.getElementById('qa-fab'), sheet = document.getElementById('qa-sheet'); if (!fab || !sheet) return;
+  var last = null;
+  function today() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function open() { last = document.activeElement; sheet.hidden = false; fab.setAttribute('aria-expanded', 'true'); document.documentElement.classList.add('qa-open'); requestAnimationFrame(function () { sheet.classList.add('on'); var b = sheet.querySelector('.qa-item'); if (b) b.focus({ preventScroll: true }); }); }
+  function close(back) { sheet.classList.remove('on'); fab.setAttribute('aria-expanded', 'false'); document.documentElement.classList.remove('qa-open'); setTimeout(function () { if (!sheet.classList.contains('on')) sheet.hidden = true; }, 220); if (back !== false && last && last.isConnected) last.focus({ preventScroll: true }); }
+  fab.addEventListener('click', function () { if (sheet.hidden) open(); else close(); });
+  sheet.addEventListener('click', function (e) {
+    if (e.target.closest('[data-qa-close]')) { close(); return; }
+    var b = e.target.closest('[data-qa-field]'); if (!b) return;
+    close(false);
+    if (window.openDayForm) window.openDayForm(today(), b.dataset.qaField || null);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (sheet.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key !== 'Tab') return;
+    var items = Array.from(sheet.querySelectorAll('button')), first = items[0], lastB = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); lastB.focus(); } else if (!e.shiftKey && document.activeElement === lastB) { e.preventDefault(); first.focus(); }
+  });
+})();
+</script>
+
 </body></html>
 
 
