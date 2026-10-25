@@ -7248,7 +7248,8 @@ function dayWorkHTML(date, compact) {
     var why = fut || rest ? '' : cov ? 'Il file di Hevy copre questo giorno e non contiene sedute.' : 'Nessuna seduta importata da Hevy: non vuol dire riposo. Per stimare il consumo uso ' + esc((x && x.A && x.A.gym && x.A.gym.orig) || 'le abitudini dichiarate') + '.';
     return '<div class="empty wd-empty">' + head + '</div>' + (why ? '<p class="muted small">' + why + '</p>' : '');
   }
-  return ws.map(function (w, i) {
+  var restOn = (state.days.get(date) || {}).riposo === true;
+  return (restOn ? '<p class="muted small">Hai confermato il riposo: queste sedute non entrano nel consumo del giorno. Togli la spunta nei dati del giorno se ti sei allenato.</p>' : '') + ws.map(function (w, i) {
     var G = GROUP[wGroup(w)], vol = 0, nS = 0, e = se.filter(function (s) { return s.title === w.title; })[0] || se[i];
     (w.exercises || []).forEach(function (ex) { setsOf(ex, w.date).forEach(function (s) { vol += (s.kg || 0) * (s.reps || 0); nS++; }); });
     var meta = [w.start ? 'ore ' + esc(w.start) : '', w.durMin ? fmtDur(w.durMin) : 'durata non registrata', (w.exercises || []).length + ((w.exercises || []).length === 1 ? ' esercizio' : ' esercizi'), nS + ' serie', vol > 0 ? fmt(vol, 0) + ' kg sollevati' : ''].filter(Boolean).join(', ');
@@ -12196,11 +12197,13 @@ function dailyEnergyHTML(view,options) {
   var jobLabel=scheduledRest?'Oggi non hai lavorato':(src.job||'').replace(/\s*\(dichiarato\)/gi,'')||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
   var sessions=Array.from(state.workouts.values()).filter(function(w){return w.date===selectedDate;}).sort(function(a,b){return (a.start||'').localeCompare(b.start||'');});
   var gy=a.gym||{},dayRec=state.days.get(selectedDate)||{},workoutNote='';
-  var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · ')
-    :dayRec.riposo===true?'Riposo, segnato da te'
+  /* il riposo confermato nei dati del giorno vale più di tutto: il motore non conta palestra, con o senza Hevy */
+  var workoutLabel=dayRec.riposo===true?'Riposo confermato da te'
+    :sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · ')
     :gy.k>0.5?(past?'Seduta non registrata: conto la tua routine':'Nessuna seduta registrata finora: conto la tua routine')
     :/hevy/i.test(gy.orig||'')?'Nessuna seduta: riposo':'Nessun allenamento';
-  if(!sessions.length&&dayRec.riposo!==true&&gy.k>0.5)workoutNote=(gy.orig?cap(String(gy.orig).replace(/,\s*energia media.*$/i,''))+'. ':'')+'Si aggiorna quando importi le sedute da Hevy o segni il riposo.';
+  if(dayRec.riposo===true&&sessions.length)workoutNote='In questa data c’è una seduta importata, ma non la conto perché hai confermato il riposo. Togli la spunta se ti sei allenato.';
+  else if(!sessions.length&&dayRec.riposo!==true&&gy.k>0.5)workoutNote=(gy.orig?cap(String(gy.orig).replace(/,\s*energia media.*$/i,''))+'. ':'')+'Si aggiorna quando importi le sedute da Hevy o segni il riposo.';
   var status=closed?'Ricostruito dal diario completo':past?'Calorie incomplete · per la digestione si usa il piano':'Previsione · si aggiorna con il diario completo';
   var dateLabel=past?cap(fmtDay(options.date)):'Oggi, '+fmtDay(view.today&&view.today.d||todayStr());
   return '<div class="daily-energy de2" role="group" aria-label="Consumo stimato del giorno selezionato"><div class="de-main"><span class="daily-energy-title">Consumo stimato del giorno</span><strong class="daily-energy-date">'+esc(dateLabel)+'</strong><div class="de-value"><b>'+fmt(x.C,0)+'</b><span>kcal</span></div><span class="de-status'+(closed?' is-done':'')+'">'+status+'</span></div>'
