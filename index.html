@@ -15747,33 +15747,6 @@ html body .recipe-workspace-head:not(#z) > h2{position:absolute!important;width:
 #tab-amici .friends-code-card .friends-invite-row{margin-top:4px}
 #tab-amici .friends-empty .friends-invite-row{margin-top:16px}
 
-/* ===== G1 · Un colore, un significato =====
-   Superfici neutre uguali in tutte le sezioni; il colore resta solo ai dati
-   (calorie rosa, proteine lime, carboidrati arancio, grassi viola, passi azzurro, sonno indaco, peso blu).
-   Pulsanti principali bianchi, barra in basso con la voce attiva bianca. */
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d),html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .recipe-workspace:not(#a):not(#b):not(#c):not(#d),html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .cu-story:not(#a):not(#b):not(#c):not(#d){background:#1C1C1E!important;background-image:none!important;border:1px solid #FFFFFF12!important;box-shadow:none!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d)::before,html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .panel:not(#a):not(#b):not(#c):not(#d)::after{background-image:none!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) :is(.p2-tile,.hs,.ds,.wk-t,.wk-hero,.impact-hero,.impact-tile,.impact-details,.impact-comparison-result,.impact-comparison-note,.projection-card,.bs-hero,.ms,.note,.pv-hero,.figs,.cal30,.sp,.wk-day):not(#a):not(#b):not(#c):not(#d){background:#FFFFFF08!important;background-image:none!important;box-shadow:none!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) :is(.p2-tile,.hs,.ds,.wk-t,.wk-hero,.impact-hero,.impact-details,.impact-comparison-result,.impact-comparison-note,.projection-card,.bs-hero,.ms,.note,.pv-hero,.figs,.cal30):not(#a):not(#b):not(#c):not(#d){border-color:#FFFFFF12!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .maintenance-hero:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF06!important;background-image:none!important;border-color:#FFFFFF14!important}
-/* lo stato resta leggibile: la striscia a sinistra dei giorni (in target, sopra, sotto) e il bordo colorato delle sedute fatte */
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile:not(#a):not(#b):not(#c):not(#d){border-color:#FFFFFF12!important;border-top-width:2px!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-blue:not(#a):not(#b):not(#c):not(#d){border-top-color:#64D2FF!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-orange:not(#a):not(#b):not(#c):not(#d){border-top-color:#FF9F0A!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-purple:not(#a):not(#b):not(#c):not(#d){border-top-color:#BF5AF2!important}
-html body main :is(#tab-oggi,#tab-diario,#tab-allenamenti,#tab-corpo,#tab-ricette,#tab-dati,#tab-amici,#tab-regole) .impact-tile.impact-mint:not(#a):not(#b):not(#c):not(#d){border-top-color:#30D5A3!important}
-/* Amici: niente più fondo pesca */
-html body #tab-amici :is(#friend-comparison,.friends-code-card,.friends-add,.friends-settings,.friends-requests,.friends-empty,.friends-onboarding,.gg-card,.gg-panel,.gg-hub,.gg-quest,.gg-milestone,.gg-player,.friends-photo-setting):not(#a):not(#b):not(#c):not(#d){background:#1C1C1E!important;background-image:none!important;border-color:#FFFFFF14!important}
-html body #tab-amici .friend-metric:not(#a):not(#b):not(#c):not(#d){background:transparent!important}
-/* pulsanti principali: bianchi ovunque */
-html body .btn:not(.ghost):not(.danger):not(.linkbtn):not(#a):not(#b):not(#c):not(#d),html body #tab-amici button.btn:not(.ghost):not(.danger):not(#a):not(#b):not(#c):not(#d),html body .gg-primary:not(#a):not(#b):not(#c):not(#d){background:#F2F2F7!important;background-image:none!important;border-color:#F2F2F7!important;color:#141216!important;-webkit-text-fill-color:#141216!important;box-shadow:none!important}
-html body .btn:not(.ghost):not(.danger):not(.linkbtn):not(#a):not(#b):not(#c):not(#d):hover{background:#FFFFFF!important}
-/* barra di navigazione: voce attiva bianca */
-html body .tab[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d){color:#FFFFFF!important}
-html body .nav .tab[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF14!important;border-radius:16px}
-html body main .recent-today td:not(#a):not(#b):not(#c):not(#d),html body main .projection-card header:not(#a):not(#b):not(#c):not(#d){background:#FFFFFF0D!important;background-image:none!important}
-html body main #tab-oggi .hs:not(#a):not(#b):not(#c):not(#d):not(#e){background:#FFFFFF08!important;background-image:none!important;border-color:#FFFFFF12!important}
-
 /* ===== G3 · spiegazioni dietro un tocco ===== */
 .g3-more{margin-top:10px;border-top:1px solid #FFFFFF12}
 .g3-more>summary{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 2px!important;list-style:none;cursor:pointer;font-size:.8rem;font-weight:650;color:#C7C7CC;min-height:0}
@@ -16093,7 +16066,7 @@ html body #tab-ricette .recipe-create-box[open]:not(#a):not(#b):not(#c){border-s
 .rf-photo-prev.on{border-style:solid}
 
 /* E · profilo con livello e traguardi */
-html body #tab-dati #pf-card:not(#a):not(#b):not(#c):not(#d){border:1px solid #2C2C2E!important;background:#1C1C1E!important;padding:24px 20px 20px!important}
+html body #tab-dati #pf-card:not(#a):not(#b):not(#c):not(#d){padding:24px 20px 20px!important}
 #tab-dati .pe-top{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
 html body #tab-dati .pe-av:not(#a):not(#b){width:96px;height:96px;padding:0;border:0;border-radius:28px;overflow:hidden;background:#2C2C2E;cursor:pointer;margin-bottom:10px;display:grid;place-items:center}
 html body #tab-dati .pe-av:not(#a):not(#b) > *{width:100%!important;height:100%!important;border-radius:0!important;font-size:38px!important}
@@ -16132,6 +16105,20 @@ html body #tab-dati #pf-card .pe-acts .pe-link:not(#a):not(#b):not(#c):not(#d){c
 #tab-dati .pe-coin em{font-style:normal;line-height:1}#tab-dati .pe-medal.is-next .pe-coin em{filter:grayscale(1);opacity:.6}
 #tab-dati .pe-medal.is-next .pe-coin i{position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(#FA114F calc(var(--p)*1%),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
 @media(max-width:359px){#tab-dati .pe-coin{width:46px;height:46px;font-size:20px}#tab-dati .pe-medal b{font-size:11px}#tab-dati .pe-lv{width:42px;height:42px;font-size:19px}}
+
+/* ===== Colori di sezione sui nuovi riquadri (dopo il ritorno ai fondi tinti) ===== */
+html body #tab-oggi .panel.hero-today:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 70% at 100% 0,#FA114F2E,transparent 60%),radial-gradient(90% 60% at 0 100%,#A6FF0014,transparent 60%),#1C1C1E!important;border:1px solid #FA114F33!important}
+html body #tab-oggi .hero-today .ht-q:not(#a):not(#b),html body #tab-oggi .hero-today :is(.ht-quick button,.ht-quick a):not(#a):not(#b){background:#FFFFFF0D}
+html body #tab-oggi #streak-card:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 0 0,#FF9F0A2E,transparent 65%),linear-gradient(160deg,#2A1E10,#1C1A18)!important;border:1px solid #FF9F0A40!important}
+html body main .need-sum>div:nth-child(1):not(#a){background:linear-gradient(160deg,#0A84FF22,#0A84FF0A);box-shadow:inset 0 0 0 1px #0A84FF30}
+html body main .need-sum>div:nth-child(2):not(#a){background:linear-gradient(160deg,#FF9F0A22,#FF9F0A0A);box-shadow:inset 0 0 0 1px #FF9F0A30}
+html body main .need-sum>div:nth-child(3):not(#a){background:linear-gradient(160deg,#FA114F26,#FA114F0A);box-shadow:inset 0 0 0 1px #FA114F33}
+html body main .w-tiles .w-tile:not(#a):not(#b){background:linear-gradient(160deg,#0A84FF24,#0A84FF0C)!important;border:1px solid #0A84FF33!important}
+html body main .sum-card:not(#a):not(#b):not(#c){background:linear-gradient(160deg,#64D2FF1C,#5E5CE60E)!important;border:1px solid #64D2FF2E!important}
+#tab-dati .pe-num:nth-child(1){background:linear-gradient(160deg,#30D15833,#30D1580D);box-shadow:inset 0 0 0 1px #30D15840}
+#tab-dati .pe-num:nth-child(2){background:linear-gradient(160deg,#BF5AF233,#BF5AF20D);box-shadow:inset 0 0 0 1px #BF5AF240}
+#tab-dati .pe-num:nth-child(3){background:linear-gradient(160deg,#0A84FF33,#0A84FF0D);box-shadow:inset 0 0 0 1px #0A84FF40}
+#tab-dati .pe-num:nth-child(1) small{color:#7FE3A0}#tab-dati .pe-num:nth-child(2) small{color:#D9A6F8}#tab-dati .pe-num:nth-child(3) small{color:#7DBBFF}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
