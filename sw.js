@@ -1,5 +1,5 @@
 /* GymJourney · Percorso Mosaico · static app shell only. */
-var CACHE = 'gymjourney-colori-20261025-b';
+var CACHE = 'gymjourney-colori-20261025-c';
 var FILES = ["./","index.html","manifest.webmanifest","brand-icon.svg","icon-192.png","icon-512.png","icon-maskable-512.png","apple-touch-icon.png","favicon-32.png","favicon-16.png","favicon.ico"];
 var SCOPE = self.registration.scope;
 var STATIC_PATHS = FILES.map(function (p) { return new URL(p, SCOPE).pathname; });
@@ -11,7 +11,7 @@ self.addEventListener('install', function (event) {
 self.addEventListener('activate', function (event) {
   event.waitUntil(caches.keys().then(function (keys) {
     return Promise.all(keys.filter(function (key) {
-      return key !== CACHE && (key === 'gymjourney-v1' || key.indexOf('gymjourney-mosaico-') === 0);
+      return key !== CACHE && key.indexOf('gymjourney-') === 0;
     }).map(function (key) { return caches.delete(key); }));
   }).then(function () { return self.clients.claim(); }));
 });
