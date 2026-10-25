@@ -9443,6 +9443,7 @@ function openRule(id) {
 function applyDview(anim) {
   if (!state.dview) { try { state.dview = localStorage.getItem('ml-dview') || 'giorno'; } catch (e) { state.dview = 'giorno'; } }
   $$('.dviews [data-dview]').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.dview === state.dview ? 'true' : 'false'); });
+  (function () { var on = document.querySelector('.dviews [data-dview][aria-selected="true"]'), bar = on && on.parentElement; if (bar && bar.scrollWidth > bar.clientWidth) { var l = on.offsetLeft - bar.offsetLeft, r = l + on.offsetWidth; if (l < bar.scrollLeft || r > bar.scrollLeft + bar.clientWidth) bar.scrollTo({ left: Math.max(0, l - (bar.clientWidth - on.offsetWidth) / 2), behavior: 'smooth' }); } })();
   $$('.dsec').forEach(function (sec) {
     var on = sec.dataset.dsec === state.dview, was = !sec.hidden;
     sec.hidden = !on;
@@ -11392,6 +11393,16 @@ function bindFriends() {
   function stamp(){return firebase.firestore.FieldValue.serverTimestamp();}
   function randomCode(){var b=new Uint8Array(12);crypto.getRandomValues(b);return Array.from(b,function(x){return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[x%32];}).join('');}
   function fmtCode(x){return x?x.match(/.{1,4}/g).join('–'):'';}
+  /* F1 · invito: apre la condivisione del telefono (WhatsApp, Instagram…) con codice e link; altrimenti copia il messaggio */
+  function inviteButton(t){return F.profile&&F.profile.code?'<button type="button" class="btn fit small friends-invite" data-friend-action="invite"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M7 8l5-5 5 5"/></svg>'+t+'</button>':'';}
+  function inviteText(){return 'Ti va di seguire insieme il percorso in palestra? Su GymJourney aggiungimi con il mio codice amico: '+fmtCode(F.profile.code);}
+  function invite(){
+    if(!F.profile||!F.profile.code)return;var url=location.origin+location.pathname,text=inviteText();
+    if(navigator.share){navigator.share({title:'GymJourney',text:text,url:url}).catch(function(){});return;}
+    var all=text+'\n'+url;
+    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(all).then(function(){F.message='Invito copiato: incollalo nella chat che preferisci.';note();},function(){F.message=all;note();});
+    else{F.message=all;note();}
+  }
   function relationPeer(x){return x.from===F.uid?x.to:x.from;}
   function relationName(x){return x.from===F.uid?x.toName:x.fromName;}
   function incomingRequests(){return F.links.filter(function(x){return x.status==='pending'&&x.to===F.uid&&F.blocks.indexOf(x.from)<0;});}
@@ -11442,11 +11453,11 @@ function bindFriends() {
     if(!F.ready){var loading='<div class="friends-empty">Caricamento della sezione Amici…</div>';fillPanels(loading,loading);return;}
     if(!F.profile){fillPanels('<div class="friends-list-heading"><h3>I tuoi amici <span>0</span></h3></div><div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Apri le impostazioni per creare il tuo codice e aggiungere le persone che conosci.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi il tuo primo amico</button></div>','<div class="friends-onboarding"><div class="friends-symbol" aria-hidden="true">＋</div><h2>Crea il tuo codice amico</h2><p>Nessun dato del diario viene condiviso finché non lo scegli.</p><label class="f"><span>Nome visibile agli amici</span><input id="friend-nickname" maxlength="40" value="'+esc(safeName(S().name)||'Utente')+'" autocomplete="nickname"></label>'+actionButton('activate','Crea il mio codice amico')+'</div>');return;}
     var cfg=F.config||defaults(),friends=friendList(),incoming=incomingRequests(),outgoing=F.links.filter(function(x){return x.status==='pending'&&x.from===F.uid;});
-    var h='<div class="friends-top-grid"><div class="friends-code-card"><small>Il tuo codice amico</small><b>'+fmtCode(F.profile.code)+'</b><span>Condividilo con chi vuoi aggiungere.</span>'+actionButton('copy','Copia codice')+'</div><form id="friend-request-form" class="friends-add"><label class="f"><span>Aggiungi un amico</span><input name="code" placeholder="Codice amico" maxlength="20" autocomplete="off" spellcheck="false" required></label><button class="btn fit small"'+(F.busy?' disabled':'')+'>Invia richiesta</button></form></div>';
+    var h='<div class="friends-top-grid"><div class="friends-code-card"><small>Il tuo codice amico</small><b>'+fmtCode(F.profile.code)+'</b><span>Condividilo con chi vuoi aggiungere.</span>'+'<div class="friends-invite-row">'+inviteButton('Invita un amico')+actionButton('copy','Copia codice')+'</div></div><form id="friend-request-form" class="friends-add"><label class="f"><span>Aggiungi un amico</span><input name="code" placeholder="Codice amico" maxlength="20" autocomplete="off" spellcheck="false" required></label><button class="btn fit small"'+(F.busy?' disabled':'')+'>Invia richiesta</button></form></div>';
     h+='<details class="friends-settings"><summary>La tua condivisione <span class="friends-state">'+(cfg.enabled?'Attiva':'Disattivata')+'</span></summary><div class="friends-settings-body" data-ib-keep><form id="friend-sharing-form"><label class="f"><span>Nome visibile</span><input name="nickname" maxlength="40" value="'+esc(F.profile.nickname)+'" required></label><label class="friends-check friends-master"><input type="checkbox" name="enabled"'+(cfg.enabled?' checked':'')+'>Condividi i riepiloghi con gli amici accettati</label><div class="friends-pref-grid">'+FD.KEYS.map(function(k){return '<label class="friends-check"><input type="checkbox" name="'+k+'"'+(cfg.prefs[k]?' checked':'')+'>'+labels[k]+'</label>';}).join('')+'</div><p class="friends-help">Solo i riepiloghi selezionati degli ultimi 14 giorni vengono aggiornati. Pasti, note, email e dettagli degli allenamenti restano privati. La condivisione si aggiorna quando apri l’app online e il diario è salvato.</p><button class="btn fit small"'+(F.busy?' disabled':'')+'>Salva condivisione</button></form></div></details>';
     var requests='';if(incoming.length||outgoing.length){requests+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){requests+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){requests+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});requests+='</div>';}
-    var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3>'+actionButton('refresh','Aggiorna')+'</div>';
-    if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta o condividi il tuo codice dalle impostazioni. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi un amico</button></div>';
+    var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3><div class="friends-invite-row">'+inviteButton('Invita')+actionButton('refresh','Aggiorna')+'</div></div>';
+    if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Mandagli un invito con il tuo codice: quando ti aggiunge, qui vedi il confronto. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><div class="friends-invite-row">'+inviteButton('Invita un amico')+'<button type="button" class="btn ghost fit small" data-friends-view-go="settings">Ho un codice</button></div></div>';
     else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'"><i aria-hidden="true">'+faAvatar(uid,relationName(x))+'</i>'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
     fillPanels(list+requests,Games.settingsHTML()+h,'<div id="friend-game-content">'+Games.render()+'</div>'+requests);
@@ -11610,7 +11621,7 @@ function bindFriends() {
   async function perform(fn){if(F.busy)return;F.busy=true;F.error='';F.message='';note();try{await fn();}catch(e){F.error=report(e);}finally{F.busy=false;render();}}
   document.addEventListener('submit',function(e){if(e.target.id==='friend-request-form'){e.preventDefault();var code=e.target.elements.code.value;perform(function(){return request(code);});}if(e.target.id==='friend-sharing-form'){e.preventDefault();var form=e.target;perform(function(){return saveSharing(form);});}});
   document.addEventListener('click',function(e){var viewButton=e.target.closest('#tab-amici [data-friends-view],#tab-amici [data-friends-view-go]');if(viewButton){setFriendsView(viewButton.dataset.friendsView||viewButton.dataset.friendsViewGo,false,true);return;}var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
-    if(a==='date-prev'||a==='date-next'||a==='date-today'){setComparisonDate(a==='date-today'?todayStr():FD.add(comparisonDate(),a==='date-prev'?-1:1));return;}if(a==='select'){subscribePeer(k);render();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
+    if(a==='date-prev'||a==='date-next'||a==='date-today'){setComparisonDate(a==='date-today'?todayStr():FD.add(comparisonDate(),a==='date-prev'?-1:1));return;}if(a==='select'){subscribePeer(k);render();return;}if(a==='invite'){invite();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
     if(a==='refresh'){Games.refresh();if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
     perform(async function(){if(a==='activate')return activate();if(a==='copy'){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(F.profile.code);F.message='Codice copiato.';}else{F.message='Il tuo codice: '+F.profile.code;}return;}
       if(a==='accept'){await fs.doc('friendships/'+k).update({status:'accepted',acceptedAt:stamp()});F.message='Amicizia accettata. Scegli cosa condividere nelle impostazioni.';}
@@ -12275,7 +12286,9 @@ function dayTitle(date) {
 })();
 init();
 try {
-  var showIntro = !RM && !(location.hash && location.hash !== '#oggi');
+  var introDay = null; try { introDay = localStorage.getItem('gj-intro-day'); } catch (e) {}
+  var showIntro = !RM && !(location.hash && location.hash !== '#oggi') && introDay !== todayStr();
+  if (showIntro) { try { localStorage.setItem('gj-intro-day', todayStr()); } catch (e) {} }
   if (showIntro) { document.documentElement.classList.add('intro-on'); $('#intro').classList.add('intro-active'); introStart(); }
   else { intro.gone = true; $('#intro').remove(); }
 } catch (e) { intro.gone = true; document.documentElement.classList.remove('intro-on'); if ($('#intro')) $('#intro').remove(); }
@@ -15049,27 +15062,27 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
 /* ===== Progressi › Calorie: consumo del giorno, settimana, storico, approfondimenti =====
    Stessa grammatica del riquadro del mantenimento: card scure, accento rosa dell'energia,
    etichette piccole e attenuate sopra valori bianchi, numeri tabellari. */
-#energy-now{--en-acc:#FA114F;--en-soft:#ff9bb3;--en-ink:#f6e8ee;--en-mute:#b9a9b1;--en-line:#ffffff14;--en-card:#ffffff06}
+#energy-now,#need-body{--en-acc:#FA114F;--en-soft:#ff9bb3;--en-ink:#f6e8ee;--en-mute:#b9a9b1;--en-line:#ffffff14;--en-card:#ffffff06}
 
 /* consumo del giorno */
-#energy-now .daily-energy.de2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 28px;padding:22px 24px;margin:0 0 18px;border:1px solid var(--en-line);border-radius:20px;background:var(--en-card)}
-#energy-now .de-main{display:flex;flex-direction:column;gap:4px;min-width:0}
-#energy-now .de2 .daily-energy-title{font-size:.78rem;font-weight:700;color:var(--en-soft)!important}
-#energy-now .de2 .daily-energy-date{font-size:.92rem;color:var(--en-ink);font-weight:600}
-#energy-now .de-value{display:flex;align-items:baseline;gap:8px;margin:8px 0 10px}
-#energy-now .de-value b{font-size:clamp(2.1rem,4.4vw,2.8rem);line-height:1;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums}
-#energy-now .de-value span{font-size:.95rem;color:var(--en-mute)}
-#energy-now .de-status{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;font-size:.72rem;font-weight:650;line-height:1.3;color:var(--en-ink);background:#ffffff0d}
-#energy-now .de-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--en-soft);flex:none}
-#energy-now .de-status.is-done::before{background:#30D158}
-#energy-now .de-facts{margin:0;display:grid;align-content:center;border-left:1px solid var(--en-line);padding-left:26px}
-#energy-now .de-facts>div{display:grid;gap:3px;padding:11px 0;border-bottom:1px solid var(--en-line)}
-#energy-now .de-facts>div:first-child{padding-top:2px}
-#energy-now .de-facts>div:last-child{border-bottom:0;padding-bottom:2px}
-#energy-now .de-facts dt{font-size:.72rem;color:var(--en-mute)}
-#energy-now .de-facts dd{margin:0;font-size:.9rem;font-weight:600;color:#fff;line-height:1.4}
-#energy-now .de-facts dd small{display:block;font-weight:400;font-size:.74rem;color:var(--en-mute);margin-top:1px}
-#energy-now .de-note{grid-column:1/-1;margin:10px 0 0;padding-top:12px;border-top:1px solid var(--en-line);font-size:.76rem;line-height:1.55;color:#9c9198}
+:is(#energy-now,#need-body) .daily-energy.de2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 28px;padding:22px 24px;margin:0 0 18px;border:1px solid var(--en-line);border-radius:20px;background:var(--en-card)}
+:is(#energy-now,#need-body) .de-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+:is(#energy-now,#need-body) .de2 .daily-energy-title{font-size:.78rem;font-weight:700;color:var(--en-soft)!important}
+:is(#energy-now,#need-body) .de2 .daily-energy-date{font-size:.92rem;color:var(--en-ink);font-weight:600}
+:is(#energy-now,#need-body) .de-value{display:flex;align-items:baseline;gap:8px;margin:8px 0 10px}
+:is(#energy-now,#need-body) .de-value b{font-size:clamp(2.1rem,4.4vw,2.8rem);line-height:1;letter-spacing:-.03em;color:#fff;font-variant-numeric:tabular-nums}
+:is(#energy-now,#need-body) .de-value span{font-size:.95rem;color:var(--en-mute)}
+:is(#energy-now,#need-body) .de-status{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;font-size:.72rem;font-weight:650;line-height:1.3;color:var(--en-ink);background:#ffffff0d}
+:is(#energy-now,#need-body) .de-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--en-soft);flex:none}
+:is(#energy-now,#need-body) .de-status.is-done::before{background:#30D158}
+:is(#energy-now,#need-body) .de-facts{margin:0;display:grid;align-content:center;border-left:1px solid var(--en-line);padding-left:26px}
+:is(#energy-now,#need-body) .de-facts>div{display:grid;gap:3px;padding:11px 0;border-bottom:1px solid var(--en-line)}
+:is(#energy-now,#need-body) .de-facts>div:first-child{padding-top:2px}
+:is(#energy-now,#need-body) .de-facts>div:last-child{border-bottom:0;padding-bottom:2px}
+:is(#energy-now,#need-body) .de-facts dt{font-size:.72rem;color:var(--en-mute)}
+:is(#energy-now,#need-body) .de-facts dd{margin:0;font-size:.9rem;font-weight:600;color:#fff;line-height:1.4}
+:is(#energy-now,#need-body) .de-facts dd small{display:block;font-weight:400;font-size:.74rem;color:var(--en-mute);margin-top:1px}
+:is(#energy-now,#need-body) .de-note{grid-column:1/-1;margin:10px 0 0;padding-top:12px;border-top:1px solid var(--en-line);font-size:.76rem;line-height:1.55;color:#9c9198}
 
 /* card della settimana e dello storico */
 #energy-now .ew-card{margin:0 0 18px;padding:22px 24px 18px;border:1px solid var(--en-line);border-radius:20px;background:var(--en-card)}
@@ -15146,8 +15159,8 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
 #energy-now .maintenance-details>summary::-webkit-details-marker{display:none}
 #energy-now .maintenance-details>summary>.disclosure-cue{position:static!important;transform:none!important;flex:none;margin:0!important}
 @media(max-width:650px){
-  #energy-now .daily-energy.de2{grid-template-columns:1fr;padding:18px;gap:6px}
-  #energy-now .de-facts{border-left:0;padding-left:0;border-top:1px solid var(--en-line);margin-top:10px;padding-top:4px}
+  :is(#energy-now,#need-body) .daily-energy.de2{grid-template-columns:1fr;padding:18px;gap:6px}
+  :is(#energy-now,#need-body) .de-facts{border-left:0;padding-left:0;border-top:1px solid var(--en-line);margin-top:10px;padding-top:4px}
   #energy-now .ew-card{padding:18px 16px 16px}
   #energy-now .ew-head{flex-direction:column;align-items:flex-start;gap:10px}
   #energy-now .ew-total{align-items:flex-start;flex-direction:row;align-items:baseline;gap:6px}
@@ -15247,6 +15260,38 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
   #tab-amici .fx-duel{padding:10px}
   #tab-amici .friends-period button{padding:8px 14px}
 }
+
+/* ===== G2 · Un solo tipo di selettore in tutta l'app =====
+   Binario neutro; la voce scelta è una pillola bianca con testo scuro. Il colore resta ai dati. */
+html body .segbar:not(#z):not(#y):not(#x):not(#w),html body .dviews:not(#z):not(#y):not(#x):not(#w),html body .seg:not(#z):not(#y):not(#x):not(#w),html body .cu-views:not(#z):not(#y):not(#x):not(#w),html body .gg-hub-switch:not(#z):not(#y):not(#x):not(#w){background:#1C1C1E!important;border:1px solid #FFFFFF14!important;box-shadow:none!important;border-radius:999px!important;padding:4px!important;gap:4px!important}
+html body .segbar button:not(#z):not(#y):not(#x):not(#w),html body .dviews button:not(#z):not(#y):not(#x):not(#w),html body .seg button:not(#z):not(#y):not(#x):not(#w),html body .cu-views button:not(#z):not(#y):not(#x):not(#w),html body .gg-hub-switch button:not(#z):not(#y):not(#x):not(#w){background:transparent!important;color:#C7C7CC!important;-webkit-text-fill-color:currentColor;border:0!important;box-shadow:none!important;border-radius:999px!important;font-weight:600!important;min-height:38px}
+html body .segbar button[aria-selected="true"]:not(#z):not(#y):not(#x):not(#w),html body .dviews button[aria-selected="true"]:not(#z):not(#y):not(#x):not(#w),html body .seg button[aria-pressed="true"]:not(#z):not(#y):not(#x):not(#w),html body .cu-views button[aria-pressed="true"]:not(#z):not(#y):not(#x):not(#w),html body .gg-hub-switch button[aria-pressed="true"]:not(#z):not(#y):not(#x):not(#w){background:#F2F2F7!important;color:#141216!important;font-weight:750!important;box-shadow:0 1px 6px #0000004d!important}
+html body .gg-hub-switch button[aria-pressed="true"] small:not(#z){color:#4A4650!important}
+html body .segbar button:not([aria-selected="true"]):hover:not(#z):not(#y):not(#x):not(#w),html body .dviews button:not([aria-selected="true"]):hover:not(#z):not(#y):not(#x):not(#w),html body .seg button:not([aria-pressed="true"]):hover:not(#z):not(#y):not(#x):not(#w),html body .cu-views button:not([aria-pressed="true"]):hover:not(#z):not(#y):not(#x):not(#w){background:#FFFFFF0F!important;color:#fff!important}
+html body .segbar button:focus-visible:not(#z),html body .dviews button:focus-visible:not(#z),html body .seg button:focus-visible:not(#z),html body .cu-views button:focus-visible:not(#z),html body .gg-hub-switch button:focus-visible:not(#z){outline:2px solid #fff!important;outline-offset:2px}
+html body .dviews button:not(#z):not(#y):not(#x):not(#w)::before,html body .dviews button:not(#z):not(#y):not(#x):not(#w)::after{display:none!important}
+/* Progressi: le sei voci in una riga sola che scorre */
+html body #tab-diario .dviews:not(#z):not(#y):not(#x):not(#w){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-padding-inline:8px}
+html body #tab-diario .dviews:not(#z)::-webkit-scrollbar{display:none}
+html body #tab-diario .dviews button:not(#z):not(#y):not(#x):not(#w){flex:0 0 auto!important;width:auto!important;min-width:0!important;max-width:none!important;white-space:nowrap!important;padding:9px 16px!important;font-size:.88rem!important;line-height:1.2!important}
+/* Profilo: niente più pillola colorata scorrevole */
+html body #tab-dati .profile-switch:not(#z):not(#y):not(#x):not(#w)::before{display:none!important}
+html body #tab-dati .profile-switch:not(#z):not(#y):not(#x):not(#w){width:min(100%,540px)}
+/* Sfide: il selettore grande resta grande, ma neutro */
+html body .gg-hub-switch:not(#z):not(#y):not(#x):not(#w){border-radius:22px!important;padding:6px!important}
+html body .gg-hub-switch button:not(#z):not(#y):not(#x):not(#w){border-radius:17px!important;min-height:64px}
+/* grafico dei passi o del peso: stesso selettore, a tutta larghezza */
+html body .rch-seg button[aria-pressed="true"]:not(#z):not(#y):not(#x):not(#w){background:#F2F2F7!important;color:#141216!important}
+
+/* ===== G5 · niente slogan in cima alle sezioni: i dati subito ===== */
+html body .area-lead:not(#z):not(#y):not(#x):not(#w){display:none!important}
+html body .recipe-workspace-head:not(#z) > span,html body .recipe-workspace-head:not(#z) > p{display:none!important}
+html body .recipe-workspace-head:not(#z) > h2{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+/* ===== F1 · invita un amico ===== */
+#tab-amici .friends-invite-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#tab-amici .friends-invite{display:inline-flex;align-items:center;gap:7px}
+#tab-amici .friends-code-card .friends-invite-row{margin-top:4px}
+#tab-amici .friends-empty .friends-invite-row{margin-top:16px}
 </style>
 </body></html>
 
