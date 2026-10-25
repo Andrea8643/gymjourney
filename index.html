@@ -4098,7 +4098,7 @@ M.weekBudget = weekBudget;
 function simulate(o) {
   var w = o.w0, out = [w], rho = o.rho || K.RHO;
   for (var t = 0; t < o.days; t++) {
-    var I = typeof o.I === 'function' ? o.I(t) : o.I;
+    var I = typeof o.I === 'function' ? o.I(t, w) : o.I;
     var C = o.B0 + (o.perKg || 0) * (w - o.w0) + K.TEF * I;
     w = w - (C - I) / rho; out.push(w);
   }
@@ -4127,9 +4127,13 @@ M.simulate = simulate; M.arrival = arrival; M.requiredIntake = requiredIntake; M
    calibrato l'energia per kg è accoppiata al consumo: con 5.000 kcal/kg anche il mantenimento ricavato dalle pesate
    è diverso (base.rhoK), quindi i due effetti in parte si compensano. Gli spostamenti si combinano in quadratura e
    la fascia è il valore centrale ± due deviazioni (circa 95%, se le ipotesi del modello reggono). */
+/* piano che si aggiorna: quando il peso cambia, cambia anche il mantenimento (perKg kcal per kg) e la revisione
+   settimanale sposta le calorie della stessa quantità, così deficit o surplus restano quelli del ritmo scelto. Con un
+   piano manuale le calorie restano fisse e il ritmo si attenua da solo. */
 function scenarioOf(base, I, m, e, rho) {
-  var r = base.rhoK && rho !== K.RHO && base.rhoK[rho] ? base.rhoK[rho] : 1, sc = base.rhoScale || 1;
-  return { w0: base.w0 + e, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: I, rho: rho * sc };
+  var r = base.rhoK && rho !== K.RHO && base.rhoK[rho] ? base.rhoK[rho] : 1, sc = base.rhoScale || 1, w0 = base.w0, pk = base.perKg || 0;
+  var In = base.closed && typeof I === 'number' ? function (t, w) { return I + pk * (w - w0) / (1 - K.TEF); } : I;
+  return { w0: base.w0 + e, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: In, rho: rho * sc };
 }
 function spreadOf(central, pairs) {
   var early = 0, late = 0, open = false;
