@@ -2375,8 +2375,8 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         <div class="golist">
           <button type="button" class="gol" data-goview="giorno" style="--c:var(--prot)"><b>Giorno per giorno</b><span>calorie, macro, peso e seduta di ogni giorno, calendario, cose da tenere d'occhio</span></button>
           <button type="button" class="gol" data-goview="peso" style="--c:var(--accent)"><b>Peso e previsione</b><span>grafico del peso, data di arrivo, prospetto dei prossimi mesi, peso previsto per domattina</span></button>
-          <button type="button" class="gol" data-goview="calorie" style="--c:var(--kcal)"><b>Calorie e consumo</b><span>consumo di riferimento, consumo stimato, bilancio dall'inizio, grafico delle calorie</span></button>
-          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Settimane</b><span>medie degli ultimi 7 giorni, riepilogo per settimana e mese, resoconto da incollare</span></button>
+          <button type="button" class="gol" data-goview="calorie" style="--c:var(--kcal)"><b>Calorie e consumo</b><span>mantenimento della settimana, consumo stimato, bilancio dall'inizio, grafico delle calorie</span></button>
+          <button type="button" class="gol" data-goview="storico" style="--c:var(--carb)"><b>Settimane</b><span>riepilogo per settimana e mese, resoconto da copiare</span></button>
           <button type="button" class="gol" data-goview="curiosita" style="--c:var(--good)"><b>Curiosità</b><span>le cose inaspettate del percorso, spiegate con i tuoi numeri</span></button>
         </div>
       </div>
@@ -6886,8 +6886,9 @@ function renderNeed() {
   rows.push(p2tile('Revisione del piano', esc(rv.title || '—'), '<p>' + esc(rv.text || '') + (rv.why ? ' Perché: ' + esc(rv.why) + '.' : '') + (rv.n !== 5 && dataTxt ? ' ' + dataTxt : '') + (next ? ' Prossima rivalutazione: ' + fmtDay(next) + '.' : '') + '</p>' + rx, { vis: rvis, rule: 'esiti', cls: 'wide' + (rv.n === 6 || rv.n === 7 ? ' warn' : rv.n === 8 ? ' bad' : '') }));
   /* ordine sullo schermo: due riquadri per riga, macro e revisione a tutta larghezza */
   /* ordine voluto: consumo di oggi, consumo medio della settimana scorsa, obiettivo; poi deficit, macro, fiducia, peso, revisione */
-  rows = [rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
-  box.innerHTML = needSummaryWrap(energyView(), energyView(), t, maintenanceHeroHTML(energyView()) + dailyEnergyHTML(energyView()) + '<div class="p2-tiles">' + rows.join('') + '</div>') + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
+  /* qui solo ciò che non c'è altrove: obiettivo, scostamento dal piano, revisione. Mantenimento e consumo sono in Progressi › Calorie, macro nel riquadro in alto, peso in Progressi › Peso */
+  rows = [rows[0], rows[4], rows[7]];
+  box.innerHTML = needSummaryWrap(energyView(), energyView(), t, '<div class="p2-tiles">' + rows.join('') + '</div>') + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
   var why = $('#nc-why');
   if (why) why.innerHTML = '<p>Il <b>mantenimento medio della settimana</b> è il riferimento giornaliero della routine, uguale mentre scorri i giorni della stessa settimana. Per quella in corso è aggiornato con i dati fino a oggi; per quelle concluse fino alla domenica. Nuovi dati e correzioni possono aggiornarlo.</p><p>Il <b>consumo stimato del giorno</b> segue invece lavoro, palestra, passi e calorie di quel giorno. Il dettaglio indica se le calorie sono complete o se è ancora una previsione.</p><p><b>Mantenimento × 7 giorni</b> significa il riferimento medio moltiplicato per sette; la somma dei consumi giornalieri è distinta e si trova in «Totali della settimana e metodo di calcolo».</p><p>L’obiettivo alimentare è quanto mangiare secondo il piano; non è il consumo stimato. Il residuo si calcola sull’obiettivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
 }
@@ -7314,13 +7315,14 @@ function renderWeightHero() {
   var v = activeVersion(), g = v && v.goal || {}, w0 = g.startWeight > 0 ? g.startWeight : s.startWeight, d0 = g.startDate || s.startDate, gw = g.goalWeight > 0 ? g.goalWeight : s.goalWeight, dir = goalDir();
   var dlt = w0 > 0 ? now.w - w0 : null, rate = null; try { rate = trendRate(); } catch (e) {}
   var good = dlt != null && dir ? dlt * dir >= 0 : null;
-  var chip = dlt != null ? '<span class="w-delta' + (good === false ? ' is-off' : '') + '">' + (dlt > 0 ? '+' : dlt < 0 ? '−' : '') + fmt(Math.abs(dlt), 1) + ' kg' + (d0 ? ' dal ' + fmtShort(d0) : '') + (rate && rate.perWeek != null ? ' · ' + (rate.perWeek > 0 ? '+' : rate.perWeek < 0 ? '−' : '') + fmt(Math.abs(rate.perWeek), 1) + ' kg/sett' : '') + '</span>' : '';
+  var chip = dlt != null ? '<span class="w-delta' + (good === false ? ' is-off' : '') + '">' + (dlt > 0 ? '+' : dlt < 0 ? '−' : '') + fmt(Math.abs(dlt), 1) + ' kg' + (d0 ? ' dal ' + fmtShort(d0) : '') + '</span>' : '';
+  var sl = rate && rate.perWeek != null ? rate.perWeek : null, tr0 = null; try { tr0 = targetRate(); } catch (e) {}
   var td = state.days.get(t) || {}, left = gw > 0 ? (gw - now.w) * (dir || -1) : null, F = state.E && state.E.forecast, arr = F && !F.none && !F.done && !F.maint && F.plan && F.plan.central ? F.plan.central : null;
   var tile = function (l, v2, sub) { return '<div class="w-tile"><small>' + l + '</small><b>' + v2 + '</b><span>' + sub + '</span></div>'; };
   box.innerHTML = '<div class="w-big"><b>' + fmt(now.w, 1) + '</b><span>kg</span></div>' + chip
     + '<div class="w-tiles">' + tile('Pesata di oggi', td.weight > 0 ? fmt(td.weight, 1) : '<button type="button" class="w-add" data-addfield="weight" data-adddate="' + t + '">+ Aggiungi</button>', td.weight > 0 ? 'kg' : 'non ancora')
     + tile('Ti mancano', left != null ? (left > 0.05 ? fmt(left, 1) + ' kg' : 'Arrivato') : '—', gw > 0 ? 'a ' + fmt(gw, 1) + ' kg' : 'nessun obiettivo')
-    + tile('Arrivo stimato', arr ? cap(MESI[parseD(arr).getMonth()]) + ' ' + parseD(arr).getFullYear() : '—', arr ? 'col piano · ' + fmtShort(arr) : 'non ancora stimabile') + '</div>';
+    + tile('Ritmo', sl != null ? (sl > 0.05 ? '+' : sl < -0.05 ? '−' : '') + fmt(Math.abs(sl), 1) + ' kg' : '—', sl != null ? 'a settimana' + (tr0 != null ? ' · piano ' + (tr0 > 0 ? '+' : tr0 < 0 ? '−' : '') + fmt(Math.abs(tr0), 1) : '') : 'servono più pesate') + '</div>';
 }
 function renderWeightChart() {
   var s = S(), ws = weightsSeries(), avg = movAvg(ws), E = state.E, tr = E && E.weight ? E.weight.trend : null, f = E && E.forecast, t = todayStr();
@@ -8749,12 +8751,12 @@ function rulesData() {
     what: 'Ogni seduta è scomposta: il cardio con tipo, durata e distanza; il resto della durata totale (pause comprese) come pesi. Niente calorie dal tonnellaggio o dal massimale.',
     how: fx(L('Pesi', C(F(K.STRENGTH_MET, 1) + ' MET') + ' netti ' + C('(' + F(K.STRENGTH_LO, 1) + '–' + F(K.STRENGTH_HI, 1) + ')') + ' × ' + P('peso') + ' × minuti non di cardio'), L('Cardio', 'per tipo: con distanza e durata le equazioni ACSM, altrimenti i MET del Compendium; senza durata non la invento'), L('Dati incompatibili', 'cardio più lungo della seduta: conto solo il cardio e lo segnalo'), L('Durata stimata', 'da sedute simili o dall\'abitudine: stesso valore centrale, intervallo ±' + F(K.DUR_EST * 100, 0) + '% più largo'), L('Stessa attività nel diario e in Hevy', 'conto la più grande; l\'intervallo arriva fino alla somma'), L('Sedute nello stesso minuto', 'con titoli diversi restano due sedute'), L('Senza Hevy', 'fuori dai periodi coperti uso le abitudini dichiarate; «nessuna seduta» non è riposo confermato')) + rg('forza') + rg('met') + rg('corsa') + rg('durata_stimata') + rg('doppione_attivita') + rg('allenamenti_ignoti'),
     why: 'Una seduta di 75 minuti con 20 di cardio non vale 75 minuti di pesi più 20 di cardio.' });
-  add({ id: 'tile-sonno', g: 'medie', t: 'Sonno medio, 7 giorni', w: 'Progressi › Settimane, Ultimi 7 giorni',
+  add({ id: 'tile-sonno', g: 'medie', t: 'Sonno medio, 7 giorni', w: 'Progressi › Settimane, Riepilogo',
     what: "La media delle ore dormite nelle notti registrate degli ultimi 7 giorni.",
     how: fx(L(O('Media'), 'somma delle ' + SO('ore dormite') + ' ÷ notti registrate'), L('Quale notte', 'quella tra il 14 e il 15 va sulla riga del 15: la notte che finisce la mattina di quel giorno'), L('Colore', '<span class="st-good">verde</span> dal ' + C('95%') + ' dell\'obiettivo di ' + PF(F(s.sleepGoal || 8, 0) + ' ore') + ' in su · <span class="st-warn">giallo</span> sotto')),
     why: "Le notti senza «Sonno» nel diario non contano.",
     ex: function () { var v = d7.map(function (d) { return g(d, 'sleepH'); }).filter(Boolean); return row('Notti registrate', v.length ? v.length + ', media ' + fmtH(mean(v)) : 'nessuna'); } });
-  add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Progressi › Settimane, Ultimi 7 giorni',
+  add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Progressi › Settimane, Riepilogo',
     what: "Le sedute in Hevy negli ultimi 7 giorni e nelle ultime 4 settimane, fino a oggi. Le barrette sono le sedute di ciascuna delle ultime 8 settimane.",
     how: fx(L(O('Sedute'), AL('sedute') + ' con data tra oggi−6 e oggi, oppure tra oggi−27 e oggi'), L('Colore', '<span class="st-good">verde</span> se arrivi alle sedute della tua settimana (' + weeklyTarget() + ') · <span class="st-acc">blu</span> una in meno · <span class="st-warn">giallo</span> di più in meno')),
     why: "Contano tutte le sedute, cardio compreso.",
@@ -11501,7 +11503,7 @@ function create(ctx){
     var entries=[{label:n+(n===1?' giornata completa × 10':' giornate complete × 10'),value:n*10,done:n>0,desc:'Punti confermati dal diario'},
       {label:'Bonus 5 giornate',value:n>=5?10:0,done:n>=5,desc:n>=5?'Bonus ottenuto':Math.max(0,5-n)+(5-n===1?' giornata':' giornate')+' al bonus di +10'},
       {label:'Bonus 7 giornate',value:n===7?20:0,done:n===7,desc:n===7?'Bonus ottenuto':Math.max(0,7-n)+(7-n===1?' giornata':' giornate')+' al bonus di +20'}];
-    return '<section class="gg-card gg-ledger"><span class="gg-kicker">IL TUO PUNTEGGIO, SPIEGATO</span><div class="gg-ledger-title"><h3>Da dove arrivano i tuoi punti</h3><strong>'+p.points+' <small>/ 100</small></strong></div><div class="gg-ledger-rows">'+entries.map(function(x){return '<div class="'+(x.done?'is-earned':'is-waiting')+'"><span class="gg-state-symbol" aria-hidden="true">'+(x.done?'✓':'○')+'</span><div><b>'+x.label+'</b><small>'+x.desc+'</small></div><strong>+'+x.value+'</strong></div>';}).join('')+'</div><p class="gg-note">Questi sono i punti della sfida con il tuo amico. Quantità di calorie, peso e XP personali non aumentano questo punteggio.</p>'+button('score','Vedi le giornate conteggiate',S.uid)+'</section>';
+    return '<details class="gg-card gg-ledger"><summary class="gg-ledger-sum"><span><span class="gg-kicker">IL TUO PUNTEGGIO</span><b>Da dove arrivano i tuoi '+p.points+' punti su 100</b></span></summary><div class="gg-ledger-rows">'+entries.map(function(x){return '<div class="'+(x.done?'is-earned':'is-waiting')+'"><span class="gg-state-symbol" aria-hidden="true">'+(x.done?'✓':'○')+'</span><div><b>'+x.label+'</b><small>'+x.desc+'</small></div><strong>+'+x.value+'</strong></div>';}).join('')+'</div><p class="gg-note">Questi sono i punti della sfida con il tuo amico. Quantità di calorie, peso e XP personali non aumentano questo punteggio.</p>'+button('score','Vedi le giornate conteggiate',S.uid)+'</details>';
   }
   function render(){
     var personal=S.view==='personal',m=milestones(),p=stats(),g=current();
@@ -12248,7 +12250,8 @@ function energyWeeksHTML(view) {
     var st=x.reference.manual?'Manuale':x.reference.calibrated?'Calibrato':'Stima iniziale',dc=delta==null?'is-none':Math.abs(delta)<15?'is-flat':delta>0?'is-up':'is-down';
     return '<li class="eh-row"><div class="eh-week"><b>'+esc(enRange(x.from,x.to))+'</b><span class="eh-tags"><span class="eh-tag'+(x.reference.calibrated?' is-cal':'')+'">'+st+'</span><span class="eh-tag">Diario '+x.complete+'/7</span></span></div><div class="eh-track"><i style="--w:'+(x.reference.R/hx).toFixed(4)+'"></i></div><div class="eh-val"><b>'+fmt(x.reference.R,0)+'</b><span>kcal/giorno</span></div><div class="eh-delta '+dc+'"'+(delta!=null?' title="rispetto alla settimana prima"':'')+'>'+(delta!=null?sgn(delta,0):'—')+'</div><p class="eh-why">'+esc(why)+'</p></li>';}).join('');
   var history='<section class="ew-card eh-card" aria-label="Le settimane precedenti"><header class="ew-head"><div><h3>Settimane precedenti</h3><p>Mantenimento medio stimato con i dati che c\'erano allora; la variazione è rispetto alla settimana prima</p></div></header>'+(H.length?'<ol class="eh-list">'+rows+'</ol>':'<p class="ew-note">Ancora nessuna settimana precedente disponibile.</p>')+'</section>';
-  return current+history;
+  /* la settimana in corso giorno per giorno è già in Progressi › Settimana in corso */
+  return history;
 }
 function energyTotalsHTML(view){
   var totals=view.history.map(function(x){return '<li>'+esc(enRange(x.from,x.to))+': consumo ricostruito '+(x.consumption!=null?kc(x.consumption):'non completo')+'; riferimento di mantenimento equivalente '+kc(x.reference.weekly)+'/settimana.</li>';}).join('');
@@ -12262,7 +12265,7 @@ var originalCurrentEnergy=renderCurrentEnergy;
 renderCurrentEnergy=function(){
   originalCurrentEnergy();var box=$('#energy-now-body');if(!box)return;var technical=box.innerHTML,view=energyView();
   $('#energy-now h2').textContent='Mantenimento e consumi della settimana';
-  box.innerHTML=maintenanceHeroHTML(view)+dailyEnergyHTML(view)+energyWeeksHTML(view)+'<div class="ex-group"><h3 class="ex-title">Approfondimenti</h3>'+energyTotalsHTML(view)+energyValidationHTML(view)+'<details class="ex-row energy-technical"><summary><span class="ex-t">Formule, stima iniziale e calcoli intermedi<small>Da cosa è fatto il consumo di oggi e come si adatta ai tuoi dati</small></span></summary>'+technical+'</details></div>';
+  box.innerHTML=maintenanceHeroHTML(view)+dailyEnergyHTML(view)+energyWeeksHTML(view)+'<div class="ex-group"><h3 class="ex-title">Per chi vuole i dettagli tecnici</h3>'+energyTotalsHTML(view)+((view.validation||{}).n?energyValidationHTML(view):'')+'<details class="ex-row energy-technical"><summary><span class="ex-t">Formule, stima iniziale e calcoli intermedi<small>Da cosa è fatto il consumo di oggi e come si adatta ai tuoi dati</small></span></summary>'+technical+'</details></div>';
 };
 
 bind();
@@ -12540,6 +12543,55 @@ requestAnimationFrame(moveInd);
 var rzT = 0;
 window.addEventListener('resize', function () { moveInd(); clearTimeout(rzT); rzT = setTimeout(renderAll, 180); });
 try { document.fonts.ready.then(moveInd); } catch (e) {}
+
+/* ===== Ogni dato in un posto solo ===== */
+(function () {
+  var hideOf = function (sel) { var el = document.querySelector(sel), p = el && (el.classList.contains('panel') ? el : el.closest('.panel')); if (p) p.classList.add('gj-dup'); };
+  /* Settimane: «Ultimi 7 giorni» = prima riga del Riepilogo; «Il percorso in breve» = Oggi e Peso. Giorno: la tabella degli ultimi 30 giorni = calendario. Calorie: il mantenimento è già in cima. */
+  ['#week-tiles', '#sum-head', '#d-recent', '#td-h'].forEach(hideOf);
+  /* Settimane: il resoconto diventa un pulsante dentro il Riepilogo */
+  var sum = document.getElementById('summary'), rp = document.getElementById('rep-text'), rpPanel = rp && rp.closest('.panel');
+  if (sum && rpPanel) {
+    var host = sum.closest('.panel'), box = document.createElement('div'); box.className = 'rep-inline';
+    box.innerHTML = '<div class="rep-inline-top"><div><b>Resoconto da copiare</b><small>Testo della settimana da incollare</small></div></div>';
+    var nav = rpPanel.querySelector('.weeknav'), copy = document.getElementById('rep-copy'), msg = document.getElementById('rep-msg');
+    var act = document.createElement('div'); act.className = 'rep-inline-act'; if (copy) { copy.textContent = 'Copia'; copy.setAttribute('aria-label', 'Copia il resoconto della settimana'); act.appendChild(copy); } box.firstChild.appendChild(act);
+    if (nav) box.appendChild(nav); if (msg) box.appendChild(msg);
+    var see = document.createElement('details'); see.className = 'g3-more rep-see'; see.innerHTML = '<summary>Vedi il testo</summary><div class="g3-more-body"></div>'; see.lastChild.appendChild(rp); box.appendChild(see);
+    var hint = host.querySelector('.summary-scroll-hint'); if (hint) host.insertBefore(box, hint); else host.appendChild(box); rpPanel.classList.add('gj-dup');
+  }
+  /* Peso: il prospetto settimana per settimana dentro il riquadro dell'arrivo */
+  var fc = document.getElementById('fc-rows'), pp = document.getElementById('proj-panel');
+  if (fc && pp) {
+    var fp = fc.closest('.panel'), d = document.createElement('details'); d.className = 'g3-more fc-proj';
+    d.innerHTML = '<summary>Il peso settimana per settimana</summary><div class="g3-more-body"></div>';
+    ['proj-text', 'proj-cards', 'proj-note'].forEach(function (id) { var x = document.getElementById(id); if (x) d.lastChild.appendChild(x); });
+    var how = pp.querySelector('details'); if (how) d.lastChild.appendChild(how);
+    var cap0 = fp.querySelector(':scope > .caption'); if (cap0) fp.insertBefore(d, cap0); else fp.appendChild(d);
+    pp.classList.add('gj-dup');
+  }
+  /* Corpo: la lista di tutti i muscoli si apre a richiesta (la mappa e «Muscoli della settimana» la riassumono) */
+  var rank = document.getElementById('body-rank');
+  if (rank) { var hd = rank.previousElementSibling, dd = document.createElement('details'); dd.className = 'g3-more body-rank-more'; dd.innerHTML = '<summary>Tutti i muscoli, uno per uno</summary><div class="g3-more-body"></div>'; rank.parentNode.insertBefore(dd, rank); if (hd && hd.classList.contains('body-rank-heading')) { var hint = hd.querySelector('span'); if (hint) dd.lastChild.appendChild(hint); hd.remove(); } dd.lastChild.appendChild(rank); }
+  /* Oggi: il peso in una riga; i dettagli sono in Progressi › Peso */
+  var hm = document.querySelector('#tab-oggi .hero-main');
+  if (hm) { var row = document.createElement('button'); row.type = 'button'; row.id = 'oggi-peso'; row.className = 'panel oggi-peso'; row.dataset.goview = 'peso'; hm.parentNode.insertBefore(row, hm); hm.classList.add('gj-dup'); }
+})();
+function renderOggiPeso() {
+  var row = document.getElementById('oggi-peso'); if (!row) return;
+  var NW = null; try { NW = weightNow(); } catch (e) {}
+  var s = S(), dir = goalDir(), slope = NW && NW.slope != null ? NW.slope * 7 : null, rem = NW && s.goalWeight > 0 && dir ? Math.round((s.goalWeight - NW.w) * dir * 10) / 10 : null;
+  var meta = [];
+  if (slope != null) meta.push((slope > 0.05 ? '+' : slope < -0.05 ? '−' : '') + fmt(Math.abs(slope), 1) + ' kg/sett');
+  if (rem != null) meta.push(rem > 0.05 ? 'mancano ' + fmt(rem, 1) + ' kg' : 'obiettivo raggiunto');
+  row.setAttribute('aria-label', 'Tendenza del peso: apri Progressi, Peso');
+  row.innerHTML = '<span class="op-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8.5 9.5a5 5 0 0 1 7 0M12 9.5l1.4-1.6"/></svg></span>'
+    + '<span class="op-main"><small>Tendenza del peso</small><b>' + (NW ? fmt(NW.w, 1) + ' <i>kg</i>' : 'Nessuna pesata') + '</b></span>'
+    + '<span class="op-meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</span><span class="op-chev" aria-hidden="true">›</span>';
+}
+var renderHeroBase = renderHero;
+renderHero = function () { renderHeroBase.apply(this, arguments); try { renderOggiPeso(); } catch (e) {} };
+try { renderOggiPeso(); } catch (e) {}
 /* ===== F2 · immagini da condividere (formato storia 1080×1920) ===== */
 var GJShare = (function () {
   var W = 1080, H = 1920, FONT = 'system-ui,-apple-system,"SF Pro Display","Segoe UI",Roboto,sans-serif';
@@ -16250,6 +16302,50 @@ html body #tab-diario .fc-alt-h:not(#a):not(#b):not(#c){margin:10px 0 8px!import
 
 html body #tab-diario #fc-chips:not(#a):not(#b):not(#c):not(#d):not(#e){margin:0!important}
 html body #tab-diario #fc-origin.forecast-origin:not(#a):not(#b):not(#c){margin-bottom:0!important}
+
+/* ===== Ogni dato in un posto solo ===== */
+html body .gj-dup:not(#a):not(#b):not(#c):not(#d):not(#e){display:none!important}
+/* Oggi: il peso in una riga */
+html body #tab-oggi .oggi-peso:not(#a):not(#b):not(#c){display:flex!important;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;padding:16px 18px!important;border-radius:22px!important;background:linear-gradient(135deg,#0A84FF26,#64D2FF0D),#1C1C1E!important;border:1px solid #0A84FF40!important;color:#fff;font:inherit}
+html body #tab-oggi .oggi-peso .op-ic{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#0A84FF;color:#fff}
+html body #tab-oggi .oggi-peso .op-ic svg{width:22px;height:22px}
+html body #tab-oggi .oggi-peso .op-main{display:flex;flex-direction:column;min-width:0}
+html body #tab-oggi .oggi-peso .op-main small{font-size:.78rem;color:#9FC9FF;font-weight:600}
+html body #tab-oggi .oggi-peso .op-main b{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+html body #tab-oggi .oggi-peso .op-main b i{font-style:normal;font-size:.9rem;color:#AEAEB2;font-weight:600}
+html body #tab-oggi .oggi-peso .op-meta{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:.8rem;color:#D1D1D6;text-align:right;min-width:0}
+html body #tab-oggi .oggi-peso .op-chev{font-size:1.4rem;color:#8E8E93;margin-left:2px}
+/* Settimane: resoconto a pulsante */
+html body #tab-diario .rep-inline{margin-top:16px;padding-top:14px;border-top:1px solid #FFFFFF14;display:grid;gap:10px}
+html body #tab-diario .rep-inline-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+html body #tab-diario .rep-inline-top b{display:block;color:#fff;font-size:.98rem}
+html body #tab-diario .rep-inline-top small{color:#98989F;font-size:.8rem}
+html body #tab-diario .rep-inline .weeknav{display:flex;align-items:center;gap:6px;font-size:.85rem;color:#D1D1D6}
+html body #tab-diario .rep-inline-act{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+html body #tab-diario .rep-inline-act .btn{width:auto!important}
+html body #tab-diario .rep-see pre{white-space:pre-wrap;font-size:.75rem;max-height:340px;overflow:auto}
+/* Peso: prospetto dentro l'arrivo */
+html body #tab-diario .fc-proj:not(#a){margin-top:12px}
+/* Amici: punteggio chiuso */
+html body #tab-amici details.gg-ledger > summary.gg-ledger-sum{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;position:relative;padding-right:90px}
+html body #tab-amici details.gg-ledger > summary::-webkit-details-marker{display:none}
+html body #tab-amici details.gg-ledger > summary b{display:block;color:#fff;font-size:1.02rem;margin-top:4px}
+html body #tab-amici details.gg-ledger[open] > summary{margin-bottom:14px}
+/* Amici: niente slogan sopra le sfide (le regole sono in «Le regole») */
+html body #tab-amici .gg-hub-intro:not(#a):not(#b){display:none!important}
+
+html body #tab-oggi .oggi-peso .op-main{flex:1 1 auto}
+html body #tab-oggi .oggi-peso .op-main small{white-space:nowrap}
+html body #tab-oggi .oggi-peso .op-meta{flex:0 0 auto;white-space:nowrap}
+html body #tab-diario .rep-inline{margin:4px 0 14px!important;padding:12px 14px!important;border:0!important;border-radius:18px;background:#FFFFFF0A}
+
+html body #tab-diario .rep-inline-top{flex-wrap:nowrap!important}
+html body #tab-diario .rep-inline-act .btn:not(#a):not(#b){padding:10px 16px!important;font-size:.88rem!important;min-height:0!important;white-space:nowrap}
+html body #tab-diario .rep-inline .weeknav:not(#a){justify-content:flex-start}
+html body #tab-diario .rep-inline .weeknav .btn.icon:not(#a){width:32px!important;height:32px!important;min-height:0!important}
+html body #tab-diario .rep-inline #rep-msg:empty{display:none}
+html body #tab-diario .rep-see:not(#a){margin:0!important}
+@media(max-width:700px){html body #tab-diario .summary-scroll-hint:not(#a):not(#b){display:none!important}}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
