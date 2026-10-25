@@ -2440,7 +2440,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div class="area-lead" style="--area:#b8abff;--area2:#8a9df8"><span class="area-kicker">PROGRESSI / PESO</span><strong>La tendenza oltre la singola pesata.</strong><p>Metti a confronto bilancia, andamento stimato e scenari per l’obiettivo.</p><span class="area-mark" aria-hidden="true">↗</span></div>
       <div class="panel" data-cat="peso">
         <div class="panel-head">
-          <div class="ph-t"><h2>Andamento del peso</h2><button type="button" class="rq" data-rule="grafico-peso" aria-label="Come si calcola" title="Come si calcola">?</button></div>
+          <div class="ph-t"><h2>Tendenza del peso</h2><button type="button" class="rq" data-rule="grafico-peso" aria-label="Come si calcola" title="Come si calcola">?</button></div>
           <span class="hint">Dal diario</span>
         </div>
         <div class="chart-box"><svg id="w-chart" class="chart" role="img" aria-label="Andamento del peso"></svg><div class="tip"></div></div>
@@ -6918,6 +6918,7 @@ function phaseDayText() {
 }
 /* ---------- «bilancia di domani»: intervallo descrittivo, separato dalle previsioni d'arrivo ---------- */
 /* Riferimento descrittivo dalla tendenza; non è una previsione alimentare o un giudizio sulla pesata. */
+document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('tmw-fold')) state.tmwOpen = e.target.open; }, true);
 function renderTomorrow() {
   var t = todayStr(), R = ringDay(), box = $('#tmw-body'); $('#tmw').hidden = false; tmNav(R, t);
   var asOf = addDays(R, -1), tm = null;
@@ -6961,7 +6962,8 @@ function renderTomorrow() {
   html += '<div class="weigh-explain"><b>Peso atteso e tendenza: che differenza c\'è</b>Sono lo stesso peso «di fondo», senza acqua e cibo di passaggio, in due momenti. Il <b>peso atteso</b> è calcolato prima della pesata, con i dati fino al ' + fmtDay(asOf) + ': serve a giudicare la pesata, quindi non può contenerla. La <b>tendenza del peso</b> è lo stesso calcolo dopo aver letto la pesata: di solito si sposta di pochi grammi.</div>'
     + '<div class="weigh-explain"><b>Come leggere la fascia</b>È l\'oscillazione tipica delle tue pesate nelle ultime ' + (GJM.K.TREND_DAYS / 7) + ' settimane attorno al tuo andamento, almeno ±0,3 kg. Non è una probabilità né un limite di peso normale.</div>'
     + '<div class="weigh-explain"><b>Cosa può spostare la bilancia di più</b>Dopo una giornata insolita (molto cibo, sale, carboidrati) la bilancia può salire anche di qualche chilo per acqua e cibo nell\'intestino. In quei giorni la pesata conta meno nel calcolo, senza essere scartata, e torna normale in pochi giorni.</div>';
-  box.innerHTML = html;
+  var foldTxt = fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg · ' + (mw != null ? 'pesata ' + mwTxt + ' kg' + (inside ? ': nell’oscillazione normale' : ': fuori dall’oscillazione normale') : 'pesata non ancora inserita');
+  box.innerHTML = '<details class="tmw-fold"' + (state.tmwOpen ? ' open' : '') + '><summary><span><b>Dove ci aspettavamo la bilancia</b><small>' + foldTxt + '</small></span><span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary>' + html + '</details>';
 }
 
 /* settimana in corso: oggi non è né passato né futuro, lo dico esplicitamente (la settimana finisce sempre di domenica) */
@@ -7225,6 +7227,23 @@ function barsFor(date, stepsToo) {
   return html;
 }
 /* ---------- peso ---------- */
+/* B · in cima: la tendenza, quanto è cambiata e tre numeri chiave */
+function renderWeightHero() {
+  var svg = $('#w-chart'); if (!svg) return; var panel = svg.closest('.panel'); if (!panel) return;
+  var box = $('#w-hero'); if (!box) { box = document.createElement('div'); box.id = 'w-hero'; box.className = 'w-hero'; var head = panel.querySelector('.panel-head'); panel.insertBefore(box, head ? head.nextSibling : panel.firstChild); }
+  var s = S(), t = todayStr(), now = null; try { now = weightNow(); } catch (e) {}
+  if (!now || now.w == null) { box.innerHTML = '<p class="muted small">Con le prime pesate qui compare la tendenza del tuo peso.</p>'; return; }
+  var v = activeVersion(), g = v && v.goal || {}, w0 = g.startWeight > 0 ? g.startWeight : s.startWeight, d0 = g.startDate || s.startDate, gw = g.goalWeight > 0 ? g.goalWeight : s.goalWeight, dir = goalDir();
+  var dlt = w0 > 0 ? now.w - w0 : null, rate = null; try { rate = trendRate(); } catch (e) {}
+  var good = dlt != null && dir ? dlt * dir >= 0 : null;
+  var chip = dlt != null ? '<span class="w-delta' + (good === false ? ' is-off' : '') + '">' + (dlt > 0 ? '+' : dlt < 0 ? '−' : '') + fmt(Math.abs(dlt), 1) + ' kg' + (d0 ? ' dal ' + fmtShort(d0) : '') + (rate && rate.perWeek != null ? ' · ' + (rate.perWeek > 0 ? '+' : rate.perWeek < 0 ? '−' : '') + fmt(Math.abs(rate.perWeek), 1) + ' kg/sett' : '') + '</span>' : '';
+  var td = state.days.get(t) || {}, left = gw > 0 ? (gw - now.w) * (dir || -1) : null, F = state.E && state.E.forecast, arr = F && !F.none && !F.done && !F.maint && F.plan && F.plan.central ? F.plan.central : null;
+  var tile = function (l, v2, sub) { return '<div class="w-tile"><small>' + l + '</small><b>' + v2 + '</b><span>' + sub + '</span></div>'; };
+  box.innerHTML = '<div class="w-big"><b>' + fmt(now.w, 1) + '</b><span>kg</span></div>' + chip
+    + '<div class="w-tiles">' + tile('Pesata di oggi', td.weight > 0 ? fmt(td.weight, 1) : '<button type="button" class="w-add" data-addfield="weight" data-adddate="' + t + '">+ Aggiungi</button>', td.weight > 0 ? 'kg' : 'non ancora')
+    + tile('Ti mancano', left != null ? (left > 0.05 ? fmt(left, 1) + ' kg' : 'Arrivato') : '—', gw > 0 ? 'a ' + fmt(gw, 1) + ' kg' : 'nessun obiettivo')
+    + tile('Arrivo stimato', arr ? cap(MESI[parseD(arr).getMonth()]) + ' ' + parseD(arr).getFullYear() : '—', arr ? 'col piano · ' + fmtShort(arr) : 'non ancora stimabile') + '</div>';
+}
 function renderWeightChart() {
   var s = S(), ws = weightsSeries(), avg = movAvg(ws), E = state.E, tr = E && E.weight ? E.weight.trend : null, f = E && E.forecast, t = todayStr();
   var svg = $('#w-chart'); if (!svg) return;
@@ -7233,14 +7252,16 @@ function renderWeightChart() {
   var panel = svg.closest('.panel'), seg = $('#w-rng');
   if (!seg && panel) {
     seg = document.createElement('div'); seg.id = 'w-rng'; seg.className = 'seg w-rng'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', 'Periodo del grafico');
-    seg.innerHTML = '<button type="button" data-wr="4w">4 settimane</button><button type="button" data-wr="fase">Fase in corso</button><button type="button" data-wr="tutto">Tutto</button>';
+    seg.innerHTML = '<button type="button" data-wr="4w">1 mese</button><button type="button" data-wr="fase">Fase</button><button type="button" data-wr="prev">Previsione</button><button type="button" data-wr="tutto">Tutto</button>';
     svg.parentNode.parentNode.insertBefore(seg, svg.parentNode);
     seg.addEventListener('click', function (e) { var b = e.target.closest('[data-wr]'); if (!b) return; state.wRange = b.dataset.wr; try { localStorage.setItem('ml-wrange', state.wRange); } catch (er) {} svg.dataset.sig = ''; renderWeightChart(); });
   }
   if (seg) $$('[data-wr]', seg).forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.wr === state.wRange ? 'true' : 'false'); });
   var v = activeVersion(), g = v && v.goal || {}, phase0 = g.startDate || s.startDate || (v && v.from) || (ws[0] && ws[0].d) || t;
-  var gw = s.goalWeight > 0 ? s.goalWeight : null, showFc = state.wRange !== '4w';
-  var x0 = state.wRange === '4w' ? addDays(t, -27) : state.wRange === 'fase' ? phase0 : ((ws[0] && ws[0].d) || phase0), x1 = t;
+  renderWeightHero();
+  /* B · la scala segue i tuoi dati: la previsione fino all'obiettivo ha il suo periodo; in «1 mese» e «Fase» solo le prossime due settimane */
+  var gw = s.goalWeight > 0 ? s.goalWeight : null, showFc = state.wRange === 'prev' || state.wRange === 'tutto', shortFc = !showFc;
+  var x0 = state.wRange === '4w' ? addDays(t, -27) : state.wRange === 'fase' || state.wRange === 'prev' ? phase0 : ((ws[0] && ws[0].d) || phase0), x1 = t;
   if (x0 > t) x0 = addDays(t, -27);
   var arr = null, proj = null;
   if (showFc && f && f.plan && f.plan.central && gw) {
@@ -7248,6 +7269,10 @@ function renderWeightChart() {
     proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: f.plan.central, v: gw } };
     if (f.plan.from) arr = { a: f.plan.from, b: pEnd };
     if (pEnd > x1) x1 = addDays(pEnd, 4);
+  } else if (shortFc && f && f.plan && f.plan.central && gw && f.w0 != null) {
+    var sh = 14, sb = addDays(f.from, sh), stot = Math.max(1, diffDays(f.from, f.plan.central)), sv = f.w0 + (gw - f.w0) * Math.min(1, sh / stot);
+    proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: sb, v: Math.round(sv * 10) / 10 } };
+    if (sb > x1) x1 = addDays(sb, 1);
   }
   if (showFc && s.endDate && s.endDate > x1 && diffDays(t, s.endDate) < 200) x1 = addDays(s.endDate, 3);
   if (diffDays(x0, x1) < 10) x0 = addDays(x1, -10);
@@ -7255,10 +7280,10 @@ function renderWeightChart() {
   var wv = ws.filter(function (p) { return inR(p.d); }), av = avg.filter(function (p) { return inR(p.d); });
   var avgMap = {}; avg.forEach(function (p) { avgMap[p.d] = p.v; });
   var vals = wv.map(function (p) { return p.w; }).concat(av.map(function (p) { return p.v; }));
-  if (proj) vals.push(gw, proj.a.v);
+  if (proj) { vals.push(proj.a.v, proj.b.v); if (showFc) vals.push(gw); }
   var plan = s.startWeight > 0 && gw && s.endDate && s.startDate ? { a: { d: s.startDate, v: s.startWeight }, b: { d: s.endDate, v: gw } } : null;
   var planAt = function (d) { return plan ? plan.a.v + (plan.b.v - plan.a.v) * diffDays(plan.a.d, d) / Math.max(1, diffDays(plan.a.d, plan.b.d)) : null; };
-  if (plan) [x0 > plan.a.d ? x0 : plan.a.d, x1 < plan.b.d ? x1 : plan.b.d].forEach(function (d) { if (d >= plan.a.d && d <= plan.b.d) vals.push(planAt(d)); });
+  if (plan && showFc) [x0 > plan.a.d ? x0 : plan.a.d, x1 < plan.b.d ? x1 : plan.b.d].forEach(function (d) { if (d >= plan.a.d && d <= plan.b.d) vals.push(planAt(d)); });
   if (!vals.length) vals = [s.startWeight || 70];
   var ymin = Math.min.apply(null, vals), ymax = Math.max.apply(null, vals);
   var W = chartW(svg), narrow = W < 520;
@@ -7326,6 +7351,7 @@ function renderWeightChart() {
     var up = ny - m.t > 30, tg = tag(nx - 8, up ? ny - 18 : ny + 20, fmt(now.v, 1) + ' kg', 'w-tag-now', 'end');
   }
   if (gw && gw >= lo && gw <= hi) tag(vb.w - m.r - 2, ys(gw) + (ys(gw) > m.t + ph - 14 ? -13 : 13), 'obiettivo ' + fmt(gw, 1), 'w-tag-goal', 'end');
+  else if (gw) svg.appendChild(el('text', { class: 'w-goal-off', x: vb.w - m.r - 2, y: gw < lo ? m.t + ph - 6 : m.t + 10, 'text-anchor': 'end' }, 'obiettivo ' + fmt(gw, 1) + (gw < lo ? ' ↓' : ' ↑')));
   /* eventi: tacche numerate sotto l'asse, senza linee verticali che coprono il peso */
   evs.forEach(function (ev) { var ex = xs(ev.d); if (ex < m.l || ex > vb.w - m.r) return; svg.appendChild(el('path', { class: 'w-ev', d: 'M' + ex.toFixed(1) + ' ' + (m.t + ph + 3) + ' l4 7 h-8 z' })); });
   var guide = el('line', { class: 'guide' }); svg.appendChild(guide);
@@ -15880,6 +15906,32 @@ html body #hero-today .ht-foot:not(#a){margin-top:8px}
 .need-more>summary>.disclosure-cue{position:static!important;transform:none!important;flex:none;margin:0!important}
 .need-more-body{padding-top:10px}
 .need-go{display:block;margin:12px 0 2px}
+
+/* ===== B · Peso: tendenza e grafico in cima ===== */
+[data-dsec="peso"] > .panel:has(#w-chart){order:-2}
+[data-dsec="peso"] > #tmw{order:-1}
+.w-hero{margin:4px 0 6px}
+.w-big{display:flex;align-items:baseline;gap:8px}
+.w-big b{font-size:clamp(2.8rem,13vw,3.4rem);line-height:1;letter-spacing:-.035em;color:#fff;font-variant-numeric:tabular-nums}
+.w-big span{font-size:1rem;color:#9C9CA3}
+.w-delta{display:inline-flex;margin-top:8px;padding:5px 11px;border-radius:999px;background:#30D15822;color:#5EE07D;font-size:.8rem;font-weight:750}
+.w-delta.is-off{background:#FF9F0A22;color:#FFB340}
+.w-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0 2px}
+.w-tile{padding:11px;border-radius:16px;background:#FFFFFF08;min-width:0}
+.w-tile small{display:block;font-size:.7rem;color:#9C9CA3;font-weight:600}
+.w-tile b{display:block;font-size:1.08rem;color:#fff;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w-tile span{display:block;font-size:.7rem;color:#8E8E93;margin-top:2px}
+.w-add{padding:3px 9px;border-radius:999px;border:1px dashed #0A84FF;background:#0A84FF1F;color:#64A8FF;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer}
+.w-goal-off{fill:#30D158;font-size:11px;font-weight:700}
+html body #w-rng:not(#a):not(#b):not(#c):not(#d):not(#e){display:flex!important;flex-wrap:nowrap!important}
+html body #w-rng button:not(#a):not(#b):not(#c):not(#d):not(#e){flex:1 1 0!important;min-width:0!important;padding:8px 6px!important;font-size:.82rem!important;white-space:nowrap}
+#tmw .tmw-fold>summary{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;cursor:pointer;padding:2px 0!important}
+#tmw .tmw-fold>summary::-webkit-details-marker{display:none}
+#tmw .tmw-fold>summary>.disclosure-cue{position:static!important;transform:none!important;flex:none;margin:0!important}
+#tmw .tmw-fold>summary b{display:block;font-size:.98rem;color:#fff}
+#tmw .tmw-fold>summary small{display:block;font-size:.8rem;color:#9C9CA3;margin-top:3px;line-height:1.4}
+#tmw .tmw-fold[open]>summary{margin-bottom:12px}
+#tmw:not(:has(.tmw-fold[open])) > :not(#tmw-body){display:none!important}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
