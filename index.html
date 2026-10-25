@@ -9415,7 +9415,7 @@ function explainBlock(id, tone, title, value, lead, steps, note) {
 var helpSeq=0;
 function decorateHelpControls(){
   $$('details > summary').forEach(function(s){if(s.querySelector('.disclosure-cue'))return;var c=document.createElement('span');c.className='disclosure-cue';c.setAttribute('aria-hidden','true');c.innerHTML='<span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>';s.appendChild(c);});
-  $$('.rq[data-rule]').forEach(function(b){b.innerHTML='Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>';b.setAttribute('aria-label','Spiega questo dato qui');if(!b.hasAttribute('aria-expanded'))b.setAttribute('aria-expanded','false');});
+  $$('.rq[data-rule]').forEach(function(b){if(!b.closest('#tab-regole')){if(b.textContent!=='i'){b.textContent='i';}b.classList.add('ib');b.setAttribute('aria-label','Spiegazione');b.setAttribute('title','Spiegazione');if(!b.hasAttribute('aria-expanded'))b.setAttribute('aria-expanded','false');return;}b.innerHTML='Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>';b.setAttribute('aria-label','Spiega questo dato qui');if(!b.hasAttribute('aria-expanded'))b.setAttribute('aria-expanded','false');});
   $$('.context-help[data-context-rule]').forEach(function(p){p.querySelector('.context-help-body').innerHTML=inlineExplanationHTML(p.dataset.contextRule);});
 }
 function openLocalExplanation(b){
@@ -16119,6 +16119,69 @@ html body main .sum-card:not(#a):not(#b):not(#c){background:linear-gradient(160d
 #tab-dati .pe-num:nth-child(2){background:linear-gradient(160deg,#BF5AF233,#BF5AF20D);box-shadow:inset 0 0 0 1px #BF5AF240}
 #tab-dati .pe-num:nth-child(3){background:linear-gradient(160deg,#0A84FF33,#0A84FF0D);box-shadow:inset 0 0 0 1px #0A84FF40}
 #tab-dati .pe-num:nth-child(1) small{color:#7FE3A0}#tab-dati .pe-num:nth-child(2) small{color:#D9A6F8}#tab-dati .pe-num:nth-child(3) small{color:#7DBBFF}
+
+/* ===== Telefono: niente testi tagliati, bilancia morbida, selettori a colori ===== */
+/* testi che prima finivano con «…»: ora vanno a capo */
+html body main .w-tile b:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;font-size:clamp(.92rem,4.3vw,1.08rem);line-height:1.2;overflow-wrap:anywhere}
+html body main .wk-mid small:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
+html body main .wkm-row span:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
+html body main .sx-ex:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
+html body #tab-diario #d-date-txt:not(#a):not(#b):not(#c):not(#d){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
+html body #tab-dati .pe-medal b:not(#a):not(#b){display:block;-webkit-line-clamp:unset;overflow:visible;overflow-wrap:anywhere;hyphens:auto}
+/* pulsanti «Apri / Chiudi»: pillola come il resto dell'app */
+html body .disclosure-cue:not(#a):not(#b){border-radius:999px!important;padding-inline:12px!important}
+@media(max-width:380px){html body .disclosure-cue:not(#a):not(#b){padding-inline:10px!important}}
+/* La pesata rispetto al tuo andamento: riquadri morbidi, senza contorni netti */
+html body #tab-diario #tmw .bs-hero:not(#a):not(#b){border:0!important;border-radius:24px!important;box-shadow:inset 0 0 0 1px #64D2FF1F,0 10px 30px -18px #0A84FF99}
+html body #tab-diario #tmw .bs-hero .g3-more:not(#a):not(#b){border:0!important;margin-top:12px;padding:4px 4px 4px 14px;border-radius:999px;background:#FFFFFF12}
+html body #tab-diario #tmw .bs-hero .g3-more[open]:not(#a):not(#b){border-radius:20px;padding-bottom:12px}
+html body #tab-diario #tmw .bs-scale:not(#a):not(#b),html body #tab-diario #tmw .bs-res:not(#a):not(#b){border:0!important;border-radius:24px!important;background:#FFFFFF0A!important}
+html body #tab-diario #tmw .bs-res.bs-ok:not(#a):not(#b){background:linear-gradient(160deg,#30D1581F,#30D15808)!important}
+html body #tab-diario #tmw .bs-res.bs-out:not(#a):not(#b){background:linear-gradient(160deg,#FFD60A1C,#FFD60A06)!important}
+html body #tab-diario #tmw .bs-res :is(.bs-n>div,.bs-nums>div):not(#a){border-radius:18px}
+html body #tab-diario #tmw .bs-badge:not(#a){border-radius:999px}
+
+/* Selettori in alto: ogni voce con il colore della sua sezione */
+html body #tab-diario .dviews button:not(#a):not(#b):not(#c):not(#d):not(#e){color:var(--sel-c,#C7C7CC)!important}
+html body #tab-diario .dviews button[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d):not(#e){background:linear-gradient(135deg,var(--sel-a),var(--sel-b))!important;color:var(--sel-t,#141216)!important;box-shadow:0 4px 14px -4px var(--sel-a)!important}
+html body #tab-diario .dviews button[data-dview="giorno"]{--sel-c:#FFC266;--sel-a:#FFB340;--sel-b:#FF9F0A;--sel-t:#2B1700}
+html body #tab-diario .dviews button[data-dview="peso"]{--sel-c:#7DBBFF;--sel-a:#3B9BFF;--sel-b:#0A84FF;--sel-t:#fff}
+html body #tab-diario .dviews button[data-dview="calorie"]{--sel-c:#FF7A9C;--sel-a:#FF3B6B;--sel-b:#FA114F;--sel-t:#fff}
+html body #tab-diario .dviews button[data-dview="settimana"]{--sel-c:#7FE3A0;--sel-a:#4CDB74;--sel-b:#30D158;--sel-t:#062A12}
+html body #tab-diario .dviews button[data-dview="storico"]{--sel-c:#9FE4FF;--sel-a:#8ADDFF;--sel-b:#64D2FF;--sel-t:#04222E}
+html body #tab-diario .dviews button[data-dview="curiosita"]{--sel-c:#D9A6F8;--sel-a:#CF7BF6;--sel-b:#BF5AF2;--sel-t:#fff}
+/* niente più riga che scorre con voci tagliate: le voci vanno a capo e riempiono lo spazio */
+html body #tab-diario .dviews:not(#a):not(#b):not(#c):not(#d):not(#e){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;overflow:visible!important;border-radius:24px!important;height:auto!important;min-height:0!important;max-height:none!important;align-items:stretch!important}
+html body #tab-diario .dviews button:not(#a):not(#b):not(#c):not(#d):not(#e){width:auto!important;min-width:0!important;padding:8px 6px!important;height:auto!important;min-height:40px!important;max-height:none!important;white-space:normal!important;line-height:1.15!important;text-align:center!important;font-size:.86rem!important;border-radius:20px!important}
+@media(min-width:700px){html body #tab-diario .dviews:not(#a):not(#b):not(#c):not(#d):not(#e){grid-template-columns:repeat(6,minmax(0,1fr))!important;border-radius:999px!important}html body #tab-diario .dviews button:not(#a):not(#b):not(#c):not(#d):not(#e){border-radius:999px!important}}
+/* gli altri selettori principali: la voce scelta prende il colore della sezione */
+html body #tab-allenamenti > .segbar button[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d):not(#e),html body #tab-corpo > .segbar button[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d):not(#e){background:linear-gradient(135deg,#CF7BF6,#BF5AF2)!important;color:#fff!important;box-shadow:0 4px 14px -4px #BF5AF2!important}
+html body #tab-amici .friends-switch button[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d):not(#e){background:linear-gradient(135deg,#FFB08A,#FF8A5B)!important;color:#2B1206!important;box-shadow:0 4px 14px -4px #FF8A5B!important}
+html body #tab-dati .profile-switch button[aria-selected="true"]:not(#a):not(#b):not(#c):not(#d):not(#e){background:linear-gradient(135deg,#FF3B6B,#FA114F)!important;color:#fff!important;box-shadow:0 4px 14px -4px #FA114F!important}
+
+/* Corpo › periodo: su telefono due righe da due, niente voci tagliate */
+@media(max-width:520px){
+html body #tab-corpo .body-control-group .seg:not(#a):not(#b):not(#c):not(#d):not(#e){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;border-radius:22px!important}
+html body #tab-corpo .body-control-group .seg button:not(#a):not(#b):not(#c):not(#d):not(#e){border-radius:18px!important;white-space:nowrap!important;padding:9px 8px!important;min-width:0!important;width:auto!important;height:auto!important;min-height:40px!important;line-height:1.2!important}
+/* Ricette: ricerca a tutta larghezza, «Ordina per» sotto su una riga */
+html body #tab-ricette .recipe-workspace .recipe-search-panel > .row:not(#a):not(#b){flex-wrap:wrap!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+html body #tab-ricette .recipe-search-panel > .row > label.f:not(#a):not(#b){flex:1 1 100%!important;min-width:0!important}
+html body #tab-ricette .recipe-sort-control:not(#a):not(#b){flex:1 1 100%!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+html body #tab-ricette .recipe-sort-control .recipe-sort-trigger:not(#a):not(#b){flex:0 1 auto;min-width:150px}
+}
+
+html body #tab-ricette .recipe-sort-label:not(#a):not(#b){white-space:nowrap}
+html body #tab-ricette #r-tags:not(#a):not(#b):not(#c){flex-wrap:wrap!important;overflow:visible!important;-webkit-mask-image:none!important;mask-image:none!important}
+
+/* intestazioni dei riquadri: il titolo non si stringe su tre righe, il pulsante va sotto se serve */
+html body #tab-diario .dayhead:not(#a):not(#b):not(#c){flex-wrap:wrap!important;row-gap:10px!important}
+html body #tab-diario .dayhead h2:not(#a):not(#b):not(#c){flex:1 1 auto!important;min-width:0!important}
+html body #tab-diario .dayhead > :is(button.btn,.btn,a.btn):last-child:not(#a):not(#b){margin-left:auto}
+html body #tab-oggi .hero-top:not(#a):not(#b):not(#c){display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:10px!important}
+html body #tab-oggi .hero-top .hero-lbl:not(#a):not(#b):not(#c){flex:1 1 auto!important;min-width:0!important}
+html body #tab-oggi .hero-top .rq:not(#a):not(#b):not(#c){flex:0 0 auto!important;margin-left:auto!important}
+html body #tab-oggi #streak-card .sk-head:not(#a):not(#b){flex-wrap:wrap}
+html body #tab-oggi #streak-card .sk-head h2:not(#a):not(#b){flex:1 1 100%;min-width:0}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
@@ -16155,6 +16218,8 @@ html body main .sum-card:not(#a):not(#b):not(#c){background:linear-gradient(160d
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); lastB.focus(); } else if (!e.shiftKey && document.activeElement === lastB) { e.preventDefault(); first.focus(); }
   });
 })();
+
+
 </script>
 
 </body></html>
