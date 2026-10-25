@@ -2746,7 +2746,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.5.2-riferimento' };
+var M = { V: '2.6.0-pause' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -3767,7 +3767,7 @@ M.transitionWindows = transitionWindows;
    previsione ha peso ridotto, mai scartata in silenzio.
    Oltre alla stima del giorno (filtro, che usa solo i dati fino a quel giorno) calcola la stima «a posteriori» (kS, LS)
    con tutti i dati disponibili oggi: è quella giusta per ricostruire i giorni passati. */
-var KF = { PHASE_K: 0.08, PHASE_DAYS: 42, PHASE_DELAY: 10, DRIFT: 0.005, PHI: 0.65, WATER: 0.40, SD_I: 300, SD_IMP: 700, SD_EXC: 500, STRUCT_K: 0.08, GATE: 4, BINGE_KG: 0.6, BINGE_DECAY: 0.5, BINGE_X: 1.3, L0: 0.3 };
+var KF = { PHASE_K: 0.08, PHASE_DAYS: 42, PHASE_DELAY: 10, DRIFT: 0.005, PHI: 0.65, WATER: 0.40, SD_I: 300, SD_IMP: 700, SD_GAP: 4000, GAP_RUN: 3, SD_EXC: 500, STRUCT_K: 0.08, GATE: 4, BINGE_KG: 0.6, BINGE_DECAY: 0.5, BINGE_X: 1.3, L0: 0.3 };
 M.KF = KF;
 function inv3(m) {
   var a = m[0][0], b = m[0][1], c = m[0][2], d = m[1][0], e = m[1][1], f = m[1][2], g = m[2][0], h = m[2][1], i = m[2][2];
@@ -3797,6 +3797,11 @@ function kalmanRun(ctx, cfg, rho) {
   var gapMag = function (g) { return g < 0 ? -g / 0.25 : g / 0.10; }, histI = [], histB = [], kvPh = {};;
   var exc = function (d) { return (ctx.events || []).some(function (e) { return EXCEPT[e.kind] && d >= e.from && d <= (e.to || e.from); }); };
   var x = null, P = null, prevI = null, prevA = null, excess = 0, logged = [], nW = 0, firstW = null, seq = [];
+  /* giorni dentro una pausa del diario: sequenze di almeno GAP_RUN giorni consecutivi senza calorie complete,
+     riconosciute con i dati disponibili alla data del calcolo (anche il primo giorno della pausa ne fa parte) */
+  var inGap = {}, run = [];
+  dRange(first, to).forEach(function (d) { if (intakeOf(ctx.days[d], false).usable) { if (run.length >= KF.GAP_RUN) run.forEach(function (q) { inGap[q] = 1; }); run = []; } else run.push(d); });
+  if (run.length >= KF.GAP_RUN) run.forEach(function (q) { inGap[q] = 1; });
   var med = function () { if (!logged.length) return null; var a = logged.slice(-28).sort(function (p, q) { return p - q; }); return a[a.length >> 1]; };
   /* riferimento per riconoscere una giornata abbondante: la più alta fra la mediana di 4 settimane e quella dell'ultima
      settimana, così dopo un cambio di fase le giornate del nuovo piano non vengono scambiate per abbuffate */
@@ -3839,7 +3844,10 @@ function kalmanRun(ctx, cfg, rho) {
     if (it.usable) logged.push(it.kcal);
     histI.push(it.usable ? it.kcal : null);
     var m1 = med();
-    prevI = it.usable ? { v: it.kcal, sd: ex ? KF.SD_EXC : KF.SD_I } : { v: m1 != null ? m1 : 0, sd: KF.SD_IMP, imputed: true };
+    /* in una pausa del diario non si sa quanto si è mangiato: l'introito resta stimato ma con un'incertezza così ampia
+       che il peso di quei giorni sposta il livello, non il consumo (vacanze, feste, settimane difficili). Uno o due
+       giorni mancanti restano stimati come prima. */
+    prevI = it.usable ? { v: it.kcal, sd: ex ? KF.SD_EXC : KF.SD_I } : { v: m1 != null ? m1 : 0, sd: inGap[d] ? KF.SD_GAP : KF.SD_IMP, imputed: true, gap: !!inGap[d] };
     var A = shapeAt(ctx, d, cfg, 'osservato'); if (A > 0) prevA = A; else if (prevA == null) prevA = 0;
     if (x) histB.push(x[1] * prevA);
     if (x) {
@@ -4514,6 +4522,11 @@ function filterSummary(ctx, kh, asOf, base) {
   days.forEach(function (d) { var it = intakeOf(ctx.days[d], false), x = g[dWd(d) >= 5 ? 1 : 0]; x.n++; if (it.usable) { x.c++; nC++; gap = 0; } else { gap++; maxGap = Math.max(maxGap, gap); } });
   if (days.length) res.completeness = { frac: nC / days.length, weekday: g[0].n ? g[0].c / g[0].n : 1, weekend: g[1].n ? g[1].c / g[1].n : 1, maxGap: maxGap, nComplete: nC, nDays: days.length };
   var tr = trendAt(ctx, asOf); res.slope = tr && !tr.none ? tr.slope : null;
+  /* le ultime due settimane: una pausa recente del diario pesa più di una lontana */
+  var rc = dRange(dAdd(asOf, -14), dAdd(asOf, -1)).filter(function (d) { return d >= kh.start; }), rn = 0, lastC = null;
+  rc.forEach(function (d) { if (intakeOf(ctx.days[d], false).usable) rn++; });
+  dRange(kh.start, dAdd(asOf, -1)).forEach(function (d) { if (intakeOf(ctx.days[d], false).usable) lastC = d; });
+  res.recent = { nDays: rc.length, nComplete: rn, lastComplete: lastC };
   return res;
 }
 M.filterSummary = filterSummary;
@@ -4686,6 +4699,18 @@ function confidenceOf(cal, base, tr, origine, cfg, vo) {
   if (cal && cal.status !== 'calibrato') { why.push('oggi: ' + (cal.reasons[0] || cal.status)); if (level === 'più alta') level = 'media'; }
   if (base && base.transfer) why.push(base.transfer.why);
   if (tr && tr.datato) { level = 'bassa'; why.push('ultima pesata di ' + tr.age + ' giorni fa'); }
+  /* la stima è verificata solo dove il diario c'è: con poche calorie complete il filtro lavora su valori stimati */
+  var cp = cal && cal.completeness, rc = cal && cal.recent;
+  if (cp && cp.nDays >= 7 && origine === 'calibrato_sul_diario') {
+    var noRecent = rc && rc.nDays >= 10 && rc.nComplete === 0, fewRecent = rc && rc.nDays >= 10 && rc.nComplete / rc.nDays < 0.5;
+    if (cp.frac < 0.5 || noRecent) {
+      level = 'bassa'; why[0] = 'stima confrontata con le pesate, ma con poche calorie registrate';
+      why.push(noRecent ? 'nessuna giornata con calorie complete nelle ultime due settimane' + (rc.lastComplete ? ' (l\'ultima è del ' + dIt(rc.lastComplete) + ')' : '') : 'calorie complete in ' + cp.nComplete + ' giornate su ' + cp.nDays);
+    } else if (cp.frac < 0.8 || fewRecent) {
+      if (level === 'più alta') level = 'media';
+      why.push(fewRecent ? 'calorie complete in ' + rc.nComplete + ' delle ultime ' + rc.nDays + ' giornate' : 'calorie complete in ' + cp.nComplete + ' giornate su ' + cp.nDays);
+    }
+  }
   return { level: level, kSD: sdk, factorRelativeSD: factorRelativeSD, activityRelativeSD: activityRelativeSD, relativeSD: relativeSD, maintenanceSD: base && base.ok && relativeSD != null ? base.R * relativeSD : null, why: why.join('; ') };
 }
 
@@ -6704,6 +6729,9 @@ function confidenceDetail(E) {
   var w = cal && cal.window, c = cal && cal.completeness;
   if (w) o.data.push((calibrated ? 'Dati usati' : 'Periodo esaminato') + ': ' + date(w.from) + '–' + date(w.to) + (w.nW != null ? ', ' + w.nW + ' pesate accettate' : '') + (w.nDays != null ? ', ' + w.nDays + ' giorni fra le pesate' : '') + '.');
   if (c && c.nDays > 0) o.data.push('Alimentazione: ' + c.nComplete + ' giornate complete su ' + c.nDays + ' (' + num(c.frac * 100) + '%)' + (c.nComplete === c.nDays ? '. Nel periodo usato non mancano giornate alimentari complete.' : '; le giornate mancanti rendono la ricostruzione meno certa.'));
+  var rcn = cal && cal.recent;
+  if (rcn && rcn.nDays >= 10 && rcn.nComplete / rcn.nDays < 0.5) { add('Nelle ultime ' + rcn.nDays + ' giornate ' + (rcn.nComplete ? 'solo ' + rcn.nComplete + ' hanno' : 'nessuna ha') + ' le calorie complete' + (rcn.lastComplete ? ' (l’ultima è del ' + date(rcn.lastComplete) + ')' : '') + '. Durante una pausa del diario le pesate aggiornano il peso di tendenza ma non il consumo: riprendi a registrare per tornare a una stima verificata.'); if (level === 'bassa') o.summary = 'Il diario delle calorie è fermo o quasi: il fabbisogno resta quello stimato prima della pausa e non può dirsi verificato.'; }
+  else if (c && c.nDays >= 7 && c.frac < 0.5) add('Solo il ' + num(c.frac * 100) + '% delle giornate ha le calorie complete: con così pochi dati la stima non può dirsi verificata dal diario.');
   var vo = E.verifiedOn;
   if (vo && vo.d) o.data.push('Ultimo controllo utilizzabile del fabbisogno: ' + date(vo.d) + '.');
   if (cal && cal.since) add('Non viene usato automaticamente tutto il diario: la finestra riparte dopo «' + cal.since.label + '» (' + date(cal.since.d) + '). I dati precedenti restano salvati.');
@@ -12119,17 +12147,22 @@ function needDateContext(date){
   if(needDateCache.source!==state.E){needDateCache.source=state.E;needDateCache.entries=[];}
   var cached=needDateCache.entries.filter(function(x){return x.date===date;})[0];if(cached)return cached;
   var result={date:date,historical:true,E:null,view:{available:false,history:[]}};
-  try{var D=engineD();result.E=GJM.engine(D,date);result.view=GJEnergySummary.build(D,result.E,GJM);}catch(e){result.error=e;}
+  try{var D=engineD();result.E=GJM.engine(D,date);result.view=GJEnergySummary.build(D,result.E,GJM);
+    /* il consumo del giorno è lo stesso che mostra Progressi: ricostruito con tutti i dati disponibili oggi */
+    var o=state.E.dayOf?state.E.dayOf(date):null;
+    if(o&&o.C!=null){result.day=o;result.view=Object.assign({},result.view,{today:Object.assign({},result.view.today||{},{d:date,C:o.C,A:o.A||(result.view.today||{}).A,usable:o.usable,lo:o.lo,hi:o.hi})});}
+  }catch(e){result.error=e;}
   needDateCache.entries.push(result);if(needDateCache.entries.length>8)needDateCache.entries.shift();
   return result;
 }
 function renderHistoricalNeed(date,box){
   var context=needDateContext(date),weekly=needWeekContext(date),E=context.E,h=$('#need-card h2'),why=$('#nc-why');
   if(h)h.textContent='Mantenimento e piano del '+fmtDay(date);
-  if(why)why.innerHTML='<p>Il piano e il consumo del giorno seguono il giorno scelto con le frecce. Il mantenimento medio, invece, è un unico riferimento per tutta la settimana da lunedì a domenica.</p><p>Per una settimana conclusa uso la stima aggiornata alla sua domenica; per quella in corso uso la stima aggiornata a oggi. La data di aggiornamento è indicata nel riquadro. Il consumo del singolo giorno conserva i dati e la calibrazione di quel giorno.</p><p>Nuovi dati o correzioni dello storico possono aggiornare il riferimento. Consultare lo storico non modifica il piano.</p>';
+  if(why)why.innerHTML='<p>Il piano e il consumo del giorno seguono il giorno scelto con le frecce. Il mantenimento medio, invece, è un unico riferimento per tutta la settimana da lunedì a domenica.</p><p>Per una settimana conclusa uso la stima aggiornata alla sua domenica; per quella in corso uso la stima aggiornata a oggi. La data di aggiornamento è indicata nel riquadro. Il consumo del singolo giorno è ricostruito con tutti i dati di oggi, come in Progressi: nuove pesate possono ritoccarlo di poco.</p><p>Nuovi dati o correzioni dello storico possono aggiornare il riferimento. Consultare lo storico non modifica il piano.</p>';
   if(context.error){box.innerHTML='<div class="p2-empty"><b>Non riesco a ricostruire questa data.</b><p>'+esc(String(context.error.message||context.error))+'</p></div>';return;}
   if(!E||E.status==='nessun_piano'){box.innerHTML='<div class="p2-empty"><b>Nessun piano in vigore il '+fmtDay(date)+'.</b><p>Non ci sono obiettivi registrati per questa data.</p></div>';return;}
   var td=E.today||{},T=td.target,M=td.macros,B=td.balance,Rs=td.residual,cf=E.confidence||{},tr=E.weight&&E.weight.trend,rows=[];
+  if(B&&context.day&&context.day.B!=null&&B.T!=null)B=Object.assign({},B,{expected:context.day.B-(1-GJM.K.TEF)*B.T});
   var note=T?'È quanto prevedeva il piano per il '+fmtDay(date)+', in vigore dal '+fmtDay(T.from)+'. L’obiettivo alimentare è distinto dal consumo stimato.':'Nessun obiettivo disponibile per questa data.';
   rows.push(p2tile('Obiettivo calorico del giorno',T?kc(T.v):'—',note,{rule:'obiettivo-kcal'}));
   var balance='—',balanceNote='Bilancio del piano non disponibile.';
@@ -12162,11 +12195,16 @@ function dailyEnergyHTML(view,options) {
   var scheduledRest=selectedJob&&selectedJob.days&&selectedJob.days.length&&selectedJob.days.indexOf(weekday)<0;
   var jobLabel=scheduledRest?'Oggi non hai lavorato':(src.job||'').replace(/\s*\(dichiarato\)/gi,'')||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
   var sessions=Array.from(state.workouts.values()).filter(function(w){return w.date===selectedDate;}).sort(function(a,b){return (a.start||'').localeCompare(b.start||'');});
-  var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · '):'Nessun allenamento, riposo';
+  var gy=a.gym||{},dayRec=state.days.get(selectedDate)||{},workoutNote='';
+  var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · ')
+    :dayRec.riposo===true?'Riposo, segnato da te'
+    :gy.k>0.5?(past?'Seduta non registrata: conto la tua routine':'Nessuna seduta registrata finora: conto la tua routine')
+    :/hevy/i.test(gy.orig||'')?'Nessuna seduta: riposo':'Nessun allenamento';
+  if(!sessions.length&&dayRec.riposo!==true&&gy.k>0.5)workoutNote=(gy.orig?cap(String(gy.orig).replace(/,\s*energia media.*$/i,''))+'. ':'')+'Si aggiorna quando importi le sedute da Hevy o segni il riposo.';
   var status=closed?'Ricostruito dal diario completo':past?'Calorie incomplete · per la digestione si usa il piano':'Previsione · si aggiorna con il diario completo';
   var dateLabel=past?cap(fmtDay(options.date)):'Oggi, '+fmtDay(view.today&&view.today.d||todayStr());
   return '<div class="daily-energy de2" role="group" aria-label="Consumo stimato del giorno selezionato"><div class="de-main"><span class="daily-energy-title">Consumo stimato del giorno</span><strong class="daily-energy-date">'+esc(dateLabel)+'</strong><div class="de-value"><b>'+fmt(x.C,0)+'</b><span>kcal</span></div><span class="de-status'+(closed?' is-done':'')+'">'+status+'</span></div>'
-    +'<dl class="de-facts"><div><dt>Lavoro</dt><dd>'+esc(jobLabel)+'</dd></div><div><dt>Allenamento</dt><dd>'+esc(workoutLabel)+'</dd></div><div><dt>Passi</dt><dd>'+(a.steps!=null?fmt(a.steps,0):'Non disponibili')+(src.steps?'<small>'+esc(src.steps)+'</small>':'')+'</dd></div></dl>'
+    +'<dl class="de-facts"><div><dt>Lavoro</dt><dd>'+esc(jobLabel)+'</dd></div><div><dt>Allenamento</dt><dd>'+esc(workoutLabel)+(workoutNote?'<small>'+esc(workoutNote)+'</small>':'')+'</dd></div><div><dt>Passi</dt><dd>'+(a.steps!=null?fmt(a.steps,0):'Non disponibili')+(src.steps?'<small>'+esc(src.steps)+'</small>':'')+'</dd></div></dl>'
     +'<p class="de-note">Segue lavoro, allenamento, passi e digestione di questo giorno: può essere diverso dal mantenimento medio.</p></div>';
 }
 function maintenanceWeekDetailsHTML(view){
