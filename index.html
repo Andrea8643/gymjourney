@@ -11242,22 +11242,21 @@ var api={evaluate:evaluate};if(typeof module==='object'&&module.exports)module.e
 /* A separate, opt-in friend photo. Private settings/avatar is never readable by friends. */
 (function(root){'use strict';
 var pattern=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
-function create(ctx){var uid=null,peer=null,ownOff=null,peerOff=null,enabled=false,remote=null,busy=false,message='',lastSource=null,epoch=0;
+function create(ctx){var uid=null,peer=null,ownOff=null,peerOff=null,enabled=false,remote=null,busy=false,message='',lastSource=null,epoch=0,stored='',known=false;
  function db(){return root.firebase&&root.firebase.firestore();}
  function stamp(){return root.firebase.firestore.FieldValue.serverTimestamp();}
- function stop(){epoch++;if(ownOff)ownOff();if(peerOff)peerOff();ownOff=peerOff=null;uid=peer=null;enabled=false;remote=null;lastSource=null;busy=false;message='';}
+ function stop(){epoch++;if(ownOff)ownOff();if(peerOff)peerOff();ownOff=peerOff=null;uid=peer=null;enabled=false;remote=null;lastSource=null;busy=false;message='';stored='';known=false;}
  function connect(id){if(uid===id)return;stop();uid=id;if(!id||!db())return;var current=epoch;
-  ownOff=db().doc('friendAvatars/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(current!==epoch||s.metadata&&s.metadata.fromCache)return;var v=s.exists?s.data():null;enabled=!!(v&&v.enabled);ctx.changed();if(enabled)refresh();},function(){if(current!==epoch)return;message='Il servizio non consente di caricare la foto in questo momento.';ctx.changed();});
+  ownOff=db().doc('friendAvatars/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(current!==epoch||s.metadata&&s.metadata.fromCache)return;var v=s.exists?s.data():null;enabled=!!(v&&v.enabled);stored=v&&typeof v.image==='string'?v.image:'';known=true;ctx.changed();refresh();},function(){if(current!==epoch)return;message='Il servizio non consente di caricare la foto in questo momento.';ctx.changed();});
  }
  function select(id){if(peer===id)return;if(peerOff)peerOff();peer=id;remote=null;if(!uid||!id||!db())return;var expected=epoch;
   peerOff=db().doc('friendAvatars/'+id).onSnapshot({includeMetadataChanges:true},function(s){if(expected!==epoch||peer!==id||s.metadata&&s.metadata.fromCache)return;var d=s.exists?s.data():null;remote=d&&d.enabled&&typeof d.image==='string'&&pattern.test(d.image)?d.image:null;ctx.changed();},function(){if(expected!==epoch||peer!==id)return;remote=null;ctx.changed();});
  }
  function image(id){var s=id===uid?ctx.own():id===peer?remote:null;return typeof s==='string'&&pattern.test(s)?s:null;}
  function smallPhoto(source){return new Promise(function(resolve,reject){if(!source){resolve('');return;}if(!pattern.test(source)){reject(Error('La foto non è valida.'));return;}var im=new Image();im.onload=function(){var canvas=document.createElement('canvas');canvas.width=canvas.height=144;var c=canvas.getContext('2d');c.fillStyle='#231A1D';c.fillRect(0,0,144,144);var n=Math.min(im.naturalWidth,im.naturalHeight);c.drawImage(im,(im.naturalWidth-n)/2,(im.naturalHeight-n)/2,n,n,0,0,144,144);var result=canvas.toDataURL('image/jpeg',.75);if(result.length>80000)reject(Error('La foto è troppo grande.'));else resolve(result);};im.onerror=function(){reject(Error('La foto non si apre.'));};im.src=source;});}
- async function write(on){if(busy||!uid||!db())return;busy=true;message='';ctx.changed();var current=epoch,source=ctx.own();try{var data=on?await smallPhoto(source):'';if(current!==epoch)return;await db().doc('friendAvatars/'+uid).set({enabled:!!on,image:data,updatedAt:stamp()});if(current!==epoch)return;enabled=!!on;lastSource=source;message=on?'Foto visibile solo agli amici accettati.':'Condivisione della foto disattivata.';}catch(e){if(current===epoch)message=/permission-denied/.test(String(e&&e.code))?'Il servizio non ha autorizzato la condivisione della foto. Riprova più tardi.':e.message||'Foto non sincronizzata. Riprova online.';}finally{if(current===epoch){busy=false;ctx.changed();}}}
- function refresh(){if(enabled&&!busy&&(!ctx.ready||ctx.ready())&&ctx.own()!==lastSource)write(true);}
- function settingsHTML(){return '<section class="friends-photo-setting"><div><b>La tua foto nelle sfide</b><p>'+ (enabled?'Visibile agli amici accettati. Si aggiorna con la foto del profilo.':'Scegli se mostrare la foto del profilo ai tuoi amici nelle sfide. La condivisione è facoltativa.')+'</p>'+(message?'<p role="status">'+ctx.esc(message)+'</p>':'')+'</div><button type="button" class="gg-btn" data-photo-share="'+(enabled?'off':'on')+'"'+(busy?' disabled':'')+'>'+(busy?'Salvo…':enabled?'Nascondi foto':'Condividi foto')+'</button></section>';}
- document.addEventListener('click',function(e){var b=e.target.closest('#tab-amici [data-photo-share]');if(b)write(b.dataset.photoShare==='on');});
+ /* La foto del profilo è sempre visibile agli amici accettati: si pubblica da sola e si aggiorna quando cambia; scrive solo se è davvero diversa. */
+ function refresh(){if(!known||busy||!uid||!db()||(ctx.ready&&!ctx.ready()))return;var source=ctx.own();if(source===lastSource)return;var current=epoch;busy=true;smallPhoto(source).catch(function(){return '';}).then(function(data){if(current!==epoch)return;lastSource=source;if(enabled&&data===stored)return;return db().doc('friendAvatars/'+uid).set({enabled:true,image:data,updatedAt:stamp()}).then(function(){if(current!==epoch)return;enabled=true;stored=data;});}).catch(function(){if(current===epoch)lastSource=null;}).then(function(){if(current===epoch)busy=false;});}
+ function settingsHTML(){return '';}
  return {connect:connect,disconnect:stop,select:select,image:image,settingsHTML:settingsHTML,refresh:refresh};
 }
 root.GJFriendAvatars={create:create};
@@ -15190,11 +15189,8 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
 #tab-amici .fx-who.is-me i{background:var(--fme);color:#2A140C}
 #tab-amici .fx-who.is-pe i{background:var(--fpe);color:#0F1A26}
 #tab-amici .fx-who i,#tab-amici .friends-pill>i{overflow:hidden;box-sizing:border-box}
-#tab-amici .fx-who i>img,#tab-amici .friends-pill>i>img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
-#tab-amici .fx-who i:has(img){width:36px;height:36px;padding:2px;background:#1C1517;box-shadow:0 0 0 2px var(--fx-ring)}
-#tab-amici .fx-who.is-me{--fx-ring:var(--fme)}#tab-amici .fx-who.is-pe{--fx-ring:var(--fpe)}
-#tab-amici .friends-pill>i:has(img){padding:1.5px;background:#1C1517;box-shadow:0 0 0 1.5px #FFFFFF40}
-#tab-amici .friends-pill[aria-pressed=true]>i:has(img){box-shadow:0 0 0 2px var(--fpe)}
+#tab-amici .fx-who i:has(img){width:40px;height:40px;border-radius:14px;background:#32242A}
+#tab-amici .fx-who i>img,#tab-amici .friends-pill>i>img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
 #tab-amici .fx-vs{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8F8388}
 #tab-amici .fa-row{display:flex;flex-direction:column;gap:8px;padding:18px 0;border-top:1px solid var(--fa-line);min-width:0}
 #tab-amici .fx-duel+.fa-row{border-top:0}
