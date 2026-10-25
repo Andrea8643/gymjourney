@@ -11385,7 +11385,7 @@ root.GJGameUI={create:create};
 function bindFriends() {
   var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',date:null,view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
   var FD=window.GJFriendData, fs=null, auth=null;
-  var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
+  var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();refreshAvatars();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
   var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Allenamenti: nome delle sedute e riposo',weight:'Peso (facoltativo)'};
   var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
@@ -11448,7 +11448,7 @@ function bindFriends() {
     var requests='';if(incoming.length||outgoing.length){requests+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){requests+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){requests+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});requests+='</div>';}
     var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3>'+actionButton('refresh','Aggiorna')+'</div>';
     if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta o condividi il tuo codice dalle impostazioni. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi un amico</button></div>';
-    else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'"><i aria-hidden="true">'+esc(initial(relationName(x)))+'</i>'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
+    else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'"><i aria-hidden="true">'+faAvatar(uid,relationName(x))+'</i>'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
     fillPanels(list+requests,Games.settingsHTML()+h,'<div id="friend-game-content">'+Games.render()+'</div>'+requests);
   }
@@ -11465,6 +11465,8 @@ function bindFriends() {
     weight:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/></svg>'
   };
   function initial(n){var c=String(n||'').trim().charAt(0).toUpperCase();return c||'?';}
+  /* Foto profilo condivisa (la stessa delle Sfide); l'iniziale solo se la foto non c'è. */
+  function faAvatar(uid,name){var img=uid?Photos.image(uid):null;return img?'<img src="'+esc(img)+'" alt="" decoding="async">':esc(initial(name));}
   /* Valore di una persona per una metrica, già pronto per il confronto. */
   function sideStat(rows,key,allowed,own){
     function miss(t,sub){return {miss:t,sub:sub||''};}
@@ -11552,9 +11554,10 @@ function bindFriends() {
     if(r.error||!r.config||!r.config.enabled)return head+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div>';
     if(!keys.length)return head+'<div class="friends-empty">Nessun dato selezionato per il confronto.</div>';
     var myName=(F.profile&&F.profile.nickname)||S().name||'Tu';
-    var duel='<div class="fx-duel" aria-hidden="true"><span class="fx-who is-me"><i>'+esc(initial(myName))+'</i><b>Tu</b></span><span class="fx-vs">vs</span><span class="fx-who is-pe"><b>'+esc(name.length>12&&name.indexOf(' ')>0?name.split(' ')[0]:name)+'</b><i>'+esc(initial(name))+'</i></span></div>';
+    var duel='<div class="fx-duel" aria-hidden="true"><span class="fx-who is-me"><i>'+faAvatar(F.uid,myName)+'</i><b>Tu</b></span><span class="fx-vs">vs</span><span class="fx-who is-pe"><b>'+esc(name.length>12&&name.indexOf(' ')>0?name.split(' ')[0]:name)+'</b><i>'+faAvatar(F.selected,name)+'</i></span></div>';
     return head+(comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'')+'<div class="fa-board">'+duel+keys.map(function(k){return faRow(k,own,r.days,true,r.config.prefs[k],name);}).join('')+'<p class="friends-help">Ognuno ha il proprio target: le calorie si leggono come percentuale del proprio obiettivo (100% = in linea, la tacca bianca). Le giornate mancanti restano mancanti e le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p></div>';
   }
+  function refreshAvatars(){document.querySelectorAll('#tab-amici .friends-pill[data-key]').forEach(function(b){var i=b.querySelector('i'),h=faAvatar(b.dataset.key,b.textContent);if(i&&i.innerHTML!==h)i.innerHTML=h;});var d=$('#friend-comparison .fx-duel');if(d){var link=friendList().find(function(x){return relationPeer(x)===F.selected;}),me=d.querySelector('.is-me>i'),pe=d.querySelector('.is-pe>i'),hm=faAvatar(F.uid,(F.profile&&F.profile.nickname)||S().name),hp=link?faAvatar(F.selected,relationName(link)):'';if(me&&me.innerHTML!==hm)me.innerHTML=hm;if(pe&&link&&pe.innerHTML!==hp)pe.innerHTML=hp;}}
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){Photos.select(null);F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
   function subscribePeer(uid){stopPeer();F.selected=uid;Games.select(uid);Photos.select(uid);if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
@@ -15186,6 +15189,12 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
 #tab-amici .fx-who i{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;font-style:normal;font-weight:800;font-size:.8rem}
 #tab-amici .fx-who.is-me i{background:var(--fme);color:#2A140C}
 #tab-amici .fx-who.is-pe i{background:var(--fpe);color:#0F1A26}
+#tab-amici .fx-who i,#tab-amici .friends-pill>i{overflow:hidden;box-sizing:border-box}
+#tab-amici .fx-who i>img,#tab-amici .friends-pill>i>img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+#tab-amici .fx-who i:has(img){width:36px;height:36px;padding:2px;background:#1C1517;box-shadow:0 0 0 2px var(--fx-ring)}
+#tab-amici .fx-who.is-me{--fx-ring:var(--fme)}#tab-amici .fx-who.is-pe{--fx-ring:var(--fpe)}
+#tab-amici .friends-pill>i:has(img){padding:1.5px;background:#1C1517;box-shadow:0 0 0 1.5px #FFFFFF40}
+#tab-amici .friends-pill[aria-pressed=true]>i:has(img){box-shadow:0 0 0 2px var(--fpe)}
 #tab-amici .fx-vs{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8F8388}
 #tab-amici .fa-row{display:flex;flex-direction:column;gap:8px;padding:18px 0;border-top:1px solid var(--fa-line);min-width:0}
 #tab-amici .fx-duel+.fa-row{border-top:0}
