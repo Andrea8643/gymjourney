@@ -2547,7 +2547,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
     <section id="tab-allenamenti" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Allenamenti"><button type="button" data-sub="allenamenti">Sedute</button><button type="button" data-sub="corpo">Corpo</button></div>
       <div class="area-lead" style="--area:#8ab9ff;--area2:#6d7fff"><span class="area-kicker">ALLENAMENTO / SEDUTE</span><strong>Ogni seduta lascia un segno.</strong><p>Lo split racconta cosa hai fatto, cosa viene dopo e come evolve la tua costanza.</p><span class="area-mark" aria-hidden="true">◈</span></div>
-      <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Settimana di allenamento</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-all"></div></div>
+      <div class="panel" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Questa settimana</h2><button type="button" class="rq" data-rule="split" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint">Da Hevy</span></div><div id="split-all"></div></div>
       <div class="panel wk-muscles" data-cat="allen"><div class="panel-head"><div class="ph-t"><h2>Muscoli della settimana</h2></div><button type="button" class="linkbtn small" data-wk-body>Apri la mappa ›</button></div><div class="wkm-grid"><div class="wkm-figs" aria-hidden="true"><svg id="wk-body-front" viewBox="0 0 100 200"></svg><svg id="wk-body-back" viewBox="0 -1 100 222"></svg></div><div class="wkm-list" id="wk-muscles-list"></div></div></div>
       <div class="panel workout-calendar" data-cat="allen">
         <div class="panel-head"><div class="ph-t"><h2>Calendario delle sedute</h2><button type="button" class="rq" data-rule="costanza" aria-label="Come si calcola" title="Come si calcola">?</button></div>
@@ -6219,6 +6219,14 @@ function initials(t) {
   return (w[0].charAt(0) + (w.length > 1 ? w[w.length - 1].charAt(0) : '')).toUpperCase();
 }
 var openSess = new Set();
+/* C · record personali di una seduta: esercizi in cui il miglior set supera tutte le sedute precedenti */
+function sessPRs(w) {
+  var n = 0; (w.exercises || []).forEach(function (ex) {
+    var best = Math.max.apply(null, setsOf(ex, w.date).map(setScore).concat([0])); if (!(best > 0)) return;
+    var prev = 0, seen = false; state.workouts.forEach(function (o) { if (o.date >= w.date) return; (o.exercises || []).forEach(function (e) { if (e.name !== ex.name) return; seen = true; setsOf(e, o.date).forEach(function (st) { prev = Math.max(prev, setScore(st)); }); }); });
+    if (seen && best > prev) n++;
+  }); return n;
+}
 function renderWorkouts() {
   var listEl = $('#w-list');
   if (!listEl.dataset.bound) {
@@ -6237,7 +6245,11 @@ function renderWorkouts() {
       var vol = 0, c = GROUP[wGroup(w)].c;
       (w.exercises || []).forEach(function (ex) { setsOf(ex, w.date).forEach(function (s) { vol += (s.kg || 0) * (s.reps || 0); }); });
       var meta = [w.durMin ? fmtDur(w.durMin) : '', (w.exercises || []).length + ((w.exercises || []).length === 1 ? ' esercizio' : ' esercizi'), vol > 0 ? fmt(vol, 0) + ' kg sollevati' : ''].filter(Boolean);
-      return '<details class="sess" data-id="' + esc(w.id) + '" style="--c:' + c + '"' + (openSess.has(w.id) ? ' open' : '') + '><summary><span class="ico">' + esc(initials(w.title)) + '</span><span style="min-width:0"><div class="tt">' + esc(w.title) + '</div><div class="dt">' + esc(cap(fmtLong(w.date))) + (w.start ? ', ore ' + esc(w.start) : '') + '</div></span><span class="mt">' + meta.join(' · ') + '</span></summary>'
+      var nSets = 0; (w.exercises || []).forEach(function (ex) { nSets += setsOf(ex, w.date).length; });
+      var pd0 = parseD(w.date), pr = sessPRs(w), ex0 = (w.exercises || [])[0], ss0 = ex0 ? setsOf(ex0, w.date) : [], top0 = ss0.reduce(function (a, st) { return setScore(st) > setScore(a) ? st : a; }, ss0[0] || {});
+      var exLine = ex0 ? esc(ex0.name) + ' ' + ss0.length + '×' + (top0.reps || '') + (top0.kg > 0 ? ' · ' + fmt(top0.kg, top0.kg % 1 ? 1 : 0) + ' kg' : '') + ((w.exercises || []).length > 1 ? ' · +' + ((w.exercises || []).length - 1) + ((w.exercises || []).length === 2 ? ' esercizio' : ' esercizi') : '') : 'Nessun esercizio';
+      return '<details class="sess sx" data-id="' + esc(w.id) + '" style="--c:' + c + '"' + (openSess.has(w.id) ? ' open' : '') + '><summary><span class="ico">' + esc(initials(w.title)) + '</span><span class="sx-t"><span class="tt">' + esc(w.title) + (pr ? '<em class="sx-pr"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15" r="5"/><path d="M8 3h8l-2 7h-4z"/></svg>' + pr + (pr === 1 ? ' record' : ' record') + '</em>' : '') + '</span><span class="dt">' + cap(DOW[(pd0.getDay() + 6) % 7]) + ' ' + pd0.getDate() + ' ' + MESI[pd0.getMonth()] + (pd0.getFullYear() !== new Date().getFullYear() ? ' ' + pd0.getFullYear() : '') + (w.start ? ' · ' + esc(w.start) : '') + '</span></span><span class="sx-chev" aria-hidden="true">›</span>'
+        + '<span class="sx-stats"><span><small>Durata</small><b>' + (w.durMin ? fmtDur(w.durMin) : '—') + '</b></span><span><small>Volume</small><b>' + (vol > 0 ? fmt(vol, 0) + ' kg' : '—') + '</b></span><span><small>Serie</small><b>' + nSets + '</b></span></span><span class="sx-ex">' + exLine + '</span></summary>'
         + '<div class="body">' + (w.exercises || []).map(function (ex) {
           return '<div class="ex"><b>' + esc(ex.name) + '</b><div class="sets">' + (ex.sets || []).map(function (s) { return '<span>' + esc(fmtSet(s)) + '</span>'; }).join('') + '</div></div>';
         }).join('')
@@ -9309,6 +9321,13 @@ function renderSplitBox(id) {
   if (P.extra.length) lines.push('In più: ' + P.extra.map(function (w) { return esc(wGroup(w)); }).join(', ') + '.');
   lines.push('Settimana scorsa: ' + prev.n + (prev.n === 1 ? ' seduta.' : ' sedute.'));
   if (lw < sw.ws) lines.push('L\'ultima seduta importata è del ' + fmtDay(lw) + ': se nel frattempo ti sei allenato, esporta di nuovo da Hevy e carica il file.');
+  if (id === 'split-all') {
+    /* C · in Palestra: una riga con i giorni della split, un'etichetta con quante sedute mancano, una nota corta */
+    var row = P.slots.map(function (x) { var dw = x.w, isNext = P.next === x, c = groupInfo(x.g).c, pd = dw ? parseD(dw.date) : null; return '<div class="spc' + (dw ? ' done' : isNext ? ' next' : '') + '" style="--c:' + c + '"><b>' + esc(x.k) + (dw ? '<i aria-hidden="true">✓</i>' : '') + '</b><span>' + (dw ? DOW[(pd.getDay() + 6) % 7] + ' ' + pd.getDate() : isNext ? 'prossima' : 'da fare') + '</span></div>'; }).join('');
+    var note = [P.extra.length ? 'In più: ' + P.extra.map(function (w) { return esc(wGroup(w)); }).join(', ') + '.' : '', 'Settimana scorsa: ' + prev.n + (prev.n === 1 ? ' seduta.' : ' sedute.'), lw < sw.ws ? 'Ultima seduta importata: ' + fmtDay(lw) + '.' : ''].filter(Boolean).join(' ');
+    box.innerHTML = '<div class="spc-head"><span class="spc-chip' + (done >= N ? ' full' : '') + '">' + done + ' di ' + N + ' sedute' + (done >= N ? ' ✓' : '') + '</span><button type="button" class="linkbtn small" data-split-edit>Cambia l’ordine</button></div><div class="spc-row" style="--n:' + Math.min(N, 4) + '">' + row + '</div><p class="spc-note">' + note + '</p>';
+    return;
+  }
   box.innerHTML = html + '<div class="splitnote">' + lines.join(' ') + '</div>';
 }
 /* finestra per scegliere l'ordine dei giorni della split: si scelgono solo titoli già arrivati da Hevy */
@@ -15932,6 +15951,37 @@ html body #w-rng button:not(#a):not(#b):not(#c):not(#d):not(#e){flex:1 1 0!impor
 #tmw .tmw-fold>summary small{display:block;font-size:.8rem;color:#9C9CA3;margin-top:3px;line-height:1.4}
 #tmw .tmw-fold[open]>summary{margin-bottom:12px}
 #tmw:not(:has(.tmw-fold[open])) > :not(#tmw-body){display:none!important}
+
+/* ===== C · Palestra: settimana compatta e sedute in stile feed ===== */
+.spc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 12px}
+.spc-chip{padding:5px 11px;border-radius:999px;background:#FFFFFF10;font-size:.8rem;font-weight:750;color:#E9E9EE}
+.spc-chip.full{background:#30D15822;color:#5EE07D}
+.spc-row{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:8px}
+.spc{padding:10px 6px;border-radius:14px;text-align:center;background:#FFFFFF08;border:1px solid #FFFFFF10;min-width:0}
+.spc b{display:flex;align-items:center;justify-content:center;gap:4px;font-size:1.15rem;color:#8E8E93;letter-spacing:.02em}
+.spc b i{font-style:normal;font-size:.8rem}
+.spc span{display:block;font-size:.72rem;color:#8E8E93;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spc.done{background:color-mix(in srgb,var(--c) 18%,transparent);border-color:color-mix(in srgb,var(--c) 35%,transparent)}
+.spc.done b{color:var(--c)}.spc.done span{color:#E5E5EA}
+.spc.next{border-color:color-mix(in srgb,var(--c) 70%,transparent);border-style:dashed}
+.spc.next b{color:#E5E5EA}
+.spc-note{margin:10px 0 0;font-size:.8rem;color:#8E8E93}
+html body .sess.sx:not(#a):not(#b):not(#c){background:#1C1C1E!important;border:1px solid #FFFFFF12!important;border-radius:20px!important}
+html body .sess.sx + .sess.sx:not(#a){margin-top:10px}
+html body .sess.sx > summary:not(#a):not(#b):not(#c){display:grid!important;grid-template-columns:40px minmax(0,1fr) auto!important;grid-template-areas:"ico t chev" "stats stats stats" "ex ex ex"!important;gap:4px 12px!important;align-items:center!important;padding:14px!important;min-height:0!important}
+html body .sess.sx > summary > .disclosure-cue:not(#a){display:none!important}
+.sess.sx .ico{grid-area:ico}
+.sx-t{grid-area:t;display:flex;flex-direction:column;min-width:0}
+.sx-t .tt{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:1.02rem;font-weight:700;color:#fff}
+.sx-t .dt{font-size:.8rem;color:#8E8E93;margin-top:1px}
+.sx-pr{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:#FFD60A1F;color:#FFD60A;font-style:normal;font-size:.7rem;font-weight:800}
+.sx-chev{grid-area:chev;font-size:1.4rem;color:#636366;transition:transform .2s}
+.sess.sx[open] .sx-chev{transform:rotate(90deg)}
+.sx-stats{grid-area:stats;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 6px}
+.sx-stats small{display:block;font-size:.7rem;color:#8E8E93}
+.sx-stats b{font-size:.98rem;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sx-ex{grid-area:ex;padding-top:9px;border-top:1px solid #FFFFFF12;font-size:.8rem;color:#C7C7CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .sess.sx .body:not(#a){padding:0 14px 14px!important}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
