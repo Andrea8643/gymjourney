@@ -7407,16 +7407,19 @@ function renderProjection() {
   }
   var T = E.today.target ? E.today.target.v : null, Il = f.logged ? f.logged.I : null, B = E.base, dir = goalDir(), gw = s.goalWeight;
   var kd = f.sim.kSDrel || 0, marks = [14, 28, 56, 84];
-  function result(I, k, name, tone, sim) {
-    if (I == null) return '<div class="projection-result '+tone+'"><small>'+name+'</small><b class="projection-unavailable">Non disponibile</b><span>Servono giornate complete sufficienti.</span></div>';
-    var b = GJM.weightBand(sim || f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
-    return '<div class="projection-result '+tone+'"><small>'+name+'</small>'
-      + (done ? '<b class="projection-achieved">Traguardo raggiunto</b><span>in questo scenario</span>' : '<b>'+fmt(b.c,1)+'<em> kg</em></b><span>'+fmt(b.lo,1)+' – '+fmt(b.hi,1)+' kg · intervallo del modello</span>') + '</div>';
-  }
+
   var dateText = function(d) { return d.split('-').reverse().join('/'); };
   var startText = dateText(f.from);
   $('#proj-context').innerHTML = '<div class="projection-scenarios"><span class="projection-plan"><i></i><span class="projection-scenario-copy"><span>Seguendo il piano dal '+startText+'</span><b>'+(T!=null?kc(T)+'/giorno':'non disponibile')+'</b></span></span><span class="projection-diary"><i></i><span class="projection-scenario-copy"><span>Mantenendo la media recente delle ultime due settimane</span><b>'+(Il!=null?kc(Il)+'/giorno':'non disponibile')+'</b></span></span></div>';
-  box.innerHTML = marks.map(function(k){return '<article class="projection-card"><header><span>Tra <b>'+k/7+' settimane</b></span><time datetime="'+addDays(f.from,k)+'">'+fmtShort(addDays(f.from,k))+'</time></header><div class="projection-results">'+result(T,k,'Con il piano','projection-plan',f.simPlan)+result(Il,k,'Con la media recente','projection-diary')+'</div></article>';}).join('');
+  /* P1 · le quattro date in una tabella: stessa informazione, un quarto dello spazio */
+  function cell(I, k, sim) {
+    if (I == null) return '<td class="pt-na">—</td>';
+    var b = GJM.weightBand(sim || f.sim, I, k), done = dir && gw > 0 && (b.c - gw) * dir >= 0;
+    return done ? '<td><b class="pt-done">Traguardo</b><small>raggiunto</small></td>' : '<td><b>' + fmt(b.c, 1) + '</b><small>' + fmt(b.lo, 1) + '–' + fmt(b.hi, 1) + '</small></td>';
+  }
+  box.innerHTML = '<div class="proj-table-wrap"><table class="proj-table"><thead><tr><th scope="col">Tra</th><th scope="col" class="pt-plan"><i></i>Col piano</th><th scope="col" class="pt-diary"><i></i>Con la media</th></tr></thead><tbody>'
+    + marks.map(function (k) { return '<tr><th scope="row">' + k / 7 + ' settimane<small><time datetime="' + addDays(f.from, k) + '">' + fmtShort(addDays(f.from, k)) + '</time></small></th>' + cell(T, k, f.simPlan) + cell(Il, k) + '</tr>'; }).join('')
+    + '</tbody></table></div><p class="proj-legend">Peso in kg; sotto, la fascia del modello.' + (Il == null ? ' Media recente: servono giornate complete sufficienti.' : '') + '</p>';
   $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, dal '+fmtDay(f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
   $('#proj-note').textContent = (f.planUpdates ? 'Con il piano la fascia considera che le calorie vengono corrette ogni settimana con le tue pesate: un errore del mantenimento non si accumula. Con la media recente le calorie restano fisse, quindi la fascia si allarga col tempo. ' : 'Il piano ha calorie fisse: la fascia si allarga col tempo perché un errore del mantenimento non viene corretto. ') + (f.glycogen ? 'Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'stare sopra' : 'stare sotto') + ' questi valori di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua. ' : '') + 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
   $('#proj-more').innerHTML = '<p>'+(f.startOrigin==='filtro'?'La partenza è il peso stimato dallo stesso calcolo del mantenimento, senza le oscillazioni d\'acqua.':'La partenza usa la traiettoria energetica corretta dalle pesate.')+' Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Energia per kg: '+fmt(f.sim.rho||7700,0)+' kcal/kg'+((f.sim.rho||7700)<7700?' (in surplus una parte del peso preso è muscolo)':'')+'. La fascia unisce tre incertezze: il consumo (±'+fmt(kd*100,1)+'%), il peso di partenza (±'+fmt(f.w0Se,1)+' kg) e l\'energia per kg (5.000–9.400 kcal/kg'+(f.sim.rhoK?', ricalcolando ogni volta anche il mantenimento':'')+'). È circa il 95% se le ipotesi del modello reggono; non è una garanzia.</p>';
@@ -7512,7 +7515,17 @@ function renderSummary() {
     return '<tr'+(r.label.indexOf('(in corso)')>=0?' class="summary-current"':'')+'><td><div class="summary-period">' + esc(r.label.replace(' (in corso)','')) + (r.label.indexOf('(in corso)')>=0?'<span class="summary-live">In corso</span>':'') + '</div>' + (r.sub ? '<div class="faint" style="font-size:.78rem">' + r.sub + '</div>' : '') + '</td><td>' + (r.w != null ? fmt(r.w, 1) : '—') + '</td><td class="' + dwCls + '">' + (r.dw != null ? sgn(r.dw, 1) : '—') + '</td><td>' + (r.k != null ? fmt(r.k, 0) : '—') + '</td><td class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) + '<small> su ' + r.nb + '</small>' : '—') + '</td><td>' + (r.p != null ? fmt(r.p, 0) : '—') + '</td><td>' + (r.c != null ? fmt(r.c, 0) : '—') + '</td><td>' + (r.f != null ? fmt(r.f, 0) : '—') + '</td><td>' + (r.st != null ? fmt(r.st, 0) : '—') + '</td><td>' + fmtH(r.sl) + '</td><td>' + r.work + '</td><td>' + r.nd + '/' + r.span + '</td></tr>';
   }).join('');
   var th = function (a, b) { return '<th>' + a + (b ? '<small>' + b + '</small>' : '') + '</th>'; };
-  $('#summary').innerHTML = '<table class="sum" aria-label="Riepilogo del percorso"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Sonno', 'ore a notte') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
+  /* P2 · sul telefono ogni periodo è una scheda: niente tabella che scorre di lato */
+  var dash = function (v, d) { return v != null ? fmt(v, d) : '—'; };
+  var cardsHTML = '<div class="sum-cards">' + rows.map(function (r) {
+    var live = r.label.indexOf('(in corso)') >= 0, dwCls = r.dw == null || !dir ? '' : (r.dw * dir > 0) ? 'neg' : 'pos', balCls = r.bal == null || !dir ? '' : (r.bal * dir > 0) ? 'neg' : 'pos';
+    return '<article class="sum-card' + (live ? ' is-live' : '') + '"><header><div><b>' + esc(r.label.replace(' (in corso)', '')) + '</b>' + (r.sub ? '<span>' + r.sub + '</span>' : '') + '</div>' + (live ? '<span class="summary-live">In corso</span>' : '<span class="sum-days">' + r.nd + '/' + r.span + ' giorni con calorie</span>') + '</header>'
+      + '<div class="sum-kpi"><div><small>Peso medio</small><b>' + dash(r.w, 1) + '<em> kg</em></b>' + (r.dw != null ? '<span class="' + dwCls + '">' + sgn(r.dw, 1) + ' kg</span>' : '') + '</div>'
+      + '<div><small>Calorie</small><b>' + dash(r.k, 0) + '</b><span>al giorno</span></div>'
+      + '<div><small>Bilancio stimato</small><b class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) : '—') + '</b><span>' + (r.bal != null ? 'su ' + r.nb + ' giornate' : 'al giorno') + '</span></div></div>'
+      + '<div class="sum-mini"><span><i style="background:var(--prot)"></i>P ' + dash(r.p, 0) + '</span><span><i style="background:var(--carb)"></i>C ' + dash(r.c, 0) + '</span><span><i style="background:var(--fat)"></i>G ' + dash(r.f, 0) + '</span><span><i style="background:var(--steps)"></i>' + dash(r.st, 0) + ' passi</span><span><i style="background:var(--sleep)"></i>' + fmtH(r.sl) + ' h</span><span><i style="background:#BF5AF2"></i>' + r.work + (r.work === 1 ? ' seduta' : ' sedute') + '</span></div></article>';
+  }).join('') + '</div>';
+  $('#summary').innerHTML = cardsHTML + '<table class="sum" aria-label="Riepilogo del percorso"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Sonno', 'ore a notte') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
   $('#summary-legend').innerHTML = '<p><b>Bilancio stimato</b>: calorie registrate meno consumo stimato di ciascun giorno, in media, solo sulle giornate dichiarate complete (il numero piccolo dice quante). Negativo = deficit stimato. Non è una misura.</p><p><b>Passi</b>: passi quotidiani, palestra esclusa. <b>Allenamenti</b>: sedute importate da Hevy. <b>Giorni con calorie</b>: giorni con calorie scritte, su quelli del periodo.</p>';
 }
 /* ora e condizione della pesata, quando le hai scritte (sezione 11): restano accanto al valore osservato */
@@ -15456,6 +15469,48 @@ html.dayform-open .qa-fab,html.intro-on .qa-fab{display:none}
 .gj-cheer-t small{font-size:.78rem;color:#AEAEB2;line-height:1.35}
 @media (min-width:1024px){.gj-cheer{bottom:40px}}
 @media (prefers-reduced-motion:reduce){.gj-cheer{transition:opacity .2s}}
+
+/* ===== P1 · previsioni del peso in tabella ===== */
+.proj-table-wrap{overflow-x:auto;margin-top:6px}
+.proj-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.proj-table th,.proj-table td{padding:12px 8px;text-align:left;vertical-align:top;border-top:1px solid #FFFFFF12}
+.proj-table thead th{border-top:0;padding-top:4px;padding-bottom:8px;font-size:.74rem;font-weight:650;color:#AEAEB2;white-space:nowrap}
+.proj-table thead th i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.proj-table .pt-plan i{background:#64D2FF}.proj-table .pt-diary i{background:#30D158}
+.proj-table tbody th{font-size:.86rem;font-weight:650;color:#fff;white-space:nowrap}
+.proj-table small{display:block;margin-top:2px;font-size:.72rem;font-weight:500;color:#8E8E93}
+.proj-table td b{font-size:1.15rem;color:#fff;letter-spacing:-.01em}
+.proj-table td:nth-child(2) b{color:#64D2FF}.proj-table td:nth-child(3) b{color:#30D158}
+.proj-table td b.pt-done{font-size:.92rem;color:#FFD60A!important}
+.proj-table .pt-na{color:#636366;font-size:1.1rem}
+.proj-legend{margin:8px 0 0;font-size:.74rem;color:#8E8E93}
+@media (max-width:360px){.proj-table th,.proj-table td{padding:10px 5px}.proj-table td b{font-size:1.02rem}.proj-table tbody th{white-space:normal}}
+
+/* ===== P2 · Settimane e mesi a schede sul telefono ===== */
+.sum-cards{display:none}
+@media (max-width:700px){
+  #summary .sum-cards{display:flex;flex-direction:column;gap:10px}
+  #summary table.sum{display:none}
+  #summary{overflow:visible!important}
+}
+.sum-card{padding:14px;border-radius:18px;background:#FFFFFF08;border:1px solid #FFFFFF12}
+.sum-card.is-live{border-color:#FFFFFF2A}
+.sum-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sum-card header b{display:block;font-size:1rem;color:#fff}
+.sum-card header div span{display:block;font-size:.76rem;color:#8E8E93;margin-top:2px}
+.sum-card .sum-days{font-size:.72rem;color:#8E8E93;text-align:right}
+.sum-kpi{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sum-kpi small{display:block;font-size:.7rem;color:#8E8E93;margin-bottom:3px}
+.sum-kpi b{display:block;font-size:1.12rem;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.sum-kpi b em{font-style:normal;font-size:.72rem;color:#8E8E93;font-weight:500}
+.sum-kpi span{display:block;font-size:.72rem;color:#8E8E93;margin-top:2px}
+.sum-kpi .neg{color:#30D158!important}.sum-kpi .pos{color:#FF9F0A!important}
+.sum-mini{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;padding-top:10px;border-top:1px solid #FFFFFF12;font-size:.76rem;color:#C7C7CC;font-variant-numeric:tabular-nums}
+.sum-mini span{display:inline-flex;align-items:center;gap:5px}
+.sum-mini i{width:7px;height:7px;border-radius:50%}
+html body main .proj-table:not(#a):not(#b):not(#c) :is(th,td){position:static!important;background:transparent!important;box-shadow:none!important;min-width:0!important}
+html body main .proj-table:not(#a):not(#b):not(#c) thead th{white-space:normal!important}
+.proj-table{table-layout:fixed}.proj-table th:first-child{width:36%}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
