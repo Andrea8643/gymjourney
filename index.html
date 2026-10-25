@@ -5565,7 +5565,7 @@ function recipeCover(r) {
 function recipeCardSummary(r) {
   var one = recipeNutrition(r, false), n = recipeServings(r), kp = one.protein * 4, kc = one.carbs * 4, kf = one.fat * 9, tot = kp + kc + kf;
   var bar = tot > 0 ? '<span class="rc-mbar" aria-hidden="true"><i style="flex:' + kp + ';background:var(--prot)"></i><i style="flex:' + kc + ';background:var(--carb)"></i><i style="flex:' + kf + ';background:var(--fat)"></i></span>' : '';
-  return recipeCover(r) + '<span class="rc-body"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="rc-kcal"><b>' + fmt(one.kcal, 0) + ' kcal</b> a porzione</span>' + bar + '<span class="rc-mac">P ' + recipeNumber(one.protein) + ' · C ' + recipeNumber(one.carbs) + ' · G ' + recipeNumber(one.fat) + (n > 1 ? ' · ' + n + ' porz.' : '') + '</span></span>';
+  return recipeCover(r) + '<span class="rc-body"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="rc-kcal"><b>' + fmt(one.kcal, 0) + ' kcal</b> a porzione</span>' + bar + '<span class="rc-mac"><span>P ' + fmt(one.protein, 0) + ' · C ' + fmt(one.carbs, 0) + ' · G ' + fmt(one.fat, 0) + '</span><span class="rc-porz">' + n + (n === 1 ? ' porzione' : ' porzioni') + '</span></span></span>';
 }
 function renderRecipes() {
   RecipeUI.mealView = null;
@@ -6821,7 +6821,7 @@ function lastWeekNeed() {
 function needSummaryWrap(view, dayView, date, inner) {
   var R = view && view.available && view.reference ? view.reference.R : null, x = dayView && dayView.today, C = x && x.C != null ? x.C : null, T = dayTarget(date), K = T && T.kcal > 0 ? T.kcal : null;
   var cell = function (l, v, c) { return '<div><small>' + l + '</small><b' + (c ? ' style="color:' + c + '"' : '') + '>' + (v != null ? fmt(v, 0) : '—') + '</b></div>'; };
-  return '<div class="need-sum">' + cell('Mantenimento', R) + cell(date === todayStr() ? 'Consumo di oggi' : 'Consumo del giorno', C) + cell('Obiettivo', K, HEX.kcal) + '</div>'
+  return '<div class="need-sum">' + cell('Mantenimento', R) + cell(date === todayStr() ? 'Consumo oggi' : 'Consumo', C) + cell('Obiettivo', K, HEX.kcal) + '</div>'
     + '<details class="need-more"' + (state.needOpen ? ' open' : '') + '><summary>Dettagli del piano e del consumo<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary><div class="need-more-body">' + inner + '<button type="button" class="linkbtn small need-go" data-goview="calorie">Apri Progressi › Calorie ›</button></div></details>';
 }
 document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('need-more')) state.needOpen = e.target.open; }, true);
@@ -7500,7 +7500,7 @@ function renderForecast() {
   if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg il ' + fmtDay(f.in28.d) + (f.in28.lo != null ? ' (fascia probabile ' + fmt(f.in28.lo, 1) + '–' + fmt(f.in28.hi, 1) + ' kg' + (f.planUpdates ? ', con le revisioni settimanali delle calorie' : '') + ')' : '') : '—') + '.' + (f.glycogen ? ' Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua: non è grasso.' : '') + ' È una simulazione, non una misura.</p>'; return; }
   if (f.done) { big.textContent = 'Obiettivo raggiunto'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">La tendenza è già oltre l\'obiettivo: il piano andrebbe portato al mantenimento (Profilo).</p>'; return; }
   big.textContent = rng(f.plan);
-  (function(){var sub=$('#fc-sub');if(!sub)return;var w=winText(f.plan);sub.innerHTML=f.plan&&f.plan.central?'Se da oggi segui il piano: <b>'+kc(f.plan.I)+' al giorno</b>.'+(w?' '+esc(w.replace('Fascia probabile (95%): fra il ','Quasi sicuramente fra il ')):'')+' Tiene già conto di tutto quello che hai fatto finora, perché parte dal tuo peso di oggi.':'';})();
+  (function(){var sub=$('#fc-sub');if(!sub)return;var w=winText(f.plan);sub.innerHTML=f.plan&&f.plan.central?'Se da oggi segui il piano: <b>'+kc(f.plan.I)+' al giorno</b>.'+(w?' '+esc(w.replace('Fascia probabile (95%): fra il ','Quasi sicuramente fra il ')):'')+' Tiene già conto di tutto quello che hai fatto finora, perché parte dal tuo peso di oggi.'+(f.plan.far?' Oltre 12 settimane la data è indicativa.':''):'';})();
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
   var rows = '<h3 class="fc-alt-h">E se invece…</h3><div class="fc-grid">'
     + line('Se mantieni la media recente', f.logged ? fmt(f.logged.I, 0) + ' kcal al giorno: media delle giornate complete nelle ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
@@ -12560,6 +12560,7 @@ try { document.fonts.ready.then(moveInd); } catch (e) {}
     var see = document.createElement('details'); see.className = 'g3-more rep-see'; see.innerHTML = '<summary>Vedi il testo</summary><div class="g3-more-body"></div>'; see.lastChild.appendChild(rp); box.appendChild(see);
     var hint = host.querySelector('.summary-scroll-hint'); if (hint) host.insertBefore(box, hint); else host.appendChild(box); rpPanel.classList.add('gj-dup');
   }
+  var fv = document.getElementById('fc-v'), g2 = fv && fv.closest('.grid2'); if (g2) g2.classList.add('fc-first');
   /* Peso: il prospetto settimana per settimana dentro il riquadro dell'arrivo */
   var fc = document.getElementById('fc-rows'), pp = document.getElementById('proj-panel');
   if (fc && pp) {
@@ -16346,6 +16347,29 @@ html body #tab-diario .rep-inline .weeknav .btn.icon:not(#a){width:32px!importan
 html body #tab-diario .rep-inline #rep-msg:empty{display:none}
 html body #tab-diario .rep-see:not(#a){margin:0!important}
 @media(max-width:700px){html body #tab-diario .summary-scroll-hint:not(#a):not(#b){display:none!important}}
+
+/* Ricette: schede della stessa altezza, valori sempre allineati in fondo */
+html body #tab-ricette .rcard.recipe-compact:not(#a):not(#b):not(#c):not(#d){align-self:stretch!important;display:flex!important;flex-direction:column}
+html body #tab-ricette .rcard.recipe-compact > .recipe-expand:not(#a){flex:1 1 auto;display:flex;flex-direction:column}
+html body #tab-ricette .rcard.recipe-compact > .recipe-expand > summary.rc2:not(#a):not(#b){flex:1 1 auto;display:flex!important;flex-direction:column}
+html body #tab-ricette .rc2 .rc-body:not(#a){flex:1 1 auto;display:flex!important;flex-direction:column}
+html body #tab-ricette .rc2 .rc-kcal:not(#a){margin-top:auto!important}
+html body #tab-ricette .rc2 .rc-mac:not(#a):not(#b){display:flex!important;flex-direction:column;gap:2px;white-space:nowrap}
+html body #tab-ricette .rc2 .rc-porz{font-weight:600;opacity:.8}
+html body #tab-ricette #r-tags:empty{display:none!important}
+html body #tab-ricette .recipe-search-panel:not(#a):not(#b):not(#c){gap:10px!important}
+/* Oggi: i tre numeri del mantenimento sulla stessa riga, qualunque sia la lunghezza dell'etichetta */
+html body main .need-sum>div:not(#a){display:flex;flex-direction:column;justify-content:space-between;gap:8px;min-width:0}
+html body main .need-sum>div small:not(#a){font-size:.74rem;line-height:1.25}
+html body main .need-sum>div b:not(#a){margin-top:auto;line-height:1.1;font-variant-numeric:tabular-nums}
+/* Peso: per prima la data di arrivo, poi il grafico */
+html body #tab-diario .dsec[data-dsec="peso"] > .grid2.fc-first:not(#a){order:-3}
+
+html body #tab-diario #fc-chips:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:none!important}
+html body main .need-sum:not(#a){gap:6px!important}
+html body main .need-sum>div:not(#a):not(#b){padding:12px 10px!important}
+html body main .need-sum>div small:not(#a):not(#b){font-size:clamp(.64rem,2.9vw,.76rem)!important;letter-spacing:-.01em}
+@media(max-width:359px){html body main .need-sum>div small:not(#a):not(#b):not(#c){font-size:.6rem!important}html body main .need-sum>div:not(#a):not(#b):not(#c){padding:11px 8px!important}}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
