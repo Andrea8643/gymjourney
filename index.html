@@ -2741,7 +2741,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
    Funzioni pure: nessun accesso alla pagina, all'archivio o all'orologio. Ogni calcolo riceve i dati (D) e la data
    «asOf» e usa soltanto ciò che era disponibile fino a quel giorno. Le date sono giorni del calendario dell'utente
    ('AAAA-MM-GG'); l'aritmetica usa UTC, così cambio dell'ora, fine mese e fine anno non duplicano né saltano giorni. */
-var M = { V: '2.5.0-fasi' };
+var M = { V: '2.5.1-riferimento' };
 
 /* ---------- date ---------- */
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -2844,7 +2844,7 @@ var REG = [
   { id: 'limite_k', nome: 'Fattore di calibrazione plausibile', valore: [0.4, 2.5], tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'limiti ingegneristici ampi per incompatibilità estreme; non una misura fisiologica né un vincolo vicino alla stima teorica', ipotesi: 'il valore non troncato resta visibile nei dettagli' },
   { id: 'transizione', nome: 'Transizioni', unita: 'giorni', tipo: 'ingegneria', fonte: 'scelta del prodotto, basata sui tempi tipici di riequilibrio di glicogeno e acqua', misura: 'inizio del percorso 14 giorni (circa 1 kg); cambio di fase 14 giorni (circa 1,2 kg); creatina con carico 7 giorni, senza carico o alla sospensione 28 giorni (circa 1,5 kg); malattia: durata più 7 giorni. In questi giorni il peso si può spostare senza che lo spostamento venga contato come grasso. Dopo un cambio di fase, dal decimo giorno e per sei settimane, anche il consumo può cambiare più del solito (adattamento che rientra, movimento spontaneo), tanto più quanto erano grandi il deficit o il surplus prima e dopo il cambio; questa incertezza entra nel margine fin dal giorno del cambio. Un cambio di lavoro o di routine rende il fattore personale meno certo finché non arrivano dati nuovi', ipotesi: 'nessuna massa d\'acqua sottratta in automatico: il calcolo non si ferma, attribuisce lo sbalzo all\'acqua finché i dati non dicono altro' },
   { id: 'outlier', nome: 'Controllo di plausibilità delle pesate', valore: 0.045, unita: 'frazione della mediana delle vicine (almeno 2 kg)', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'le oscillazioni normali crescono con il peso (3 kg a 65 kg, 4,5 kg a 100 kg); controllo, non legge del corpo umano: la pesata resta e si può confermare', ipotesi: 'vicine = 7 giorni prima e dopo, solo fino alla data di calcolo; con meno di 3 vicine, nei primi 14 giorni del piano, confronto con il peso di partenza del profilo' },
-  { id: 'tendenza', nome: 'Tendenza del peso', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'retta robusta (Theil–Sen) sulle pesate degli ultimi 14 giorni fino alla data; con meno di 4 pesate, mediana degli ultimi 7 giorni', ipotesi: 'confrontata con ultima pesata e media semplice nella validazione' },
+  { id: 'tendenza', nome: 'Tendenza del peso', tipo: 'ingegneria', fonte: 'scelta del prodotto', misura: 'con il mantenimento calibrato, il peso stimato dal filtro del bilancio energetico (stesso numero in tutta l\'app); altrimenti retta robusta (Theil–Sen) sulle pesate degli ultimi 14 giorni fino alla data, con meno di 4 pesate mediana degli ultimi 7 giorni. Il riferimento per leggere la pesata di un giorno è il peso del giorno prima più l\'effetto delle sue calorie, se la giornata è completa', ipotesi: 'confrontata con ultima pesata e media semplice nella validazione' },
   { id: 'ritmo_cut', nome: 'Ritmo massimo del piano automatico in cut', valore: 1.0, unita: '% del peso a settimana, e deficit ≤ 25% del consumo', tipo: 'prodotto', fonte: 'vincolo del prodotto', misura: 'oltre, il piano automatico non viene generato: si propone di cambiare data, obiettivo o modalità', ipotesi: 'non è una soglia di sicurezza personale' },
   { id: 'ritmo_surplus', nome: 'Ritmo massimo del piano automatico in surplus', valore: 0.5, unita: '% del peso a settimana, e surplus ≤ 15% del consumo', tipo: 'prodotto', fonte: 'vincolo del prodotto' },
   { id: 'fascia', nome: 'Fascia di mantenimento', valore: 1.0, unita: 'kg', tipo: 'prodotto', fonte: 'vincolo del prodotto', misura: 'un obiettivo entro la fascia non genera un deficit automatico', ipotesi: 'modificabile nel profilo' },
@@ -3463,13 +3463,36 @@ function makeWeightAt(ctx) {
 }
 /* «bilancia di domani»: la tendenza spostata di un giorno e la dispersione tipica delle tue pesate attorno ad essa.
    È un intervallo descrittivo, non una probabilità; sale, liquidi, intestino e orario non sono noti. */
+/* Peso di riferimento unico dell'app: con la stima adattiva calibrata è il livello del filtro del mantenimento (peso
+   senza le oscillazioni di acqua e cibo, che riconosce le giornate abbondanti); altrimenti la retta delle pesate.
+   Stessa forma di trendAt (data, numero di pesate, ultima pesata, età), con v, se e pendenza dal filtro e ref='filtro'. */
+function refWeight(ctx, asOf) {
+  var key = 'rw:' + asOf; if (ctx.memo[key]) return ctx.memo[key];
+  var tr = trendAt(ctx, asOf);
+  if (tr.none) return (ctx.memo[key] = tr);
+  var v = versionAt(ctx.versions, asOf), cfg = v ? tdeeCfg(ctx, v) : null;
+  if (!cfg || !cfg.ok || !cfg.adaptive || !cfg.useProfile) return (ctx.memo[key] = tr);
+  var kh = kHistory(ctx, asOf, cfg);
+  if (!kh.ready || !kh.level) return (ctx.memo[key] = tr);
+  var run = kalmanRun(ctx, cfg), p14 = run.days[dAdd(asOf, -14)], p7 = run.days[dAdd(asOf, -7)], back = p14 || p7;
+  var slope = back ? (kh.level.v - back.L) / dDiff(back.d, asOf) : tr.slope;
+  return (ctx.memo[key] = Object.assign({}, tr, { v: kh.level.v, se: kh.level.se, slope: slope, ref: 'filtro', line: { v: tr.v, slope: tr.slope }, k: kh.k, run: run, cfg: cfg }));
+}
+M.refWeight = refWeight;
 function tomorrowScale(ctx, asOf) {
-  var t = trendAt(ctx, asOf);
+  var t = refWeight(ctx, asOf);
   if (t.none) return { none: true, why: 'nessuna pesata' };
   if (t.method !== 'retta') return { none: true, why: 'servono almeno ' + K.TREND_MIN + ' pesate negli ultimi ' + K.TREND_DAYS + ' giorni' };
   if (t.datato) return { none: true, why: 'ultima pesata di più di 7 giorni fa' };
-  var c = t.v + t.slope, s = Math.max(0.3, 2 * (t.s || 0));
-  return { d: dAdd(asOf, 1), c: c, lo: c - s, hi: c + s, spread: s, n: t.n };
+  /* riferimento per la pesata di domani: peso di oggi più l'effetto delle calorie di oggi (se la giornata è completa)
+     con il consumo stimato; altrimenti la pendenza recente */
+  var c = t.v + t.slope, by = 'pendenza';
+  if (t.ref === 'filtro') {
+    var it = intakeOf(ctx.days[asOf], false), A = shapeAt(ctx, asOf, t.cfg, 'osservato');
+    if (it.usable && A > 0) { c = t.v + ((1 - K.TEF) * it.kcal - t.k * A) / rhoAt(ctx, asOf); by = 'calorie'; }
+  }
+  var s = Math.max(0.3, 2 * (t.s || 0));
+  return { d: dAdd(asOf, 1), c: c, lo: c - s, hi: c + s, spread: s, n: t.n, ref: t.ref || 'retta', by: by };
 }
 M.weighIns = weighIns; M.trendAt = trendAt; M.tomorrowScale = tomorrowScale;
 
@@ -4578,8 +4601,8 @@ function engine(D, asOf, opts) {
   };
   /* oggi */
   var tdy = week[dWd(asOf)];
-  var tr = trendAt(ctx, asOf), tm = tomorrowScale(ctx, asOf), wi = weighIns(ctx, asOf);
-  out.weight = { trend: tr, tomorrow: tm, flagged: wi.flagged, confirmed: wi.conf, other: wi.other, n: wi.all.length };
+  var trLine = trendAt(ctx, asOf), tr = refWeight(ctx, asOf), tm = tomorrowScale(ctx, asOf), wi = weighIns(ctx, asOf);
+  out.weight = { trend: stripRef(tr), trendLine: trLine, tomorrow: tm, flagged: wi.flagged, confirmed: wi.conf, other: wi.other, n: wi.all.length };
   var kSD = base.ok ? base.kSD : null;
   var daySD = kSD && tdy.B != null ? Math.sqrt(Math.pow(kSD / (base.k || 1) * tdy.B, 2) + Math.pow(tdy.A && tdy.A.ok ? kAt(asOf) * (tdy.A.hi - tdy.A.lo) / 4 : 0, 2)) : null;
   out.today = {
@@ -4597,7 +4620,7 @@ function engine(D, asOf, opts) {
   out.confidence = confidenceOf(qcal, base, tr, origine, cfg, out.verifiedOn);
   /* revisione del piano (6.3): candidata, conflitto o nessuna */
   out.revision = planRevision(ctx, v, z, res, asOf, kh, base);
-  out.review = reviewOutcome(out, ctx, v, res, qcal, tr);
+  out.review = reviewOutcome(out, ctx, v, res, qcal, trLine);
   /* una pesata isolata non deve far partire subito una revisione: la rinvio alla rivalutazione successiva */
   if (out.review.n === 3 && out.revision && (out.revision.kind === 'proposta' || out.revision.kind === 'da_applicare')) out.revision = { kind: 'rinviata', next: dAdd(asOf, 1), why: 'revisione rinviata: l\'ultima pesata si discosta dalla tendenza, aspetto altre pesate confrontabili', deferred: out.revision.kind };
   out.alerts = alertsOf(out, ctx, asOf);
@@ -4633,6 +4656,7 @@ function engine(D, asOf, opts) {
 }
 M.engine = engine; M.dayInfo = dayInfo;
 
+function stripRef(t) { if (!t || !t.ref) return t; var o = Object.assign({}, t); delete o.run; delete o.cfg; return o; }
 function avgParts(days) {
   var o = { rmr: 0, base: 0, steps: 0, gym: 0, job: 0, other: 0 };
   days.forEach(function (a) { for (var k in o) o[k] += a.parts[k] || 0; });
@@ -6442,7 +6466,7 @@ function movAvg(series) {
 /* tendenza del peso del motore, nella forma usata dall'interfaccia */
 function weightNow(asOf) {
   var E = state.E, tr = null;
-  if (asOf && asOf !== todayStr()) { try { tr = GJM.trendAt(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tr = null; } }
+  if (asOf && asOf !== todayStr()) { try { tr = GJM.refWeight(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tr = null; } }
   else tr = E && E.weight ? E.weight.trend : null;
   if (!tr) { var ws = weightsSeries(); if (!ws.length) return null; var l = ws[ws.length - 1]; return { w: l.w, method: 'ultima', last: { d: l.d, w: l.w }, n: 1, at: l.d, from: l.d, to: l.d, age: diffDays(l.d, todayStr()) }; }
   if (tr.none) return null;
@@ -6898,7 +6922,7 @@ function renderTomorrow() {
     return;
   }
   var html = '<div class="bs-hero"><small>Fascia indicativa dal tuo storico</small><div class="bs-big bs-range-main"><b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + '</b><span>kg</span></div>'
-    + '<p class="bs-range">Riferimento della tendenza: <b>' + fmt(tm.c, 1) + ' kg</b></p><p class="bs-context">Un riferimento per leggere la pesata, non un obiettivo da raggiungere stamattina.</p></div>';
+    + '<p class="bs-range">Riferimento della tendenza: <b>' + fmt(tm.c, 1) + ' kg</b>' + (tm.by === 'calorie' ? '<br><small>peso del giorno prima senza le oscillazioni d\'acqua, più l\'effetto delle sue calorie</small>' : '') + '</p><p class="bs-context">Un riferimento per leggere la pesata, non un obiettivo da raggiungere stamattina.</p></div>';
   // A symmetric display scale keeps the trend at the center, including outlying weigh-ins.
   var radius = Math.max(tm.c - tm.lo, tm.hi - tm.c, mw != null ? Math.abs(mw - tm.c) : 0, 0.3);
   var extent = radius + Math.max(0.25, radius * 0.18), lo = tm.c - extent, hi = tm.c + extent;
@@ -6906,7 +6930,7 @@ function renderTomorrow() {
   var inside = mw != null && mw >= tm.lo && mw <= tm.hi, diff = mw != null ? mw - tm.c : null;
   // Neutral styling in both cases: outside the descriptive band is not a failed objective.
   html += '<div class="bs-scale bs-neutral" role="img" aria-label="Fascia indicativa ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg; riferimento della tendenza ' + fmt(tm.c, 1) + ' kg' + (mw != null ? '; pesata registrata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
-    + (mw != null ? '<div class="bs-pin"><span>Tu · ' + mwTxt + ' kg</span></div>' : '<div class="bs-pin bs-pin-wait"><span>Pesata non ancora inserita</span></div>')
+    + (mw != null ? (function () { var x = (mw - lo) / (hi - lo) * 100, al = x < 18 ? 'left' : x > 82 ? 'right' : 'center'; return '<div class="bs-pinrow"><div class="bs-pinlab bs-al-' + al + '" style="left:' + x.toFixed(2) + '%"><span>Tu · ' + mwTxt + ' kg</span></div><i class="bs-pintick" style="left:' + x.toFixed(2) + '%"></i></div>'; })() : '<div class="bs-pin bs-pin-wait"><span>Pesata non ancora inserita</span></div>')
     + '<div class="bs-track"><span class="bs-band" style="left:' + P(tm.lo) + ';width:calc(' + P(tm.hi) + ' - ' + P(tm.lo) + ')"></span><span class="bs-mid" style="left:' + P(tm.c) + '"></span>' + (mw != null ? '<span class="bs-me" style="left:' + P(mw) + '"></span>' : '') + '</div>'
     + '<div class="bs-ticks"><span><b>' + fmt(lo, 1) + '</b></span><span class="bs-tc"><b>' + fmt(tm.c, 1) + '</b>riferimento</span><span><b>' + fmt(hi, 1) + '</b></span></div></div><div class="bs-scale-note">Scala in kg · centrata sulla tendenza</div>'
     + '<div class="bs-key"><span class="k-band">fascia indicativa</span><span class="k-mid">tendenza</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
@@ -8431,11 +8455,11 @@ function rulesData() {
 
   /* ---------- peso ---------- */
   add({ id: 'tendenza', g: 'peso', t: 'Tendenza del peso', w: 'Oggi, Progressi › Peso',
-    what: 'Il livello di peso indicato dalle pesate recenti, calcolato solo con le pesate fino a oggi: una retta robusta (Theil–Sen) sulle pesate degli ultimi ' + K.TREND_DAYS + ' giorni; con meno di ' + K.TREND_MIN + ' pesate, la mediana degli ultimi 7 giorni.',
+    what: 'Il tuo peso «di fondo», lo stesso numero in tutta l\'app. Quando il mantenimento è calibrato è il peso stimato dal calcolo del mantenimento: unisce pesate, calorie e attività e separa il tessuto dall\'acqua, quindi una pesata alta dopo una giornata abbondante non lo trascina. Prima della calibrazione è una retta robusta (Theil–Sen) sulle pesate degli ultimi ' + K.TREND_DAYS + ' giorni; con meno di ' + K.TREND_MIN + ' pesate, la mediana degli ultimi 7 giorni.',
     how: fx(L(O('Pendenza'), 'mediana delle pendenze fra tutte le coppie di ' + P('pesate')), L(O('Livello di oggi'), 'mediana di (' + P('pesata') + ' − pendenza × giorni) + pendenza × giorni fino a oggi'), L('Senza pesate da 7 giorni', 'la tendenza non viene prolungata: resta all\'ultima pesata, con fiducia bassa')) + rg('tendenza'),
-    why: 'La mediana resiste a una pesata storta. Nessuna quantità d\'acqua, glicogeno o creatina viene sottratta.',
-    pl: { s: 'Il peso «di fondo» indicato dalle pesate recenti, senza farsi trascinare da una sola pesata.', n: function () { return NW ? { l: 'Tendenza di oggi', v: F(NW.w, 1) + ' kg', sub: NW.n + ' pesate, ' + (NW.method === 'retta' ? 'retta robusta' : NW.method === 'mediana7' ? 'mediana di 7 giorni' : 'ultima pesata') } : null; } },
-    ex: function () { if (!tw || tw.none) return row('Tendenza', 'nessuna pesata'); return row('Metodo', tw.method) + row('Pesate usate', tw.n + ' dal ' + fmtShort(tw.from) + ' al ' + fmtShort(tw.to)) + (tw.slope != null ? row('Pendenza', sgn(tw.slope * 7, 1) + ' kg a settimana') : '') + row('Livello di oggi', F(tw.v, 1) + ' kg') + (tw.estrapolato ? row('Prolungata', tw.age + ' giorni dopo l\'ultima pesata') : ''); } });
+    why: 'Un solo riferimento evita numeri diversi in schermate diverse. Nessuna quantità d\'acqua, glicogeno o creatina viene sottratta a mano: il calcolo la riconosce dalle pesate dei giorni seguenti.',
+    pl: { s: 'Il peso «di fondo» indicato dalle pesate recenti, senza farsi trascinare da una sola pesata.', n: function () { return NW ? { l: 'Tendenza di oggi', v: F(NW.w, 1) + ' kg', sub: NW.n + ' pesate, ' + (NW.ref === 'filtro' ? 'stima del mantenimento' : NW.method === 'retta' ? 'retta robusta' : NW.method === 'mediana7' ? 'mediana di 7 giorni' : 'ultima pesata') } : null; } },
+    ex: function () { if (!tw || tw.none) return row('Tendenza', 'nessuna pesata'); return row('Metodo', tw.ref === 'filtro' ? 'stima del mantenimento (retta delle pesate: ' + F(tw.line.v, 1) + ' kg)' : tw.method) + row('Pesate usate', tw.n + ' dal ' + fmtShort(tw.from) + ' al ' + fmtShort(tw.to)) + (tw.slope != null ? row('Pendenza', sgn(tw.slope * 7, 1) + ' kg a settimana') : '') + row('Livello di oggi', F(tw.v, 1) + ' kg') + (tw.estrapolato ? row('Prolungata', tw.age + ' giorni dopo l\'ultima pesata') : ''); } });
   add({ id: 'peso-adesso', g: 'peso', t: 'Ultima pesata e tendenza', w: 'Oggi, Profilo',
     what: 'L\'ultima pesata è un dato osservato; la tendenza è una stima. Le mostro separate, con la data della pesata.',
     how: fx(L(P('Ultima pesata'), 'il valore del diario, com\'è'), L(O('Tendenza'), 'vedi «Tendenza del peso»')),
@@ -14186,6 +14210,14 @@ body #tab-diario #tmw .bs-ticks span:first-child{text-align:left}
 body #tab-diario #tmw .bs-ticks span:last-child{text-align:right}
 body #tab-diario #tmw .bs-scale-note{font-size:.67rem;line-height:1.5;text-align:center;color:#969BA4;margin:4px 0 13px}
 body #tab-diario #tmw .bs-key{margin-inline:0;gap:7px 13px;line-height:1.5}
+/* etichetta della pesata agganciata al pallino: centrata sopra di esso, allineata al bordo vicino agli estremi */
+.bs-pinrow{position:relative;height:46px;margin:0 0 2px}
+.bs-pinlab{position:absolute;top:0;white-space:nowrap;pointer-events:none}
+.bs-pinlab.bs-al-center{transform:translateX(-50%)}
+.bs-pinlab.bs-al-left{transform:translateX(-12px)}
+.bs-pinlab.bs-al-right{transform:translateX(calc(-100% + 12px))}
+.bs-pinlab span{display:inline-block;padding:6px 12px;border-radius:999px;background:#FFD60A;color:#1C1C1E;font-size:.8rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.3}
+.bs-pintick{position:absolute;top:31px;width:2px;height:15px;margin-left:-1px;background:#FFD60A;border-radius:1px}
 
 /* Each metric owns two flexible, independent person columns. No fixed table widths. */
 #tab-amici #friend-comparison{min-width:0;padding:22px;background:radial-gradient(ellipse at 100% 0,#64D2FF0B,transparent 65%),#1D232B;border-color:#6B92AE30;border-radius:24px;box-sizing:border-box}
