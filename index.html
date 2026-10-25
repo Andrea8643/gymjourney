@@ -11448,7 +11448,7 @@ function bindFriends() {
     var requests='';if(incoming.length||outgoing.length){requests+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){requests+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){requests+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});requests+='</div>';}
     var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3>'+actionButton('refresh','Aggiorna')+'</div>';
     if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Invia una richiesta o condividi il tuo codice dalle impostazioni. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi un amico</button></div>';
-    else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'">'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
+    else{list+='<div class="friends-pills">'+friends.map(function(x){var uid=relationPeer(x);return '<button type="button" class="friends-pill" data-friend-action="select" data-key="'+esc(uid)+'" aria-pressed="'+(F.selected===uid)+'"><i aria-hidden="true">'+esc(initial(relationName(x)))+'</i>'+esc(relationName(x))+'</button>';}).join('')+'</div><div id="friend-comparison">'+comparisonHTML()+'</div>';}
     if(F.blocks.length)h+='<details class="friends-settings"><summary>Persone bloccate · '+F.blocks.length+'</summary><div class="friends-settings-body">'+F.blocks.map(function(uid){return '<div class="friends-person-row"><span>Utente bloccato · '+esc(uid.slice(0,6))+'…</span>'+actionButton('unblock','Sblocca',uid)+'</div>';}).join('')+'</div></details>';
     fillPanels(list+requests,Games.settingsHTML()+h,'<div id="friend-game-content">'+Games.render()+'</div>'+requests);
   }
@@ -11457,37 +11457,103 @@ function bindFriends() {
   function comparisonNavigator(){var d=comparisonDate();return '<div class="friends-date-nav"><button type="button" data-friend-action="date-prev" aria-label="Giorno precedente del confronto">‹</button><label class="friends-date-picker"><span>'+esc(fmtDay(d))+'</span><span aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18M8 15h3v3H8z"/></svg></span><input type="date" data-friend-date value="'+d+'" max="'+todayStr()+'" min="1900-01-01" aria-label="Scegli la data del confronto"></label><button type="button" data-friend-action="date-next" aria-label="Giorno successivo del confronto"'+(d>=todayStr()?' disabled':'')+'>›</button>'+(d!==todayStr()?'<button type="button" data-friend-action="date-today">Oggi</button>':'')+'</div>';}
   function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
-  function cell(rows,key,allowed){
-    if(!allowed)return '<b class="friend-muted">Non condiviso</b>';
-    if(!rows)return '<b class="friend-muted">In attesa dei dati</b>';
+  var FA_IC={
+    calories:'<svg viewBox="0 0 24 24"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/></svg>',
+    macros:'<svg viewBox="0 0 24 24"><path d="M12 3v18M4 7h16M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/></svg>',
+    steps:'<svg viewBox="0 0 24 24"><path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/></svg>',
+    workouts:'<svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>',
+    weight:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/></svg>'
+  };
+  function initial(n){var c=String(n||'').trim().charAt(0).toUpperCase();return c||'?';}
+  /* Valore di una persona per una metrica, già pronto per il confronto. */
+  function sideStat(rows,key,allowed,own){
+    function miss(t,sub){return {miss:t,sub:sub||''};}
+    if(!allowed)return miss('Non condiviso');
+    if(!rows)return miss('In attesa dei dati');
+    var week=F.period==='week',whose=own?'del tuo':'del suo';
     if(key==='calories'||key==='steps'){
-      if(F.period==='week'){var a=FD.aggregate(rows,key);return '<b>'+val(a.value,key==='calories'?'kcal':'')+'</b><small>'+a.n+'/7 giornate complete · media</small>';}
-      var x=rows[0]&&rows[0][key];if(!x||x.value==null)return '<b class="friend-muted">Non registrato</b>';
-      var st=FD.complete(x.state)?'Completo':x.state==='parziale'?'In corso':'Da confermare';
-      return '<b>'+val(x.value,key==='calories'?'kcal':'')+'</b><small>'+st+(key==='calories'&&x.target!=null?' · target '+val(x.target,'kcal'):'')+'</small>';
+      var o;
+      if(week){
+        var a=FD.aggregate(rows,key);if(a.value==null)return miss('Nessuna giornata completa',a.n+'/7 giornate complete');
+        o={v:a.value,txt:fmt(a.value,0),sub:a.n+'/7 giornate complete'};
+        if(key==='calories'){var ps=rows.map(function(x){return x&&x.calories;}).filter(function(x){return x&&x.value!=null&&x.target>0&&FD.complete(x.state);}).map(function(x){return x.value/x.target*100;});if(ps.length){o.pct=ps.reduce(function(t,p){return t+p;},0)/ps.length;o.sub=Math.round(o.pct)+'% '+whose+' target in media · '+o.sub;}}
+        else o.sub='media · '+o.sub;
+        return o;
+      }
+      var x=rows[0]&&rows[0][key];if(!x||x.value==null)return miss('Non registrato');
+      var st=FD.complete(x.state)?'completo':x.state==='parziale'?'in corso':'da confermare';
+      o={v:x.value,txt:fmt(x.value,0),sub:st};
+      if(key==='calories'&&x.target>0){o.pct=x.value/x.target*100;o.sub=Math.round(o.pct)+'% '+whose+' target · '+st;}
+      return o;
     }
     if(key==='macros'){
-      var ms=rows.map(function(x){return x&&x.macros;}).filter(function(x){return x&&(F.period!=='week'||FD.complete(x.state));});
-      return ['protein','carbs','fat'].map(function(k,i){var values=ms.map(function(x){return x[k];}).filter(function(v){return v!=null;});return '<span class="friends-macro"><small>'+['P','C','G'][i]+'</small><b>'+val(values.length?values.reduce(function(a,b){return a+b;},0)/values.length:null,'g')+'</b></span>';}).join('')+(F.period==='week'?'<small>medie delle giornate complete</small>':'');
+      var ms=rows.map(function(x){return x&&x.macros;}).filter(function(x){return x&&(!week||FD.complete(x.state));}),m={};
+      ['protein','carbs','fat'].forEach(function(k){var vs=ms.map(function(x){return x[k];}).filter(function(v){return v!=null;});m[k]=vs.length?vs.reduce(function(t,v){return t+v;},0)/vs.length:null;});
+      if(m.protein==null&&m.carbs==null&&m.fat==null)return miss(week?'Nessuna giornata completa':'Non registrato');
+      return {m:m};
     }
-    var values=rows.map(function(x){return x&&x[key];}).filter(function(x){return x!=null;});
     if(key==='workouts'){
       var known=rows.filter(function(x){return x&&x.workouts!=null;});
-      if(!known.length)return '<b class="friend-muted">Non registrato</b><small>Allenamento o riposo non confermati</small>';
-      var total=known.reduce(function(n,x){return n+x.workouts;},0),lines=known.filter(function(x){return x.workouts>0;}).map(function(x){var names=Array.isArray(x.workoutNames)?x.workoutNames:[],text=names.length?names.join(' · '):'Allenamento registrato';if(x.workouts>names.length&&names.length)text+=' · altri '+(x.workouts-names.length);return '<span class="friend-workout-item">'+(F.period==='week'?'<small>'+esc(fmtShort(x.date))+'</small>':'')+'<b>'+esc(text)+'</b>'+(names.length?'':'<small>Nome non ancora condiviso: si aggiorna quando l’amico apre la nuova versione.</small>')+'</span>';});
-      return (total?'<div class="friend-workout-list">'+lines.join('')+'</div>':'<b class="friend-rest">Riposo</b>')+(F.period==='week'?'<small>'+known.length+'/7 giorni con attività nota</small>':'');
+      if(!known.length)return miss('Non registrato',week?'nessun giorno confermato':'allenamento o riposo non confermato');
+      var total=known.reduce(function(t,x){return t+x.workouts;},0);
+      var items=known.filter(function(x){return x.workouts>0;}).map(function(x){var names=Array.isArray(x.workoutNames)?x.workoutNames:[],t=names.length?names.join(' · '):'Allenamento';if(x.workouts>names.length&&names.length)t+=' · altri '+(x.workouts-names.length);return {date:x.date,text:t,noName:!names.length};});
+      var sed=function(n){return n===1?'1 seduta':fmt(n,0)+' sedute';};
+      if(week)return {v:total,txt:sed(total),sub:'in '+known.length+'/7 giorni noti',items:items,text:true};
+      if(!total)return {v:0,txt:'Riposo',sub:'giorno di riposo',text:true};
+      return {v:total,txt:esc(items.map(function(i){return i.text;}).join(' · ')),sub:sed(total)+(items.some(function(i){return i.noName;})?' · nome non ancora condiviso':''),text:true,long:items.map(function(i){return i.text;}).join(' · ').length>12};
     }
-    return '<b>'+val(values.length?values[values.length-1]:null,'kg')+'</b><small>'+(F.period==='week'?'ultimo peso disponibile':'pesata registrata')+'</small>';
+    var vals=rows.map(function(x){return x&&x.weight;}).filter(function(v){return v!=null;});
+    if(!vals.length)return miss('Non registrato');
+    var w=vals[vals.length-1];return {v:w,txt:fmt(w,1),unit:'kg',sub:week?'ultimo peso disponibile':'pesata del giorno'};
+  }
+  function faVal(side,s,unit){
+    if(s.miss)return '<div class="fa-v is-'+side+' is-miss"><b>'+esc(s.miss)+'</b>'+(s.sub?'<small>'+esc(s.sub)+'</small>':'')+'</div>';
+    var u=s.unit||unit;
+    var list=s.items&&s.items.length?'<ul class="fa-wl">'+s.items.map(function(i){return '<li><small>'+esc(fmtShort(i.date))+'</small><span>'+esc(i.text)+'</span></li>';}).join('')+'</ul>':'';
+    return '<div class="fa-v is-'+side+(s.text?' is-text':'')+(s.long?' is-long':'')+'"><b>'+s.txt+(u?'<em>'+u+'</em>':'')+'</b>'+(s.sub?'<small>'+esc(s.sub)+'</small>':'')+list+'</div>';
+  }
+  function faSplit(a,b){
+    if(a==null||b==null||a+b<=0)return '<div class="fa-split is-empty" aria-hidden="true"></div>';
+    var t=a+b;return '<div class="fa-split" aria-hidden="true"><i class="is-me" style="flex-grow:'+(a/t).toFixed(4)+'"></i><i class="is-pe" style="flex-grow:'+(b/t).toFixed(4)+'"></i></div>';
+  }
+  function faTarget(a,b){
+    if(a.pct==null&&b.pct==null)return '';
+    function half(side,p){return '<span class="is-'+side+'">'+(p!=null?'<i style="width:'+(Math.min(p,130)/130*100).toFixed(1)+'%"></i><em></em>':'')+'</span>';}
+    return '<div class="fa-tgt" aria-hidden="true">'+half('me',a.pct)+half('pe',b.pct)+'</div>';
+  }
+  function faLead(a,b,peer,what){
+    if(a==null||b==null)return '';
+    var d=Math.abs(a-b);if(Math.round(d)===0)return '<p class="fa-lead is-tie">Pari</p>';
+    var me=a>b;return '<p class="fa-lead is-'+(me?'me':'pe')+'"><b>'+(me?'Tu':esc(peer))+'</b> +'+what(d)+'</p>';
+  }
+  function faLabel(k,t,sub){return '<header class="fa-lab"><span class="fa-ic" aria-hidden="true">'+FA_IC[k]+'</span><h4>'+t+'</h4><span aria-hidden="true"></span></header>'+(sub?'<p class="fa-labsub">'+sub+'</p>':'');}
+  function faRow(k,own,peer,cfgOwn,cfgPeer,peerName){
+    var week=F.period==='week',a=sideStat(own,k,cfgOwn,true),b=sideStat(peer,k,cfgPeer,false),names={calories:week?'Calorie medie':'Calorie',macros:week?'Macro medie':'Macro',steps:week?'Passi medi':'Passi',workouts:week?'Allenamenti':'Allenamento',weight:'Peso'};
+    var h='<section class="fa-row" data-metric="'+k+'" aria-label="'+names[k]+'">';
+    if(k==='macros'){
+      h+=faLabel(k,names[k],week?'medie delle giornate complete':'');
+      var miss=[a.miss?'Tu: '+a.miss.toLowerCase():'',b.miss?esc(peerName)+': '+b.miss.toLowerCase():''].filter(Boolean);
+      ['protein','carbs','fat'].forEach(function(m,i){var x=a.m?a.m[m]:null,y=b.m?b.m[m]:null;
+        h+='<div class="fa-mac"><span class="fa-mac-t">'+['Proteine','Carboidrati','Grassi'][i]+'</span><div class="fa-mac-line"><b class="is-me"><span class="fa-sr">Tu: </span>'+(x==null?'—':fmt(x,0)+' g')+'</b>'+faSplit(x,y)+'<b class="is-pe"><span class="fa-sr">'+esc(peerName)+': </span>'+(y==null?'—':fmt(y,0)+' g')+'</b></div></div>';});
+      if(miss.length)h+='<p class="fa-note">'+miss.join(' · ')+'</p>';
+      return h+'</section>';
+    }
+    h+=faLabel(k,names[k])+'<div class="fa-pair"><span class="fa-sr">Tu: </span>'+faVal('me',a,k==='calories'?'kcal':'')+'<span class="fa-sr">'+esc(peerName)+': </span>'+faVal('pe',b,k==='calories'?'kcal':'')+'</div>';
+    if(k==='calories')h+=faTarget(a,b);
+    if(k==='steps'){h+=faSplit(a.v,b.v)+faLead(a.v,b.v,peerName,function(d){return fmt(d,0)+(week?' passi al giorno':' passi');});}
+    if(k==='workouts'&&week&&a.v!=null&&b.v!=null){h+=faSplit(a.v,b.v)+faLead(a.v,b.v,peerName,function(d){return d===1?'1 seduta':fmt(d,0)+' sedute';});}
+    return h+'</section>';
   }
   function comparisonHTML(){
     var link=friendList().find(function(x){return relationPeer(x)===F.selected;});if(!link)return '<div class="friends-empty">Seleziona un amico per confrontare i dati.</div>';
     var r=F.remote,own=localRows(),name=relationName(link),keys=FD.KEYS.filter(function(k){return (F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]);});
-    var head='<div class="friends-comparison-head"><div><h3>Tu e '+esc(name)+'</h3><span>'+ (F.period==='week'?'7 giorni · '+fmtShort(FD.add(comparisonDate(),-6))+'–'+fmtShort(comparisonDate()):fmtDay(comparisonDate()))+'</span></div><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></div><div class="friends-period"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator();
+    var head='<div class="friends-comparison-head"><div><h3>Tu e '+esc(name)+'</h3><span>'+ (F.period==='week'?'7 giorni · '+fmtShort(FD.add(comparisonDate(),-6))+'–'+fmtShort(comparisonDate()):fmtDay(comparisonDate()))+'</span></div><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></div><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator();
     if(!r)return head+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div>';
     if(r.error||!r.config||!r.config.enabled)return head+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div>';
     if(!keys.length)return head+'<div class="friends-empty">Nessun dato selezionato per il confronto.</div>';
-    var names={calories:F.period==='week'?'Calorie medie':'Calorie',macros:'Macro',steps:F.period==='week'?'Passi medi':'Passi',workouts:'Allenamenti',weight:'Peso'};
-    return head+(comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'')+'<div class="friends-metrics">'+keys.map(function(k){return '<section class="friend-metric" data-metric="'+k+'" aria-label="'+names[k]+'"><h4>'+names[k]+'</h4><div class="friend-metric-pair"><div class="friend-metric-person friend-metric-own"><span class="friend-metric-name">Tu</span><div class="friend-metric-value">'+cell(own,k,true)+'</div></div><div class="friend-metric-person friend-metric-peer"><span class="friend-metric-name">'+esc(name)+'</span><div class="friend-metric-value">'+cell(r.days,k,r.config.prefs[k])+'</div></div></div></section>';}).join('')+'</div><p class="friends-help">Ogni persona ha il proprio target. Nei riepiloghi le giornate mancanti restano mancanti; le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p>';
+    var myName=(F.profile&&F.profile.nickname)||S().name||'Tu';
+    var duel='<div class="fx-duel" aria-hidden="true"><span class="fx-who is-me"><i>'+esc(initial(myName))+'</i><b>Tu</b></span><span class="fx-vs">vs</span><span class="fx-who is-pe"><b>'+esc(name.length>12&&name.indexOf(' ')>0?name.split(' ')[0]:name)+'</b><i>'+esc(initial(name))+'</i></span></div>';
+    return head+(comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'')+'<div class="fa-board">'+duel+keys.map(function(k){return faRow(k,own,r.days,true,r.config.prefs[k],name);}).join('')+'<p class="friends-help">Ognuno ha il proprio target: le calorie si leggono come percentuale del proprio obiettivo (100% = in linea, la tacca bianca). Le giornate mancanti restano mancanti e le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p></div>';
   }
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){Photos.select(null);F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
@@ -15093,6 +15159,89 @@ body .wcheck-method>summary>.disclosure-cue:not(#z):not(#y):not(#x){display:inli
   #energy-now .ex-row>:not(summary){margin-left:16px;margin-right:16px}
 }
 
+
+/* ===== Amici › Confronto «testa a testa» =====
+   Il colore identifica solo la persona: Tu = corallo (sempre a sinistra), amico = azzurro (sempre a destra).
+   I comandi (periodo, data, scelta dell'amico) sono neutri: selezionato = bianco pieno. */
+#tab-amici{--fme:#FF9A72;--fme-s:#FF9A7224;--fpe:#72B8FF;--fpe-s:#72B8FF24;--fa-mute:#ADA1A6;--fa-line:#FFFFFF12}
+#tab-amici .friends-comparison-head>div>span{color:var(--fa-mute)}
+#tab-amici .friends-period{display:inline-flex;align-self:flex-start;width:max-content;max-width:100%;gap:4px;padding:4px;margin:16px 0 0;border-radius:999px;background:#FFFFFF08;border:1px solid #FFFFFF14}
+#tab-amici .friends-period button{min-height:38px;padding:8px 18px;border:0!important;border-radius:999px;background:transparent!important;color:#C9BFC3!important;font-weight:600}
+#tab-amici .friends-period button[aria-pressed=true]{background:#F4EFF1!important;color:#1D1617!important;font-weight:750;box-shadow:0 1px 6px #0000004d}
+#tab-amici .friends-period button:focus-visible,#tab-amici .friends-pill:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#tab-amici .friends-pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:#FFFFFF05!important;color:#D6CDD1!important;border:1px solid #FFFFFF22!important}
+#tab-amici .friends-pill>i{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-style:normal;font-weight:800;font-size:.72rem;background:#FFFFFF1A;color:#E8E1E4}
+#tab-amici .friends-pill[aria-pressed=true]{background:var(--fpe-s)!important;color:#fff!important;border-color:#72B8FF8C!important;font-weight:700}
+#tab-amici .friends-pill[aria-pressed=true]>i{background:var(--fpe);color:#0F1A26}
+#tab-amici .friends-date-nav>button{color:#EDE6E8;border-color:#FFFFFF22;background:#FFFFFF06}
+#tab-amici .friends-date-picker{border-color:#FFFFFF26;background:#FFFFFF08;color:#F4EFF1}
+#tab-amici .friends-date-picker>span:nth-child(2){color:#C9BFC3}
+#tab-amici .friends-date-picker:focus-within{outline-color:#fff}
+#tab-amici .fa-board{width:100%;max-width:720px;margin:0 auto;min-width:0}
+#tab-amici .fa-sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#tab-amici .fx-duel{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;margin:0 0 6px;padding:12px 14px;border-radius:16px;background:#FFFFFF06;border:1px solid #FFFFFF14}
+#tab-amici .fx-who{display:flex;align-items:center;gap:10px;min-width:0;font-size:.95rem}
+#tab-amici .fx-who.is-pe{justify-content:flex-end}
+#tab-amici .fx-who b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff}
+#tab-amici .fx-who i{display:inline-grid;place-items:center;flex:none;width:30px;height:30px;border-radius:50%;font-style:normal;font-weight:800;font-size:.8rem}
+#tab-amici .fx-who.is-me i{background:var(--fme);color:#2A140C}
+#tab-amici .fx-who.is-pe i{background:var(--fpe);color:#0F1A26}
+#tab-amici .fx-vs{font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8F8388}
+#tab-amici .fa-row{display:flex;flex-direction:column;gap:8px;padding:18px 0;border-top:1px solid var(--fa-line);min-width:0}
+#tab-amici .fx-duel+.fa-row{border-top:0}
+#tab-amici .fa-lab{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;color:#BDB1B6}
+#tab-amici .fa-lab h4{margin:0;font-size:.74rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:#D9CFD3}
+#tab-amici .fa-ic{justify-self:end;display:flex}
+#tab-amici .fa-ic svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#tab-amici .fa-labsub{margin:-4px 0 0;text-align:center;font-size:.7rem;color:var(--fa-mute)}
+#tab-amici .fa-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;min-width:0}
+#tab-amici .fa-v{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+#tab-amici .fa-v.is-pe{text-align:right;align-items:flex-end}
+#tab-amici .fa-v>b{font-size:1.5rem;line-height:1.15;font-weight:750;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+#tab-amici .fa-v>b>em{font-style:normal;font-size:.62em;font-weight:600;margin-left:4px;opacity:.85}
+#tab-amici .fa-v.is-me>b{color:var(--fme)}
+#tab-amici .fa-v.is-pe>b{color:var(--fpe)}
+#tab-amici .fa-v.is-long>b{font-size:1.08rem;line-height:1.3}
+#tab-amici .fa-v>small{font-size:.72rem;line-height:1.45;color:var(--fa-mute)}
+#tab-amici .fa-v.is-miss>b{font-size:.86rem;font-weight:600;color:#9D9196}
+#tab-amici .fa-wl{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.76rem;line-height:1.35;color:#E6DEE1}
+#tab-amici .fa-wl li{display:block}
+#tab-amici .fa-wl small{display:block;color:var(--fa-mute);font-size:.68rem;line-height:1.3}
+#tab-amici .fa-split{display:flex;gap:3px;height:8px;margin-top:4px}
+#tab-amici .fa-split>i{display:block;min-width:0;height:100%;border-radius:999px;flex-basis:0}
+#tab-amici .fa-split>.is-me{background:var(--fme)}
+#tab-amici .fa-split>.is-pe{background:var(--fpe)}
+#tab-amici .fa-split.is-empty{border-radius:999px;background:#FFFFFF0D}
+#tab-amici .fa-tgt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:4px}
+#tab-amici .fa-tgt>span{position:relative;height:8px;border-radius:999px;background:#FFFFFF10}
+#tab-amici .fa-tgt>span>i{position:absolute;top:0;bottom:0;border-radius:999px}
+#tab-amici .fa-tgt>.is-me>i{right:0;background:var(--fme)}
+#tab-amici .fa-tgt>.is-pe>i{left:0;background:var(--fpe)}
+#tab-amici .fa-tgt>span>em{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:#fff}
+#tab-amici .fa-tgt>.is-me>em{right:76.92%}
+#tab-amici .fa-tgt>.is-pe>em{left:76.92%}
+#tab-amici .fa-lead{align-self:center;margin:4px 0 0;padding:4px 11px;border-radius:999px;font-size:.73rem;font-weight:650;color:#F2ECEE;text-align:center}
+#tab-amici .fa-lead.is-me{background:var(--fme-s)}
+#tab-amici .fa-lead.is-pe{background:var(--fpe-s)}
+#tab-amici .fa-lead.is-tie{background:#FFFFFF0D;color:#D3C9CD}
+#tab-amici .fa-lead.is-me>b{color:var(--fme)}
+#tab-amici .fa-lead.is-pe>b{color:var(--fpe)}
+#tab-amici .fa-mac{display:flex;flex-direction:column;gap:3px}
+#tab-amici .fa-mac-t{text-align:center;font-size:.72rem;color:var(--fa-mute)}
+#tab-amici .fa-mac-line{display:grid;grid-template-columns:4.6em minmax(0,1fr) 4.6em;align-items:center;gap:10px}
+#tab-amici .fa-mac-line>b{font-size:1rem;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap}
+#tab-amici .fa-mac-line>b.is-me{color:var(--fme)}
+#tab-amici .fa-mac-line>b.is-pe{color:var(--fpe);text-align:right}
+#tab-amici .fa-mac-line>.fa-split{margin:0;height:7px}
+#tab-amici .fa-note{margin:2px 0 0;text-align:center;font-size:.72rem;color:var(--fa-mute)}
+#tab-amici .fa-board>.friends-help{margin:6px 0 0;padding-top:16px;border-top:1px solid var(--fa-line);font-size:.75rem;line-height:1.65;color:var(--fa-mute)}
+@media(max-width:360px){
+  #tab-amici .fa-v>b{font-size:1.28rem}
+  #tab-amici .fa-mac-line{grid-template-columns:4.2em minmax(0,1fr) 4.2em;gap:8px}
+  #tab-amici .fa-mac-line>b{font-size:.92rem}
+  #tab-amici .fx-duel{padding:10px}
+  #tab-amici .friends-period button{padding:8px 14px}
+}
 </style>
 </body></html>
 
