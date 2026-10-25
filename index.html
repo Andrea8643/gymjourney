@@ -2306,9 +2306,11 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
     <section id="tab-oggi" class="view">
       <div class="panel hero-today" id="hero-today" data-cat="giorno">
         <div class="ht-head"><button type="button" class="ht-nav" data-htgo="-1" aria-label="Giorno precedente">‹</button><span class="ht-lbl" id="ht-lbl">Calorie di oggi</span><button type="button" class="ht-nav" data-htgo="1" aria-label="Giorno successivo">›</button><span class="ht-pct" id="ht-pct"></span></div>
-        <div class="ht-body"><svg id="ht-rings" viewBox="0 0 200 200" role="img" aria-label="Cerchi di calorie, proteine, carboidrati, grassi, passi e sonno"></svg><div class="ht-legend" id="ht-legend"></div></div>
+        <div class="ht-body"><svg id="ht-rings" viewBox="0 0 200 200" role="img" aria-label="Cerchi di calorie, proteine e passi"></svg><div class="ht-main"><div class="ht-left" id="ht-left"></div><div class="ht-legend" id="ht-legend"></div></div></div>
+        <div class="ht-macros" id="ht-macros"></div>
+        <div class="ht-quick" id="ht-quick"></div>
         <div class="ht-foot" id="ht-foot"></div>
-        <button type="button" class="btn add-data" id="ht-add">+ Inserisci i dati di oggi</button>
+        <button type="button" class="linkbtn small ht-all" id="ht-add">Tutti i dati di oggi ›</button>
       </div>
       <div class="panel need-card" id="need-card" data-cat="energia">
         <div class="panel-head"><div class="ph-t"><h2>Il tuo piano di oggi</h2><button type="button" class="rq nc-why-btn" id="nc-why-btn" data-why="nc-why" aria-expanded="false" aria-controls="nc-why">Spiega<svg class="disclosure-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
@@ -6738,6 +6740,14 @@ function lastWeekNeed() {
   var n = xs.length;
   return { from: from, to: addDays(from, 6), v: xs.reduce(function (a, b) { return a + b; }, 0) / n, n: n, full: full, lo: nr === n ? lo / n : null, hi: nr === n ? hi / n : null };
 }
+/* A · in Oggi il mantenimento è una riga di tre numeri; il resto si apre al tocco */
+function needSummaryWrap(view, dayView, date, inner) {
+  var R = view && view.available && view.reference ? view.reference.R : null, x = dayView && dayView.today, C = x && x.C != null ? x.C : null, T = dayTarget(date), K = T && T.kcal > 0 ? T.kcal : null;
+  var cell = function (l, v, c) { return '<div><small>' + l + '</small><b' + (c ? ' style="color:' + c + '"' : '') + '>' + (v != null ? fmt(v, 0) : '—') + '</b></div>'; };
+  return '<div class="need-sum">' + cell('Mantenimento', R) + cell(date === todayStr() ? 'Consumo di oggi' : 'Consumo del giorno', C) + cell('Obiettivo', K, HEX.kcal) + '</div>'
+    + '<details class="need-more"' + (state.needOpen ? ' open' : '') + '><summary>Dettagli del piano e del consumo<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary><div class="need-more-body">' + inner + '<button type="button" class="linkbtn small need-go" data-goview="calorie">Apri Progressi › Calorie ›</button></div></details>';
+}
+document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('need-more')) state.needOpen = e.target.open; }, true);
 function renderNeed() {
   var box = $('#need-body'); if (!box) return;
   var selectedDay=ringDay();if(selectedDay!==todayStr()){renderHistoricalNeed(selectedDay,box);return;}
@@ -6800,7 +6810,7 @@ function renderNeed() {
   /* ordine sullo schermo: due riquadri per riga, macro e revisione a tutta larghezza */
   /* ordine voluto: consumo di oggi, consumo medio della settimana scorsa, obiettivo; poi deficit, macro, fiducia, peso, revisione */
   rows = [rows[0], rows[4], rows[1], rows[5], rows[6], rows[7]];
-  box.innerHTML = maintenanceHeroHTML(energyView()) + dailyEnergyHTML(energyView()) + '<div class="p2-tiles">' + rows.join('') + '</div>' + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
+  box.innerHTML = needSummaryWrap(energyView(), energyView(), t, maintenanceHeroHTML(energyView()) + dailyEnergyHTML(energyView()) + '<div class="p2-tiles">' + rows.join('') + '</div>') + (E.plan.status === 'fuori_ambito_automatico' ? '<p class="p2-warn">' + esc((fr.errors || [])[0] ? fr.errors[0].msg : '') + '</p>' : '');
   var why = $('#nc-why');
   if (why) why.innerHTML = '<p>Il <b>mantenimento medio della settimana</b> è il riferimento giornaliero della routine, uguale mentre scorri i giorni della stessa settimana. Per quella in corso è aggiornato con i dati fino a oggi; per quelle concluse fino alla domenica. Nuovi dati e correzioni possono aggiornarlo.</p><p>Il <b>consumo stimato del giorno</b> segue invece lavoro, palestra, passi e calorie di quel giorno. Il dettaglio indica se le calorie sono complete o se è ancora una previsione.</p><p><b>Mantenimento × 7 giorni</b> significa il riferimento medio moltiplicato per sette; la somma dei consumi giornalieri è distinta e si trova in «Totali della settimana e metodo di calcolo».</p><p>L’obiettivo alimentare è quanto mangiare secondo il piano; non è il consumo stimato. Il residuo si calcola sull’obiettivo.</p><button type="button" class="linkbtn small" data-gorule="consumo">Come si calcola, passo per passo ›</button>';
 }
@@ -12010,7 +12020,7 @@ function renderHistoricalNeed(date,box){
   rows.push(p2tile('Macro',M?macroHTML(M):'—','Quantità previste dal piano in vigore il '+fmtDay(date)+'.',{cls:'wide',rule:'macro'}));
   rows.push(p2tile('Fiducia nella stima al '+fmtDay(date),lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
   rows.push(p2tile('Peso, tendenza',tr&&!tr.none?fmt(tr.v,1)+' kg':'—',tr&&!tr.none?'Tendenza ricostruita con le pesate fino al '+fmtDay(date)+'. Ultima pesata: '+fmt(tr.last.w,1)+' kg il '+fmtDay(tr.last.d)+'.':'Nessuna pesata disponibile fino a questa data.',{rule:'tendenza'}));
-  box.innerHTML=maintenanceHeroHTML(weekly.view,{historical:true,date:date,E:weekly.E,weekError:weekly.error})+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>';
+  box.innerHTML=needSummaryWrap(weekly.view,context.view,date,maintenanceHeroHTML(weekly.view,{historical:true,date:date,E:weekly.E,weekError:weekly.error})+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>');
 }
 function routineEnergyHTML(r) {
   var j=r.routine.job, a=[], R=r.routine;
@@ -12181,40 +12191,79 @@ function htState(m) {
   if (!(m.v > 0) || !(m.g > 0)) return '';
   var st = rchStatus(m.k, m.v, m.day); return st === 'ok' ? 'ok' : st === 'hi' ? 'over' : '';
 }
+/* A · cruscotto del giorno: tre anelli (calorie, proteine, passi), «rimangono», macro in barre, registrazione in un tocco */
+var HT3_R = [86, 62, 38];
 function renderTodayRings() {
   var box = $('#hero-today'), svg = $('#ht-rings'); if (!box || !svg) return;
   var t = todayStr(), day = ringDay(), d = state.days.get(day) || {}, isT = day === t, ago = diffDays(day, t), M = htMetrics(d, day); M.forEach(function (m) { m.day = day; });
-  if (!svg.dataset.init) {
-    svg.dataset.init = '1';
-    M.forEach(function (m, i) {
-      var r = HT_R[i], C = 2 * Math.PI * r;
-      var tk = el('circle', { class: 'ht-trk', cx: 100, cy: 100, r: r, 'stroke-width': 12.5, fill: 'none' }); tk.style.stroke = m.c; svg.appendChild(tk);
-      var p = el('circle', { class: 'ht-ring', id: 'htr-' + m.k, cx: 100, cy: 100, r: r, 'stroke-width': 12.5, fill: 'none', stroke: m.c, 'stroke-linecap': 'round', 'stroke-dasharray': C.toFixed(2), transform: 'rotate(-90 100 100)' });
+  var R3 = [M[0], M[1], M[4]];
+  if (svg.dataset.init !== '3') {
+    svg.dataset.init = '3'; while (svg.firstChild) svg.removeChild(svg.firstChild);
+    R3.forEach(function (m, i) {
+      var r = HT3_R[i], C = 2 * Math.PI * r;
+      var tk = el('circle', { class: 'ht-trk', cx: 100, cy: 100, r: r, 'stroke-width': 20, fill: 'none' }); tk.style.stroke = m.c; svg.appendChild(tk);
+      var p = el('circle', { class: 'ht-ring', id: 'htr-' + m.k, cx: 100, cy: 100, r: r, 'stroke-width': 20, fill: 'none', stroke: m.c, 'stroke-linecap': 'round', 'stroke-dasharray': C.toFixed(2), transform: 'rotate(-90 100 100)' });
       p.style.strokeDashoffset = C.toFixed(2); svg.appendChild(p);
     });
   }
   requestAnimationFrame(function () {
-    M.forEach(function (m, i) {
-      var C = 2 * Math.PI * HT_R[i], f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, c = $('#htr-' + m.k);
+    R3.forEach(function (m, i) {
+      var C = 2 * Math.PI * HT3_R[i], f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, c = $('#htr-' + m.k);
       if (c) { c.style.strokeDashoffset = (C * (1 - f)).toFixed(2); c.style.opacity = f > 0 ? 1 : 0; }
     });
   });
   var pd = parseD(day), dn = isT ? 'oggi' : ago === 1 ? 'ieri' : DOWL[(pd.getDay() + 6) % 7].slice(0, 3) + ' ' + pd.getDate() + ' ' + MESI[pd.getMonth()];
-  $('#ht-lbl').textContent = 'Calorie di ' + dn;
-  var pct = $('#ht-pct');
-  pct.textContent = M[0].g > 0 && M[0].v > 0 ? Math.round(M[0].v / M[0].g * 100) + '%' : '';
-  pct.classList.toggle('over', htState(M[0]) === 'over');
-  $('#ht-legend').innerHTML = M.map(function (m) {
-    var has = m.v > 0, st = htState(m), rg = m.k === 'kcal' && !kRange(day).fixed;
-    var lab = m.n + ' ' + (has ? m.f(m.v) : 'nessun dato') + ' su ' + (rg ? kRange(day).label : m.f(m.g)) + m.u + (st === 'ok' ? ', nel target' : st === 'over' ? ', sopra il target' : '') + '. Apri il giorno in Progressi';
-    return '<button type="button" class="ht-row" data-htk="' + m.k + '" aria-label="' + esc(lab) + '"><span class="n">' + m.n + '</span><b style="color:' + m.c + '">' + (has ? m.f(m.v) : '–') + (rg ? '' : '<small> / ' + m.f(m.g) + m.u + '</small>') + (st === 'ok' ? '<em aria-hidden="true">✓</em>' : st === 'over' ? '<em class="over" aria-hidden="true">▲</em>' : '') + '</b>' + (rg ? '<small class="ht-rg">obiettivo ' + kRange().label + '</small>' : '') + '</button>';
+  $('#ht-lbl').textContent = isT ? 'Oggi' : cap(dn);
+  /* quanto del diario è già scritto: peso, calorie, passi, sonno */
+  var filled = [d.weight > 0, d.kcal > 0 || (d.st && d.st.kcal === 'zero_confermato'), d.steps > 0 || (d.st && d.st.steps === 'zero_confermato'), d.sleepH > 0].filter(Boolean).length;
+  var pct = $('#ht-pct'); pct.textContent = 'Diario ' + filled + '/4'; pct.classList.toggle('over', false); pct.classList.toggle('full', filled === 4);
+  /* il numero protagonista */
+  var T = dayTarget(day), goal = T && T.kcal > 0 ? T.kcal : M[0].g, kc = d.kcal > 0 ? d.kcal : 0, left = goal > 0 ? goal - kc : null, rg = !kRange(day).fixed;
+  var lh;
+  if (!(goal > 0)) lh = '<small>Calorie</small><b>' + (kc ? fmt(kc, 0) : '—') + '</b><span>nessun obiettivo nel piano</span>';
+  else if (left >= 0) lh = '<small>' + (kc ? 'Rimangono' : 'Obiettivo') + '</small><b>' + fmt(left, 0) + '</b><span>' + (kc ? 'kcal per arrivare a ' + (rg ? kRange(day).label : fmt(goal, 0)) : 'kcal ' + (isT ? 'da mangiare oggi' : 'previste quel giorno')) + '</span>';
+  else lh = '<small>Oltre l’obiettivo</small><b class="over">+' + fmt(-left, 0) + '</b><span>kcal sopra ' + (rg ? kRange(day).label : fmt(goal, 0)) + '</span>';
+  $('#ht-left').innerHTML = lh;
+  $('#ht-legend').innerHTML = R3.map(function (m) {
+    var has = m.v > 0, st = htState(m), rg2 = m.k === 'kcal' && rg;
+    var lab = m.n + ' ' + (has ? m.f(m.v) : 'nessun dato') + ' su ' + (rg2 ? kRange(day).label : m.f(m.g)) + m.u + (st === 'ok' ? ', nel target' : st === 'over' ? ', sopra il target' : '') + '. Apri il giorno in Progressi';
+    return '<button type="button" class="ht-row" data-htk="' + m.k + '" aria-label="' + esc(lab) + '"><i style="background:' + m.c + '"></i><span class="v">' + (has ? m.f(m.v) : '–') + '</span><span class="n">/ ' + (rg2 ? kRange(day).label : m.g > 0 ? m.f(m.g) : '—') + (m.k === 'kcal' ? ' kcal' : m.k === 'protein' ? ' g proteine' : ' passi') + '</span>' + (st === 'ok' ? '<em aria-hidden="true">✓</em>' : st === 'over' ? '<em class="over" aria-hidden="true">▲</em>' : '') + '</button>';
   }).join('');
+  $('#ht-macros').innerHTML = [M[1], M[2], M[3]].map(function (m) {
+    var f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, st = htState(m);
+    return '<div class="htm' + (st === 'over' ? ' is-over' : '') + '"><small>' + m.n + '</small><b>' + (m.v > 0 ? m.f(m.v) : '–') + '<em> / ' + (m.g > 0 ? m.f(m.g) : '—') + ' g</em></b><span class="htm-bar"><i style="width:' + (f * 100).toFixed(1) + '%;background:' + m.c + '"></i></span></div>';
+  }).join('');
+  var Q = [['weight', 'Peso', HEX.accent || '#0A84FF', '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/>'], ['kcal', 'Calorie', HEX.kcal, '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/>'], ['steps', 'Passi', HEX.steps, '<path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>'], ['sleepH', 'Sonno', HEX.sleep, '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>']];
+  var have = { weight: d.weight > 0, kcal: d.kcal > 0, steps: d.steps > 0, sleepH: d.sleepH > 0 };
+  $('#ht-quick').innerHTML = Q.map(function (q) { return '<button type="button" class="htq' + (have[q[0]] ? ' is-done' : '') + '" data-addfield="' + q[0] + '" data-adddate="' + day + '" style="--c:' + q[2] + '"><span><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (have[q[0]] ? '<path d="m5 12 4 4 10-10"/>' : '<path d="M12 5v14M5 12h14"/>') + '</svg></span>' + q[1] + '</button>'; }).join('');
   var hasFood = M.some(function (m) { return m.k !== 'sleep' && m.v > 0; }), hasAny = hasFood || !!(d.weight > 0);
   $('#ht-foot').innerHTML = !isT ? '<button type="button" class="linkbtn small" data-htback>Torna a oggi</button>' : '';
-  $('#ht-add').textContent = isT ? (hasFood ? 'Aggiorna i dati di oggi' : '+ Inserisci i dati di oggi') : (hasAny ? 'Modifica i dati di ' : '+ Inserisci i dati di ') + dn;
+  $('#ht-add').textContent = (isT ? 'Tutti i dati di oggi' : (hasAny ? 'Tutti i dati di ' : 'Inserisci i dati di ') + dn) + ' ›';
   state.renderedDay = t;
   box.querySelector('[data-htgo="1"]').disabled = isT;
   box.querySelector('[data-htgo="-1"]').disabled = day <= ringFirst();
+  renderStreakCard();
+}
+/* A · la serie e la missione del giorno, subito sotto il cruscotto */
+function renderStreakCard() {
+  var hero = $('#hero-today'); if (!hero) return;
+  var card = $('#streak-card');
+  if (!card) { card = document.createElement('div'); card.className = 'panel streak-card'; card.id = 'streak-card'; var need = $('#need-card'); if (need && need.parentNode) need.parentNode.insertBefore(card, need); else hero.parentNode.insertBefore(card, hero.nextSibling); }
+  var t = todayStr(), ws = weekStart(t), n = 0, k = splitWeek(ws).n ? 0 : 1;
+  try { while (splitWeek(addDays(ws, -7 * k)).n) { n++; k++; } } catch (e) {}
+  var names = ['L', 'M', 'M', 'G', 'V', 'S', 'D'], done = 0;
+  var dots = names.map(function (lab, i) {
+    var dd = addDays(ws, i), v = state.days.get(dd) || {}, ok = v.kcal > 0 && GJM.fieldState(v, 'kcal', dd === t) === 'completo' || (v.st && v.st.kcal === 'zero_confermato');
+    if (ok) done++;
+    var cls = ok ? 'ok' : dd === t ? 'now' : dd > t ? 'next' : 'miss';
+    return '<div class="sk-d ' + cls + '"><span>' + lab + '</span><i aria-hidden="true">' + (ok ? '✓' : dd === t ? '•' : '') + '</i></div>';
+  }).join('');
+  var d = state.days.get(t) || {}, todayOk = d.kcal > 0 && GJM.fieldState(d, 'kcal', true) === 'completo';
+  var miss = [!(d.weight > 0) && 'peso', !(d.kcal > 0) && 'calorie', !(d.steps > 0) && 'passi', !(d.sleepH > 0) && 'sonno'].filter(Boolean);
+  var mission = todayOk ? '<div class="sk-m is-done"><div><b>Diario di oggi completo</b><small>Ottimo, la giornata conta per serie e sfide.</small></div><span class="sk-ok" aria-hidden="true">✓</span></div>'
+    : '<button type="button" class="sk-m" data-adddata="today"><div><b>Completa il diario di oggi</b><small>' + (miss.length ? 'Mancano ' + miss.join(', ') : 'Segna la giornata come completa') + '</small></div><span class="sk-go" aria-hidden="true">›</span></button>';
+  var html = '<div class="sk-head"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + PF_IC.fire + '</svg>' + (n > 0 ? n + (n === 1 ? ' settimana' : ' settimane') + ' di fila in palestra' : 'La tua settimana') + '</h2><span class="sk-chip">' + done + '/7 giorni completi</span></div><div class="sk-week" aria-label="Giorni completi di questa settimana">' + dots + '</div>' + mission;
+  if (card.innerHTML !== html) card.innerHTML = html;
 }
 /* perché manca ancora l'ultimo fabbisogno verificato: stessi requisiti della verifica con la bilancia */
 function avatarKey() { var a = state.avatar || ''; return a.length + ':' + a.slice(-24) + '|' + (S().name || ''); }
@@ -15769,6 +15818,68 @@ html body main .proj-table:not(#a):not(#b):not(#c) thead th{white-space:normal!i
 .ms-prev{left:0}.ms-next{right:0}
 .ms-nav:focus-visible,.ms-x:focus-visible,.ms-share:focus-visible{outline:2px solid #fff;outline-offset:-4px}
 html.ms-open .qa-fab{display:none}
+
+/* ===== A · cruscotto di Oggi ===== */
+#hero-today .ht-head{display:flex;align-items:center;gap:8px}
+#hero-today .ht-lbl{font-size:.8rem!important;letter-spacing:.08em!important;text-transform:uppercase;font-weight:750!important;color:#D7D7DC!important}
+#hero-today .ht-pct{margin-left:auto;padding:5px 11px;border-radius:999px;background:#FFFFFF10;color:#E9E9EE!important;font-size:.76rem!important;font-weight:700!important}
+#hero-today .ht-pct.full{background:#30D15824;color:#5EE07D!important}
+html body #hero-today .ht-body:not(#a):not(#b){display:grid!important;grid-template-columns:minmax(0,150px) minmax(0,1fr)!important;gap:16px!important;align-items:center!important;margin:14px 0 16px!important}
+html body #hero-today #ht-rings:not(#a):not(#b){width:100%!important;height:auto!important;max-width:170px}
+.ht-main{display:flex;flex-direction:column;gap:10px;min-width:0}
+.ht-left small{display:block;font-size:.78rem;font-weight:650;color:#9C9CA3}
+.ht-left b{display:block;font-size:clamp(2.4rem,11vw,3rem);line-height:1;letter-spacing:-.035em;color:#fff;margin:4px 0 4px;font-variant-numeric:tabular-nums}
+.ht-left b.over{color:#FF9F0A}
+.ht-left span{display:block;font-size:.8rem;line-height:1.4;color:#9C9CA3}
+html body #hero-today .ht-legend:not(#a):not(#b):not(#c):not(#d){align-items:flex-start!important;display:flex!important;flex-direction:column!important;gap:4px!important}
+html body #hero-today .ht-row:not(#a):not(#b):not(#c):not(#d){display:flex!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;width:auto!important;gap:7px!important;padding:2px 0!important;background:none!important;border:0!important;text-align:left;font-size:.8rem!important;min-height:0!important}
+#hero-today .ht-row i{width:8px;height:8px;border-radius:50%;flex:none}
+#hero-today .ht-row .v{color:#E9E9EE;font-weight:700;font-variant-numeric:tabular-nums}
+#hero-today .ht-row .n{color:#9C9CA3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hero-today .ht-row em{font-style:normal;color:#30D158;font-size:.75rem}#hero-today .ht-row em.over{color:#FF9F0A}
+.ht-macros{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding-top:14px;border-top:1px solid #FFFFFF12}
+.htm small{display:block;font-size:.74rem;color:#9C9CA3;font-weight:600}
+.htm b{display:block;font-size:1.05rem;color:#fff;margin:3px 0 7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.htm b em{font-style:normal;font-size:.74rem;color:#8E8E93;font-weight:500}
+.htm-bar{display:block;height:6px;border-radius:9px;background:#FFFFFF12;overflow:hidden}.htm-bar i{display:block;height:100%;border-radius:9px}
+.htm.is-over b{color:#FF9F0A}
+.ht-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
+.htq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 2px;border-radius:16px;border:1px solid #FFFFFF12;background:#FFFFFF07;color:#fff;font:inherit;font-size:.78rem;font-weight:650;cursor:pointer;min-width:0}
+.htq span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:var(--c);background:color-mix(in srgb,var(--c) 20%,transparent)}
+.htq.is-done span{background:var(--c);color:#111}
+.htq:hover{background:#FFFFFF10}.htq:focus-visible{outline:2px solid #fff;outline-offset:2px}
+html body #hero-today .ht-all:not(#a):not(#b):not(#c):not(#d){display:block;margin:12px auto 0;color:#C7C7CC!important;-webkit-text-fill-color:#C7C7CC!important;background:none!important;border:0!important;font-weight:650;text-decoration:none!important}
+html body #hero-today .ht-foot:not(#a){margin-top:8px}
+@media (max-width:360px){html body #hero-today .ht-body:not(#a):not(#b){grid-template-columns:118px minmax(0,1fr)!important;gap:12px!important}.htq{font-size:.7rem}}
+/* scheda della serie */
+.streak-card{order:-8}
+.streak-card .sk-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.streak-card h2{display:flex;align-items:center;gap:8px;margin:0;font-size:1.05rem;color:#fff}
+.streak-card h2 svg{color:#FF9F0A}
+.sk-chip{padding:5px 11px;border-radius:999px;background:#FFFFFF10;font-size:.76rem;font-weight:700;color:#E9E9EE}
+.sk-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:14px 0}
+.sk-d{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.72rem;font-weight:700;color:#8E8E93}
+.sk-d i{width:min(36px,9vw);height:min(36px,9vw);border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:.95rem;font-weight:900;background:#FFFFFF0D;color:#6d6d73}
+.sk-d.ok i{background:linear-gradient(160deg,#FFB340,#FF7A1A);color:#2a1500}
+.sk-d.now i{box-shadow:inset 0 0 0 2px #FF9F0A;background:transparent;color:#FF9F0A}
+.sk-d.next i{background:#FFFFFF07}
+.sk-m{display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:12px 14px;border-radius:16px;border:0;background:#FFFFFF08;color:#fff;font:inherit;text-align:left;cursor:pointer}
+.sk-m div{flex:1;min-width:0}.sk-m b{display:block;font-size:.95rem}.sk-m small{display:block;font-size:.8rem;color:#9C9CA3;margin-top:2px}
+.sk-go{font-size:1.4rem;color:#C7C7CC}.sk-ok{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#30D158;color:#06210f;font-weight:900}
+.sk-m.is-done{cursor:default}
+.sk-m:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#h-streak{display:none!important}
+/* mantenimento in una riga */
+.need-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.need-sum>div{padding:12px;border-radius:16px;background:#FFFFFF08}
+.need-sum small{display:block;font-size:.72rem;color:#9C9CA3;font-weight:600}
+.need-sum b{display:block;font-size:1.25rem;color:#fff;margin-top:4px;font-variant-numeric:tabular-nums}
+.need-more{margin-top:10px}
+.need-more>summary{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 4px!important;list-style:none;cursor:pointer;font-size:.86rem;font-weight:650;color:#D7D7DC}
+.need-more>summary::-webkit-details-marker{display:none}
+.need-more>summary>.disclosure-cue{position:static!important;transform:none!important;flex:none;margin:0!important}
+.need-more-body{padding-top:10px}
+.need-go{display:block;margin:12px 0 2px}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
