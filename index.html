@@ -2634,11 +2634,14 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         </div>
         <div class="tags" id="r-tags"></div>
       </div>
+      </section>
+      <div class="rgrid" id="r-grid"></div>
       <details class="form-box recipe-create-box">
         <summary>Nuova ricetta</summary>
         <form id="r-form" class="stack">
           <div class="row">
             <label class="f" style="flex:2 1 200px">Nome<input id="rf-name" type="text" required></label>
+            <div class="f rf-photo" data-photo-field="rf-"><span>Foto della copertina (facoltativa)</span><div class="rf-photo-row"><span class="rf-photo-prev" aria-hidden="true"></span><label class="btn ghost sm rf-photo-pick">Scegli foto<input type="file" accept="image/*" data-recipe-photo="rf-" hidden></label><button type="button" class="linkbtn small" data-recipe-photo-del="rf-" hidden>Rimuovi</button></div><input type="hidden" id="rf-photo"></div>
             <label class="f" style="flex:1 1 160px">Etichette, separate da virgola<input id="rf-tags" type="text" placeholder="colazione, alto proteico"></label>
             <fieldset class="recipe-duration"><legend><span aria-hidden="true">◷</span> Tempo della ricetta</legend><div class="recipe-duration-inputs"><label class="f"><span>Ore</span><input id="rf-hours" name="hours" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label><span class="recipe-duration-colon" aria-hidden="true">:</span><label class="f"><span>Minuti</span><input id="rf-time" name="time" type="number" min="0" max="59" step="1" inputmode="numeric" placeholder="00"></label></div></fieldset>
           </div>
@@ -2654,8 +2657,6 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <div class="row"><button class="btn fit" type="submit">Salva ricetta</button></div>
         </form>
       </details>
-      </section>
-      <div class="rgrid" id="r-grid"></div>
 
     </section>
 
@@ -5507,6 +5508,40 @@ function recipeMessage(text) {
   el.hidden = !RecipeUI.notice;
   el.innerHTML = '<span>' + esc(RecipeUI.notice) + '</span>' + (RecipeUI.undo ? '<button type="button" class="btn ghost sm" data-recipe-undo>Annulla rimozione</button>' : '');
 }
+/* D · copertina della ricetta: la foto se c'è, altrimenti un colore e un'icona scelti dal nome */
+function recipePhotoField(p) { return '<div class="f rf-photo" data-photo-field="' + p + '"><span>Foto della copertina (facoltativa)</span><div class="rf-photo-row"><span class="rf-photo-prev" aria-hidden="true"></span><label class="btn ghost sm rf-photo-pick">Scegli foto<input type="file" accept="image/*" data-recipe-photo="' + p + '" hidden></label><button type="button" class="linkbtn small" data-recipe-photo-del="' + p + '" hidden>Rimuovi</button></div><input type="hidden" id="' + p + 'photo"></div>'; }
+function recipePhotoPreview(p) {
+  var inp = document.getElementById(p + 'photo'); if (!inp) return; var wrap = inp.closest('.rf-photo'); if (!wrap) return;
+  var prev = wrap.querySelector('.rf-photo-prev'), del = wrap.querySelector('[data-recipe-photo-del]'), v = inp.value;
+  prev.style.backgroundImage = v ? 'url("' + v + '")' : ''; prev.classList.toggle('on', !!v); if (del) del.hidden = !v;
+  var pick = wrap.querySelector('.rf-photo-pick'); if (pick && pick.firstChild && pick.firstChild.nodeType === 3) pick.firstChild.nodeValue = v ? 'Cambia foto' : 'Scegli foto';
+}
+document.addEventListener('change', function (e) {
+  var f = e.target.closest && e.target.closest('input[data-recipe-photo]'); if (!f || !f.files || !f.files[0]) return;
+  var p = f.dataset.recipePhoto, file = f.files[0], url = URL.createObjectURL(file), im = new Image();
+  im.onload = function () {
+    var W = 640, H = 480, c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d'), r = Math.max(W / im.naturalWidth, H / im.naturalHeight), w = im.naturalWidth * r, h = im.naturalHeight * r;
+    g.fillStyle = '#1C1C1E'; g.fillRect(0, 0, W, H); g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h); URL.revokeObjectURL(url);
+    var inp = document.getElementById(p + 'photo'); if (inp) { inp.value = c.toDataURL('image/jpeg', .72); recipePhotoPreview(p); }
+  };
+  im.onerror = function () { URL.revokeObjectURL(url); recipeMessage('Questa foto non si apre: prova con un\'altra immagine.'); };
+  im.src = url; f.value = '';
+});
+document.addEventListener('click', function (e) { var b = e.target.closest('[data-recipe-photo-del]'); if (!b) return; e.preventDefault(); var inp = document.getElementById(b.dataset.recipePhotoDel + 'photo'); if (inp) { inp.value = ''; recipePhotoPreview(b.dataset.recipePhotoDel); } });
+var RC_ICONS = [[/muffin|cupcake/, '🧁'], [/torta|cheesecake|crostat|dolce|tiramis/, '🍰'], [/biscott|cookie/, '🍪'], [/pancake|crêpe|crepe/, '🥞'], [/pollo|tacchin/, '🍗'], [/curry|riso|risott/, '🍛'], [/pasta|spaghett|penne|lasagn|gnocch/, '🍝'], [/pizza|focacc/, '🍕'], [/insalat|bowl|poke/, '🥗'], [/oats|avena|porridge|granola|yogurt/, '🥣'], [/uov|frittat|omelet/, '🍳'], [/salmon|tonno|pesce|merluzz|gamber/, '🐟'], [/manzo|carne|bistecc|burger|hamburger/, '🥩'], [/frullat|smoothie|shake|frappè/, '🥤'], [/zuppa|minestr|vellutat/, '🍲'], [/pane|toast|panin|wrap|piadin/, '🥪'], [/cioccolat|cacao|nutella/, '🍫'], [/frutt|banan|mela|fragol|mirtill/, '🍓']];
+var RC_TONES = [['#5a2d1c', '#2a1510'], ['#5a4313', '#2a1d08'], ['#4d1d3a', '#22101b'], ['#1d4a2a', '#0f2214'], ['#1d3550', '#0d1a28'], ['#4a2350', '#1f1022'], ['#50381d', '#22180c'], ['#1f4848', '#0e2222']];
+function recipeCover(r) {
+  var n = (r.name || '').toLowerCase() + ' ' + (r.tags || []).join(' ').toLowerCase(), ic = '🍽️';
+  for (var i = 0; i < RC_ICONS.length; i++) if (RC_ICONS[i][0].test(n)) { ic = RC_ICONS[i][1]; break; }
+  var h = 0; for (var k = 0; k < (r.name || '').length; k++) h = (h * 31 + r.name.charCodeAt(k)) >>> 0; var t = RC_TONES[h % RC_TONES.length];
+  var time = r.time ? '<em class="rc-time"><span aria-hidden="true">◷</span> ' + esc(recipeDurationLabel(r.time)) + '</em>' : '';
+  return r.photo ? '<span class="rc-cover has-photo" style="background-image:url(&quot;' + r.photo + '&quot;)">' + time + '</span>' : '<span class="rc-cover" style="background:linear-gradient(135deg,' + t[0] + ',' + t[1] + ')"><span class="rc-ic" aria-hidden="true">' + ic + '</span>' + time + '</span>';
+}
+function recipeCardSummary(r) {
+  var one = recipeNutrition(r, false), n = recipeServings(r), kp = one.protein * 4, kc = one.carbs * 4, kf = one.fat * 9, tot = kp + kc + kf;
+  var bar = tot > 0 ? '<span class="rc-mbar" aria-hidden="true"><i style="flex:' + kp + ';background:var(--prot)"></i><i style="flex:' + kc + ';background:var(--carb)"></i><i style="flex:' + kf + ';background:var(--fat)"></i></span>' : '';
+  return recipeCover(r) + '<span class="rc-body"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="rc-kcal"><b>' + fmt(one.kcal, 0) + ' kcal</b> a porzione</span>' + bar + '<span class="rc-mac">P ' + recipeNumber(one.protein) + ' · C ' + recipeNumber(one.carbs) + ' · G ' + recipeNumber(one.fat) + (n > 1 ? ' · ' + n + ' porz.' : '') + '</span></span>';
+}
 function renderRecipes() {
   RecipeUI.mealView = null;
   var q = $('#r-search').value.trim().toLowerCase(), sort = $('#r-sort').value, date = state.sel || todayStr();
@@ -5532,7 +5567,7 @@ function renderRecipes() {
   }
   $('#r-grid').innerHTML = list.map(function (r) {
     var meals = recipeDiaryMeals(r.id, date), review = recipeDayNeedsReview(date), total = recipeNutrition(r, true), shown = total || recipeNutrition(r, false), preparation = recipePreparationHTML(r);
-    return '<article class="panel rcard recipe-compact" data-recipe-card="' + esc(r.id) + '"><details class="recipe-expand"' + (expanded[r.id] ? ' open' : '') + '><summary class="recipe-summary"><span class="recipe-summary-content"><span class="recipe-title" role="heading" aria-level="3">' + esc(r.name) + '</span><span class="recipe-summary-chips" aria-label="' + (total ? 'Valori totali della ricetta' : 'Valori per una porzione; numero di porzioni non indicato') + '">' + recipeMacroChips(shown, !total) + (r.time ? '<span class="recipe-chip recipe-chip-time"><span aria-hidden="true">◷</span> ' + esc(recipeDurationLabel(r.time)) + '</span>' : '') + '</span></span></summary><div class="recipe-full">'
+    return '<article class="panel rcard recipe-compact" data-recipe-card="' + esc(r.id) + '"><details class="recipe-expand"' + (expanded[r.id] ? ' open' : '') + '><summary class="recipe-summary rc2">' + recipeCardSummary(r) + '</summary><div class="recipe-full">'
       + ((r.tags || []).length || r.example ? '<div class="tags">' + (r.tags || []).map(function (t) { return '<span class="chip">' + esc(cap(t)) + '</span>'; }).join('') + (r.example ? '<span class="chip warn">Valori indicativi</span>' : '') + '</div>' : '')
       + recipeNutritionPanels(r, false)
       + (preparation ? '<details class="recipe-prep-details"' + (prepOpen[r.id] ? ' open' : '') + '><summary>Ingredienti e procedimento</summary>' + preparation + '</details>' : '')
@@ -5544,7 +5579,7 @@ function renderRecipes() {
 }
 function recipeEditorFields() {
   function field(label, name, type, extra) { return '<label class="f"><span>' + label + '</span><input id="re-' + name + '" name="' + name + '" type="' + type + '" ' + (extra || '') + '></label>'; }
-  return '<div class="recipe-editor-grid">' + field('Nome', 'name', 'text', 'required maxlength="300" class="recipe-name"')
+  return '<div class="recipe-editor-grid">' + field('Nome', 'name', 'text', 'required maxlength="300" class="recipe-name"') + recipePhotoField('re-')
     + field('Etichette, separate da virgola', 'tags', 'text', 'placeholder="colazione, alto proteico"') + recipeDurationFields('re-')
     + '</div><div class="recipe-basis-fields">' + field('Porzioni ottenute dalla ricetta', 'servings', 'number', 'min="1" step="1" inputmode="numeric" placeholder="es. 10 muffin"') + '<label class="f"><span>Valori che stai inserendo</span><select id="re-basis" name="basis"><option value="total">Totale ricetta</option><option value="portion">Per una porzione</option></select></label></div><div class="recipe-form-heading" id="re-nutrition-heading">Valori nutrizionali</div><div class="recipe-nutrients">' + field('Calorie (kcal)', 'kcal', 'number', 'required min="0" step="any" inputmode="decimal"')
     + field('Proteine (g)', 'p', 'number', 'min="0" step="any" inputmode="decimal"') + field('Carboidrati (g)', 'c', 'number', 'min="0" step="any" inputmode="decimal"') + field('Grassi (g)', 'f', 'number', 'min="0" step="any" inputmode="decimal"')
@@ -5582,6 +5617,7 @@ function recipeOpenDialog(mode, id, trigger, date) {
     var duration = recipeDurationParts(r.time);
     var vals = { name: r.name, tags: (r.tags || []).join(', '), hours: duration.hours, time: duration.minutes, servings: servings, basis: basis, kcal: values.kcal, p: values.protein, c: values.carbs, f: values.fat, ing: (r.ingredients || []).join('\n'), steps: (r.steps || []).join('\n') };
     Object.keys(vals).forEach(function (k) { $('#re-' + k, el).value = vals[k] == null ? '' : vals[k]; });
+    var phIn = $('#re-photo', el); if (phIn) { phIn.value = r.photo || ''; recipePhotoPreview('re-'); }
     recipeRefreshNutritionForm('re-');
   }
   document.documentElement.classList.add('recipe-dialog-open');
@@ -5618,7 +5654,8 @@ function recipeReadFields(prefix) {
   if (!Number.isSafeInteger(hours) || hours < 0 || !Number.isInteger(minutes) || minutes < 0 || minutes > 59 || !Number.isSafeInteger(hours * 60 + minutes)) throw Error('Controlla la durata: ore intere da zero in su e minuti da 0 a 59.');
   var time = hours * 60 + minutes;
   var lines = function (k) { return value(k).split('\n').map(function (x) { return x.trim(); }).filter(Boolean); };
-  return Object.assign({ name: name, tags: value('tags').split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean), time: time, ingredients: lines('ing'), steps: lines('steps') }, recipeReadNutrition(prefix));
+  var phEl = document.getElementById(prefix + 'photo'), photo = phEl ? phEl.value : '';
+  return Object.assign({ name: name, tags: value('tags').split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean), time: time, ingredients: lines('ing'), steps: lines('steps') }, photo ? { photo: photo } : phEl && prefix === 're-' ? { photo: null } : {}, recipeReadNutrition(prefix));
 }
 function recipeUpdatedData(old, fields) {
   var next = Object.assign({}, old, fields), previous = recipeIdentity(old), current = recipeIdentity(next);
@@ -5694,7 +5731,7 @@ function bindRecipes() {
   $('#r-form').addEventListener('submit', function (e) {
     e.preventDefault(); var data; try { data = recipeReadFields('rf-'); } catch (err) { recipeMessage(err.message); return; }
     var id = slug(data.name) + '-' + Date.now().toString(36) + '-' + (++RecipeUI.serial).toString(36);
-    state.recipes.set(id, data); RecipeUI.undo = null; var result = saveDoc('recipes/' + id, data); renderAll(); e.target.reset(); recipeRefreshNutritionForm('rf-'); recipeMessage('Ricetta aggiunta al ricettario.');
+    state.recipes.set(id, data); RecipeUI.undo = null; var result = saveDoc('recipes/' + id, data); renderAll(); e.target.reset(); recipePhotoPreview('rf-'); var cb = e.target.closest('details'); if (cb) cb.open = false; recipeRefreshNutritionForm('rf-'); recipeMessage('Ricetta aggiunta al ricettario.');
     Promise.resolve(result).catch(function () { recipeMessage('Ricetta salvata sul dispositivo: controlla lo stato della sincronizzazione.'); });
   });
   $('#tab-ricette').addEventListener('click', function (e) { if (e.target.closest('[data-recipe-undo]')) recipeUndoRemoval(); });
@@ -15982,6 +16019,40 @@ html body .sess.sx > summary > .disclosure-cue:not(#a){display:none!important}
 .sx-stats b{font-size:.98rem;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
 .sx-ex{grid-area:ex;padding-top:9px;border-top:1px solid #FFFFFF12;font-size:.8rem;color:#C7C7CC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html body .sess.sx .body:not(#a){padding:0 14px 14px!important}
+
+/* ===== D · Ricettario con copertine ===== */
+html body #tab-ricette .recipe-workspace:not(#a):not(#b):not(#c):not(#d){padding:14px!important}
+html body #tab-ricette .recipe-search-panel:not(#a):not(#b):not(#c){padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#tab-ricette .recipe-search-panel>.row{align-items:end}
+#tab-ricette .recipe-search-panel label.f{font-size:0!important;gap:0!important}
+html body #tab-ricette #r-search:not(#a):not(#b):not(#c):not(#d){text-align:left!important;font-size:15px!important;padding-left:40px!important;background:#1C1C1E url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239C9CA3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") no-repeat 13px 50%/18px!important;border-radius:14px!important;min-height:46px}
+#tab-ricette #r-tags{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;scrollbar-width:none;margin-top:10px}
+#tab-ricette #r-tags::-webkit-scrollbar{display:none}
+#tab-ricette #r-tags .chip{flex:none}
+html body #tab-ricette #r-grid:not(#a):not(#b):not(#c){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-top:14px}
+@media (min-width:900px){html body #tab-ricette #r-grid:not(#a):not(#b):not(#c){grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+html body #tab-ricette .rcard.recipe-compact:not(#a):not(#b):not(#c){padding:0!important;margin:0!important;border-radius:20px!important;overflow:hidden;background:#1C1C1E!important;border:1px solid #FFFFFF12!important;min-width:0}
+html body #tab-ricette .rcard.recipe-compact:has(.recipe-expand[open]):not(#a){grid-column:1/-1}
+html body #tab-ricette .recipe-summary.rc2:not(#a):not(#b):not(#c){display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important;padding:0!important;min-height:0!important;list-style:none;cursor:pointer}
+html body #tab-ricette .recipe-summary.rc2 > .disclosure-cue:not(#a){display:none!important}
+.rc-cover{position:relative;display:grid;place-items:center;height:104px;background-size:cover!important;background-position:center!important}
+.rc-cover .rc-ic{font-size:44px;line-height:1;filter:drop-shadow(0 4px 10px #0006)}
+.rc-time{position:absolute;left:8px;bottom:8px;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;background:#000000AA;color:#fff;font-style:normal;font-size:.7rem;font-weight:750}
+.rc-body{display:flex;flex-direction:column;gap:6px;padding:10px 11px 12px;min-width:0}
+html body #tab-ricette .rc-body .recipe-title:not(#a):not(#b):not(#c):not(#d){width:100%!important;max-width:none!important;padding:0!important;margin:0!important;font-size:.88rem!important;line-height:1.3!important;color:#fff!important;font-weight:700!important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.rc-kcal{font-size:.78rem;color:#9C9CA3}.rc-kcal b{color:#fff;font-weight:800}
+.rc-mbar{display:flex;gap:2px;height:6px;border-radius:9px;overflow:hidden}.rc-mbar i{display:block;min-width:2px}
+.rc-mac{font-size:.72rem;color:#8E8E93;font-variant-numeric:tabular-nums}
+.recipe-expand[open] .rc-cover{height:150px}
+.recipe-expand[open] .rc-body .recipe-title{-webkit-line-clamp:unset;min-height:0}
+html body #tab-ricette .recipe-full:not(#a){padding:4px 14px 16px!important}
+html body #tab-ricette .recipe-create-box:not(#a):not(#b):not(#c){margin:14px 0 0!important;border:1.5px dashed #FFFFFF2A!important;background:transparent!important;border-radius:18px!important}
+html body #tab-ricette .recipe-create-box>summary:not(#a):not(#b){justify-content:center!important;gap:8px;font-weight:750!important;color:#E3E3E8!important}
+html body #tab-ricette .recipe-create-box[open]:not(#a):not(#b):not(#c){border-style:solid!important;background:#1C1C1E!important}
+.rf-photo>span{font-size:.82rem}
+.rf-photo-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+.rf-photo-prev{width:72px;height:54px;border-radius:12px;background:#FFFFFF0C center/cover no-repeat;border:1px dashed #FFFFFF2A;flex:none}
+.rf-photo-prev.on{border-style:solid}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
