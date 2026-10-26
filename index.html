@@ -11765,11 +11765,18 @@ function bindFriends() {
     var wt=w.miss?'<span class="fz-w is-miss">—</span><span class="fz-wd">'+esc(w.miss)+'</span>':'<span class="fz-w">'+fmt(w.v,1)+'<small> kg</small></span><span class="fz-wd">'+(w.delta!=null?(Math.abs(w.delta)<0.05?'stabile':(w.delta>0?'+':'−')+fmt(Math.abs(w.delta),1)+' kg')+' in '+w.span+(w.span===1?' giorno':' giorni'):w.d===comparisonDate()?'pesata del giorno':'pesata del '+esc(fmtShort(w.d)))+'</span>';
     return '<div class="fz-p is-'+side+'"><span class="fz-av" aria-hidden="true"><i>'+faAvatar(uid,name)+'</i></span><b class="fz-n">'+esc(label)+'</b>'+wt+'</div>';
   }
+  function fzGoal(rows,week){
+    var ts=(rows||[]).map(function(x){return x&&x.calories&&x.calories.target>0?x.calories.target:null;});
+    if(week){var v=ts.filter(function(t){return t!=null;});if(!v.length)return null;var mn=Math.min.apply(null,v),mx=Math.max.apply(null,v);return {v:v.reduce(function(t,x){return t+x;},0)/v.length,avg:mx-mn>=1};}
+    var last=ts[ts.length-1];if(last!=null)return {v:last};
+    for(var i=ts.length-2;i>=0;i--)if(ts[i]!=null)return {v:ts[i],old:true};
+    return null;
+  }
   function fzBadge(side,txt){return '<span class="fz-badge is-'+side+'">'+txt+'</span>';}
   function fzHead(k,t,badge){return '<header class="fz-h"><span class="fz-ic" aria-hidden="true">'+FA_IC[k]+'</span><h4>'+t+'</h4>'+(badge||'')+'</header>';}
   function fzMirror(a,b,max,tick){function half(side,v){return '<span class="is-'+side+'">'+(v!=null&&max>0?'<i style="width:'+(Math.max(0,Math.min(v,max))/max*100).toFixed(1)+'%"></i>':'')+(tick?'<em style="--t:'+tick+'%"></em>':'')+'</span>';}return '<div class="fz-mirror" aria-hidden="true">'+half('me',a)+half('pe',b)+'</div>';}
   function fzVal(side,s,big,small){if(s.miss)return '<span class="fz-v is-'+side+' is-miss"><b>—</b><small>'+esc(s.miss)+(s.sub?' · '+esc(s.sub):'')+'</small></span>';return '<span class="fz-v is-'+side+'"><b>'+big+'</b>'+(small?'<small>'+small+'</small>':'')+'</span>';}
-  function fzRow(k,a,b,peerName,week){
+  function fzRow(k,a,b,peerName,week,goals){
     var who=esc(fzShort(peerName)),names={calories:week?'Calorie medie':'Calorie',macros:week?'Macro medie':'Macro',steps:week?'Passi medi':'Passi',workouts:week?'Allenamenti':'Allenamento'},lead=null,cmp=false,badge='',body='';
     var tag=function(side){return side==='me'?'Tu':who;};
     if(k==='calories'){
@@ -11777,7 +11784,8 @@ function bindFriends() {
       if(ok&&a.done&&b.done){cmp=true;var da=Math.abs(a.pct-100),db=Math.abs(b.pct-100);if(Math.abs(da-db)<1)badge=fzBadge('tie','Pari');else{lead=da<db?'me':'pe';badge=fzBadge(lead,tag(lead)+' più vicino al target');}}
       else if(ok)badge=fzBadge('tie','Giornata in corso');
       var cv=function(side,x){return fzVal(side,x,x.pct!=null?Math.round(x.pct)+'%':x.txt+' kcal',(x.pct!=null?x.txt+' kcal'+(week?' in media':'')+' · ':'')+esc(x.st||''));};
-      body='<div class="fz-nums">'+cv('me',a)+cv('pe',b)+'</div>'+fzMirror(a.miss?null:a.pct,b.miss?null:b.pct,125,80)+'<p class="fz-foot">percentuale del proprio obiettivo · la tacca bianca è il 100%</p>';
+      var gl=function(side,g,allowed){return '<span class="fz-goal is-'+side+'"><small>'+(g&&g.avg?'Obiettivo medio':'Obiettivo')+'</small><b>'+(g?fmt(g.v,0)+' kcal':allowed?'non impostato':'non condiviso')+'</b></span>';};
+      body='<div class="fz-goals">'+gl('me',goals&&goals.me,true)+gl('pe',goals&&goals.pe,goals&&goals.peOk)+'</div><div class="fz-nums">'+cv('me',a)+cv('pe',b)+'</div>'+fzMirror(a.miss?null:a.pct,b.miss?null:b.pct,125,80)+'<p class="fz-foot">percentuale del proprio obiettivo · la tacca bianca è il 100%</p>';
     }else if(k==='macros'){
       var miss=[a.miss?'Tu: '+a.miss.toLowerCase():'',b.miss?who+': '+b.miss.toLowerCase():''].filter(Boolean),C=['#B8FF3A','#FFB340','#D08BF5'];
       body='<div class="fz-mac">'+['protein','carbs','fat'].map(function(m,i){var x=a.m?a.m[m]:null,y=b.m?b.m[m]:null,mx=Math.max(x||0,y||0),w=function(v){return v!=null&&mx>0?'<i style="width:'+(v/mx*100).toFixed(1)+'%"></i>':'';};
@@ -11804,7 +11812,8 @@ function bindFriends() {
     if(!r)return ctrl+'<div class="fz-board">'+hero({miss:'caricamento…'})+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div></div>'+manage;
     if(r.error||!r.config||!r.config.enabled)return ctrl+'<div class="fz-board">'+hero({miss:'non disponibile'})+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div></div>'+manage;
     var peer7=r.days||[],cut=function(x){return week?x:x.slice(-1);},own=cut(own7),peer=cut(peer7);
-    var rows=keys.map(function(k){return fzRow(k,sideStat(own,k,true,true),sideStat(peer,k,r.config.prefs[k],false),name,week);});
+    var goals={me:fzGoal(own7.slice(),week),pe:r.config.prefs.calories?fzGoal(peer7.slice(),week):null,peOk:!!r.config.prefs.calories};
+    var rows=keys.map(function(k){return fzRow(k,sideStat(own,k,true,true),sideStat(peer,k,r.config.prefs[k],false),name,week,goals);});
     var me=rows.filter(function(x){return x.lead==='me';}).length,pe=rows.filter(function(x){return x.lead==='pe';}).length,cmp=rows.filter(function(x){return x.cmp;}).length;
     var chips=cmp?'<div class="fz-score">'+(me||pe?'<span class="is-me">Tu avanti in '+me+'</span><span class="is-pe">'+esc(short)+' in '+pe+'</span>':'<span class="is-tie">Per ora siete pari</span>')+'</div>':'';
     return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(keys.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
@@ -16783,6 +16792,14 @@ html body #tab-amici .fz-ctrl .friends-period button:not(#a):not(#b):not(#c):not
 html body #tab-amici .fz-ctrl .friends-date-nav:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex!important;width:100%;gap:8px!important}
 html body #tab-amici .fz-ctrl .friends-date-nav>button:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){min-width:52px!important;min-height:52px!important;border-radius:16px!important}
 html body #tab-amici .fz-ctrl .friends-date-picker:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){flex:1 1 auto!important;justify-content:center!important;gap:12px!important;min-height:52px!important;border-radius:16px!important;font-size:1rem!important}
+html body #tab-amici .fz-goals:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+html body #tab-amici .fz-goal:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;min-width:0}
+html body #tab-amici .fz-goal.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B1F;border:1px solid #FF8A5B40}
+html body #tab-amici .fz-goal.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF1F;border:1px solid #5AA9FF40;text-align:right;align-items:flex-end}
+html body #tab-amici .fz-goal>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.72rem;font-weight:600;color:#AEAEB2}
+html body #tab-amici .fz-goal>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.05rem;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+html body #tab-amici .fz-goal.is-me>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFD2BD}
+html body #tab-amici .fz-goal.is-pe>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#CFE5FF}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
