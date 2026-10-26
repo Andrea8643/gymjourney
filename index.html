@@ -3330,7 +3330,7 @@ function dayActivity(ctx, d, opts) {
   var g = { k: 0, lo: 0, hi: 0, sessions: [], orig: null };
   var dw = opts.habit ? { list: [], dup: [] } : dayWorkouts(ctx, d);
   if (dw.dup.length) out.note.push(dw.dup.length + ' seduta/e con orario e esercizi uguali a un\'altra: contata una volta');
-  if (day.riposo === true) g.orig = 'riposo confermato';
+  if (day.riposo === true && !dw.list.length) g.orig = 'riposo confermato';
   else if (dw.list.length) {
     dw.list.forEach(function (w) { var se = sessionEnergy(w, W, ctx, d); g.sessions.push(se); g.k += se.k; g.lo += se.lo; g.hi += se.hi; se.cardio.forEach(function (c) { if (c.cls === 'cammino' || c.cls === 'tapis' || c.cls === 'corsa') gymSteps += c.k / (K.WALK * W) / (K.STRIDE * H / 100); }); });
     g.orig = 'Hevy';
@@ -7248,7 +7248,7 @@ function dayWorkHTML(date, compact) {
     return '<div class="empty wd-empty">' + head + '</div>' + (why ? '<p class="muted small">' + why + '</p>' : '');
   }
   var restOn = (state.days.get(date) || {}).riposo === true;
-  return (restOn ? '<p class="muted small">Hai confermato il riposo: queste sedute non entrano nel consumo del giorno. Togli la spunta nei dati del giorno se ti sei allenato.</p>' : '') + ws.map(function (w, i) {
+  return (restOn ? '<p class="muted small">Questo giorno era segnato come riposo, ma c’è una seduta importata da Hevy: conta la seduta.</p>' : '') + ws.map(function (w, i) {
     var G = GROUP[wGroup(w)], vol = 0, nS = 0, e = se.filter(function (s) { return s.title === w.title; })[0] || se[i];
     (w.exercises || []).forEach(function (ex) { setsOf(ex, w.date).forEach(function (s) { vol += (s.kg || 0) * (s.reps || 0); nS++; }); });
     var meta = [w.start ? 'ore ' + esc(w.start) : '', w.durMin ? fmtDur(w.durMin) : 'durata non registrata', (w.exercises || []).length + ((w.exercises || []).length === 1 ? ' esercizio' : ' esercizi'), nS + ' serie', vol > 0 ? fmt(vol, 0) + ' kg sollevati' : ''].filter(Boolean).join(', ');
@@ -11381,7 +11381,7 @@ function evaluate(input,today,personal){
  dates.forEach(function(d){var x=days[d],t=targets(d)||{},ok=C.eligible(x),all=ok&&['protein','carbs','fat'].every(function(k){return valid(x[k]);});
  function on(k,target){return ok&&valid(x[k])&&valid(target)&&target>0&&Math.abs(x[k]-target)<=target*.1;}
  var recipe=ok&&(x.meals||[]).some(function(m){return m.recipe&&!m.adj&&!m.adjTotal;});
- rows[d]={diary:ok,macro:all,protein:on('protein',t.p),carbs:on('carbs',t.c),fat:on('fat',t.f),balanced:all&&on('protein',t.p)&&on('carbs',t.c)&&on('fat',t.f),fiber:ok&&valid(x.fiber),sleep:valid(x.sleepH)&&x.sleepH>0&&x.sleepH<=24,steps:valid(x.steps),weight:valid(x.weight)&&x.weight>0,rest:x.riposo===true,note:typeof x.note==='string'&&x.note.trim().length>=5,recipe:recipe,weekend:ok&&[0,6].includes(new Date(d+'T12:00:00Z').getUTCDay())};
+ rows[d]={diary:ok,macro:all,protein:on('protein',t.p),carbs:on('carbs',t.c),fat:on('fat',t.f),balanced:all&&on('protein',t.p)&&on('carbs',t.c)&&on('fat',t.f),fiber:ok&&valid(x.fiber),sleep:valid(x.sleepH)&&x.sleepH>0&&x.sleepH<=24,steps:valid(x.steps),weight:valid(x.weight)&&x.weight>0,rest:x.riposo===true&&!sessions.some(function(w){return w.date===d;}),note:typeof x.note==='string'&&x.note.trim().length>=5,recipe:recipe,weekend:ok&&[0,6].includes(new Date(d+'T12:00:00Z').getUTCDay())};
  Object.keys(rows[d]).forEach(function(k){if(rows[d][k])counts[k]=(counts[k]||0)+1;});});
  var items=[];function add(id,name,cat,current,goal,desc,symbol,blocked){items.push({id:id,name:name,category:cat,current:Math.min(current||0,goal),total:current||0,goal:goal,done:!blocked&&current>=goal,description:desc,symbol:symbol||'✦',blocked:!!blocked});}
  [[60,'Due mesi di ritmo'],[90,'Un trimestre insieme'],[180,'La forza dell’abitudine'],[365,'Un anno, un passo alla volta']].forEach(function(v){add('streak-'+v[0],v[1],'Costanza',personal.record,v[0],v[0]+' giornate consecutive di diario completo.','🔥');});
@@ -12293,12 +12293,12 @@ function dailyEnergyHTML(view,options) {
   var jobLabel=scheduledRest?'Oggi non hai lavorato':(src.job||'').replace(/\s*\(dichiarato\)/gi,'')||(p.job===0?'Nessun contributo lavorativo':'Non disponibile');
   var sessions=Array.from(state.workouts.values()).filter(function(w){return w.date===selectedDate;}).sort(function(a,b){return (a.start||'').localeCompare(b.start||'');});
   var gy=a.gym||{},dayRec=state.days.get(selectedDate)||{},workoutNote='';
-  /* il riposo confermato nei dati del giorno vale più di tutto: il motore non conta palestra, con o senza Hevy */
-  var workoutLabel=dayRec.riposo===true?'Riposo confermato da te'
-    :sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · ')
+  /* una seduta importata vale più della spunta di riposo; senza sedute, il riposo confermato vale più della routine */
+  var workoutLabel=sessions.length?sessions.map(function(w){return w.title||w.name||'Seduta senza titolo';}).join(' · ')
     :gy.k>0.5?(past?'Seduta non registrata: conto la tua routine':'Nessuna seduta registrata finora: conto la tua routine')
+    :dayRec.riposo===true?'Riposo confermato da te'
     :/hevy/i.test(gy.orig||'')?'Nessuna seduta: riposo':'Nessun allenamento';
-  if(dayRec.riposo===true&&sessions.length)workoutNote='In questa data c’è una seduta importata, ma non la conto perché hai confermato il riposo. Togli la spunta se ti sei allenato.';
+  if(dayRec.riposo===true&&sessions.length)workoutNote='Questo giorno era segnato come riposo, ma c’è una seduta importata da Hevy: conto la seduta.';
   else if(!sessions.length&&dayRec.riposo!==true&&gy.k>0.5)workoutNote=(gy.orig?cap(String(gy.orig).replace(/,\s*energia media.*$/i,''))+'. ':'')+'Si aggiorna quando importi le sedute da Hevy o segni il riposo.';
   var status=closed?'Ricostruito dal diario completo':past?'Calorie incomplete · per la digestione si usa il piano':'Previsione · si aggiorna con il diario completo';
   var dateLabel=past?cap(fmtDay(options.date)):'Oggi, '+fmtDay(view.today&&view.today.d||todayStr());
@@ -12691,8 +12691,8 @@ function renderHtWork() {
   if (!box) return;
   var d = ringDay(), t = todayStr(), day = state.days.get(d) || {}, ws = Array.from((state.workouts || new Map()).values()).filter(function (w) { return w.date === d; }).sort(function (a, b) { return (a.start || '') < (b.start || '') ? -1 : 1; });
   var who = d === t ? 'Oggi' : cap(fmtShort(d)), cls = 'is-none', val = 'nessun allenamento', sub = '';
-  if (day.riposo === true) { cls = 'is-rest'; val = 'riposo'; }
-  else if (ws.length) { cls = 'is-done'; val = ws.map(function (w) { return w.title || 'Seduta'; }).join(' + '); var mins = ws.reduce(function (a, w) { return a + (w.durMin || 0); }, 0); sub = mins ? fmtDur(mins) : ''; }
+  if (ws.length) { cls = 'is-done'; val = ws.map(function (w) { return w.title || 'Seduta'; }).join(' + '); var mins = ws.reduce(function (a, w) { return a + (w.durMin || 0); }, 0); sub = mins ? fmtDur(mins) : ''; }
+  else if (day.riposo === true) { cls = 'is-rest'; val = 'riposo'; }
   box.className = 'ht-work ' + cls;
   box.setAttribute('aria-label', who + ': ' + val + '. Apri il giorno nei Progressi');
   box.innerHTML = '<span class="ht-wi" aria-hidden="true">' + (cls === 'is-rest' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>') + '</span><span class="ht-wt"><b>' + esc(who) + ':</b> ' + esc(val) + '</span>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '<span class="ht-wc" aria-hidden="true">›</span>';
