@@ -2327,7 +2327,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           <div class="daynav"><button type="button" class="btn ghost icon" id="rg-prev" aria-label="Giorno precedente">‹</button><div class="dn-t" id="r-day"></div><button type="button" class="btn ghost icon" id="rg-next" aria-label="Giorno successivo">›</button></div>
           <div id="r-note"></div>
           <div class="rings-wrap">
-            <svg id="rings" viewBox="0 0 200 200" role="img" aria-label="Anelli di calorie, proteine, carboidrati, grassi, passi e sonno"></svg>
+            <svg id="rings" viewBox="0 0 200 200" role="img" aria-label="Anelli di calorie, proteine, carboidrati, grassi e passi"></svg>
             <div id="ring-legend"></div>
           </div>
         </div>
@@ -2393,7 +2393,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         <button type="button" data-dview="curiosita" style="--c:var(--good)">Curiosità</button>
       </div>
       <div class="dsec" data-dsec="giorno">
-      <div class="area-lead" style="--area:#ffbd82;--area2:#ed83a3"><span class="area-kicker">PROGRESSI / DIARIO</span><strong>Un giorno alla volta.</strong><p>Apri una data per leggere insieme bilancia, cibo, passi, sonno e allenamento.</p><span class="area-mark" aria-hidden="true">◌</span></div>
+      <div class="area-lead" style="--area:#ffbd82;--area2:#ed83a3"><span class="area-kicker">PROGRESSI / DIARIO</span><strong>Un giorno alla volta.</strong><p>Apri una data per leggere insieme bilancia, cibo, passi e allenamento.</p><span class="area-mark" aria-hidden="true">◌</span></div>
       <div class="panel">
         <div class="daybar">
           <button class="btn ghost icon fit" id="d-prev" aria-label="Giorno precedente">‹</button>
@@ -5870,7 +5870,7 @@ function hover(svg, vb, items, guide, yTop, yBot) {
 
 /* ---------- intestazione ed eroe ---------- */
 
-var RINGS = [{ k: 'kcal', c: HEX.kcal, r: 92 }, { k: 'protein', c: HEX.prot, r: 78 }, { k: 'carbs', c: HEX.carb, r: 64 }, { k: 'fat', c: HEX.fat, r: 50 }, { k: 'steps', c: HEX.steps, r: 36 }, { k: 'sleep', c: HEX.sleep, r: 22 }];
+var RINGS = [{ k: 'kcal', c: HEX.kcal, r: 92 }, { k: 'protein', c: HEX.prot, r: 78 }, { k: 'carbs', c: HEX.carb, r: 64 }, { k: 'fat', c: HEX.fat, r: 50 }, { k: 'steps', c: HEX.steps, r: 36 }];
 function ringDay() { var t = todayStr(); if (state.ringBase !== t) { state.ringBase = t; state.ringSel = t; } if (!state.ringSel || state.ringSel > t) state.ringSel = t; return state.ringSel; }
 function ringFirst() { var l = dayList(), f = S().startDate || todayStr(); if (l.length && l[0] < f) f = l[0]; return f; }
 function ringGo(n) { var t = todayStr(), d = addDays(ringDay(), n); if (d > t) d = t; if (d < ringFirst()) d = ringFirst(); state.ringSel = d; state.ringAnim = n; renderRings(); tmRefresh(true); }
@@ -5945,7 +5945,7 @@ function renderRings() {
   var prev = dayList().filter(function (x) { var v = state.days.get(x); return x < day && (v.kcal > 0 || v.steps > 0); }).pop();
   var w0 = Array.from(state.workouts.values()).filter(function (w) { return w.date === day; }), note = '';
   if (!has) note = '<div class="rday-empty">' + (isT ? 'Non hai ancora inserito i dati di oggi: tocca «Inserisci i dati di oggi».' : 'Nessun dato per questo giorno.') + (isT && prev ? ' <button type="button" class="linkbtn small" data-ringday="' + prev + '">Vedi il ' + fmtShort(prev) + '</button>' : '') + '</div>';
-  else note = '<div class="rday-chips">' + (d.weight > 0 ? '<span class="chip day-chip day-weight">' + tkn('peso', 'Peso ' + fmt(d.weight, 1) + ' kg') + '</span>' : '') + '<span class="chip day-chip ' + (w0.length ? 'day-training' : 'day-rest') + '">' + (w0.length ? tkn('allen', w0.map(function (w) { return GROUP[wGroup(w)].s + ' · ' + esc(w.title); }).join(', ')) : 'Riposo') + '</span>' + (d.sleepH > 0 ? '<span class="chip day-chip day-sleep">' + tkn('sonno', 'Sonno ' + fmtH(d.sleepH)) + '</span>' : '') + '</div>';
+  else note = '<div class="rday-chips">' + (d.weight > 0 ? '<span class="chip day-chip day-weight">' + tkn('peso', 'Peso ' + fmt(d.weight, 1) + ' kg') + '</span>' : '') + '<span class="chip day-chip ' + (w0.length ? 'day-training' : 'day-rest') + '">' + (w0.length ? tkn('allen', w0.map(function (w) { return GROUP[wGroup(w)].s + ' · ' + esc(w.title); }).join(', ')) : 'Riposo') + '</span>' + '</div>';
   if (!isT) note += '<button type="button" class="linkbtn small rday-back" data-ringday="' + t + '">Torna a oggi</button>';
   $('#r-note').innerHTML = note;
   var none = 'Nessun dato';
@@ -5962,10 +5962,9 @@ function renderRings() {
     + row(HEX.prot, 'Proteine', p > 0 ? fmt(p, 0) : '—', fmt(s.protein, 0) + ' g', gTxt(p, s.protein), p >= s.protein * 0.95 ? 'ok' : '')
     + row(HEX.carb, 'Carboidrati', cb > 0 ? fmt(cb, 0) : '—', fmt(s.carbs, 0) + ' g', gTxt(cb, s.carbs, 1.15), cb > s.carbs * 1.15 ? 'hi' : cb >= s.carbs * 0.95 ? 'ok' : '')
     + row(HEX.fat, 'Grassi', ft > 0 ? fmt(ft, 0) : '—', fmt(s.fat, 0) + ' g', gTxt(ft, s.fat, 1.25), ft > s.fat * 1.25 ? 'hi' : ft > 0 && ft < s.fat * 0.6 ? 'lo' : ft >= s.fat * 0.95 ? 'ok' : '')
-    + row(HEX.steps, 'Passi', st > 0 ? fmt(st, 0) : '—', fmt(s.stepsMin, 0), sTxt, st >= s.stepsMin ? 'ok' : '')
-    + row(HEX.sleep, 'Sonno', sl > 0 ? fmtH(sl) : '—', fmtH(slG) + ' h', !(sl > 0) ? none : sl >= slG ? 'Obiettivo raggiunto' : sl >= slG * 0.95 ? 'In target, mancano ' + fmtH(slG - sl) : 'Mancano ' + fmtH(slG - sl), sl >= slG * 0.95 ? 'ok' : sl > 0 && sl < 6 ? 'lo' : '');
+    + row(HEX.steps, 'Passi', st > 0 ? fmt(st, 0) : '—', fmt(s.stepsMin, 0), sTxt, st >= s.stepsMin ? 'ok' : '');
   /* il grafico aperto va dopo la coppia di voci che contiene quella toccata (due per riga) */
-  var ki = ['kcal', 'protein', 'carbs', 'fat', 'steps', 'sleep'].indexOf(state.rch);
+  var ki = ['kcal', 'protein', 'carbs', 'fat', 'steps'].indexOf(state.rch);
   if (ki >= 0) rows.splice(Math.min(rows.length, (Math.floor(ki / 2) + 1) * 2), 0, rchShell(state.rch));
   $('#ring-legend').innerHTML = legHTML + rows.join('');
   if (ki >= 0) rchFill(state.rchOpening);
@@ -7237,7 +7236,6 @@ function dayStatsHTML(date) {
     + st('Calorie', d.kcal > 0 ? fmt(d.kcal, 0) : add('kcal'), 'kcal', HEX.kcal, d.kcal > 0 ? kSub : '')
     + st('Bilancio stimato', b ? sgn(b.v, 0) : '—', 'kcal', b && b.v > 0 ? HEX.warn : HEX.good, bSub)
     + st('Passi', d.steps > 0 ? fmt(d.steps, 0) : add('steps'), '', HEX.steps, sSem)
-    + st('Sonno', d.sleepH > 0 ? fmtH(d.sleepH) : add('sleepH'), 'h', HEX.sleep, d.sleepH > 0 && S().sleepGoal > 0 ? 'obiettivo ' + fmtH(S().sleepGoal) + ' h' : '')
     + wTile;
 }
 function dayWorkHTML(date, compact) {
@@ -7631,7 +7629,7 @@ function renderSummary() {
   var dir = goalDir();
   var body = rows.map(function (r) {
     var dwCls = r.dw == null || !dir ? '' : (r.dw * dir > 0) ? 'neg' : 'pos', balCls = r.bal == null || !dir ? '' : (r.bal * dir > 0) ? 'neg' : 'pos';
-    return '<tr'+(r.label.indexOf('(in corso)')>=0?' class="summary-current"':'')+'><td><div class="summary-period">' + esc(r.label.replace(' (in corso)','')) + (r.label.indexOf('(in corso)')>=0?'<span class="summary-live">In corso</span>':'') + '</div>' + (r.sub ? '<div class="faint" style="font-size:.78rem">' + r.sub + '</div>' : '') + '</td><td>' + (r.w != null ? fmt(r.w, 1) : '—') + '</td><td class="' + dwCls + '">' + (r.dw != null ? sgn(r.dw, 1) : '—') + '</td><td>' + (r.k != null ? fmt(r.k, 0) : '—') + '</td><td class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) + '<small> su ' + r.nb + '</small>' : '—') + '</td><td>' + (r.p != null ? fmt(r.p, 0) : '—') + '</td><td>' + (r.c != null ? fmt(r.c, 0) : '—') + '</td><td>' + (r.f != null ? fmt(r.f, 0) : '—') + '</td><td>' + (r.st != null ? fmt(r.st, 0) : '—') + '</td><td>' + fmtH(r.sl) + '</td><td>' + r.work + '</td><td>' + r.nd + '/' + r.span + '</td></tr>';
+    return '<tr'+(r.label.indexOf('(in corso)')>=0?' class="summary-current"':'')+'><td><div class="summary-period">' + esc(r.label.replace(' (in corso)','')) + (r.label.indexOf('(in corso)')>=0?'<span class="summary-live">In corso</span>':'') + '</div>' + (r.sub ? '<div class="faint" style="font-size:.78rem">' + r.sub + '</div>' : '') + '</td><td>' + (r.w != null ? fmt(r.w, 1) : '—') + '</td><td class="' + dwCls + '">' + (r.dw != null ? sgn(r.dw, 1) : '—') + '</td><td>' + (r.k != null ? fmt(r.k, 0) : '—') + '</td><td class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) + '<small> su ' + r.nb + '</small>' : '—') + '</td><td>' + (r.p != null ? fmt(r.p, 0) : '—') + '</td><td>' + (r.c != null ? fmt(r.c, 0) : '—') + '</td><td>' + (r.f != null ? fmt(r.f, 0) : '—') + '</td><td>' + (r.st != null ? fmt(r.st, 0) : '—') + '</td><td>' + r.work + '</td><td>' + r.nd + '/' + r.span + '</td></tr>';
   }).join('');
   var th = function (a, b) { return '<th>' + a + (b ? '<small>' + b + '</small>' : '') + '</th>'; };
   /* P2 · sul telefono ogni periodo è una scheda: niente tabella che scorre di lato */
@@ -7642,9 +7640,9 @@ function renderSummary() {
       + '<div class="sum-kpi"><div><small>Peso medio</small><b>' + dash(r.w, 1) + '<em> kg</em></b>' + (r.dw != null ? '<span class="' + dwCls + '">' + sgn(r.dw, 1) + ' kg</span>' : '') + '</div>'
       + '<div><small>Calorie</small><b>' + dash(r.k, 0) + '</b><span>al giorno</span></div>'
       + '<div><small>Bilancio stimato</small><b class="' + balCls + '">' + (r.bal != null ? sgn(r.bal, 0) : '—') + '</b><span>' + (r.bal != null ? 'su ' + r.nb + ' giornate' : 'al giorno') + '</span></div></div>'
-      + '<div class="sum-mini"><span><i style="background:var(--prot)"></i>P ' + dash(r.p, 0) + '</span><span><i style="background:var(--carb)"></i>C ' + dash(r.c, 0) + '</span><span><i style="background:var(--fat)"></i>G ' + dash(r.f, 0) + '</span><span><i style="background:var(--steps)"></i>' + dash(r.st, 0) + ' passi</span><span><i style="background:var(--sleep)"></i>' + fmtH(r.sl) + ' h</span><span><i style="background:#BF5AF2"></i>' + r.work + (r.work === 1 ? ' seduta' : ' sedute') + '</span></div></article>';
+      + '<div class="sum-mini"><span><i style="background:var(--prot)"></i>P ' + dash(r.p, 0) + '</span><span><i style="background:var(--carb)"></i>C ' + dash(r.c, 0) + '</span><span><i style="background:var(--fat)"></i>G ' + dash(r.f, 0) + '</span><span><i style="background:var(--steps)"></i>' + dash(r.st, 0) + ' passi</span><span><i style="background:#BF5AF2"></i>' + r.work + (r.work === 1 ? ' seduta' : ' sedute') + '</span></div></article>';
   }).join('') + '</div>';
-  $('#summary').innerHTML = cardsHTML + '<table class="sum" aria-label="Riepilogo del percorso"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Sonno', 'ore a notte') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
+  $('#summary').innerHTML = cardsHTML + '<table class="sum" aria-label="Riepilogo del percorso"><thead><tr>' + th(isWeek ? 'Settimana' : 'Mese') + th('Peso medio', 'kg') + th('Variazione', 'kg') + th('Calorie', 'media al giorno') + th('Bilancio stimato', 'kcal al giorno') + th('Proteine', 'g al giorno') + th('Carboidrati', 'g al giorno') + th('Grassi', 'g al giorno') + th('Passi', 'quotidiani') + th('Allenamenti', 'sedute') + th('Giorni', 'con calorie') + '</tr></thead><tbody>' + body + '</tbody></table>';
   $('#summary-legend').innerHTML = '<p><b>Bilancio stimato</b>: calorie registrate meno consumo stimato di ciascun giorno, in media, solo sulle giornate dichiarate complete (il numero piccolo dice quante). Negativo = deficit stimato. Non è una misura.</p><p><b>Passi</b>: passi quotidiani, palestra esclusa. <b>Allenamenti</b>: sedute importate da Hevy. <b>Giorni con calorie</b>: giorni con calorie scritte, su quelli del periodo.</p>';
 }
 /* ora e condizione della pesata, quando le hai scritte (sezione 11): restano accanto al valore osservato */
@@ -7654,9 +7652,9 @@ function renderRecent() {
   var t = todayStr(), from = addDays(t, -29), days = dayList().filter(function (d) { return d >= from && d <= t; }).reverse();
   $('#d-recent-n').textContent = days.length ? days.length + (days.length === 1 ? ' giorno registrato' : ' giorni registrati') + ' negli ultimi 30' : '';
   if (!days.length) { $('#d-recent').innerHTML = '<div class="empty">Appena registri un giorno, lo ritrovi qui.</div>'; return; }
-  $('#d-recent').innerHTML = '<table aria-label="Dati degli ultimi 30 giorni"><thead><tr><th>Giorno<small>apri il diario</small></th><th>Peso<small>kg</small></th><th>Calorie<small>kcal</small></th><th style="text-align:left">Stato<small>calorie del giorno</small></th><th>Bilancio stimato<small>kcal</small></th><th>Proteine<small>g</small></th><th>Carboidrati<small>g</small></th><th>Grassi<small>g</small></th><th>Passi<small>registrati</small></th><th>Sonno<small>ore e minuti</small></th><th style="text-align:left">Note</th></tr></thead><tbody>' + days.map(function (ds) {
+  $('#d-recent').innerHTML = '<table aria-label="Dati degli ultimi 30 giorni"><thead><tr><th>Giorno<small>apri il diario</small></th><th>Peso<small>kg</small></th><th>Calorie<small>kcal</small></th><th style="text-align:left">Stato<small>calorie del giorno</small></th><th>Bilancio stimato<small>kcal</small></th><th>Proteine<small>g</small></th><th>Carboidrati<small>g</small></th><th>Grassi<small>g</small></th><th>Passi<small>registrati</small></th><th style="text-align:left">Note</th></tr></thead><tbody>' + days.map(function (ds) {
     var v = state.days.get(ds), b = balOf(ds);
-    return '<tr'+(ds===t?' class="recent-today"':'')+' data-day="' + ds + '"><td><button type="button" class="linkbtn recent-date" data-day="' + ds + '" aria-label="Apri il diario del '+esc(fmtDay(ds))+'">' + fmtShort(ds) + '<span aria-hidden="true">›</span></button></td><td>' + (v.weight > 0 ? fmt(v.weight) + (wInfo(v) ? '<small class="recent-weight-note">' + wInfo(v) + '</small>' : '') : '—') + '</td><td>' + (v.kcal > 0 ? fmt(v.kcal, 0) : '—') + '</td><td>' + (v.kcal > 0 ? '<span class="recent-state" data-state="'+esc(GJM.fieldState(v, 'kcal', ds === t))+'">'+lb('fstate', GJM.fieldState(v, 'kcal', ds === t)).toLowerCase()+'</span>' : '—') + '</td><td>' + (b ? sgn(b.v, 0) : '—') + '</td><td>' + (v.protein != null ? fmt(v.protein, 0) : '—') + '</td><td>' + (v.carbs != null ? fmt(v.carbs, 0) : '—') + '</td><td>' + (v.fat != null ? fmt(v.fat, 0) : '—') + '</td><td>' + (v.steps > 0 ? fmt(v.steps, 0) : '—') + '</td><td>' + fmtH(v.sleepH) + '</td><td class="note" title="' + esc(v.note || '') + '">' + esc(v.note || '') + '</td></tr>';
+    return '<tr'+(ds===t?' class="recent-today"':'')+' data-day="' + ds + '"><td><button type="button" class="linkbtn recent-date" data-day="' + ds + '" aria-label="Apri il diario del '+esc(fmtDay(ds))+'">' + fmtShort(ds) + '<span aria-hidden="true">›</span></button></td><td>' + (v.weight > 0 ? fmt(v.weight) + (wInfo(v) ? '<small class="recent-weight-note">' + wInfo(v) + '</small>' : '') : '—') + '</td><td>' + (v.kcal > 0 ? fmt(v.kcal, 0) : '—') + '</td><td>' + (v.kcal > 0 ? '<span class="recent-state" data-state="'+esc(GJM.fieldState(v, 'kcal', ds === t))+'">'+lb('fstate', GJM.fieldState(v, 'kcal', ds === t)).toLowerCase()+'</span>' : '—') + '</td><td>' + (b ? sgn(b.v, 0) : '—') + '</td><td>' + (v.protein != null ? fmt(v.protein, 0) : '—') + '</td><td>' + (v.carbs != null ? fmt(v.carbs, 0) : '—') + '</td><td>' + (v.fat != null ? fmt(v.fat, 0) : '—') + '</td><td>' + (v.steps > 0 ? fmt(v.steps, 0) : '—') + '</td><td class="note" title="' + esc(v.note || '') + '">' + esc(v.note || '') + '</td></tr>';
   }).join('') + '</tbody></table>';
 }
 /* ---------- resoconto della settimana ---------- */
@@ -7689,7 +7687,6 @@ function buildReport(wsDate) {
   var st = recs.filter(function (r) { return r.v.steps > 0; }).map(function (r) { return r.v.steps; });
   if (st.length) L.push('• Media Passi quotidiani (palestra esclusa): ' + fmt(mean(st), 0) + ' passi/die');
   var sl = recs.filter(function (r) { return r.v.sleepH > 0; }).map(function (r) { return r.v.sleepH; });
-  if (sl.length) L.push('• Media Sonno: ' + fmtH(mean(sl)).replace(':', 'h') + ' a notte (' + sl.length + ' notti)');
   var wk = Array.from(state.workouts.values()).filter(function (w) { return w.date >= wsDate && w.date <= we; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; });
   L.push('• Sedute in palestra: ' + wk.length + (wk.length ? ' (' + wk.map(function (w) { return w.title; }).join(', ') + ')' : ''));
   L.push('', 'DETTAGLIO GIORNALIERO:', '');
@@ -7699,7 +7696,6 @@ function buildReport(wsDate) {
     var parts = ['Peso ' + (v.weight > 0 ? fmt(v.weight, 1) + ' kg' : 'N/D')];
     if (v.kcal > 0) parts.push('In: ' + fmt(v.kcal, 0) + ' kcal' + (r.b ? '' : ' (' + lb('fstate', GJM.fieldState(v, 'kcal', r.d === t)).toLowerCase() + ')'), 'Bilancio stimato: ' + (r.b ? plainSgn(Math.round(r.b.v), 0) + ' kcal' : 'N/D'), 'P: ' + (v.protein != null ? fmt(v.protein, 0) + 'g' : 'N/D'), 'C: ' + (v.carbs != null ? fmt(v.carbs, 0) + 'g' : 'N/D'), 'F: ' + (v.fat != null ? fmt(v.fat, 0) + 'g' : 'N/D'));
     if (v.steps > 0) parts.push('Passi: ' + fmt(v.steps, 0));
-    if (v.sleepH > 0) parts.push('Sonno: ' + fmtH(v.sleepH).replace(':', 'h'));
     if (v.note) parts.push('Note: ' + v.note);
     L.push('- ' + cap(DOW[(p.getDay() + 6) % 7]) + ' ' + pad(p.getDate()) + '/' + pad(p.getMonth() + 1) + ': ' + parts.join(' | '));
   });
@@ -7993,7 +7989,7 @@ function profilePedSourceHTML() {
     + fld('Durata tipica (minuti)', pinp('v.habits.trainMin', hb.trainMin, 'num', ' type="number" step="5" min="0" max="300"'), 'senza durata uso la tua seduta tipica registrata in Hevy (ultime 8 settimane); senza nemmeno quella non stimo l\'energia degli allenamenti abituali')
     + fld('Passi: obiettivo minimo', pinp('v.steps.min', v.steps && v.steps.min, 'num', ' type="number" step="500" min="0"'))
     + fld('Passi: obiettivo massimo', pinp('v.steps.max', v.steps && v.steps.max, 'num', ' type="number" step="500" min="0"'))
-    + fld('Ore di sonno, obiettivo', pinp('v.sleepGoal', v.sleepGoal, 'num', ' type="number" step="0.25" min="4" max="12"'))
+
     + '</div><div class="ped-days"><span class="muted small">Giorni di allenamento abituali (facoltativo):</span>' + WD.map(function (d, i) { return '<label class="ped-chk"><input type="checkbox" data-wd="' + i + '"' + ((hb.trainDays || []).indexOf(i) >= 0 ? ' checked' : '') + '> ' + d + '</label>'; }).join('') + '</div>'
     + '<div class="ped-acts"><span class="muted small">Attività abituali non contate nei passi (bici, sport, carichi, lavoro fisico…):</span>' + (hb.acts || []).map(function (a, i) {
       return '<div class="ped-act">' + psel('v.habits.acts.' + i + '.type', actTypes(), a.type || 'altro') + '<label class="f">min' + pinp('v.habits.acts.' + i + '.min', a.min, 'num', ' type="number" step="5" min="0"') + '</label><label class="f">volte a sett.' + pinp('v.habits.acts.' + i + '.perWeek', a.perWeek, 'num', ' type="number" step="1" min="0" max="14"') + '</label><button type="button" class="linkbtn small" data-pa="act-del" data-i="' + i + '">Togli</button></div>';
@@ -8388,7 +8384,7 @@ function saveDayForm(date, o) {
     }
     ['alcohol', 'fiber', 'polyols'].forEach(function (k) { if (o[k] === undefined) return; if (o[k] == null) delete d[k]; else d[k] = o[k]; });
     if (!Object.keys(d.st).length) delete d.st;
-    d.sleepH = o.sleepH; d.note = o.note || null; d.source = d.source || 'app';
+    if (o.sleepH !== undefined) d.sleepH = o.sleepH; d.note = o.note || null; d.source = d.source || 'app';
     if (o.riposo) d.riposo = true; else delete d.riposo;
     if (o.acts !== undefined || o.actsNone !== undefined) {
     if (o.acts && o.acts.length) { d.acts = o.acts.map(function (a, i) { return { id: a.id || 'a' + (i + 1), type: a.type, min: a.min || null, km: a.km || null }; }); delete d.actsNone; }
@@ -8547,7 +8543,7 @@ function rulesData() {
   /* ---------- da dove arrivano i dati ---------- */
   add({ id: 'fonti', g: 'fonti', t: 'I dati che uso', w: 'Tutto il sito',
     what: 'Il sito non inventa dati: usa il diario che scrivi tu, le sedute importate da Hevy e il tuo piano a versioni. Tutti i numeri energetici vengono da un solo motore di calcolo.',
-    how: fx(L('Diario', P('peso') + ' con ora e condizione, ' + KC('calorie') + ' con lo stato della giornata, ' + PR('P') + ' ' + CA('C') + ' ' + GR('G') + ', ' + PA('passi quotidiani, palestra esclusa') + ', ' + SO('sonno') + ', riposo confermato, altre attività, pasti'),
+    how: fx(L('Diario', P('peso') + ' con ora e condizione, ' + KC('calorie') + ' con lo stato della giornata, ' + PR('P') + ' ' + CA('C') + ' ' + GR('G') + ', ' + PA('passi quotidiani, palestra esclusa') + ', riposo confermato, altre attività, pasti'),
       L('Hevy', AL('sedute') + ' con titolo, orari, esercizi, serie; i periodi coperti dall\'import'),
       L('Piano', PF('versioni datate') + ': percorso, consumo, calorie, macro, abitudini; profilo, lavoro, eventi, integratori'),
       L('Previsioni salvate', 'una fotografia al giorno di ciò che il motore diceva, mai riscritta')),
@@ -8588,7 +8584,7 @@ function rulesData() {
     why: 'Contare zero passi o zero calorie per un giorno non registrato abbasserebbe la media in modo falso. Nel consumo stimato un dato di attività che manca non diventa zero: diventa un intervallo (passi tipici, allenamenti da 0 a 3 sedute a settimana), finché non lo scrivi o non indichi un\'abitudine. Nessuna seduta in Hevy non vuol dire riposo, a meno che tu non lo confermi o dichiari il periodo coperto da Hevy.' + rg('passi_ignoti') + rg('allenamenti_ignoti') });
   add({ id: 'colori', g: 'fonti', t: 'Colori del sito', w: 'Tutto il sito',
     what: 'Ogni tipo di dato ha sempre lo stesso colore, nelle formule, negli anelli e nei grafici.',
-    how: fx(L(P('peso') + ' ' + KC('calorie') + ' ' + PR('proteine') + ' ' + CA('carboidrati') + ' ' + GR('grassi'), 'dati del diario'), L(PA('passi') + ' ' + SO('sonno') + ' ' + AL('allenamenti'), 'attività e recupero'), L(PF('profilo'), 'dati del tuo piano e profilo'), L(C('numero fisso') + ' · ' + O('risultato'), 'costanti e risultati del calcolo'), L('Colore dei giorni', '<span class="st-good">verde</span> vicino all\'obiettivo (±' + TOL_VIEW + ' kcal, scelta di visualizzazione) · <span class="st-warn">giallo</span> sopra · grigio sotto')),
+    how: fx(L(P('peso') + ' ' + KC('calorie') + ' ' + PR('proteine') + ' ' + CA('carboidrati') + ' ' + GR('grassi'), 'dati del diario'), L(PA('passi') + ' ' + AL('allenamenti'), 'attività'), L(PF('profilo'), 'dati del tuo piano e profilo'), L(C('numero fisso') + ' · ' + O('risultato'), 'costanti e risultati del calcolo'), L('Colore dei giorni', '<span class="st-good">verde</span> vicino all\'obiettivo (±' + TOL_VIEW + ' kcal, scelta di visualizzazione) · <span class="st-warn">giallo</span> sopra · grigio sotto')),
     why: 'Il giallo indica solo «sopra l\'obiettivo»: non è un giudizio e non dice che hai preso peso.' });
   add({ id: 'registro', g: 'fonti', t: 'Formule, coefficienti e fonti', w: 'Tutto il motore',
     what: 'L\'elenco completo di formule, coefficienti e assunzioni usati dal motore, con il tipo (pubblicato, convenzione, scelta del prodotto, vincolo del prodotto) e la fonte.',
@@ -8715,7 +8711,7 @@ function rulesData() {
     why: 'Il cardio in palestra è contato nelle sedute di Hevy.' });
   add({ id: 'anelli', g: 'medie', t: 'Anelli e barre del giorno', w: 'Oggi, Progressi',
     what: 'Gli anelli confrontano il giorno con gli obiettivi della versione del piano attiva quel giorno (non quella di oggi).',
-    how: fx(L('Calorie', KC('calorie') + ' ÷ obiettivo del giorno'), L('Macro', 'grammi ÷ obiettivo della versione'), L('Passi', PA('passi quotidiani') + ' ÷ obiettivo minimo'), L('Sonno', SO('ore') + ' ÷ obiettivo')),
+    how: fx(L('Calorie', KC('calorie') + ' ÷ obiettivo del giorno'), L('Macro', 'grammi ÷ obiettivo della versione'), L('Passi', PA('passi quotidiani') + ' ÷ obiettivo minimo')),
     why: 'Un giorno passato resta confrontato con il piano di allora.' });
   add({ id: 'grafico-kcal', g: 'medie', t: 'Grafico delle calorie', w: 'Progressi › Calorie',
     what: 'Le calorie delle ultime 4 settimane. Il colore di ogni giorno usa l\'obiettivo attivo quel giorno (±' + TOL_VIEW + ' kcal); la linea verde è l\'obiettivo di oggi, il tratteggio il consumo di riferimento. Con l\'interruttore vedi il consumo ricostruito di ogni giorno passato.',
@@ -8724,7 +8720,7 @@ function rulesData() {
 
   /* ---------- riepilogo ---------- */
   add({ id: 'riepilogo', g: 'riepilogo', t: 'Colonne del riepilogo', w: 'Progressi › Settimane',
-    what: 'Una riga per settimana o per mese: peso medio, variazione, calorie medie, bilancio stimato medio (solo giornate complete, con il loro numero), macro, passi, sonno, sedute, giorni con calorie.',
+    what: 'Una riga per settimana o per mese: peso medio, variazione, calorie medie, bilancio stimato medio (solo giornate complete, con il loro numero), macro, passi, sedute, giorni con calorie.',
     how: fx(L(O('Bilancio stimato'), 'media di (' + KC('calorie') + ' − consumo stimato) sulle giornate complete')),
     why: 'Le medie usano solo i giorni con quel dato.' });
   add({ id: 'resoconto', g: 'riepilogo', t: 'Resoconto della settimana', w: 'Progressi › Settimane',
@@ -8751,11 +8747,6 @@ function rulesData() {
     what: 'Ogni seduta è scomposta: il cardio con tipo, durata e distanza; il resto della durata totale (pause comprese) come pesi. Niente calorie dal tonnellaggio o dal massimale.',
     how: fx(L('Pesi', C(F(K.STRENGTH_MET, 1) + ' MET') + ' netti ' + C('(' + F(K.STRENGTH_LO, 1) + '–' + F(K.STRENGTH_HI, 1) + ')') + ' × ' + P('peso') + ' × minuti non di cardio'), L('Cardio', 'per tipo: con distanza e durata le equazioni ACSM, altrimenti i MET del Compendium; senza durata non la invento'), L('Dati incompatibili', 'cardio più lungo della seduta: conto solo il cardio e lo segnalo'), L('Durata stimata', 'da sedute simili o dall\'abitudine: stesso valore centrale, intervallo ±' + F(K.DUR_EST * 100, 0) + '% più largo'), L('Stessa attività nel diario e in Hevy', 'conto la più grande; l\'intervallo arriva fino alla somma'), L('Sedute nello stesso minuto', 'con titoli diversi restano due sedute'), L('Senza Hevy', 'fuori dai periodi coperti uso le abitudini dichiarate; «nessuna seduta» non è riposo confermato')) + rg('forza') + rg('met') + rg('corsa') + rg('durata_stimata') + rg('doppione_attivita') + rg('allenamenti_ignoti'),
     why: 'Una seduta di 75 minuti con 20 di cardio non vale 75 minuti di pesi più 20 di cardio.' });
-  add({ id: 'tile-sonno', g: 'medie', t: 'Sonno medio, 7 giorni', w: 'Progressi › Settimane, Riepilogo',
-    what: "La media delle ore dormite nelle notti registrate degli ultimi 7 giorni.",
-    how: fx(L(O('Media'), 'somma delle ' + SO('ore dormite') + ' ÷ notti registrate'), L('Quale notte', 'quella tra il 14 e il 15 va sulla riga del 15: la notte che finisce la mattina di quel giorno'), L('Colore', '<span class="st-good">verde</span> dal ' + C('95%') + ' dell\'obiettivo di ' + PF(F(s.sleepGoal || 8, 0) + ' ore') + ' in su · <span class="st-warn">giallo</span> sotto')),
-    why: "Le notti senza «Sonno» nel diario non contano.",
-    ex: function () { var v = d7.map(function (d) { return g(d, 'sleepH'); }).filter(Boolean); return row('Notti registrate', v.length ? v.length + ', media ' + fmtH(mean(v)) : 'nessuna'); } });
   add({ id: 'tile-sedute', g: 'medie', t: 'Sedute, 7 giorni e 4 settimane', w: 'Progressi › Settimane, Riepilogo',
     what: "Le sedute in Hevy negli ultimi 7 giorni e nelle ultime 4 settimane, fino a oggi. Le barrette sono le sedute di ciascuna delle ultime 8 settimane.",
     how: fx(L(O('Sedute'), AL('sedute') + ' con data tra oggi−6 e oggi, oppure tra oggi−27 e oggi'), L('Colore', '<span class="st-good">verde</span> se arrivi alle sedute della tua settimana (' + weeklyTarget() + ') · <span class="st-acc">blu</span> una in meno · <span class="st-warn">giallo</span> di più in meno')),
@@ -11033,7 +11024,7 @@ function build(input){
  });
  // Two fixed adjacent 14-day windows, with coverage and material differences.
  function windowChange(list,key,cat,unit,dec,minimum,relative){var a=list.filter(function(x){return x.d>=add(today,-27)&&x.d<=add(today,-14);}),b=list.filter(function(x){return x.d>=add(today,-13)&&x.d<=today;});if(a.length<10||b.length<10)return;var ma=avg(a.map(function(x){return x.v;})),mb=avg(b.map(function(x){return x.v;})),delta=mb-ma;if(Math.abs(delta)<Math.max(minimum,ma*relative))return;var label={passi:'passi',sonno:'sonno',proteine:'proteine',calorie:'calorie'}[key];story({id:'cambio-'+key+'-'+week(today),family:'cambio-'+key,highlightGroup:'cambio-recente',cat:cat,date:b[b.length-1].d,score:91,eyebrow:'UN CAMBIAMENTO RECENTE',title:'Nelle ultime due settimane '+(key==='sonno'?'il sonno che registri':key==='passi'?'la media dei tuoi passi':'la media delle '+label+' registrate')+' è '+(delta>0?'aumentat'+(key==='sonno'?'o':'a'):'diminuit'+(key==='sonno'?'o':'a')),stat:signed(delta,dec)+' '+unit,lead:'Il confronto usa due periodi consecutivi di 14 giorni, con almeno 10 registrazioni complete in ognuno.',facts:[fact('Periodo precedente',date(add(today,-27))+' – '+date(add(today,-14))),fact('Media precedente',f(ma,dec)+' '+unit+' · '+a.length+' osservazioni'),fact('Periodo recente',date(add(today,-13))+' – '+date(today)),fact('Media recente',f(mb,dec)+' '+unit+' · '+b.length+' osservazioni')],paragraphs:['I periodi hanno la stessa lunghezza di calendario. Le medie usano solo i valori effettivamente registrati e confermati completi.'],caveat:'Una differenza nel diario non identifica la causa e non è una prescrizione. Le soglie di comparsa servono a evitare storie su differenze minime.',source:'Due finestre adiacenti di 14 giorni, aggiornate con le nuove registrazioni.'});}
- windowChange(steps,'passi','Abitudini','passi al giorno',0,1000,.15);windowChange(sleep,'sonno','Abitudini','ore per notte',1,.5,.08);windowChange(protein,'proteine','Energia','g al giorno',0,15,.15);windowChange(kcal,'calorie','Energia','kcal al giorno',0,150,.08);
+ windowChange(steps,'passi','Abitudini','passi al giorno',0,1000,.15);windowChange(protein,'proteine','Energia','g al giorno',0,15,.15);windowChange(kcal,'calorie','Energia','kcal al giorno',0,150,.08);
  // Day-of-week patterns require multiple observations of all seven weekdays.
  var recentSteps=steps.filter(function(x){return x.d>=add(today,-55);}),buckets=[[],[],[],[],[],[],[]];recentSteps.forEach(function(x){buckets[wd(x.d)].push(x.v);});
  if(buckets.every(function(a){return a.length>=3;})){var wm=buckets.map(med),hi=wm.indexOf(Math.max.apply(null,wm)),lo=wm.indexOf(Math.min.apply(null,wm)),names=['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];if(wm[hi]-wm[lo]>=Math.max(1500,wm[lo]*.25))story({id:'ritmo-passi-'+week(today),family:'ritmo-passi',cat:'Abitudini',date:recentSteps[recentSteps.length-1].d,score:87,eyebrow:'IL TUO RITMO SETTIMANALE',title:'Nel tuo diario, di '+names[hi]+' registri più passi che di '+names[lo],stat:f(wm[hi]-wm[lo])+' passi tra le mediane',lead:'È il confronto fra i due giorni della settimana con la mediana più alta e più bassa nelle ultime 8 settimane.',facts:[fact(names[hi],f(wm[hi])+' passi · '+buckets[hi].length+' giornate'),fact(names[lo],f(wm[lo])+' passi · '+buckets[lo].length+' giornate'),fact('Giornate confrontabili',recentSteps.length)],paragraphs:['La mediana è il valore centrale delle registrazioni. Ogni giorno della settimana ha almeno 3 osservazioni complete.'],caveat:'Non deduco turni di lavoro o giornate di riposo dai nomi dei giorni. Il confronto non spiega il motivo della differenza.',source:'Passi confermati completi negli ultimi 56 giorni.'});}
@@ -11395,11 +11386,11 @@ function evaluate(input,today,personal){
  var items=[];function add(id,name,cat,current,goal,desc,symbol,blocked){items.push({id:id,name:name,category:cat,current:Math.min(current||0,goal),total:current||0,goal:goal,done:!blocked&&current>=goal,description:desc,symbol:symbol||'✦',blocked:!!blocked});}
  [[60,'Due mesi di ritmo'],[90,'Un trimestre insieme'],[180,'La forza dell’abitudine'],[365,'Un anno, un passo alla volta']].forEach(function(v){add('streak-'+v[0],v[1],'Costanza',personal.record,v[0],v[0]+' giornate consecutive di diario completo.','🔥');});
  [[50,'Cinquanta pagine'],[100,'Cento giorni raccontati'],[250,'Il tuo archivio cresce'],[500,'Cinquecento passi']].forEach(function(v){add('diary-'+v[0],v[1],'Costanza',complete.length,v[0],v[0]+' date diverse con il diario completo.','◈');});
- var groups=[['macro','Nutrizione',[1,7,30,90],['Macro in chiaro','Sette giornate complete di macro','Un mese a tutto tondo','Macro, che costanza'],'Calorie complete e tutti e tre i macro registrati.','◒'],['protein','Nutrizione',[1,7,30],['Proteine sul tuo piano','Il tuo equilibrio proteico','Trenta giorni sul tuo target'],'Giornate complete con proteine entro il 10% del target personale di quella data. Superarlo di più non dà vantaggi.','✧'],['carbs','Nutrizione',[7,30],['Energia sul tuo piano','Il tuo ritmo dei carboidrati'],'Giornate complete con carboidrati entro il 10% del target personale.','◇'],['fat','Nutrizione',[7,30],['Grassi, il tuo equilibrio','Un mese sul tuo piano'],'Giornate complete con grassi entro il 10% del target personale.','◐'],['balanced','Nutrizione',[1,7,30],['Tre su tre','La tua settimana in equilibrio','Il tuo mese in equilibrio'],'Tutti e tre i macro entro il 10% dei rispettivi target, con calorie complete.','◎'],['fiber','Nutrizione',[1,7,30],['Un dettaglio in più','Fibre nel diario','Il quadro si completa'],'Giornate complete con le fibre annotate: conta registrarle, non aumentarle.','❋'],['sleep','Recupero',[7,30,100],['Sette notti raccontate','Il tuo mese di sonno','Cento notti nel diario'],'Annota il sonno in date diverse. Nessun premio per dormire meno.','☾'],['steps','Movimento',[7,30,100],['Passi in chiaro','Un mese in movimento','Cento giorni di passi'],'Giornate diverse con passi registrati, compreso zero: non serve inseguire numeri alti.','↗'],['weight','Diario',[7,30,100],['La tua linea prende forma','Trenta punti di riferimento','Uno storico che conta'],'Pesate in date diverse: conta il dato, non aumentare o perdere peso.','⌁'],['rest','Recupero',[3,12,30],['Anche riposare conta','Recupero consapevole','Spazio al recupero'],'Giornate con riposo dalla palestra confermato nel diario.','◌'],['note','Diario',[1,7,30],['Una riga per te','Sette pagine personali','Il tuo racconto'],'Note di almeno cinque caratteri in date diverse. Restano private.','✎'],['recipe','Ricette',[1,5,15,30],['Dal ricettario al piatto','La tua cucina prende vita','Quindici giornate in cucina','Un mese di ricette'],'Giornate complete con almeno una ricetta nel diario. Più porzioni non aumentano il conteggio.','◓'],['weekend','Costanza',[4,12,30],['Anche nel weekend','Weekend dopo weekend','Il diario ti accompagna'],'Giornate di sabato o domenica con il diario completo.','✶']];
+ var groups=[['macro','Nutrizione',[1,7,30,90],['Macro in chiaro','Sette giornate complete di macro','Un mese a tutto tondo','Macro, che costanza'],'Calorie complete e tutti e tre i macro registrati.','◒'],['protein','Nutrizione',[1,7,30],['Proteine sul tuo piano','Il tuo equilibrio proteico','Trenta giorni sul tuo target'],'Giornate complete con proteine entro il 10% del target personale di quella data. Superarlo di più non dà vantaggi.','✧'],['carbs','Nutrizione',[7,30],['Energia sul tuo piano','Il tuo ritmo dei carboidrati'],'Giornate complete con carboidrati entro il 10% del target personale.','◇'],['fat','Nutrizione',[7,30],['Grassi, il tuo equilibrio','Un mese sul tuo piano'],'Giornate complete con grassi entro il 10% del target personale.','◐'],['balanced','Nutrizione',[1,7,30],['Tre su tre','La tua settimana in equilibrio','Il tuo mese in equilibrio'],'Tutti e tre i macro entro il 10% dei rispettivi target, con calorie complete.','◎'],['fiber','Nutrizione',[1,7,30],['Un dettaglio in più','Fibre nel diario','Il quadro si completa'],'Giornate complete con le fibre annotate: conta registrarle, non aumentarle.','❋'],['steps','Movimento',[7,30,100],['Passi in chiaro','Un mese in movimento','Cento giorni di passi'],'Giornate diverse con passi registrati, compreso zero: non serve inseguire numeri alti.','↗'],['weight','Diario',[7,30,100],['La tua linea prende forma','Trenta punti di riferimento','Uno storico che conta'],'Pesate in date diverse: conta il dato, non aumentare o perdere peso.','⌁'],['rest','Recupero',[3,12,30],['Anche riposare conta','Recupero consapevole','Spazio al recupero'],'Giornate con riposo dalla palestra confermato nel diario.','◌'],['note','Diario',[1,7,30],['Una riga per te','Sette pagine personali','Il tuo racconto'],'Note di almeno cinque caratteri in date diverse. Restano private.','✎'],['recipe','Ricette',[1,5,15,30],['Dal ricettario al piatto','La tua cucina prende vita','Quindici giornate in cucina','Un mese di ricette'],'Giornate complete con almeno una ricetta nel diario. Più porzioni non aumentano il conteggio.','◓'],['weekend','Costanza',[4,12,30],['Anche nel weekend','Weekend dopo weekend','Il diario ti accompagna'],'Giornate di sabato o domenica con il diario completo.','✶']];
  groups.forEach(function(g){var needs=['protein','carbs','fat','balanced'].includes(g[0]),available=!needs||dates.some(function(d){var t=targets(d)||{};return g[0]==='balanced'?['p','c','f'].every(function(k){return valid(t[k])&&t[k]>0;}):valid(t[{protein:'p',carbs:'c',fat:'f'}[g[0]]])&&t[{protein:'p',carbs:'c',fat:'f'}[g[0]]]>0;});g[2].forEach(function(n,i){add(g[0]+'-'+n,g[3][i],g[1],counts[g[0]],n,g[4],g[5],!available);});});
  [[1,'La prima seduta'],[10,'Dieci appuntamenti con te'],[25,'Venticinque sedute'],[50,'Cinquanta volte presente'],[100,'Un centinaio di sedute'],[250,'Una lunga storia in palestra']].forEach(function(v){add('workouts-'+v[0],v[1],'Movimento',sessions.length,v[0],'Sedute registrate nel tuo storico, senza obiettivi di durata o calorie bruciate.','◆');});
  var recipes=new Set();complete.forEach(function(d){(days[d].meals||[]).forEach(function(m){if(m.recipe&&!m.adj&&!m.adjTotal)recipes.add(m.recipe);});});[3,5,10].forEach(function(n){add('recipes-'+n,n+' ricette da scoprire','Ricette',recipes.size,n,'Ricette diverse registrate in giornate complete.','◒');});
- var weekRows=Object.keys(rows).filter(function(d){return d>=start;});var templates=[{key:'macro',name:'Macro in chiaro',goal:3,desc:'Registra tutti e tre i macro in tre giornate complete.'},{key:'sleep',name:'Come hai dormito?',goal:4,desc:'Annota il sonno in quattro date della settimana.'},{key:'steps',name:'Ogni passo ha una storia',goal:4,desc:'Annota i passi in quattro date, qualunque sia il numero.'},{key:'note',name:'Due righe per te',goal:2,desc:'Scrivi una nota in due giornate diverse.'},{key:'recipe',name:'Dal ricettario al diario',goal:1,desc:'Registra una ricetta in una giornata completa.'},{key:'diary',name:'Il filo della settimana',goal:5,desc:'Completa cinque giornate di diario.'}];
+ var weekRows=Object.keys(rows).filter(function(d){return d>=start;});var templates=[{key:'macro',name:'Macro in chiaro',goal:3,desc:'Registra tutti e tre i macro in tre giornate complete.'},{key:'weight',name:'Sulla bilancia',goal:4,desc:'Registra il peso in quattro date della settimana.'},{key:'steps',name:'Ogni passo ha una storia',goal:4,desc:'Annota i passi in quattro date, qualunque sia il numero.'},{key:'note',name:'Due righe per te',goal:2,desc:'Scrivi una nota in due giornate diverse.'},{key:'recipe',name:'Dal ricettario al diario',goal:1,desc:'Registra una ricetta in una giornata completa.'},{key:'diary',name:'Il filo della settimana',goal:5,desc:'Completa cinque giornate di diario.'}];
  var t0=targets(today)||{};if(valid(t0.p)&&t0.p>0)templates.push({key:'protein',name:'Proteine, al tuo ritmo',goal:3,desc:'Tre giornate complete entro il 10% del tuo target proteico, senza superarlo per fare punti.'});
  var rotation=Math.floor(Date.parse(start+'T00:00:00Z')/604800000)%templates.length;var missions=[0,1,2].map(function(i){var m=templates[(rotation+i*2)%templates.length],n=weekRows.filter(function(d){return rows[d][m.key];}).length;return Object.assign({},m,{current:Math.min(n,m.goal),done:n>=m.goal});});
  return {items:items,missions:missions,weekFrom:start,weekTo:C.add(start,6),unlocked:items.filter(function(x){return x.done;}).length,counts:counts};
@@ -12472,9 +12463,9 @@ function renderTodayRings() {
   });
   var pd = parseD(day), dn = isT ? 'oggi' : ago === 1 ? 'ieri' : DOWL[(pd.getDay() + 6) % 7].slice(0, 3) + ' ' + pd.getDate() + ' ' + MESI[pd.getMonth()];
   $('#ht-lbl').textContent = isT ? 'Oggi' : cap(dn);
-  /* quanto del diario è già scritto: peso, calorie, passi, sonno */
-  var filled = [d.weight > 0, d.kcal > 0 || (d.st && d.st.kcal === 'zero_confermato'), d.steps > 0 || (d.st && d.st.steps === 'zero_confermato'), d.sleepH > 0].filter(Boolean).length;
-  var pct = $('#ht-pct'); pct.textContent = 'Diario ' + filled + '/4'; pct.classList.toggle('over', false); pct.classList.toggle('full', filled === 4);
+  /* quanto del diario è già scritto: peso, calorie, passi */
+  var filled = [d.weight > 0, d.kcal > 0 || (d.st && d.st.kcal === 'zero_confermato'), d.steps > 0 || (d.st && d.st.steps === 'zero_confermato')].filter(Boolean).length;
+  var pct = $('#ht-pct'); pct.textContent = 'Diario ' + filled + '/3'; pct.classList.toggle('over', false); pct.classList.toggle('full', filled === 3);
   /* il numero protagonista */
   var T = dayTarget(day), goal = T && T.kcal > 0 ? T.kcal : M[0].g, kc = d.kcal > 0 ? d.kcal : 0, left = goal > 0 ? goal - kc : null, rg = !kRange(day).fixed;
   var lh;
@@ -12491,8 +12482,8 @@ function renderTodayRings() {
     var f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, st = htState(m);
     return '<div class="htm' + (st === 'over' ? ' is-over' : '') + '"><small>' + m.n + '</small><b>' + (m.v > 0 ? m.f(m.v) : '–') + '<em> / ' + (m.g > 0 ? m.f(m.g) : '—') + ' g</em></b><span class="htm-bar"><i style="width:' + (f * 100).toFixed(1) + '%;background:' + m.c + '"></i></span></div>';
   }).join('');
-  var Q = [['weight', 'Peso', HEX.accent || '#0A84FF', '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/>'], ['kcal', 'Calorie', HEX.kcal, '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/>'], ['steps', 'Passi', HEX.steps, '<path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>'], ['sleepH', 'Sonno', HEX.sleep, '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>']];
-  var have = { weight: d.weight > 0, kcal: d.kcal > 0, steps: d.steps > 0, sleepH: d.sleepH > 0 };
+  var Q = [['weight', 'Peso', HEX.accent || '#0A84FF', '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/>'], ['kcal', 'Calorie', HEX.kcal, '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/>'], ['steps', 'Passi', HEX.steps, '<path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>']];
+  var have = { weight: d.weight > 0, kcal: d.kcal > 0, steps: d.steps > 0 };
   $('#ht-quick').innerHTML = Q.map(function (q) { return '<button type="button" class="htq' + (have[q[0]] ? ' is-done' : '') + '" data-addfield="' + q[0] + '" data-adddate="' + day + '" style="--c:' + q[2] + '"><span><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (have[q[0]] ? '<path d="m5 12 4 4 10-10"/>' : '<path d="M12 5v14M5 12h14"/>') + '</svg></span>' + q[1] + '</button>'; }).join('');
   var hasFood = M.some(function (m) { return m.k !== 'sleep' && m.v > 0; }), hasAny = hasFood || !!(d.weight > 0);
   $('#ht-foot').innerHTML = !isT ? '<button type="button" class="linkbtn small" data-htback>Torna a oggi</button>' : '';
@@ -12517,7 +12508,7 @@ function renderStreakCard() {
     return '<div class="sk-d ' + cls + '"><span>' + lab + '</span><i aria-hidden="true">' + (ok ? '✓' : dd === t ? '•' : '') + '</i></div>';
   }).join('');
   var d = state.days.get(t) || {}, todayOk = d.kcal > 0 && GJM.fieldState(d, 'kcal', true) === 'completo';
-  var miss = [!(d.weight > 0) && 'peso', !(d.kcal > 0) && 'calorie', !(d.steps > 0) && 'passi', !(d.sleepH > 0) && 'sonno'].filter(Boolean);
+  var miss = [!(d.weight > 0) && 'peso', !(d.kcal > 0) && 'calorie', !(d.steps > 0) && 'passi'].filter(Boolean);
   var mission = todayOk ? '<div class="sk-m is-done"><div><b>Diario di oggi completo</b><small>Ottimo, la giornata conta per serie e sfide.</small></div><span class="sk-ok" aria-hidden="true">✓</span></div>'
     : '<button type="button" class="sk-m" data-adddata="today"><div><b>Completa il diario di oggi</b><small>' + (miss.length ? 'Mancano ' + miss.join(', ') : 'Segna la giornata come completa') + '</small></div><span class="sk-go" aria-hidden="true">›</span></button>';
   var html = '<div class="sk-head"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + PF_IC.fire + '</svg>' + (n > 0 ? n + (n === 1 ? ' settimana' : ' settimane') + ' di fila in palestra' : 'La tua settimana') + '</h2><span class="sk-chip">' + done + '/7 giorni completi</span></div><div class="sk-week" aria-label="Giorni completi di questa settimana">' + dots + '</div>' + mission;
@@ -12815,7 +12806,7 @@ var GJShare = (function () {
       ['Sedute', String(m.sessions), m.records ? '· ' + m.records + ' record' : '', C.fat],
       ['Passi medi', m.steps != null ? fmt(m.steps, 0) : '—', '', C.steps],
       ['Calorie medie', m.kcal != null ? fmt(m.kcal, 0) : '—', m.kcal != null ? 'kcal' : '', C.kcal],
-      ['Sonno medio', m.sleep != null ? fmtH(m.sleep) : '—', m.sleep != null ? 'h' : '', C.sleep]];
+      ['Proteine medie', m.prot != null ? fmt(m.prot, 0) : '—', m.prot != null ? 'g' : '', C.prot]];
     boxes.forEach(function (b, i) { var X = 80 + (i % 2) * 470, Y = 540 + Math.floor(i / 2) * 300; rr(x, X, Y, 450, 270, 40, '#1C1C1E'); x.fillStyle = b[3]; x.beginPath(); x.arc(X + 50, Y + 56, 10, 0, 6.3); x.fill(); text(x, b[0], X + 74, Y + 68, { px: 32, w: 650, color: C.mute, max: 340 }); var w = text(x, b[1], X + 40, Y + 190, { px: 92, w: 850, max: 280 }); if (b[2]) text(x, b[2], X + 40 + w + 12, Y + 190, { px: 32, w: 600, color: C.mute, max: 400 - w }); });
     if (m.muscle) text(x, 'Muscolo più allenato: ' + m.muscle, 80, 1520, { px: 40, w: 700, color: '#E5E5EA', max: W - 160 });
     if (m.fav) text(x, 'Seduta preferita: ' + m.fav, 80, 1590, { px: 40, w: 700, color: '#E5E5EA', max: W - 160 });
@@ -12966,8 +12957,7 @@ var MonthStory = (function () {
     { k: 'carbs', l: 'Carboidrati (g)', m: 'decimal' },
     { k: 'protein', l: 'Proteine (g)', m: 'decimal' },
     { k: 'fat', l: 'Grassi (g)', m: 'decimal' },
-    { k: 'steps', l: 'Passi', m: 'numeric' },
-    { k: 'sleepH', l: 'Sonno (ore, es. 7:30)', m: 'text' }
+    { k: 'steps', l: 'Passi', m: 'numeric' }
   ];
   /* sezione 6.1: facoltativi, servono solo a spiegare la differenza fra calorie e 4/4/9 */
   var XF = [{ k: 'alcohol', l: 'Alcol (g)' }, { k: 'fiber', l: 'Fibre (g)' }, { k: 'polyols', l: 'Polioli (g)' }];
@@ -16141,7 +16131,7 @@ html body #hero-today .ht-row:not(#a):not(#b):not(#c):not(#d){display:flex!impor
 .htm b em{font-style:normal;font-size:.74rem;color:#8E8E93;font-weight:500}
 .htm-bar{display:block;height:6px;border-radius:9px;background:#FFFFFF12;overflow:hidden}.htm-bar i{display:block;height:100%;border-radius:9px}
 .htm.is-over b{color:#FF9F0A}
-.ht-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
+.ht-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
 .htq{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 2px;border-radius:16px;border:1px solid #FFFFFF12;background:#FFFFFF07;color:#fff;font:inherit;font-size:.78rem;font-weight:650;cursor:pointer;min-width:0}
 .htq span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:var(--c);background:color-mix(in srgb,var(--c) 20%,transparent)}
 .htq.is-done span{background:var(--c);color:#111}
