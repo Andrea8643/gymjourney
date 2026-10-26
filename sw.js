@@ -1,5 +1,5 @@
 /* GymJourney · Percorso Mosaico · static app shell only. */
-var CACHE = 'gymjourney-registra-20261026-a';
+var CACHE = 'gymjourney-giorno-20261026-a';
 var FILES = ["./","index.html","manifest.webmanifest","brand-icon.svg","icon-192.png","icon-512.png","icon-maskable-512.png","apple-touch-icon.png","favicon-32.png","favicon-16.png","favicon.ico"];
 var SCOPE = self.registration.scope;
 var STATIC_PATHS = FILES.map(function (p) { return new URL(p, SCOPE).pathname; });
