@@ -2676,7 +2676,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
       <div id="rules-list"></div>
     </section>
 
-    <section id="tab-amici" class="view" hidden><div class="segbar friends-switch" role="tablist" aria-label="Sezioni amici"><button type="button" role="tab" id="friends-tab-games" data-friends-view="games" aria-controls="friends-games-panel" aria-selected="true" tabindex="0">Sfide<span id="friends-view-requests" class="friends-view-badge" aria-hidden="true" hidden></span></button><button type="button" role="tab" id="friends-tab-list" data-friends-view="list" aria-controls="friends-list-panel" aria-selected="false" tabindex="-1">Confronto</button><button type="button" role="tab" id="friends-tab-settings" data-friends-view="settings" aria-controls="friends-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><div id="friends-status" role="status" aria-live="polite"></div><template id="friends-intro-template"><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Ognuno il suo passo.<br>Un percorso insieme.</h2><p>Aggiungi gli amici, scegli cosa condividere e ritrova qui le impostazioni del tuo spazio.</p></div><div class="gg-welcome-symbol" aria-hidden="true">✦</div></div></template><div id="friends-body"></div></section>
+    <section id="tab-amici" class="view" hidden><div class="segbar friends-switch" role="tablist" aria-label="Sezioni amici"><button type="button" role="tab" id="friends-tab-list" data-friends-view="list" aria-controls="friends-list-panel" aria-selected="true" tabindex="0">Confronto</button><button type="button" role="tab" id="friends-tab-games" data-friends-view="games" aria-controls="friends-games-panel" aria-selected="false" tabindex="-1">Sfide<span id="friends-view-requests" class="friends-view-badge" aria-hidden="true" hidden></span></button><button type="button" role="tab" id="friends-tab-settings" data-friends-view="settings" aria-controls="friends-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><div id="friends-status" role="status" aria-live="polite"></div><template id="friends-intro-template"><div class="friends-intro"><div><div class="friends-kicker">IL TUO PERCORSO, IN COMPAGNIA</div><h2>Ognuno il suo passo.<br>Un percorso insieme.</h2><p>Aggiungi gli amici, scegli cosa condividere e ritrova qui le impostazioni del tuo spazio.</p></div><div class="gg-welcome-symbol" aria-hidden="true">✦</div></div></template><div id="friends-body"></div></section>
     <section id="tab-dati" class="view" hidden>
       <div class="segbar" role="tablist" aria-label="Profilo"><button type="button" data-sub="dati">Il tuo profilo</button><button type="button" data-sub="regole">Come funziona</button></div>
       <div class="area-lead" style="--area:#8ee0cf;--area2:#6bb6ca"><span class="area-kicker">PROFILO</span><strong>Il centro di controllo.</strong><p>Fonti, obiettivi e copie dei dati: ogni impostazione ha il suo posto.</p><span class="area-mark" aria-hidden="true">◉</span></div>
@@ -11490,15 +11490,45 @@ function create(ctx){
     if(g.status==='pending')return '<section class="gg-card gg-duel"><span class="gg-kicker">UNA SFIDA DA CONDIVIDERE</span><h3>'+esc(g.to===uid?name+' ti ha invitato':'Invito inviato a '+name)+'</h3><p>Sette giorni di diario completo. Fino a 100 punti a testa e una missione di squadra.</p><p class="gg-note">Si parte alla mezzanotte successiva all’accettazione · fuso '+esc(g.timezone)+'. L’invito scade dopo 7 giorni.</p><div class="gg-actions">'+(g.to===uid?button('accept','Accetta la sfida',g.id,'primary')+button('decline','Rifiuta',g.id):button('decline','Annulla invito',g.id))+button('rules','Come si gioca')+'</div></section>';
     if(!['active','settled'].includes(g.status))return '<section class="gg-card"><span class="gg-kicker">SFIDA ARCHIVIATA</span><h3>'+({declined:'Invito rifiutato',cancelled:'Sfida annullata',expired:'Invito scaduto'}[g.status]||'Sfida conclusa')+'</h3><p>'+esc(g.reason||'Puoi ripartire con una nuova sfida.')+'</p>'+button('invite','Nuova sfida',peer,'primary')+'</section>';
     if(g.factsAvailable===false)return '<section class="gg-card"><span class="gg-kicker">AGGIORNAMENTO DELLA SFIDA</span><h3>Attendo i dati dei punteggi</h3><p>Riapri online per sincronizzare il confronto. I dati non disponibili non vengono mostrati come zero.</p>'+button('refresh','Riprova')+'</section>';
-    var value=g.progress||C.round(g,Date.now()),mine=value.people[uid],theirs=value.people[peer],phase=g.status==='settled'?'finished':C.round(g,Date.now()).phase;
-    var phaseName={scheduled:'SI PARTE DOMANI',active:'SFIDA IN CORSO',settling:'ULTIMI AGGIORNAMENTI',finished:'SFIDA CONCLUSA'}[phase],result=phase==='finished'?(value.winner==='tie'?'Stesso impegno, stesso traguardo.':value.winner===uid?'Hai vinto questa sfida.':value.winner?'La sfida va a '+name+'.':'Sfida conclusa senza un confronto completo.'):'Il tuo passo. Il suo passo. Insieme.';
-    if(phase==='finished'&&g.status!=='settled'){phaseName='CONFERMA DEI RISULTATI';result='La sfida è terminata. Attendo la sincronizzazione finale.';}
-    var dates=C.roundDates(g),ownName='Tu',currentDay=C.dayAt(Date.now(),g.timezone);
-    function person(u,n,p,frame,title){return '<button type="button" class="gg-player'+(u===uid?' gg-player-own':' gg-player-peer')+'" data-game-action="score" data-key="'+u+'">'+avatar(n,frame,u===uid,u)+'<span class="gg-player-name">'+esc(n)+(title?'<em class="gg-equipped">'+esc(title)+'</em>':'')+'</span><strong>'+p.points+'<small> / 100</small></strong><span class="gg-progress"><i style="width:'+p.points+'%"></i></span><small>'+p.days+'/7 giorni completi</small></button>';}
-    var calendar='<div class="gg-week" aria-label="Giorni della sfida">'+dates.map(function(d,i){var a=displayRow(mine.rows[i],true,g),b=theirs.rows[i];return '<button type="button" data-game-action="day" data-key="'+d+'" class="gg-day'+(d===currentDay?' is-today':'')+'" aria-haspopup="dialog" title="Apri il confronto del giorno" aria-label="'+esc(day(d)+': tu '+stateLabel(a)+', '+name+' '+stateLabel(b))+'"><span>'+new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{weekday:'short',timeZone:'UTC'})+'</span><b>'+Number(d.slice(-2))+'</b><i class="gg-day-own '+(a.complete?'done':'')+'">'+(a.complete?'✓':a.state==='pending'?'…':d>currentDay?'·':'—')+'</i><i class="gg-day-peer '+(b.complete?'done':'')+'">'+(b.complete?'✓':d>currentDay?'·':'—')+'</i></button>';}).join('')+'</div>';
-    var todayRow=mine.rows.find(function(x){return x.date===currentDay;}),action=phase==='scheduled'?'<p>La sfida parte il <b>'+day(g.startDate)+'</b>. Il diario di oggi continua a costruire la tua serie personale.</p>':phase==='active'&&todayRow&&!todayRow.complete?'<div><b>Il prossimo passo è tuo.</b><p>Quando hai registrato tutto, completa il diario di oggi: +10 punti.</p></div>'+button('open-day','Apri il diario',currentDay,'primary'):phase==='active'?'<div><b>Oggi hai fatto il tuo passo.</b><p>Il tuo diario completo è già conteggiato.</p></div>':phase==='settling'?'<div><b>C’è ancora tempo per sincronizzare.</b><p>Chiusura dei risultati: '+stamp(g.settleMs)+'.</p></div>':g.status==='settled'?button('invite','La rivincita?',peer,'primary'):button('refresh','Aggiorna risultati',null,'primary');
-    return '<section class="gg-card gg-duel"><div class="gg-duel-head"><span class="gg-kicker">'+phaseName+'</span>'+button('rules','Le regole')+'</div><h3>7 giorni, un passo alla volta</h3><p class="gg-period">'+day(g.startDate)+' – '+day(g.endDate)+' · '+esc(g.timezone)+'</p><div class="gg-versus">'+person(uid,ownName,mine,S.profile&&S.profile.equipped,S.profile&&S.profile.title)+'<span class="gg-vs" aria-hidden="true">✦</span>'+person(peer,name,theirs,S.member&&S.member.frame,S.member&&S.member.title)+'</div><p class="gg-result">'+esc(result)+'</p><div class="gg-share-row"><button type="button" class="gg-share" data-share-duel data-own="'+mine.points+'" data-peer-pts="'+theirs.points+'" data-own-days="'+mine.days+'" data-peer-days="'+theirs.days+'" data-peer="'+esc(name)+'" data-period="'+esc(day(g.startDate)+' – '+day(g.endDate))+'" data-result="'+esc(result)+'" data-team="'+(value.teamTotal!=null?value.teamTotal:'')+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M7 8l5-5 5 5"/></svg>Condividi la sfida</button></div>'+calendar+'<p class="gg-calendar-help">Tocca un giorno per aprire il confronto e scorrere le giornate.</p><div class="gg-next">'+action+'</div><p class="gg-sync">'+(g.status==='settled'?'Risultato alla chiusura':'Punteggi provvisori')+' · aggiornato '+stamp(g.updatedMs)+(mine.rows.some(function(x){return displayRow(x,true,g).state==='pending';})?' · Diario locale completo: punti in attesa di sincronizzazione.':'')+(g.correctedAfterClose?' · diario corretto dopo la chiusura':'')+'</p></section>'+
-      scoreLedger(g)+'<section class="gg-card gg-team'+(value.cooperative?' is-achieved':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">DALLA STESSA PARTE</span><h3>Missione di squadra</h3></div><span class="gg-team-mark" aria-hidden="true">◇</span></div><p>Dieci giornate complete in due, almeno quattro ciascuno.</p><div class="gg-team-count"><b>'+value.teamTotal+'<small> / 10</small></b><span>'+ (value.cooperative?'Obiettivo raggiunto':Math.max(0,10-value.teamTotal)+' al traguardo')+'</span></div><div class="gg-progress"><i style="width:'+Math.min(100,value.teamTotal/10*100)+'%"></i></div><div class="gg-team-contributions"><span>Tu <b>'+mine.days+' / 7</b></span><span>'+esc(name)+' <b>'+theirs.days+' / 7</b></span></div><p class="gg-note">'+(value.teamTotal>=10&&!value.cooperative?'Per sbloccare il premio servono ancora almeno quattro giorni per ciascuno.':value.cooperative?'Alla chiusura: badge Squadra affiatata e +50 XP personali a testa.':'Il contributo di entrambi conta. Premio alla chiusura: badge e +50 XP a testa.')+'</p></section>';
+    var value=g.progress||C.round(g,Date.now()),mine=value.people[uid],theirs=value.people[peer],phase=g.status==='settled'?'finished':C.round(g,Date.now()).phase,waitingFinal=phase==='finished'&&g.status!=='settled';
+    var result=phase==='finished'?(waitingFinal?'La sfida è terminata. Attendo la sincronizzazione finale.':value.winner==='tie'?'Stesso impegno, stesso traguardo.':value.winner===uid?'Hai vinto questa sfida.':value.winner?'La sfida va a '+name+'.':'Sfida conclusa senza un confronto completo.'):'';
+    var dates=C.roundDates(g),currentDay=C.dayAt(Date.now(),g.timezone),ownName='Tu',short=name.length>12&&name.indexOf(' ')>0?name.split(' ')[0]:name;
+    var meIni=String(ctx.name()||'Tu').trim().charAt(0).toUpperCase()||'T',peIni=String(name).trim().charAt(0).toUpperCase()||'?';
+    var own=mine.rows.map(function(x){return displayRow(x,true,g);}),oth=theirs.rows;
+    function streak(rows){var n=0;for(var i=rows.length-1;i>=0;i--){var x=rows[i];if(!x||x.date>currentDay)continue;if(x.complete)n++;else if(x.date===currentDay)continue;else break;}return n;}
+    var todayRow=own.find(function(x){return x.date===currentDay;}),open=phase==='active'&&todayRow&&!todayRow.complete&&todayRow.state!=='pending',next=mine.days+1,gain=10+(next===5?10:0)+(next===7?20:0),idx=dates.indexOf(currentDay);
+    var badge=phase==='scheduled'?'Si parte il '+day(g.startDate):phase==='active'?(currentDay===g.endDate?'Ultimo giorno':'Giorno '+(idx+1)+' di 7'):phase==='settling'?'Ultimi aggiornamenti':waitingFinal?'Conferma dei risultati':value.winner==='tie'?'Pari':value.winner===uid?'Hai vinto':value.winner?'Vince '+short:'Conclusa';
+    var badgeCls=phase==='active'&&currentDay===g.endDate?' is-hot':phase==='finished'&&!waitingFinal&&value.winner===uid?' is-win':'';
+    var diff=mine.points-theirs.points;
+    var msg=phase==='scheduled'?'La sfida parte il <b>'+day(g.startDate)+'</b>. Intanto il diario di oggi costruisce la tua serie personale.':phase==='finished'?esc(result):(diff>0?'Sei avanti di <b>'+diff+' punti</b>.':diff<0?'<b>'+esc(short)+'</b> è avanti di <b>'+(-diff)+' punti</b>.':'Siete <b>pari</b>.')+(open?' Il diario di oggi vale <b>+'+gain+'</b>.':'');
+    var gm=Math.max(mine.points,0),gp=Math.max(theirs.points,0),zero=!gm&&!gp;
+    var tug='<div class="gz-tug'+(zero?' is-zero':'')+'" role="img" aria-label="'+esc('Tu '+mine.points+' punti, '+name+' '+theirs.points+' punti')+'"><i class="is-me" style="flex-grow:'+(zero?1:Math.max(gm,3))+'"></i><i class="is-pe" style="flex-grow:'+(zero?1:Math.max(gp,3))+'"></i></div>';
+    var FIRE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/></svg>';
+    function face(u,n,side){return '<button type="button" class="gz-face is-'+side+'" data-game-action="score" data-key="'+esc(u)+'" aria-label="'+esc('Giornate conteggiate di '+n)+'">'+avatar(n,u===uid?S.profile&&S.profile.equipped:S.member&&S.member.frame,u===uid,u)+'</button>';}
+    var share='<button type="button" class="gg-share" data-share-duel data-own="'+mine.points+'" data-peer-pts="'+theirs.points+'" data-own-days="'+mine.days+'" data-peer-days="'+theirs.days+'" data-peer="'+esc(name)+'" data-period="'+esc(day(g.startDate)+' – '+day(g.endDate))+'" data-result="'+esc(result||'Il tuo passo. Il suo passo. Insieme.')+'" data-team="'+(value.teamTotal!=null?value.teamTotal:'')+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M7 8l5-5 5 5"/></svg>Condividi</button>';
+    var hero='<section class="gg-card gz-hero"><div class="gz-top"><span class="gz-k">Tu e '+esc(short)+' · '+day(g.startDate)+' – '+day(g.endDate)+'</span><span class="gz-badge'+badgeCls+'">'+esc(badge)+'</span></div>'
+      +'<div class="gz-line">'+face(uid,ctx.name()||ownName,'me')+'<div class="gz-mid"><div class="gz-pts"><b class="is-me">'+mine.points+'</b><small>punti su 100</small><b class="is-pe">'+theirs.points+'</b></div>'+tug+'</div>'+face(peer,name,'pe')+'</div>'
+      +'<div class="gz-streaks"><span class="is-me">'+FIRE+'<span><span><b>'+streak(own)+'</b> di fila</span><small>'+mine.days+'/7 giorni completi</small></span></span><span class="is-pe">'+FIRE+'<span><span><b>'+streak(oth)+'</b> di fila</span><small>'+theirs.days+'/7 giorni completi</small></span></span></div>'
+      +'<p class="gz-msg">'+msg+'</p><div class="gz-tools">'+button('rules','Le regole')+share+'</div></section>';
+    function coin(side,ini,x,t){var st=!x?'miss':x.complete?'done':x.state==='pending'?'wait':t?'open':'miss';return '<span class="gz-coin is-'+side+' is-'+st+'" aria-hidden="true">'+(st==='wait'?'…':esc(ini))+'</span>';}
+    function dayRow(d){var i=dates.indexOf(d),a=own[i],b=oth[i],t=d===currentDay,ac=!!(a&&a.complete),bc=!!(b&&b.complete),wait=!!(a&&a.state==='pending'),lab,cls;
+      if(ac&&bc){cls='both';lab='Entrambi';}
+      else if(t){cls='open';lab=ac?'Tu fatto · '+esc(short)+' può ancora':wait?'Il tuo è in sincronizzazione':bc?esc(short)+' fatto · tocca a te, +'+gain:'Ancora aperto · vale +'+gain;}
+      else if(wait){cls='me';lab='Il tuo è in sincronizzazione';}
+      else if(ac){cls='me';lab='Solo tu';}else if(bc){cls='pe';lab='Solo '+esc(short);}else{cls='none';lab='Nessuno';}
+      var wd=new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{weekday:'short',timeZone:'UTC'});
+      return '<button type="button" class="gz-day'+(t?' is-today':'')+'" data-game-action="day" data-key="'+d+'" aria-haspopup="dialog" aria-label="'+esc(day(d)+': tu '+stateLabel(a||{})+', '+name+' '+stateLabel(b||{}))+'"><span class="gz-date"><b>'+(t?'Oggi':wd.charAt(0).toUpperCase()+wd.slice(1,3))+'</b><small>'+(t?wd+' '+Number(d.slice(-2)):day(d))+'</small></span>'+coin('me',meIni,a,t)+coin('pe',peIni,b,t)+'<span class="gz-lab is-'+cls+'">'+lab+'</span><span class="gz-chev" aria-hidden="true">›</span></button>';}
+    var past=dates.filter(function(d){return d<=currentDay;}).reverse();
+    var list=past.length?'<section class="gg-card gz-days"><div class="gz-dh"><h3>Giorno per giorno</h3><small>un gettone per ogni diario completo</small></div>'+past.slice(0,4).map(dayRow).join('')+(past.length>4?'<details class="gz-more"><summary>Mostra '+(past.length===5?'l’altro giorno':'gli altri '+(past.length-4)+' giorni')+' ›</summary>'+past.slice(4).map(dayRow).join('')+'</details>':'')+'</section>':'';
+    var cta=open?'<div class="gz-cta-wrap">'+button('open-day','Completa il diario di oggi · +'+gain,currentDay,'primary')+'</div>':phase==='active'?'<p class="gz-done">'+(todayRow&&todayRow.state==='pending'?'Diario di oggi completo: i punti arrivano appena si sincronizza.':'Oggi hai fatto il tuo passo: il diario completo è già conteggiato.')+'</p>':phase==='settling'?'<p class="gz-done">C’è ancora tempo per sincronizzare. Chiusura dei risultati: '+stamp(g.settleMs)+'.</p>':g.status==='settled'?'<div class="gz-cta-wrap">'+button('invite','La rivincita?',peer,'primary')+'</div>':phase==='finished'?'<div class="gz-cta-wrap">'+button('refresh','Aggiorna risultati',null,'primary')+'</div>':'';
+    var tt=value.teamTotal||0,dm=Math.min(mine.days,10),dp=Math.min(theirs.days,10-dm),needT=Math.max(0,10-tt),needM=Math.max(0,4-mine.days),needP=Math.max(0,4-theirs.days),left=[];
+    if(needT)left.push('mancano '+needT+(needT===1?' giornata':' giornate')+' in totale');
+    if(needP)left.push(esc(short)+' deve farne ancora '+needP);
+    if(needM)left.push('tu ancora '+needM);
+    var teamTxt=value.cooperative?'Obiettivo raggiunto insieme.':left.length?left.join(', ').replace(/^./,function(c){return c.toUpperCase();})+'.':'Ci siete: il premio arriva alla chiusura.';
+    var team='<section class="gg-card gz-team'+(value.cooperative?' is-achieved':'')+'"><div class="gz-ring" role="img" aria-label="Missione di squadra: '+tt+' giornate su 10" style="--a:'+(dm*36)+'deg;--b:'+((dm+dp)*36)+'deg"><b>'+Math.min(tt,10)+'<small>/10</small></b></div><div><h3>Missione di squadra</h3><p>10 giornate in due, almeno 4 a testa. '+teamTxt+'</p><span class="gz-prize">'+(value.cooperative?'Alla chiusura: badge Squadra affiatata e +50 XP a testa':'Premio: badge e +50 XP a testa')+'</span></div></section>';
+    var sync='<p class="gg-sync">'+(g.status==='settled'?'Risultato alla chiusura':'Punteggi provvisori')+' · aggiornato '+stamp(g.updatedMs)+(g.correctedAfterClose?' · diario corretto dopo la chiusura':'')+'</p>';
+    return hero+list+cta+team+scoreLedger(g)+sync;
   }
   function renderSocial(){
     var e=env(),p=S.profile,friend=e.friends.find(function(x){return x.uid===e.selected;}),html=statusMessage();
@@ -11555,7 +11585,7 @@ root.GJGameUI={create:create};
 
 /* Social data uses separate Firestore paths; the private users/{uid} archive is untouched. */
 function bindFriends() {
-  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',date:null,view:'games',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
+  var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',date:null,view:'list',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
   var FD=window.GJFriendData, fs=null, auth=null;
   var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();refreshAvatars();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
@@ -11613,7 +11643,7 @@ function bindFriends() {
     return '<div id="friends-games-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-games"'+(F.view!=='games'?' hidden':'')+'>'+(games||list)+'</div><div id="friends-list-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-list"'+(F.view!=='list'?' hidden':'')+'>'+list+'</div><div id="friends-settings-panel" class="friends-pane" role="tabpanel" aria-labelledby="friends-tab-settings"'+(F.view!=='settings'?' hidden':'')+'>'+(intro?intro.innerHTML:'')+settings+'</div>';
   }
   function setFriendsView(view,focus,animate){
-    F.view=['games','list','settings'].indexOf(view)>=0?view:'games';
+    F.view=['games','list','settings'].indexOf(view)>=0?view:'list';
     document.querySelectorAll('#tab-amici [data-friends-view]').forEach(function(b){var active=b.dataset.friendsView===F.view;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;if(active&&focus)b.focus({preventScroll:true});});
     ['games','list','settings'].forEach(function(v){var p=$('#friends-'+v+'-panel');if(p){p.hidden=v!==F.view;p.classList.remove('friends-pane-enter');if(v===F.view&&animate){void p.offsetWidth;p.classList.add('friends-pane-enter');}}});
   }
@@ -11638,7 +11668,7 @@ function bindFriends() {
   function comparisonDate(){return F.date||todayStr();}
   function setComparisonDate(d){if(!window.GJGame.date(d)||d>todayStr())return;F.date=d;if(F.selected)subscribePeer(F.selected);render();}
   function comparisonNavigator(){var d=comparisonDate();return '<div class="friends-date-nav"><button type="button" data-friend-action="date-prev" aria-label="Giorno precedente del confronto">‹</button><label class="friends-date-picker"><span>'+esc(fmtDay(d))+'</span><span aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18M8 15h3v3H8z"/></svg></span><input type="date" data-friend-date value="'+d+'" max="'+todayStr()+'" min="1900-01-01" aria-label="Scegli la data del confronto"></label><button type="button" data-friend-action="date-next" aria-label="Giorno successivo del confronto"'+(d>=todayStr()?' disabled':'')+'>›</button>'+(d!==todayStr()?'<button type="button" data-friend-action="date-today">Oggi</button>':'')+'</div>';}
-  function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=F.period==='week'?6:0;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
+  function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=6;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
   var FA_IC={
     calories:'<svg viewBox="0 0 24 24"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/></svg>',
@@ -11660,14 +11690,14 @@ function bindFriends() {
       var o;
       if(week){
         var a=FD.aggregate(rows,key);if(a.value==null)return miss('Nessuna giornata completa',a.n+'/7 giornate complete');
-        o={v:a.value,txt:fmt(a.value,0),sub:a.n+'/7 giornate complete'};
+        o={v:a.value,txt:fmt(a.value,0),sub:a.n+'/7 giornate complete',st:a.n+'/7 complete',done:true};
         if(key==='calories'){var ps=rows.map(function(x){return x&&x.calories;}).filter(function(x){return x&&x.value!=null&&x.target>0&&FD.complete(x.state);}).map(function(x){return x.value/x.target*100;});if(ps.length){o.pct=ps.reduce(function(t,p){return t+p;},0)/ps.length;o.sub=Math.round(o.pct)+'% '+whose+' target in media · '+o.sub;}}
         else o.sub='media · '+o.sub;
         return o;
       }
       var x=rows[0]&&rows[0][key];if(!x||x.value==null)return miss('Non registrato');
       var st=FD.complete(x.state)?'completo':x.state==='parziale'?'in corso':'da confermare';
-      o={v:x.value,txt:fmt(x.value,0),sub:st};
+      o={v:x.value,txt:fmt(x.value,0),sub:st,st:st,done:FD.complete(x.state)};
       if(key==='calories'&&x.target>0){o.pct=x.value/x.target*100;o.sub=Math.round(o.pct)+'% '+whose+' target · '+st;}
       return o;
     }
@@ -11729,25 +11759,73 @@ function bindFriends() {
     if(k==='workouts'&&week&&a.v!=null&&b.v!=null){h+=faSplit(a.v,b.v)+faLead(a.v,b.v,peerName,function(d){return d===1?'1 seduta':fmt(d,0)+' sedute';});}
     return h+'</section>';
   }
+  var FZ_COL={calories:'#FF4D7A',macros:'#B8FF3A',steps:'#3EE6FF',workouts:'#D08BF5'};
+  function fzShort(n){n=String(n||'');return n.length>12&&n.indexOf(' ')>0?n.split(' ')[0]:n;}
+  function fzWeight(rows,dates,allowed){
+    if(!allowed)return {miss:'peso non condiviso'};
+    if(!rows)return {miss:'in attesa dei dati'};
+    var pts=[];rows.forEach(function(x,i){if(x&&x.weight!=null)pts.push({v:x.weight,d:dates[i]});});
+    if(!pts.length)return {miss:'nessuna pesata in 7 giorni'};
+    var a=pts[0],b=pts[pts.length-1],o={v:b.v,d:b.d};
+    if(pts.length>1&&a.d!==b.d){o.delta=b.v-a.v;o.span=Math.round((Date.parse(b.d)-Date.parse(a.d))/864e5);}
+    return o;
+  }
+  function fzPerson(side,uid,name,label,w){
+    var wt=w.miss?'<span class="fz-w is-miss">—</span><span class="fz-wd">'+esc(w.miss)+'</span>':'<span class="fz-w">'+fmt(w.v,1)+'<small> kg</small></span><span class="fz-wd">'+(w.delta!=null?(Math.abs(w.delta)<0.05?'stabile':(w.delta>0?'+':'−')+fmt(Math.abs(w.delta),1)+' kg')+' in '+w.span+(w.span===1?' giorno':' giorni'):w.d===comparisonDate()?'pesata del giorno':'pesata del '+esc(fmtShort(w.d)))+'</span>';
+    return '<div class="fz-p is-'+side+'"><span class="fz-av" aria-hidden="true"><i>'+faAvatar(uid,name)+'</i></span><b class="fz-n">'+esc(label)+'</b>'+wt+'</div>';
+  }
+  function fzBadge(side,txt){return '<span class="fz-badge is-'+side+'">'+txt+'</span>';}
+  function fzHead(k,t,badge){return '<header class="fz-h"><span class="fz-ic" aria-hidden="true">'+FA_IC[k]+'</span><h4>'+t+'</h4>'+(badge||'')+'</header>';}
+  function fzMirror(a,b,max,tick){function half(side,v){return '<span class="is-'+side+'">'+(v!=null&&max>0?'<i style="width:'+(Math.max(0,Math.min(v,max))/max*100).toFixed(1)+'%"></i>':'')+(tick?'<em style="--t:'+tick+'%"></em>':'')+'</span>';}return '<div class="fz-mirror" aria-hidden="true">'+half('me',a)+half('pe',b)+'</div>';}
+  function fzVal(side,s,big,small){if(s.miss)return '<span class="fz-v is-'+side+' is-miss"><b>—</b><small>'+esc(s.miss)+(s.sub?' · '+esc(s.sub):'')+'</small></span>';return '<span class="fz-v is-'+side+'"><b>'+big+'</b>'+(small?'<small>'+small+'</small>':'')+'</span>';}
+  function fzRow(k,a,b,peerName,week){
+    var who=esc(fzShort(peerName)),names={calories:week?'Calorie medie':'Calorie',macros:week?'Macro medie':'Macro',steps:week?'Passi medi':'Passi',workouts:week?'Allenamenti':'Allenamento'},lead=null,cmp=false,badge='',body='';
+    var tag=function(side){return side==='me'?'Tu':who;};
+    if(k==='calories'){
+      var ok=!a.miss&&!b.miss&&a.pct!=null&&b.pct!=null;
+      if(ok&&a.done&&b.done){cmp=true;var da=Math.abs(a.pct-100),db=Math.abs(b.pct-100);if(Math.abs(da-db)<1)badge=fzBadge('tie','Pari');else{lead=da<db?'me':'pe';badge=fzBadge(lead,tag(lead)+' più vicino al target');}}
+      else if(ok)badge=fzBadge('tie','Giornata in corso');
+      var cv=function(side,x){return fzVal(side,x,x.pct!=null?Math.round(x.pct)+'%':x.txt+' kcal',(x.pct!=null?x.txt+' kcal'+(week?' in media':'')+' · ':'')+esc(x.st||''));};
+      body='<div class="fz-nums">'+cv('me',a)+cv('pe',b)+'</div>'+fzMirror(a.miss?null:a.pct,b.miss?null:b.pct,125,80)+'<p class="fz-foot">percentuale del proprio obiettivo · la tacca bianca è il 100%</p>';
+    }else if(k==='macros'){
+      var miss=[a.miss?'Tu: '+a.miss.toLowerCase():'',b.miss?who+': '+b.miss.toLowerCase():''].filter(Boolean),C=['#B8FF3A','#FFB340','#D08BF5'];
+      body='<div class="fz-mac">'+['protein','carbs','fat'].map(function(m,i){var x=a.m?a.m[m]:null,y=b.m?b.m[m]:null,mx=Math.max(x||0,y||0),w=function(v){return v!=null&&mx>0?'<i style="width:'+(v/mx*100).toFixed(1)+'%"></i>':'';};
+        return '<b class="is-me"><span class="fa-sr">Tu: </span>'+(x==null?'—':fmt(x,0)+' g')+'</b><span class="bar is-me" aria-hidden="true">'+w(x)+'</span><span class="lab" style="color:'+C[i]+'">'+['Proteine','Carbo','Grassi'][i]+'</span><span class="bar is-pe" aria-hidden="true">'+w(y)+'</span><b class="is-pe"><span class="fa-sr">'+who+': </span>'+(y==null?'—':fmt(y,0)+' g')+'</b>';}).join('')+'</div>'+(week?'<p class="fz-foot">medie delle giornate complete</p>':'')+(miss.length?'<p class="fz-foot">'+miss.join(' · ')+'</p>':'');
+    }else if(k==='steps'){
+      if(!a.miss&&!b.miss&&a.v!=null&&b.v!=null){cmp=true;var d=Math.abs(a.v-b.v);if(Math.round(d)===0)badge=fzBadge('tie','Pari');else{lead=a.v>b.v?'me':'pe';badge=fzBadge(lead,tag(lead)+' +'+fmt(d,0)+(week?' al giorno':''));}}
+      body='<div class="fz-nums">'+fzVal('me',a,a.txt,esc(a.sub||''))+fzVal('pe',b,b.txt,esc(b.sub||''))+'</div>'+fzMirror(a.miss?null:a.v,b.miss?null:b.v,Math.max(a.v||0,b.v||0),0);
+    }else if(k==='workouts'){
+      if(!a.miss&&!b.miss&&a.v!=null&&b.v!=null){cmp=true;if(week){if(a.v!==b.v){lead=a.v>b.v?'me':'pe';var dd=Math.abs(a.v-b.v);badge=fzBadge(lead,tag(lead)+' +'+(dd===1?'1 seduta':dd+' sedute'));}else badge=fzBadge('tie','Pari');}else if((a.v>0)!==(b.v>0)){lead=a.v>0?'me':'pe';badge=fzBadge(lead,tag(lead)+' si è allenato');}}
+      var card=function(side,label,x){if(x.miss)return '<div class="fz-wc is-'+side+' is-miss"><span>'+label+'</span><b>—</b><small>'+esc(x.miss)+(x.sub?' · '+esc(x.sub):'')+'</small></div>';var list=week&&x.items&&x.items.length?'<ul>'+x.items.slice(0,4).map(function(i){return '<li><small>'+esc(fmtShort(i.date))+'</small>'+esc(i.text)+'</li>';}).join('')+(x.items.length>4?'<li><small>e altre '+(x.items.length-4)+'</small></li>':'')+'</ul>':'';return '<div class="fz-wc is-'+side+'"><span>'+label+'</span><b>'+x.txt+'</b><small>'+esc(x.sub||'')+'</small>'+list+'</div>';};
+      body='<div class="fz-wo">'+card('me','Tu',a)+card('pe',who,b)+'</div>';
+    }
+    return {lead:lead,cmp:cmp,html:'<section class="fz-card" data-metric="'+k+'" aria-label="'+names[k]+'" style="--mc:'+FZ_COL[k]+'">'+fzHead(k,names[k],badge)+body+'</section>'};
+  }
   function comparisonHTML(){
     var link=friendList().find(function(x){return relationPeer(x)===F.selected;});if(!link)return '<div class="friends-empty">Seleziona un amico per confrontare i dati.</div>';
-    var r=F.remote,own=localRows(),name=relationName(link),keys=FD.KEYS.filter(function(k){return (F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]);});
-    var head='<div class="friends-comparison-head"><div><h3>Tu e '+esc(name)+'</h3><span>'+ (F.period==='week'?'7 giorni · '+fmtShort(FD.add(comparisonDate(),-6))+'–'+fmtShort(comparisonDate()):fmtDay(comparisonDate()))+'</span></div><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></div><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator();
-    if(!r)return head+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div>';
-    if(r.error||!r.config||!r.config.enabled)return head+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div>';
-    if(!keys.length)return head+'<div class="friends-empty">Nessun dato selezionato per il confronto.</div>';
-    var myName=(F.profile&&F.profile.nickname)||S().name||'Tu';
-    var duel='<div class="fx-duel" aria-hidden="true"><span class="fx-who is-me"><i>'+faAvatar(F.uid,myName)+'</i><b>Tu</b></span><span class="fx-vs">vs</span><span class="fx-who is-pe"><b>'+esc(name.length>12&&name.indexOf(' ')>0?name.split(' ')[0]:name)+'</b><i>'+faAvatar(F.selected,name)+'</i></span></div>';
-    return head+(comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'')+'<div class="fa-board">'+duel+keys.map(function(k){return faRow(k,own,r.days,true,r.config.prefs[k],name);}).join('')+'<p class="friends-help">Ognuno ha il proprio target: le calorie si leggono come percentuale del proprio obiettivo (100% = in linea, la tacca bianca). Le giornate mancanti restano mancanti e le medie usano solo giornate complete. I dati dell’amico si aggiornano quando apre e salva il diario online.</p></div>';
+    var r=F.remote,week=F.period==='week',dates=[],i;for(i=6;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
+    var own7=localRows(),name=relationName(link),short=fzShort(name),keys=FD.KEYS.filter(function(k){return k!=='weight'&&((F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]));});
+    var ctrl='<h3 class="fa-sr">Tu e '+esc(name)+' · '+(week?'7 giorni fino al '+fmtDay(comparisonDate()):fmtDay(comparisonDate()))+'</h3><div class="fz-ctrl"><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator()+'</div>';
+    var manage='<details class="fz-manage"><summary>Gestisci l’amicizia con '+esc(short)+'</summary><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></details>';
+    var myName=(F.profile&&F.profile.nickname)||S().name||'Tu',wMe=fzWeight(own7,dates,true);
+    function hero(wPe,chips){return '<section class="fz-hero" aria-label="Tu e '+esc(name)+': peso">'+fzPerson('me',F.uid,myName,'Tu',wMe)+'<span class="fz-vs" aria-hidden="true">VS</span>'+fzPerson('pe',F.selected,name,short,wPe)+(chips||'')+'</section>';}
+    var hist=comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'';
+    if(!r)return ctrl+'<div class="fz-board">'+hero({miss:'caricamento…'})+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div></div>'+manage;
+    if(r.error||!r.config||!r.config.enabled)return ctrl+'<div class="fz-board">'+hero({miss:'non disponibile'})+'<div class="friends-empty">'+esc(r.error||name+' non sta condividendo dati al momento.')+'</div></div>'+manage;
+    var peer7=r.days||[],cut=function(x){return week?x:x.slice(-1);},own=cut(own7),peer=cut(peer7);
+    var rows=keys.map(function(k){return fzRow(k,sideStat(own,k,true,true),sideStat(peer,k,r.config.prefs[k],false),name,week);});
+    var me=rows.filter(function(x){return x.lead==='me';}).length,pe=rows.filter(function(x){return x.lead==='pe';}).length,cmp=rows.filter(function(x){return x.cmp;}).length;
+    var chips=cmp?'<div class="fz-score">'+(me||pe?'<span class="is-me">Tu avanti in '+me+'</span><span class="is-pe">'+esc(short)+' in '+pe+'</span>':'<span class="is-tie">Per ora siete pari</span>')+'</div>':'';
+    return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(keys.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
   }
-  function refreshAvatars(){document.querySelectorAll('#tab-amici .friends-pill[data-key]').forEach(function(b){var i=b.querySelector('i'),h=faAvatar(b.dataset.key,b.textContent);if(i&&i.innerHTML!==h)i.innerHTML=h;});var d=$('#friend-comparison .fx-duel');if(d){var link=friendList().find(function(x){return relationPeer(x)===F.selected;}),me=d.querySelector('.is-me>i'),pe=d.querySelector('.is-pe>i'),hm=faAvatar(F.uid,(F.profile&&F.profile.nickname)||S().name),hp=link?faAvatar(F.selected,relationName(link)):'';if(me&&me.innerHTML!==hm)me.innerHTML=hm;if(pe&&link&&pe.innerHTML!==hp)pe.innerHTML=hp;}}
+  function refreshAvatars(){document.querySelectorAll('#tab-amici .friends-pill[data-key]').forEach(function(b){var i=b.querySelector('i'),h=faAvatar(b.dataset.key,b.textContent);if(i&&i.innerHTML!==h)i.innerHTML=h;});var d=$('#friend-comparison .fz-hero');if(d){var link=friendList().find(function(x){return relationPeer(x)===F.selected;}),me=d.querySelector('.fz-p.is-me .fz-av>i'),pe=d.querySelector('.fz-p.is-pe .fz-av>i'),hm=faAvatar(F.uid,(F.profile&&F.profile.nickname)||S().name),hp=link?faAvatar(F.selected,relationName(link)):'';if(me&&me.innerHTML!==hm)me.innerHTML=hm;if(pe&&link&&pe.innerHTML!==hp)pe.innerHTML=hp;}}
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
   function stopPeer(){Photos.select(null);F.epoch++;if(F.peerUnsub)F.peerUnsub();F.peerUnsub=null;F.remote=null;}
   function subscribePeer(uid){stopPeer();F.selected=uid;Games.select(uid);Photos.select(uid);if(!uid){render();return;}var epoch=F.epoch,readVersion=0;
     F.peerUnsub=fs.doc('friendShares/'+uid).onSnapshot({includeMetadataChanges:true},function(s){
       if(epoch!==F.epoch)return;var read=++readVersion;F.remote=null;refreshComparison();if(s.metadata.fromCache||s.metadata.hasPendingWrites)return;
       var cfg=s.exists?s.data():null;if(!cfg||!cfg.enabled){F.remote={config:cfg,days:[]};refreshComparison();return;}
-      var dates=[];for(var i=F.period==='week'?6:0;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
+      var dates=[];for(var i=6;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
       Promise.all(dates.map(function(d){return fs.doc('friendShares/'+uid+'/days/'+d).get({source:'server'}).then(function(x){return x.exists&&x.data().revision===cfg.revision?x.data():null;});})).then(function(days){if(epoch!==F.epoch||read!==readVersion)return;F.remote={config:cfg,days:days};refreshComparison();}).catch(function(){if(epoch!==F.epoch||read!==readVersion)return;F.remote={error:'Dati non disponibili online o condivisione revocata.'};refreshComparison();});
     },function(){readVersion++;if(epoch!==F.epoch)return;F.peerUnsub=null;F.remote={error:'Condivisione non disponibile o amicizia rimossa.'};refreshComparison();});
   }
@@ -11759,7 +11837,7 @@ function bindFriends() {
     F.unsub.push(rootRef().onSnapshot(function(s){if(!s.exists)return;F.config=s.data();render();queuePublish();},function(e){F.error=report(e);note();}));
     F.unsub.push(profileRef().collection('blocks').onSnapshot(function(q){F.blocks=q.docs.map(function(d){return d.id;});applyLinks(outgoing,incoming);},function(e){F.error=report(e);note();}));
   }
-  function clean(){Photos.disconnect();Games.disconnect();clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='games';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
+  function clean(){Photos.disconnect();Games.disconnect();clearTimeout(F.timer);F.unsub.forEach(function(u){u();});F.unsub=[];stopPeer();F.profile=null;F.config=null;F.links=[];F.blocks=[];F.selected=null;F.view='list';F.ready=false;F.publishHash='';lastRequestCount=null;updateRequestBadge();}
   async function load(uid){clean();F.uid=uid;Photos.connect(uid);F.error='';if(!uid){render();return;}var expected=uid;
     try{var s=await profileRef().get({source:'server'});if(F.uid!==expected)return;F.profile=s.exists?s.data():null;
       if(F.profile){Games.connect(uid);var c=await rootRef().get({source:'server'});if(F.uid!==expected)return;F.config=c.exists?c.data():defaults();listen();}
@@ -11804,8 +11882,8 @@ function bindFriends() {
     });
   });
   document.addEventListener('change',function(e){if(e.target.matches('#tab-amici [data-friend-date]'))setComparisonDate(e.target.value);});
-  document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var views=['games','list','settings'],i=views.indexOf(F.view),v=e.key==='Home'?views[0]:e.key==='End'?views[2]:views[(i+(e.key==='ArrowLeft'?2:1))%3];setFriendsView(v,true,true);});
-  var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='games';Games.refresh();render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else{Games.leave();stopPeer();}};
+  document.addEventListener('keydown',function(e){var b=e.target.closest('#tab-amici [data-friends-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var views=['list','games','settings'],i=views.indexOf(F.view),v=e.key==='Home'?views[0]:e.key==='End'?views[2]:views[(i+(e.key==='ArrowLeft'?2:1))%3];setFriendsView(v,true,true);});
+  var originalShow=show;show=function(tab){var wasOpen=F.opened;originalShow(tab);F.opened=tab==='amici';if(F.opened){if(!wasOpen)F.view='list';Games.refresh();render();if(F.uid&&F.error)load(F.uid);else if(F.selected&&!F.peerUnsub)subscribePeer(F.selected);}else{Games.leave();stopPeer();}};
   var originalRender=renderAll;renderAll=function(){originalRender();Photos.refresh();queuePublish();};
   var originalSync=window.GJ_onSync;window.GJ_onSync=function(st){if(originalSync)originalSync(st);queuePublish();};
   window.GJFriends={open:function(){show('amici');},localChanged:queuePublish};
@@ -16522,6 +16600,193 @@ html body #hero-today .ht-work.is-rest:not(#a):not(#b){background:linear-gradien
 html body .gg-dialog button:focus:not(:focus-visible):not(#a){outline:none!important;box-shadow:none!important}
 html body #tab-amici .gg-team-mark:not(#a){color:#7FF0CC!important;border-color:#7FF0CC!important}
 html body #tab-allenamenti .spc-row .spc span:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;font-size:.68rem;line-height:1.2}
+
+/* ===== Amici: Confronto «faccia a faccia» e Sfide «a gettoni» (Tu = corallo, amico = azzurro, squadra = verde acqua) ===== */
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:transparent!important;border:0!important;padding:0!important;border-radius:0!important;box-shadow:none!important}
+html body #tab-amici .friends-switch:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px!important;border-radius:999px!important;background:#1C1C1E!important;border:1px solid #2C2C2E!important;margin:0 0 16px!important;box-shadow:none!important}
+html body #tab-amici .friends-switch>button:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){min-height:42px!important;border-radius:999px!important;font-weight:600!important;color:#C7C7CC!important;background:transparent!important;box-shadow:none!important;border:0!important}
+html body #tab-amici .friends-switch>button[aria-selected=true]:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(135deg,#FFB08A,#FF8A5B)!important;color:#2B1206!important;font-weight:750!important}
+html body #tab-amici .fz-ctrl:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+html body #tab-amici .fz-ctrl .friends-period:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important;background:#1C1C1E!important;border-color:#2C2C2E!important}
+html body #tab-amici .fz-ctrl .friends-date-nav:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0!important}
+html body #tab-amici .fz-board:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:12px;width:100%;max-width:720px;margin:0 auto;min-width:0}
+html body #tab-amici .fz-hero:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){position:relative;display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);align-items:start;gap:6px;padding:22px 12px 18px;border-radius:26px;background:radial-gradient(90% 90% at 0 0,#FF8A5B52,#FF8A5B00 60%),radial-gradient(90% 90% at 100% 0,#5AA9FF52,#5AA9FF00 60%),#1C1C1E;border:1px solid #2C2C2E}
+html body #tab-amici .fz-p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
+html body #tab-amici .fz-av:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:block;width:88px;height:88px;border-radius:50%;padding:3px;box-sizing:border-box;flex:none}
+html body #tab-amici .fz-p.is-me .fz-av:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(145deg,#FFB08A,#FF8A5B)}
+html body #tab-amici .fz-p.is-pe .fz-av:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(145deg,#9CCBFF,#5AA9FF)}
+html body #tab-amici .fz-av>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;place-items:center;width:100%;height:100%;border-radius:50%;overflow:hidden;font-style:normal;font-size:2rem;font-weight:800}
+html body #tab-amici .fz-p.is-me .fz-av>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#3A2A24;color:#FFD2BD}
+html body #tab-amici .fz-p.is-pe .fz-av>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#1F2C3D;color:#CFE5FF}
+html body #tab-amici .fz-av>i>img:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+html body #tab-amici .fz-n:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.95rem;font-weight:700;color:#fff;max-width:100%;overflow-wrap:anywhere}
+html body #tab-amici .fz-w:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.85rem;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+html body #tab-amici .fz-w>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.85rem;font-weight:600}
+html body #tab-amici .fz-p.is-me .fz-w:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFB08A}
+html body #tab-amici .fz-p.is-me .fz-w>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#E5C2B2}
+html body #tab-amici .fz-p.is-pe .fz-w:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#9CCBFF}
+html body #tab-amici .fz-p.is-pe .fz-w>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#B9D3F0}
+html body #tab-amici .fz-p .fz-w.is-miss:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#636366}
+html body #tab-amici .fz-wd:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.72rem;font-weight:600;line-height:1.3;color:#C7C7CC;background:#FFFFFF14;padding:4px 9px;border-radius:999px;max-width:100%}
+html body #tab-amici .fz-vs:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){align-self:start;margin-top:22px;width:44px;height:44px;border-radius:50%;background:#000;border:1px solid #3A3A3C;display:grid;place-items:center;font-size:.8rem;font-weight:800;color:#E5E5EA}
+html body #tab-amici .fz-score:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-column:1/-1;margin-top:12px;display:flex;justify-content:center;flex-wrap:wrap;gap:8px}
+html body #tab-amici .fz-score>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){padding:6px 12px;border-radius:999px;font-size:.8rem;font-weight:700}
+html body #tab-amici .fz-score>.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B29;color:#FFC4A8}
+html body #tab-amici .fz-score>.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF29;color:#BFDDFF}
+html body #tab-amici .fz-score>.is-tie:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#30D5A324;color:#7FF0CC}
+html body #tab-amici .fz-card:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;background:#1C1C1E;border:1px solid #2C2C2E;min-width:0}
+html body #tab-amici .fz-h:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap}
+html body #tab-amici .fz-ic:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--mc) 18%,transparent);color:var(--mc);flex:none}
+html body #tab-amici .fz-ic svg:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+html body #tab-amici .fz-h h4:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0;font-size:1rem;font-weight:700;color:#fff;flex:1 1 auto;letter-spacing:0;text-transform:none}
+html body #tab-amici .fz-badge:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;font-weight:700;padding:4px 10px;border-radius:999px;line-height:1.3}
+html body #tab-amici .fz-badge.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFC4A8;background:#FF8A5B29}
+html body #tab-amici .fz-badge.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#BFDDFF;background:#5AA9FF29}
+html body #tab-amici .fz-badge.is-tie:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#C7C7CC;background:#FFFFFF14}
+html body #tab-amici .fz-nums:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+html body #tab-amici .fz-v:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:2px;min-width:0}
+html body #tab-amici .fz-v.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){text-align:right;align-items:flex-end}
+html body #tab-amici .fz-v>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.45rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+html body #tab-amici .fz-v.is-me>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFB08A}
+html body #tab-amici .fz-v.is-pe>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#9CCBFF}
+html body #tab-amici .fz-v.is-miss>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#636366}
+html body #tab-amici .fz-v>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;color:#AEAEB2;line-height:1.35}
+html body #tab-amici .fz-mirror:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px;height:12px}
+html body #tab-amici .fz-mirror>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){position:relative;display:flex;background:#FFFFFF0F}
+html body #tab-amici .fz-mirror>.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){justify-content:flex-end;border-radius:999px 0 0 999px}
+html body #tab-amici .fz-mirror>.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){justify-content:flex-start;border-radius:0 999px 999px 0}
+html body #tab-amici .fz-mirror i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:block;height:100%;transition:width .4s ease}
+html body #tab-amici .fz-mirror>.is-me>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(270deg,#FFB08A,#FF8A5B);border-radius:999px 0 0 999px}
+html body #tab-amici .fz-mirror>.is-pe>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(90deg,#9CCBFF,#5AA9FF);border-radius:0 999px 999px 0}
+html body #tab-amici .fz-mirror em:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;border-radius:2px}
+html body #tab-amici .fz-mirror>.is-me>em:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){right:var(--t)}
+html body #tab-amici .fz-mirror>.is-pe>em:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){left:var(--t)}
+html body #tab-amici .fz-foot:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0;font-size:.74rem;color:#8E8E93;text-align:center;line-height:1.4}
+html body #tab-amici .fz-mac:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr) auto;align-items:center;gap:10px 8px;font-size:.84rem}
+html body #tab-amici .fz-mac>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:750}
+html body #tab-amici .fz-mac>b.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFB08A;text-align:right}
+html body #tab-amici .fz-mac>b.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#9CCBFF}
+html body #tab-amici .fz-mac>.bar:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){height:8px;border-radius:999px;background:#FFFFFF0F;display:flex}
+html body #tab-amici .fz-mac>.bar.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){justify-content:flex-end}
+html body #tab-amici .fz-mac>.bar>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:block;height:100%;border-radius:999px}
+html body #tab-amici .fz-mac>.bar.is-me>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B}
+html body #tab-amici .fz-mac>.bar.is-pe>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF}
+html body #tab-amici .fz-mac>.lab:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){text-align:center;font-weight:700;font-size:.78rem}
+html body #tab-amici .fz-wo:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+html body #tab-amici .fz-wc:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:16px;min-width:0;overflow-wrap:anywhere}
+html body #tab-amici .fz-wc.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B1F;border:1px solid #FF8A5B59}
+html body #tab-amici .fz-wc.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF1F;border:1px solid #5AA9FF59}
+html body #tab-amici .fz-wc>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;font-weight:700}
+html body #tab-amici .fz-wc.is-me>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFC4A8}
+html body #tab-amici .fz-wc.is-pe>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#BFDDFF}
+html body #tab-amici .fz-wc>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1rem;color:#fff;line-height:1.3}
+html body #tab-amici .fz-wc>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;color:#D1D1D6;line-height:1.35}
+html body #tab-amici .fz-wc.is-miss>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#8E8E93}
+html body #tab-amici .fz-wc ul:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px;font-size:.74rem;color:#E5E5EA;line-height:1.35}
+html body #tab-amici .fz-wc li small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#AEAEB2;margin-right:6px}
+html body #tab-amici .fz-help:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:2px 4px 0;font-size:.74rem;color:#8E8E93;line-height:1.5}
+html body #tab-amici .fz-manage:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:16px 0 0;border-radius:16px;background:#1C1C1E;border:1px solid #2C2C2E;padding:0 14px}
+html body #tab-amici .fz-manage>summary:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){padding:12px 0;font-size:.85rem;color:#C7C7CC;cursor:pointer}
+html body #tab-amici .fz-manage .friends-actions:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;gap:8px;flex-wrap:wrap;padding:0 0 14px}
+html body #tab-amici .gg-hub-switch:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-template-columns:repeat(2,minmax(0,1fr));gap:4px!important;padding:4px!important;border-radius:999px!important;background:#1C1C1E!important;border:1px solid #2C2C2E!important;margin:0 0 14px!important}
+html body #tab-amici .gg-hub-switch button:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border-radius:999px!important;padding:10px 8px!important;min-height:0!important;background:transparent!important;border:0!important;color:#C7C7CC!important;gap:6px!important;box-shadow:none!important}
+html body #tab-amici .gg-hub-switch button small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:none!important}
+html body #tab-amici .gg-hub-switch button b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.86rem!important;color:inherit!important}
+html body #tab-amici .gg-hub-switch button>span:first-child:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1rem!important}
+html body #tab-amici .gg-hub-switch button[aria-pressed=true]:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#F2F2F7!important;color:#141216!important}
+html body #tab-amici .gg-root .gg-card:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#1C1C1E!important;border:1px solid #2C2C2E!important;border-radius:24px!important;box-shadow:none!important}
+html body #tab-amici .gg-friend-chip:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border-radius:999px!important;background:#1C1C1E!important;border:1px solid #2C2C2E!important;color:#C7C7CC!important}
+html body #tab-amici .gg-friend-chip.is-selected:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF24!important;border-color:#5AA9FF8C!important;color:#fff!important}
+html body #tab-amici .gg-root .gz-hero:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;gap:14px;padding:18px 16px!important;background:radial-gradient(70% 90% at 0 0,#FF8A5B2E,#FF8A5B00 60%),radial-gradient(70% 90% at 100% 0,#5AA9FF2E,#5AA9FF00 60%),#1C1C1E!important}
+html body #tab-amici .gz-top:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;justify-content:space-between;align-items:center;gap:8px 10px;flex-wrap:wrap}
+html body #tab-amici .gz-k:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#AEAEB2}
+html body #tab-amici .gz-badge:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;font-weight:700;color:#E5E5EA;background:#FFFFFF14;padding:4px 10px;border-radius:999px}
+html body #tab-amici .gz-badge.is-hot:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#fff;background:#FA114F}
+html body #tab-amici .gz-badge.is-win:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#2B1206;background:#FFB08A}
+html body #tab-amici .gz-line:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;align-items:center;gap:10px}
+html body #tab-amici .gz-face:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){flex:none;width:52px;height:52px;border-radius:50%;padding:3px;border:0;cursor:pointer;display:grid;place-items:center;box-sizing:border-box}
+html body #tab-amici .gz-face.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B}
+html body #tab-amici .gz-face.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF}
+html body #tab-amici .gz-face .gg-avatar:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:100%!important;height:100%!important;min-width:0!important;border-radius:50%!important;margin:0!important;font-size:1.1rem!important;box-shadow:none!important;border:0!important;outline:0!important}
+html body #tab-amici .gz-face.is-me .gg-avatar:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#3A2A24!important;color:#FFD2BD!important}
+html body #tab-amici .gz-face.is-pe .gg-avatar:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#1F2C3D!important;color:#CFE5FF!important}
+html body #tab-amici .gz-face .gg-avatar img:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border-radius:50%!important}
+html body #tab-amici .gz-mid:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}
+html body #tab-amici .gz-pts:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+html body #tab-amici .gz-pts>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.9rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+html body #tab-amici .gz-pts>b.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFB08A}
+html body #tab-amici .gz-pts>b.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#9CCBFF}
+html body #tab-amici .gz-pts>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.7rem;color:#8E8E93;text-align:center}
+html body #tab-amici .gz-tug:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;gap:3px;height:16px;border-radius:999px;overflow:hidden}
+html body #tab-amici .gz-tug>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:block;min-width:0;transition:flex-grow .5s ease}
+html body #tab-amici .gz-tug>.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(90deg,#FF8A5B,#FFB08A)}
+html body #tab-amici .gz-tug>.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:linear-gradient(90deg,#9CCBFF,#5AA9FF)}
+html body #tab-amici .gz-tug.is-zero>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){opacity:.3}
+html body #tab-amici .gz-streaks:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+html body #tab-amici .gz-streaks>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;font-size:.82rem;min-width:0;line-height:1.3}
+html body #tab-amici .gz-streaks svg:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+html body #tab-amici .gz-streaks>.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B1F;color:#FFD2BD}
+html body #tab-amici .gz-streaks>.is-me svg:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFB08A}
+html body #tab-amici .gz-streaks>.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#5AA9FF1F;color:#CFE5FF}
+html body #tab-amici .gz-streaks>.is-pe svg:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#9CCBFF}
+html body #tab-amici .gz-msg:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0;font-size:.92rem;color:#E5E5EA;line-height:1.45}
+html body #tab-amici .gz-msg b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#fff}
+html body #tab-amici .gz-tools:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;gap:8px;flex-wrap:wrap}
+html body #tab-amici .gz-tools .gg-btn:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f),html body #tab-amici .gz-tools .gg-share:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){min-height:36px!important;padding:7px 12px!important;font-size:.78rem!important;border-radius:999px!important;background:#FFFFFF0F!important;border:1px solid #3A3A3C!important;color:#E5E5EA!important;display:inline-flex;align-items:center;gap:6px;box-shadow:none!important;margin:0!important;width:auto!important}
+html body #tab-amici .gg-root .gz-days:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){padding:0!important;overflow:hidden}
+html body #tab-amici .gz-dh:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;justify-content:space-between;align-items:baseline;gap:4px 8px;flex-wrap:wrap;padding:16px 16px 10px}
+html body #tab-amici .gz-dh h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0;font-size:1rem;font-weight:700;color:#fff}
+html body #tab-amici .gz-dh small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;color:#8E8E93}
+html body #tab-amici .gz-day:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:62px 38px 38px minmax(0,1fr) 12px;align-items:center;gap:8px;width:100%;margin:0;padding:11px 16px;border:0;border-top:1px solid #2C2C2E;border-radius:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer;min-height:0}
+html body #tab-amici .gz-day.is-today:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#FF8A5B1A}
+html body #tab-amici .gz-date:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;min-width:0}
+html body #tab-amici .gz-date b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.9rem;color:#fff}
+html body #tab-amici .gz-date small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.74rem;color:#AEAEB2}
+html body #tab-amici .gz-coin:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:34px;height:34px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;font-size:.8rem;font-weight:800}
+html body #tab-amici .gz-coin.is-me.is-done:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:radial-gradient(circle at 35% 30%,#FFD2BD,#FF8A5B 70%);color:#2B1206;box-shadow:0 0 12px #FF8A5B55}
+html body #tab-amici .gz-coin.is-pe.is-done:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:radial-gradient(circle at 35% 30%,#CFE5FF,#5AA9FF 70%);color:#06223D;box-shadow:0 0 12px #5AA9FF55}
+html body #tab-amici .gz-coin.is-miss:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){background:#2C2C2E;color:#636366}
+html body #tab-amici .gz-coin.is-me.is-open:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border:2px dashed #FF8A5B;color:#FFB08A}
+html body #tab-amici .gz-coin.is-pe.is-open:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border:2px dashed #5AA9FF;color:#9CCBFF}
+html body #tab-amici .gz-coin.is-wait:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){border:2px solid #FF8A5B;color:#FFB08A}
+html body #tab-amici .gz-lab:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.82rem;min-width:0;line-height:1.3}
+html body #tab-amici .gz-lab.is-both:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#7FF0CC;font-weight:700}
+html body #tab-amici .gz-lab.is-me:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFC4A8}
+html body #tab-amici .gz-lab.is-pe:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#BFDDFF}
+html body #tab-amici .gz-lab.is-none:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#8E8E93}
+html body #tab-amici .gz-lab.is-open:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#FFD2BD;font-weight:700}
+html body #tab-amici .gz-chev:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#8E8E93}
+html body #tab-amici .gz-more>summary:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){padding:12px 16px 14px;border-top:1px solid #2C2C2E;font-size:.78rem;color:#AEAEB2;cursor:pointer;list-style:none}
+html body #tab-amici .gz-more>summary:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f)::-webkit-details-marker{display:none}
+html body #tab-amici .gz-more[open]>summary:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:none}
+html body #tab-amici .gz-cta-wrap:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 18px}
+html body #tab-amici .gz-cta-wrap .gg-btn:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:100%!important;min-height:50px!important;border-radius:16px!important;border:0!important;font-weight:800!important;font-size:.95rem!important;color:#2B1206!important;background:linear-gradient(135deg,#FFB08A,#FF8A5B)!important;box-shadow:none!important}
+html body #tab-amici .gz-done:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 18px;padding:12px 14px;border-radius:16px;background:#30D5A31A;color:#B5F5DF;font-size:.85rem;line-height:1.45}
+html body #tab-amici .gg-root .gz-team:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;align-items:center;padding:16px!important;background:radial-gradient(100% 80% at 0 0,#30D5A338,#30D5A300 60%),#1C1C1E!important;border-color:#30D5A359!important}
+html body #tab-amici .gz-ring:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:88px;height:88px;border-radius:50%;background:conic-gradient(#FF8A5B 0 var(--a),#5AA9FF var(--a) var(--b),#FFFFFF14 var(--b) 360deg);display:grid;place-items:center}
+html body #tab-amici .gz-ring>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:68px;height:68px;border-radius:50%;background:#1C1C1E;display:flex;align-items:center;justify-content:center;font-size:1.35rem;font-weight:800;color:#7FF0CC}
+html body #tab-amici .gz-ring>b>small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.72rem;color:#AEAEB2;font-weight:600}
+html body #tab-amici .gz-team h3:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 6px;font-size:1rem;color:#fff}
+html body #tab-amici .gz-team p:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){margin:0 0 6px;font-size:.84rem;color:#D1D1D6;line-height:1.45}
+html body #tab-amici .gz-prize:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.76rem;color:#7FF0CC;font-weight:700}
+html body #tab-amici .gz-team.is-achieved .gz-ring>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){color:#fff}
+@media(max-width:370px){
+html body #tab-amici .fz-av:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:72px;height:72px}
+html body #tab-amici .fz-av>i:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.6rem}
+html body #tab-amici .fz-w:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.55rem}
+html body #tab-amici .fz-hero:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);padding-inline:8px}
+html body #tab-amici .fz-vs:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:36px;height:36px;font-size:.7rem;margin-top:18px}
+html body #tab-amici .gz-day:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-template-columns:52px 34px 34px minmax(0,1fr) 10px;gap:6px;padding-inline:12px}
+html body #tab-amici .gz-coin:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:32px;height:32px}
+html body #tab-amici .gz-face:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:46px;height:46px}
+html body #tab-amici .gz-pts>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:1.6rem}
+html body #tab-amici .gg-root .gz-team:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){grid-template-columns:76px minmax(0,1fr)}
+html body #tab-amici .gz-ring:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:76px;height:76px}
+html body #tab-amici .gz-ring>b:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){width:58px;height:58px;font-size:1.15rem}
+}
+html body #tab-amici .gz-streaks>span>span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:flex;flex-direction:column;min-width:0}
+html body #tab-amici .gz-streaks small:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){font-size:.7rem;opacity:.75}
+html body #tab-amici .gz-more>summary .disclosure-cue:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f){display:none!important}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
