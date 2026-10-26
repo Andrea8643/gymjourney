@@ -11370,6 +11370,16 @@ function create(ctx,notify){
 root.GJGameSpark={create:create,describeError:describeError,serverDiary:serverDiary};
 })(typeof window!=='undefined'?window:this);
 
+/* Medaglie dei traguardi: lo stesso disegno in Profilo, Sfide, collezione e dettaglio */
+(function(root){'use strict';
+var CAT={Costanza:'#FF9F0A',Nutrizione:'#30D158',Movimento:'#0A84FF',Recupero:'#7D7AFF',Diario:'#64D2FF',Ricette:'#FFD60A',Distintivi:'#FA114F'};
+var ICO={streak:'🔥',diary:'📒',workouts:'🏋️',recipes:'🍳',macro:'🥗',balanced:'🥗',protein:'🍗',carbs:'🍝',fat:'🥑',fiber:'🥦',sleep:'🌙',rest:'🛋️',steps:'👟',weight:'⚖️',note:'✍️',weekend:'📅'};
+var REW={first:'👣',rhythm:'🎵',week:'⭐',fortnight:'⚡',month:'🏆',comeback:'🔄',team:'🤝'};
+function color(cat){return CAT[cat]||'#FF9F0A';}
+function icon(x){if(x&&x.reward)return REW[x.id]||'✦';return ICO[String(x&&x.id||'').split('-')[0]]||'✦';}
+function coin(x,o){o=o||{};var on=!!(x&&x.done),pct=x&&x.goal?Math.max(0,Math.min(1,(x.current||0)/x.goal)):0;return '<span class="gjb-coin'+(on?' is-on':' is-off')+(o.size?' gjb-'+o.size:'')+'" style="--cat:'+color(x&&x.category)+';--p:'+Math.round(pct*100)+'" aria-hidden="true"><em>'+icon(x)+'</em>'+(on||x&&x.blocked?'':'<i></i>')+'</span>';}
+root.GJBadge={color:color,icon:icon,coin:coin,CAT:CAT};
+})(typeof window!=='undefined'?window:this);
 /* Personal milestones derived exclusively from recorded data. No competitive points are written. */
 (function(root){'use strict';
 function valid(n){return typeof n==='number'&&Number.isFinite(n)&&n>=0;}
@@ -11455,18 +11465,23 @@ function create(ctx){
   function pendingCount(){return S.profile&&S.profile.enabled?S.pointers.filter(function(x){return x.pending&&x.open;}).length:0;}
   function current(){var peer=env().selected;return S.rounds.filter(function(g){return g.participants.includes(peer);}).sort(function(a,b){return (b.createdMs||0)-(a.createdMs||0);})[0]||null;}
   function statCards(){
-    var p=stats(),enabled=S.profile&&S.profile.enabled&&S.profile.ready,bounds=C.levelBounds(p.xp||0),progress=enabled?Math.max(0,Math.min(100,(p.xp-bounds.from)/(bounds.to-bounds.from)*100)):0;
-    return '<section class="gg-card gg-personal'+(S.celebrate?' gg-celebrate':'')+'"><div class="gg-section-head"><div><span class="gg-kicker">UNA GIORNATA ALLA VOLTA</span><h3>La tua costanza</h3></div>'+flame(p.streak)+'</div><div class="gg-stats"><div><span>Streak attuale</span><b>'+p.streak+'<small> giorni</small></b></div><div><span>Il tuo record</span><b>'+p.record+'<small> giorni</small></b></div><div><span>Diario completo</span><b>'+p.complete+'<small> date</small></b></div></div><p class="gg-note">'+(p.todayComplete?'Oggi il diario è completo.':p.streak?'Oggi è ancora in corso: la tua serie resta a '+p.streak+' giorni.':p.complete?'La prossima giornata completa può iniziare una nuova serie.':'La tua prima giornata completa dà inizio al percorso.')+'</p>'+(enabled?'<div class="gg-level"><span>Livello '+bounds.level+'</span><b>'+p.xp+' XP</b><div class="gg-progress"><i style="width:'+progress+'%"></i></div><small>'+Math.max(0,bounds.to-p.xp)+' XP al prossimo livello · bonus costanza ×'+p.multiplier.toLocaleString('it-IT')+'</small></div>':'<p class="gg-note">La serie viene dal tuo diario. Attiva le sfide per sbloccare livello e premi.</p>')+'<div class="gg-personal-actions">'+button('streak','Vedi i giorni')+(enabled?button('rewards','I tuoi distintivi'):'')+'</div></section>';
+    var p=stats(),xp=Math.max(0,Math.round(p.xp||0)),b=C.levelBounds(xp),pct=Math.max(0,Math.min(100,(xp-b.from)/(b.to-b.from)*100)),title='';(C.REWARDS||[]).forEach(function(r){if(r.at&&(p.record||0)>=r.at)title=r.title;});
+    var note=p.todayComplete?'Oggi il diario è completo: la serie continua.':p.streak?'Oggi è ancora in corso: completa il diario per portarla a '+(p.streak+1)+'.':p.complete?'La prossima giornata completa fa ripartire la serie.':'La tua prima giornata completa dà inizio alla serie.';
+    var mult=(p.multiplier||1).toLocaleString('it-IT');
+    return '<section class="gg-card gp-card gp-streak'+(S.celebrate?' gg-celebrate':'')+'"><div class="gp-streak-top">'+flame(p.streak)+'<div><span class="gp-k">La tua serie</span><b class="gp-big">'+p.streak+' <small>'+(p.streak===1?'giorno':'giorni')+'</small></b><span class="gp-sub">di diario completo di fila</span></div></div><div class="gp-pills"><span><b>'+p.record+'</b> il tuo record</span><span><b>'+p.complete+'</b> giornate complete</span></div><p class="gp-note">'+note+'</p>'+button('streak','Vedi i giorni')+'</section>'
+      +'<section class="gg-card gp-card gp-level"><div class="gp-level-top"><span class="gp-lv" aria-hidden="true">'+b.level+'</span><div><span class="gp-k">Livello personale</span><b>Livello '+b.level+(title?' · '+esc(title):'')+'</b></div><strong>'+xp.toLocaleString('it-IT')+' <small>XP</small></strong></div><div class="gp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(pct)+'" aria-label="Avanzamento verso il livello '+(b.level+1)+'"><i style="width:'+pct.toFixed(1)+'%"></i></div><small class="gp-sub">'+Math.max(0,b.to-xp).toLocaleString('it-IT')+' XP al livello '+(b.level+1)+' · bonus costanza ×'+mult+'</small><details class="g3-more gp-how"><summary>Come si guadagnano gli XP</summary><div class="g3-more-body"><p>Ogni giornata con il diario completo vale 20 XP. Il bonus costanza li moltiplica: ×1,10 da 3 giorni di fila, ×1,20 da 7, ×1,25 da 14. Una giornata già contata non vale di nuovo se la registri un’altra volta.</p><p>XP e livello sono solo tuoi: non cambiano i punti delle sfide con gli amici.</p></div></details></section>';
   }
   function flame(n){return '<span class="gg-fire '+(n?'is-lit':'is-cold')+'" aria-hidden="true"><svg viewBox="0 0 48 60"><defs><linearGradient id="gg-fire-color" x2="0" y2="1"><stop stop-color="#FFCB7A"/><stop offset="1" stop-color="#FA365A"/></linearGradient></defs><path class="flame-outer" fill="url(#gg-fire-color)" d="M25 2c4 15 18 20 18 35a19 19 0 0 1-38 0c0-8 4-15 10-21-1 9 1 13 5 15C27 25 28 14 25 2Z"/><path class="flame-inner" fill="#FFE8B2" d="M25 30c1 7 10 11 9 18-1 5-5 8-10 8s-9-4-9-9c0-6 7-10 10-17Z"/></svg></span>';}
   function milestones(){var input=ctx.milestones?ctx.milestones():{days:Object.fromEntries(ctx.days()),workouts:[],targets:function(){return {};}};return root.GJMilestones.evaluate(input,today(),stats());}
-  function milestoneCards(items){return '<div class="gg-milestone-grid">'+items.map(function(m){return '<button type="button" class="gg-milestone'+(m.done?' is-unlocked':!m.blocked&&m.current/m.goal>=0.75?' is-near':' is-progress')+'" data-game-action="milestone" data-key="'+m.id+'"><i aria-hidden="true">'+m.symbol+'</i><b>'+esc(m.name)+'</b><small>'+esc(m.category)+'</small><span class="gg-progress"><i style="width:'+Math.min(100,m.current/m.goal*100)+'%"></i></span><small>'+ (m.blocked?'Target da impostare':m.done?'✓ Raggiunto':m.blocked?'Target da impostare':(m.current/m.goal>=0.75?'Quasi! · ':'In corso · ')+m.current+' / '+m.goal)+'</small></button>';}).join('')+'</div>';}
-  function missionSection(){var m=milestones();return '<section class="gg-card"><div class="gg-section-head"><div><span class="gg-kicker">TRE PICCOLE MISSIONI</span><h3>Questa settimana, per te</h3></div>'+flame(m.missions.filter(function(x){return x.done;}).length)+'</div><p class="gg-mission-period">'+day(m.weekFrom)+' – '+day(m.weekTo)+' · nuove missioni ogni lunedì</p><div class="gg-quests">'+m.missions.map(function(x){return '<div class="gg-quest'+(x.done?' is-done':'')+'"><b aria-hidden="true">'+(x.done?'✓':x.current/x.goal>=0.75?'↗':'✧')+'</b><div><small class="gg-quest-state">'+(x.done?'✓ Completata':x.current/x.goal>=0.75?'Quasi completata':'In corso')+' · traguardo personale</small><h4>'+esc(x.name)+'</h4><p>'+esc(x.desc)+'</p></div><span>'+x.current+' / '+x.goal+'</span></div>';}).join('')+'</div><p class="gg-note">Contano i tuoi dati reali. Missioni personali: non cambiano i punti della gara e non richiedono di mangiare o allenarti di più.</p></section>';}
-  function collectionHTML(filter){var m=milestones(),owned=S.profile&&S.profile.badges||[],cats=['Tutti','Raggiunti','Da scoprire','Costanza','Nutrizione','Movimento','Recupero','Diario','Ricette'],items=m.items.filter(function(x){return filter==='Raggiunti'?x.done:filter==='Da scoprire'?!x.done:!filter||filter==='Tutti'||x.category===filter;});return '<p class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi · progressi riletti dal tuo storico</p><div class="gg-collection-toolbar" aria-label="Categorie dei traguardi">'+cats.map(function(c){return '<button type="button" data-game-action="collection-filter" data-key="'+c+'" aria-pressed="'+(c===(filter||'Tutti'))+'">'+c+'</button>';}).join('')+'</div>'+milestoneCards(items)+(!filter||filter==='Tutti'?'<section class="gg-profile-prizes"><header><span class="gg-kicker">PERSONALIZZA IL TUO PROFILO</span><h3>I tuoi distintivi</h3><p>Scegli il titolo da mostrare accanto al tuo nome nelle sfide. Alcuni distintivi aggiungono anche una cornice alla foto. Non cambiano il punteggio.</p></header>'+rewardCards(true)+'</section>':'');}
-  function showMilestone(id){var m=milestones().items.find(function(x){return x.id===id;});if(!m)return;dialog(m.name,'<div class="gg-milestone-detail"><i aria-hidden="true">'+m.symbol+'</i><p>'+esc(m.description)+'</p><strong>'+ (m.blocked?'Imposta il target nel piano':m.current+' / '+m.goal)+'</strong><p>'+ (m.done?'Traguardo raggiunto dai dati registrati.':'Il progresso si aggiorna quando registri o correggi i tuoi dati.')+'</p><small>Traguardo personale · nessuna modifica ai punti della gara</small></div>');}
+  function milestoneCards(items){var B=root.GJBadge;return '<div class="gjb-grid">'+items.map(function(m){return '<button type="button" class="gjb-tile'+(m.done?' is-on':'')+'" data-game-action="milestone" data-key="'+m.id+'" style="--cat:'+B.color(m.category)+'">'+B.coin(m)+'<b>'+esc(m.name)+'</b><small class="gjb-cat">'+esc(m.category)+'</small><small class="gjb-st">'+(m.blocked?'Target da impostare':m.done?'✓ Raggiunto':m.current+' / '+m.goal)+'</small></button>';}).join('')+'</div>';}
+  function missionSection(){var m=milestones(),MC=['#FF9F0A','#30D158','#64D2FF'],n=m.missions.filter(function(x){return x.done;}).length;return '<section class="gg-card gp-card gp-missions"><div class="gp-head"><div><span class="gp-k">Missioni della settimana</span><b>'+n+' di '+m.missions.length+' completate</b></div><small class="gp-period">'+day(m.weekFrom)+' – '+day(m.weekTo)+'</small></div><div class="gp-mlist">'+m.missions.map(function(x,i){var pct=Math.round(Math.min(1,x.current/x.goal)*100);return '<div class="gp-m'+(x.done?' is-done':'')+'" style="--mc:'+MC[i%3]+';--p:'+pct+'"><span class="gp-ring" aria-hidden="true"><b>'+(x.done?'✓':x.current+'/'+x.goal)+'</b></span><div><h4>'+esc(x.name)+'</h4><p>'+esc(x.desc)+'</p></div></div>';}).join('')+'</div><p class="gp-note">Nuove missioni ogni lunedì. Contano i tuoi dati reali e non cambiano i punti della gara.</p></section>';}
+  function collectionHTML(filter){var B=root.GJBadge,m=milestones(),owned=S.profile&&S.profile.badges||[],cats=['Tutti','Raggiunti','Da scoprire','Costanza','Nutrizione','Movimento','Recupero','Diario','Ricette'],items=m.items.filter(function(x){return filter==='Raggiunti'?x.done:filter==='Da scoprire'?!x.done:!filter||filter==='Tutti'||x.category===filter;}),got=m.unlocked+owned.length,tot=m.items.length+C.REWARDS.length;
+    return '<div class="gjb-head"><div class="gjb-count"><b>'+got+'</b><span>di '+tot+' traguardi raggiunti</span></div><div class="gjb-bar"><i style="width:'+(tot?Math.round(got/tot*100):0)+'%"></i></div><small>Si aggiornano da soli con i dati che registri.</small></div><div class="gjb-chips" aria-label="Categorie dei traguardi">'+cats.map(function(c){return '<button type="button" data-game-action="collection-filter" data-key="'+c+'" aria-pressed="'+(c===(filter||'Tutti'))+'"'+(B.CAT[c]?' style="--cat:'+B.CAT[c]+'"':'')+'>'+(B.CAT[c]?'<i aria-hidden="true"></i>':'')+c+'</button>';}).join('')+'</div>'+(items.length?milestoneCards(items):'<p class="gjb-empty">Nessun traguardo in questo gruppo.</p>')+(!filter||filter==='Tutti'?'<section class="gjb-prizes"><h3>I tuoi distintivi</h3><p>Il titolo da mostrare accanto al tuo nome nelle sfide. Alcuni aggiungono una cornice alla foto. Non cambiano il punteggio.</p>'+rewardCards(true)+'</section>':'');}
+  function showMilestone(id){var B=root.GJBadge,m=milestones().items.find(function(x){return x.id===id;});if(!m)return;var pct=m.goal?Math.min(100,Math.round(m.current/m.goal*100)):0;dialog(m.name,'<div class="gjb-detail" style="--cat:'+B.color(m.category)+'">'+B.coin(m,{size:'lg'})+'<span class="gjb-tag">'+esc(m.category)+'</span><p class="gjb-desc">'+esc(m.description)+'</p><div class="gjb-prog"><div class="gjb-bar"><i style="width:'+(m.done?100:pct)+'%"></i></div><b>'+(m.blocked?'Imposta il target nel piano':m.done?'✓ Raggiunto'+(m.total>m.goal?' · '+m.total+' in tutto':''):m.current+' / '+m.goal)+'</b></div><p class="gjb-note">'+(m.done?'Traguardo raggiunto con i dati registrati.':'Il progresso si aggiorna quando registri o correggi i tuoi dati.')+' Non cambia i punti della gara.</p></div>');}
   function rulesHTML(){return '<div class="gg-rules"><h3>Sette giorni. Un passo al giorno.</h3><p>Conferma le calorie del diario quando hai registrato tutto. La quantità mangiata non cambia i punti.</p><dl><div><dt>Ogni giornata completa</dt><dd>+10 punti</dd></div><div><dt>Arrivi a 5 giornate</dt><dd>+10 bonus</dd></div><div><dt>Le completi tutte e 7</dt><dd>+20 bonus</dd></div></dl><p>Massimo 100 punti a testa. Gli XP e i loro moltiplicatori fanno crescere il livello personale e non aumentano il punteggio della gara.</p><p>La sfida inizia alla mezzanotte successiva all’accettazione. Apri l’app online per sincronizzare il diario: dopo l’ultimo giorno hai ancora 48 ore. Le conferme arrivate dopo la scadenza non cambiano la gara.</p></div>';}
-  function rewardCards(all){var owned=S.profile&&S.profile.badges||[],stats0=stats(),rewards=all?C.REWARDS:C.REWARDS.slice(0,3);return '<div class="gg-reward-grid">'+rewards.map(function(r){var yes=owned.includes(r.id),desc=r.at?r.at+(r.at===1?' giorno completo':' giorni consecutivi'):r.id==='team'?'Missione di squadra completata':'Tre giorni consecutivi dopo una pausa';return '<button type="button" class="gg-reward'+(yes?' is-unlocked':'')+'" data-game-action="reward" data-key="'+r.id+'"><span class="gg-reward-icon" aria-hidden="true">'+r.symbol+'</span><b>'+esc(r.name)+'</b><small>'+esc(desc)+'</small><span class="gg-reward-state">'+(yes?'Sbloccato':r.at?Math.min(stats0.record,r.at)+' / '+r.at:'Da conquistare')+'</span></button>';}).join('')+'</div>';}
-  function rewardsSection(){var m=milestones(),owned=S.profile&&S.profile.badges||[],next=m.items.filter(function(x){return !x.done&&!x.blocked;}).sort(function(a,b){return b.current/b.goal-a.current/a.goal;}).slice(0,3);return '<section class="gg-card"><div class="gg-milestone-head"><div><span class="gg-kicker">PICCOLI TRAGUARDI, TUOI</span><h3>Una collezione che cresce con te</h3><span class="gg-collection-count">'+(m.unlocked+owned.length)+' / '+(m.items.length+C.REWARDS.length)+' traguardi</span></div>'+button('rewards','Esplora')+'</div>'+milestoneCards(next)+'</section>';}
+  function rewardCards(all){var B=root.GJBadge,owned=S.profile&&S.profile.badges||[],stats0=stats(),rewards=all?C.REWARDS:C.REWARDS.slice(0,3);return '<div class="gjb-grid">'+rewards.map(function(r){var yes=owned.includes(r.id),desc=r.at?r.at+(r.at===1?' giorno completo':' giorni di fila'):r.id==='team'?'Missione di squadra':'Ripartire dopo una pausa',x={id:r.id,reward:true,done:yes,category:'Distintivi',current:r.at?Math.min(stats0.record,r.at):0,goal:r.at||1};return '<button type="button" class="gjb-tile'+(yes?' is-on':'')+'" data-game-action="reward" data-key="'+r.id+'" style="--cat:'+B.color('Distintivi')+'">'+B.coin(x)+'<b>'+esc(r.name)+'</b><small class="gjb-cat">'+esc(desc)+'</small><small class="gjb-st">'+(yes?'✓ Sbloccato':r.at?x.current+' / '+r.at:'Da conquistare')+'</small></button>';}).join('')+'</div>';}
+  function rewardsSection(){var B=root.GJBadge,m=milestones(),owned=S.profile&&S.profile.badges||[],got=m.unlocked+owned.length,tot=m.items.length+C.REWARDS.length,done=m.items.filter(function(x){return x.done;}).sort(function(a,b){return b.goal-a.goal;}),seen={},pick=[];done.forEach(function(x){if(pick.length<3&&!seen[x.category]){seen[x.category]=1;pick.push(x);}});done.forEach(function(x){if(pick.length<3&&pick.indexOf(x)<0)pick.push(x);});var next=m.items.filter(function(x){return !x.done&&!x.blocked;}).sort(function(a,b){return b.current/b.goal-a.current/a.goal;}).slice(0,4-pick.length);
+    return '<section class="gg-card gp-card gp-trophies"><div class="gp-head"><div><span class="gp-k">Traguardi</span><b>'+got+' di '+tot+' raggiunti</b></div><button type="button" class="gp-link" data-game-action="rewards">Vedi tutti ›</button></div><div class="gp-shelf">'+pick.concat(next).map(function(x){return '<button type="button" class="gp-medal'+(x.done?' is-on':'')+'" data-game-action="milestone" data-key="'+x.id+'">'+B.coin(x)+'<b>'+esc(x.name)+'</b><small>'+(x.done?esc(x.category):x.current+' / '+x.goal)+'</small></button>';}).join('')+'</div></section>';}
 
   function stateLabel(x){return {complete:'Completo',open:'Oggi in corso',partial:'Da completare',unknown:'Dati non disponibili',future:'Deve ancora iniziare',pending:'In attesa di sincronizzazione'}[x.state]||'In attesa';}
   function displayRow(x,own,g){return own&&g&&g.status==='active'&&Date.now()<g.settleMs&&x.date<=C.dayAt(Date.now(),g.timezone)&&!x.complete&&C.eligible(ctx.days().get(x.date))?Object.assign({},x,{state:'pending'}):x;}
@@ -11512,7 +11527,7 @@ function create(ctx){
       '<button type="button" data-game-action="view" data-key="personal" aria-pressed="'+personal+'"><span aria-hidden="true">✦</span><span><b>Il mio percorso</b><small>Serie, XP e traguardi</small></span></button></div>';
     var intro='<header class="gg-hub-intro"><span class="gg-kicker">'+(personal?'IL TUO PERCORSO PERSONALE':'COSTANZA DA CONDIVIDERE')+'</span><h2>'+(personal?'Ogni passo lascia il segno.':'Insieme, una giornata alla volta.')+'</h2><p>'+(personal?'Qui crescono la tua serie, il livello e la collezione. Sono separati dai punti delle sfide con gli amici.':'La gara assegna fino a 100 punti a testa. La missione di squadra si costruisce insieme.')+'</p></header>';
     var guide='<section class="gg-personal-guide"><div><span class="gg-reward-tag">XP · livello personale</span><b>'+p.xp+' XP nel tuo percorso</b><p>Ogni giornata completa parte da 20 XP. Il bonus costanza è ×1,10 da 3 giorni, ×1,20 da 7 e ×1,25 da 14. Gli XP già assegnati alla data non aumentano registrandola di nuovo.</p></div><div><span class="gg-reward-tag">Traguardi · collezione</span><b>'+m.unlocked+' obiettivi personali raggiunti</b><p>Missioni settimanali e traguardi raccontano i dati che registri: non assegnano punti gara o XP aggiuntivi. Apri una tessera per leggere il criterio.</p></div></section>';
-    return '<div class="gg-hub gg-view-'+S.view+'">'+nav+intro+'<div class="gg-hub-pane"'+(personal?' hidden':'')+'>'+renderSocial()+'</div><div class="gg-hub-pane gg-personal-pane"'+(!personal?' hidden':'')+'>'+statusMessage()+statCards()+guide+missionSection()+rewardsSection()+'</div></div>';
+    return '<div class="gg-hub gg-view-'+S.view+'">'+nav+intro+'<div class="gg-hub-pane"'+(personal?' hidden':'')+'>'+renderSocial()+'</div><div class="gg-hub-pane gg-personal-pane"'+(!personal?' hidden':'')+'>'+statusMessage()+statCards()+missionSection()+rewardsSection()+'</div></div>';
   }
   function settingsHTML(){var p=S.profile,enabled=p&&p.enabled;return '<section class="gg-card gg-settings"><span class="gg-kicker">FACOLTATIVO, COME PIACE A TE</span><h3>Le tue sfide</h3><p>Gli amici vedono se partecipi e i distintivi che mostri. Solo i due partecipanti vedono date complete e punteggi della sfida. Calorie e peso seguono le preferenze qui sotto.</p>'+statusMessage()+(enabled?'<div class="gg-setting-active"><span>Partecipazione attiva</span><b>'+esc(p.timezone)+'</b></div>'+button('refresh','Aggiorna punti')+button('disable','Disattiva sfide'):'<label class="gg-consent"><input type="checkbox" data-game-consent'+(S.consent?' checked':'')+'> <span>Attivo le sfide e condivido partecipazione e premi con gli amici; date complete e punti con il mio sfidante.</span></label>'+button('enable','Attiva la partecipazione',null,'primary'))+'<p class="gg-note">Le sfide sono facoltative. Apri l’app online per aggiornare il diario e i punti. Disattivare la partecipazione annulla le sfide ancora aperte.</p></section>';}
   function closeDialog(){var d=S.dialog,opener=S.opener;S.dialog=null;S.opener=null;document.documentElement.classList.remove('gj-game-modal-open');if(!d)return;if(d.open)d.close();d.remove();if(opener&&opener.isConnected)opener.focus({preventScroll:true});}
@@ -11844,7 +11859,7 @@ function profileShelfHTML(m,owned){
   done.slice().sort(function(a,b){return b.goal-a.goal;}).forEach(function(x){if(pick.length<3&&!seen[x.category]){seen[x.category]=1;pick.push(x);}});
   done.slice().sort(function(a,b){return b.goal-a.goal;}).forEach(function(x){if(pick.length<3&&pick.indexOf(x)<0)pick.push(x);});
   var next=m.items.filter(function(x){return !x.done&&!x.blocked;}).sort(function(a,b){return b.current/b.goal-a.current/a.goal;})[0];
-  var ICO={streak:'🔥',diary:'📒',workouts:'🏋️',recipes:'🍳',macro:'🥗',balanced:'🥗',protein:'🍗',carbs:'🍝',fat:'🥑',fiber:'🥦',sleep:'🌙',rest:'🛋️',steps:'👟',weight:'⚖️',note:'✍️',weekend:'📅'},ico=function(x){return ICO[String(x.id).split('-')[0]]||esc(x.symbol||'✦');},medal=function(x,on){return '<button type="button" class="pe-medal'+(on?' is-on':' is-next')+'" data-pe-milestone="'+esc(x.id)+'" aria-label="'+esc(x.name+(on?', raggiunto':', prossimo traguardo: '+x.current+' su '+x.goal))+'"><span class="pe-coin" aria-hidden="true"><em>'+ico(x)+'</em>'+(on?'':'<i style="--p:'+Math.round(Math.min(1,x.current/x.goal)*100)+'"></i>')+'</span><b>'+esc(x.name)+'</b><small>'+(on?esc(x.category):x.current+' / '+x.goal)+'</small></button>';};
+  var ICO={streak:'🔥',diary:'📒',workouts:'🏋️',recipes:'🍳',macro:'🥗',balanced:'🥗',protein:'🍗',carbs:'🍝',fat:'🥑',fiber:'🥦',sleep:'🌙',rest:'🛋️',steps:'👟',weight:'⚖️',note:'✍️',weekend:'📅'},ico=function(x){return ICO[String(x.id).split('-')[0]]||esc(x.symbol||'✦');},medal=function(x,on){return '<button type="button" class="pe-medal'+(on?' is-on':' is-next')+'" data-pe-milestone="'+esc(x.id)+'" aria-label="'+esc(x.name+(on?', raggiunto':', prossimo traguardo: '+x.current+' su '+x.goal))+'">'+(window.GJBadge?GJBadge.coin(x):'<span class="pe-coin"><em>'+ico(x)+'</em></span>')+'<b>'+esc(x.name)+'</b><small>'+(on?esc(x.category):x.current+' / '+x.goal)+'</small></button>';};
   var h=pick.map(function(x){return medal(x,true);}).join('')+(next?medal(next,false):'');
   if(!h)h='<p class="pe-empty">Il primo traguardo arriva con la prima giornata completa del diario.</p>';
   return '<div class="pe-shelf-head"><h3>Traguardi</h3><button type="button" class="pe-count" data-pe-collection>'+got+' / '+total+' <span aria-hidden="true">›</span></button></div><div class="pe-shelf">'+h+'</div>';
@@ -12590,6 +12605,23 @@ function renderOggiPeso() {
     + '<span class="op-main"><small>Tendenza del peso</small><b>' + (NW ? fmt(NW.w, 1) + ' <i>kg</i>' : 'Nessuna pesata') + '</b></span>'
     + '<span class="op-meta">' + meta.map(function (m) { return '<span>' + m + '</span>'; }).join('') + '</span><span class="op-chev" aria-hidden="true">›</span>';
 }
+
+/* Oggi: l'allenamento del giorno a colpo d'occhio */
+function renderHtWork() {
+  var box = document.getElementById('ht-work'), mac = document.getElementById('ht-macros');
+  if (!box && mac) { box = document.createElement('button'); box.type = 'button'; box.id = 'ht-work'; box.className = 'ht-work'; box.dataset.goview = 'giorno'; mac.parentNode.insertBefore(box, mac.nextSibling); }
+  if (!box) return;
+  var d = ringDay(), t = todayStr(), day = state.days.get(d) || {}, ws = Array.from((state.workouts || new Map()).values()).filter(function (w) { return w.date === d; }).sort(function (a, b) { return (a.start || '') < (b.start || '') ? -1 : 1; });
+  var who = d === t ? 'Oggi' : cap(fmtShort(d)), cls = 'is-none', val = 'nessun allenamento', sub = '';
+  if (day.riposo === true) { cls = 'is-rest'; val = 'riposo'; }
+  else if (ws.length) { cls = 'is-done'; val = ws.map(function (w) { return w.title || 'Seduta'; }).join(' + '); var mins = ws.reduce(function (a, w) { return a + (w.durMin || 0); }, 0); sub = mins ? fmtDur(mins) : ''; }
+  box.className = 'ht-work ' + cls;
+  box.setAttribute('aria-label', who + ': ' + val + '. Apri il giorno nei Progressi');
+  box.innerHTML = '<span class="ht-wi" aria-hidden="true">' + (cls === 'is-rest' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>') + '</span><span class="ht-wt"><b>' + esc(who) + ':</b> ' + esc(val) + '</span>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '<span class="ht-wc" aria-hidden="true">›</span>';
+}
+var renderTodayRingsBase = renderTodayRings;
+renderTodayRings = function () { renderTodayRingsBase.apply(this, arguments); try { renderHtWork(); } catch (e) {} };
+try { renderHtWork(); } catch (e) {}
 var renderHeroBase = renderHero;
 renderHero = function () { renderHeroBase.apply(this, arguments); try { renderOggiPeso(); } catch (e) {} };
 try { renderOggiPeso(); } catch (e) {}
@@ -16222,7 +16254,7 @@ html body main .wk-mid small:not(#a):not(#b){white-space:normal;overflow:visible
 html body main .wkm-row span:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
 html body main .sx-ex:not(#a):not(#b){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
 html body #tab-diario #d-date-txt:not(#a):not(#b):not(#c):not(#d){white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
-html body #tab-dati .pe-medal b:not(#a):not(#b){display:block;-webkit-line-clamp:unset;overflow:visible;overflow-wrap:anywhere;hyphens:auto}
+html body #tab-dati .pe-medal b:not(#a):not(#b){display:block;-webkit-line-clamp:unset;overflow:visible;overflow-wrap:break-word;hyphens:manual}
 /* pulsanti «Apri / Chiudi»: pillola come il resto dell'app */
 html body .disclosure-cue:not(#a):not(#b){border-radius:999px!important;padding-inline:12px!important}
 @media(max-width:380px){html body .disclosure-cue:not(#a):not(#b){padding-inline:10px!important}}
@@ -16370,6 +16402,125 @@ html body main .need-sum:not(#a){gap:6px!important}
 html body main .need-sum>div:not(#a):not(#b){padding:12px 10px!important}
 html body main .need-sum>div small:not(#a):not(#b){font-size:clamp(.64rem,2.9vw,.76rem)!important;letter-spacing:-.01em}
 @media(max-width:359px){html body main .need-sum>div small:not(#a):not(#b):not(#c){font-size:.6rem!important}html body main .need-sum>div:not(#a):not(#b):not(#c){padding:11px 8px!important}}
+
+/* ===== Medaglie dei traguardi (stesso disegno ovunque) ===== */
+.gjb-coin{position:relative;flex:0 0 auto;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:24px;line-height:1;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F5C451 55%,#C9922A);box-shadow:inset 0 -3px 0 #0003,0 6px 14px -6px #C9922A99}
+.gjb-coin em{font-style:normal;line-height:1}
+.gjb-coin.is-off{background:#2C2C2E;box-shadow:inset 0 0 0 1.5px #3A3A3C}
+.gjb-coin.is-off em{filter:grayscale(1);opacity:.55}
+.gjb-coin.is-off i{position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--cat,#FA114F) calc(var(--p)*1%),transparent 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
+.gjb-coin.gjb-lg{width:104px;height:104px;font-size:46px}
+.gjb-coin.gjb-lg.is-off i{inset:-6px;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px))}
+#tab-dati .pe-medal .gjb-coin{width:54px;height:54px}
+@media(min-width:700px){#tab-dati .pe-medal .gjb-coin{width:62px;height:62px;font-size:27px}}
+@media(max-width:359px){#tab-dati .pe-medal .gjb-coin{width:46px;height:46px;font-size:20px}}
+/* collezione */
+html body .gg-dialog:not(#a):not(#b){background:#151517!important;border:1px solid #FFFFFF14!important;color:#F2F2F7}
+html body .gg-dialog .gg-dialog-layout > header:not(#a){background:#1C1C1E!important;border-bottom:1px solid #FFFFFF12!important}
+html body .gg-dialog [data-game-action="close"]:not(#a):not(#b){background:#2C2C2E!important;border:0!important;color:#fff!important;border-radius:50%!important}
+.gjb-head{display:grid;gap:8px;padding:16px;border-radius:20px;background:linear-gradient(135deg,#FF9F0A1F,#FA114F14),#1C1C1E;border:1px solid #FF9F0A33;margin-bottom:14px}
+.gjb-count{display:flex;align-items:baseline;gap:8px}.gjb-count b{font-size:2rem;font-weight:800;color:#fff;line-height:1}.gjb-count span{color:#D1D1D6;font-size:.92rem}
+.gjb-bar{height:8px;border-radius:99px;background:#FFFFFF14;overflow:hidden}.gjb-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#FFB340,var(--cat,#FA114F))}
+.gjb-head small{color:#98989F;font-size:.78rem}
+.gjb-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+html body .gjb-chips button:not(#a):not(#b){display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid #FFFFFF1A;background:#1C1C1E;color:#D1D1D6;font-size:.82rem;font-weight:600;cursor:pointer}
+.gjb-chips button i{width:8px;height:8px;border-radius:50%;background:var(--cat)}
+html body .gjb-chips button[aria-pressed="true"]:not(#a):not(#b){background:var(--cat,#F2F2F7);border-color:transparent;color:#111}
+html body .gjb-chips button[aria-pressed="true"] i{background:#111}
+.gjb-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media(min-width:620px){.gjb-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+html body .gjb-tile:not(#a):not(#b){display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:14px 6px 12px;border-radius:18px;background:#1C1C1E;border:1px solid #FFFFFF10;color:inherit;cursor:pointer;min-width:0;font:inherit}
+html body .gjb-tile.is-on:not(#a):not(#b){background:linear-gradient(180deg,color-mix(in srgb,var(--cat) 16%,#1C1C1E),#1C1C1E 75%);border-color:color-mix(in srgb,var(--cat) 35%,transparent)}
+.gjb-tile .gjb-coin{margin-bottom:6px}
+.gjb-tile b{font-size:.8rem;line-height:1.25;color:#fff;font-weight:700;overflow-wrap:anywhere}
+.gjb-tile:not(.is-on) b{color:#AEAEB2}
+.gjb-cat{font-size:.7rem;color:var(--cat);font-weight:600}
+.gjb-st{font-size:.7rem;color:#8E8E93;font-variant-numeric:tabular-nums}
+.gjb-tile.is-on .gjb-st{color:#D1D1D6}
+.gjb-empty{color:#98989F;text-align:center;padding:20px 0}
+.gjb-prizes{margin-top:22px;padding-top:16px;border-top:1px solid #FFFFFF12}
+.gjb-prizes h3{margin:0 0 4px;color:#fff;font-size:1.05rem}.gjb-prizes p{margin:0 0 12px;color:#98989F;font-size:.84rem;line-height:1.45}
+/* dettaglio del traguardo */
+.gjb-detail{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:10px 4px 4px}
+.gjb-tag{padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--cat) 18%,transparent);color:var(--cat);font-weight:700;font-size:.8rem}
+.gjb-desc{margin:0;color:#E5E5EA;font-size:.95rem;line-height:1.5;max-width:380px}
+.gjb-prog{width:100%;max-width:340px;display:grid;gap:6px}.gjb-prog b{color:#fff;font-variant-numeric:tabular-nums}
+.gjb-prog .gjb-bar i{background:var(--cat)}
+.gjb-note{margin:0;color:#8E8E93;font-size:.8rem;line-height:1.45;max-width:380px}
+/* ===== Il mio percorso (Sfide) ===== */
+html body #tab-amici .gp-card:not(#a):not(#b):not(#c){padding:18px!important;border-radius:22px!important}
+.gp-k{display:block;font-size:.78rem;font-weight:700;color:#AEAEB2;letter-spacing:.01em}
+.gp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:12px}.gp-head b{display:block;color:#fff;font-size:1.1rem;margin-top:2px}
+.gp-period{color:#98989F;font-size:.78rem;white-space:nowrap}
+html body #tab-amici .gp-link:not(#a):not(#b){background:none;border:0;color:#FF9F0A;font-weight:700;font-size:.9rem;cursor:pointer;padding:4px 0}
+.gp-note{color:#98989F;font-size:.82rem;line-height:1.45;margin:10px 0}
+.gp-sub{color:#AEAEB2;font-size:.82rem}
+html body #tab-amici .gp-streak:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 0 0,#FF9F0A33,transparent 60%),linear-gradient(160deg,#2A1E10,#1C1A18)!important;border:1px solid #FF9F0A40!important}
+.gp-streak-top{display:flex;align-items:center;gap:14px}.gp-streak-top .gg-fire svg{width:46px;height:56px}
+.gp-big{display:block;font-size:2.4rem;font-weight:800;color:#fff;line-height:1.05;letter-spacing:-.02em}.gp-big small{font-size:1rem;color:#FFC266;font-weight:700}
+.gp-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}.gp-pills span{padding:6px 11px;border-radius:999px;background:#FFFFFF10;color:#D1D1D6;font-size:.8rem}.gp-pills b{color:#fff}
+html body #tab-amici .gp-level:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 100% 0,#FA114F2E,transparent 60%),#1C1C1E!important;border:1px solid #FA114F33!important}
+.gp-level-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}.gp-level-top > div{flex:1;min-width:0}.gp-level-top b{display:block;color:#fff;font-size:1.02rem;margin-top:2px}
+.gp-level-top strong{color:#fff;font-size:1.1rem;white-space:nowrap}.gp-level-top strong small{color:#AEAEB2;font-size:.75rem}
+.gp-lv{flex:0 0 auto;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:20px;font-weight:800;color:#fff;background:linear-gradient(145deg,#FF3B6B,#FA114F)}
+.gp-bar{height:9px;border-radius:99px;background:#FFFFFF14;overflow:hidden;margin-bottom:6px}.gp-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#FA114F,#FF9F0A)}
+.gp-how{margin-top:10px}
+html body #tab-amici .gp-missions:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 0 0,#30D1581F,transparent 60%),#1C1C1E!important;border:1px solid #30D15833!important}
+.gp-mlist{display:grid;gap:8px}
+.gp-m{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:#FFFFFF08}
+.gp-m h4{margin:0 0 2px;font-size:.92rem;color:#fff}.gp-m p{margin:0;font-size:.8rem;color:#AEAEB2;line-height:1.35}
+.gp-ring{flex:0 0 auto;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--mc) calc(var(--p)*1%),#FFFFFF14 0);position:relative}
+.gp-ring::before{content:'';position:absolute;inset:5px;border-radius:50%;background:#1E1E20}
+.gp-ring b{position:relative;font-size:.78rem;color:#fff;font-variant-numeric:tabular-nums}
+.gp-m.is-done .gp-ring b{color:var(--mc);font-size:1.1rem}
+html body #tab-amici .gp-trophies:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 100% 0,#FFB3402B,transparent 60%),#1C1C1E!important;border:1px solid #FFB34033!important}
+.gp-shelf{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+html body #tab-amici .gp-medal:not(#a):not(#b){background:none;border:0;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;cursor:pointer;min-width:0;color:inherit;font:inherit}
+.gp-medal b{font-size:.74rem;line-height:1.25;color:#fff;font-weight:700;overflow-wrap:anywhere}.gp-medal:not(.is-on) b{color:#AEAEB2}
+.gp-medal small{font-size:.68rem;color:#8E8E93}
+@media(max-width:359px){.gp-shelf .gjb-coin{width:46px;height:46px;font-size:20px}}
+/* ===== Amici: colori (Tu corallo, l'amico azzurro, squadra verde acqua) ===== */
+html body #tab-amici :is(.gg-card,#friend-comparison,.friends-code-card,.friends-add,.friends-settings,.gg-settings,.friends-intro):not(#a):not(#b):not(#c){background:#1C1C1E!important;background-image:none!important;border:1px solid #FFFFFF12!important;box-shadow:none!important}
+html body #tab-amici .gg-hub-switch button[aria-pressed="true"]:not(#a):not(#b):not(#c):not(#d):not(#e){background:linear-gradient(135deg,#FFB08A,#FF8A5B)!important;color:#2B1206!important}
+html body #tab-amici .gg-hub-switch button[aria-pressed="true"] small:not(#a):not(#b){color:#5A2A12!important}
+html body #tab-amici .gg-duel:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(90% 70% at 0 0,#FF8A5B30,transparent 60%),radial-gradient(90% 70% at 100% 0,#5AA9FF30,transparent 60%),#1C1C1E!important;border:1px solid #FFFFFF16!important;border-top:1px solid #FFFFFF16!important}
+html body #tab-amici .gg-player:not(#a):not(#b){background:#FFFFFF08!important;border:1px solid #FFFFFF12!important}
+html body #tab-amici .gg-player-own .gg-progress i,html body #tab-amici .gg-day-own.done{background:#FF8A5B!important;color:#2B1206!important}
+html body #tab-amici .gg-player-peer .gg-progress i,html body #tab-amici .gg-day-peer.done{background:#5AA9FF!important;color:#06223D!important}
+html body #tab-amici .gg-player-own strong{color:#FFB08A!important}html body #tab-amici .gg-player-peer strong{color:#9CCBFF!important}
+html body #tab-amici .gg-day:not(#a):not(#b){background:#FFFFFF08!important;border:1px solid #FFFFFF10!important}
+html body #tab-amici .gg-day.is-today:not(#a):not(#b){border-color:#FFFFFF55!important}
+html body #tab-amici .gg-next:not(#a):not(#b){background:#FF8A5B14!important;border:1px solid #FF8A5B33!important}
+html body #tab-amici .gg-primary:not(#a):not(#b):not(#c):not(#d){background:linear-gradient(135deg,#FFB08A,#FF8A5B)!important;border-color:transparent!important;color:#2B1206!important;-webkit-text-fill-color:#2B1206!important}
+html body #tab-amici .gg-ledger:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 100% 0,#FFB3402B,transparent 60%),#1C1C1E!important;border:1px solid #FFB34033!important}
+html body #tab-amici .gg-ledger .is-earned .gg-state-symbol{background:#FFB340;color:#2B1A00}
+html body #tab-amici .gg-team:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 0 0,#30D5A32E,transparent 60%),#1C1C1E!important;border:1px solid #30D5A340!important}
+html body #tab-amici .gg-team .gg-progress i{background:linear-gradient(90deg,#30D5A3,#64D2FF)!important}
+html body #tab-amici .gg-team-count b{color:#7FF0CC!important}
+html body #tab-amici .gg-kicker{color:#FFB08A}
+html body #tab-amici .gg-team .gg-kicker{color:#7FF0CC}html body #tab-amici .gg-ledger .gg-kicker{color:#FFC266}
+html body #tab-amici .gg-friend-chip.is-selected:not(#a):not(#b){background:#5AA9FF26!important;border-color:#5AA9FF66!important}
+/* Confronto */
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(80% 45% at 0 0,#FF8A5B26,transparent 60%),radial-gradient(80% 45% at 100% 0,#5AA9FF26,transparent 60%),#1C1C1E!important}
+html body #tab-amici .fa-row:not(#a):not(#b){background:#FFFFFF06!important;border:1px solid #FFFFFF0E!important;border-radius:18px!important;padding:14px!important;margin-top:10px}
+html body #tab-amici .friends-pill[aria-pressed="true"]:not(#a):not(#b){background:#5AA9FF26!important;border-color:#5AA9FF66!important;color:#fff!important}
+html body #tab-amici .friends-period button[aria-pressed="true"]:not(#a):not(#b):not(#c){background:#F2F2F7!important;color:#141216!important}
+html body #tab-amici .friends-code-card:not(#a):not(#b):not(#c):not(#d){background:radial-gradient(120% 80% at 0 0,#FF8A5B26,transparent 60%),#1C1C1E!important;border-color:#FF8A5B40!important}
+html body #tab-amici .friends-code-card b{color:#FFB08A}
+/* ===== Oggi: allenamento del giorno ===== */
+html body #hero-today .ht-work:not(#a):not(#b){display:flex;align-items:center;gap:10px;width:100%;margin:14px 0 2px;padding:11px 14px;border-radius:16px;border:1px solid #FFFFFF12;background:#FFFFFF08;color:#D1D1D6;font:inherit;text-align:left;cursor:pointer}
+.ht-work .ht-wi{flex:0 0 auto;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:#3A3A3C;color:#AEAEB2}
+.ht-work .ht-wi svg{width:18px;height:18px}
+.ht-work .ht-wt{flex:1;min-width:0;font-size:.92rem;line-height:1.3}.ht-work .ht-wt b{color:#fff}
+.ht-work small{color:#AEAEB2;font-size:.8rem;white-space:nowrap}
+.ht-work .ht-wc{color:#8E8E93;font-size:1.2rem}
+html body #hero-today .ht-work.is-done:not(#a):not(#b){background:linear-gradient(135deg,#BF5AF22E,#BF5AF20D);border-color:#BF5AF255}
+.ht-work.is-done .ht-wi{background:#BF5AF2;color:#fff}.ht-work.is-done .ht-wt{color:#fff}
+html body #hero-today .ht-work.is-rest:not(#a):not(#b){background:linear-gradient(135deg,#5E5CE62E,#5E5CE60D);border-color:#5E5CE655}
+.ht-work.is-rest .ht-wi{background:#5E5CE6;color:#fff}
+
+html body .gg-dialog button:focus:not(:focus-visible):not(#a){outline:none!important;box-shadow:none!important}
+html body #tab-amici .gg-team-mark:not(#a){color:#7FF0CC!important;border-color:#7FF0CC!important}
 </style>
 
 <!-- G9 · registrare in un tocco da ogni sezione -->
