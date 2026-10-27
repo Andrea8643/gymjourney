@@ -3312,14 +3312,16 @@ function dayActivity(ctx, d, opts) {
   var we = dWd(d) >= 5 && hb.stepsWeekend > 0, habitSteps = med != null ? med : we ? hb.stepsWeekend : hb.steps > 0 ? hb.steps : null;
   if (mode === 'osservato' && (st === 'completo' || st === 'da_confermare') && isNum(+day.steps)) { steps = +day.steps; so = 'diario'; }
   else if (st === 'zero_confermato') { steps = 0; so = 'zero confermato'; }
+  /* oggi, giornata ancora aperta: i passi già scritti sono un minimo sicuro; se superano l'abitudine valgono loro */
+  else if (st === 'parziale' && isNum(+day.steps) && +day.steps > 0 && (habitSteps == null || +day.steps >= habitSteps)) { steps = +day.steps; so = 'diario, giornata in corso'; }
   else if (habitSteps != null) { steps = habitSteps; so = med != null ? 'mediana dei tuoi giorni registrati prima' + (hb.steps > 0 && Math.abs(med - hb.steps) > 0.2 * hb.steps ? ' (avevi dichiarato ' + nf(hb.steps) + ': uso quello che registri)' : '') : we ? 'abitudine dichiarata (fine settimana)' : 'abitudine dichiarata'; }
   else { steps = K.STEPS_UNK[1]; so = 'non noti: valore tipico, intervallo ' + nf(K.STEPS_UNK[0]) + '–' + nf(K.STEPS_UNK[2]) + ' passi'; out.stepsUnknown = true; out.note.push('passi non noti e nessuna abitudine indicata: valore tipico con intervallo (registro: passi_ignoti), non zero'); }
-  out.steps = steps; out.orig.steps = so; out.stepsSem = sem; out.stepsState = so === 'diario' ? st : so === 'zero confermato' ? 'zero_confermato' : 'mancante';
+  out.steps = steps; out.orig.steps = so; out.stepsSem = sem; out.stepsState = so === 'diario' || so === 'diario, giornata in corso' ? st : so === 'zero confermato' ? 'zero_confermato' : 'mancante';
   var gymSteps = 0;
   out.parts.steps = stepCost(steps); sLo = sHi = out.parts.steps;
   if (out.stepsUnknown) { sLo = stepCost(K.STEPS_UNK[0]); sHi = stepCost(K.STEPS_UNK[2]); }
   /* passi da abitudine o mediana: intervallo dalla dispersione registrata (quartili) o dalla variabilità dichiarata (registro: passi_variabilita) */
-  else if (so !== 'diario' && so !== 'zero confermato') {
+  else if (so !== 'diario' && so !== 'zero confermato' && so !== 'diario, giornata in corso') {
     var spr = med != null && ctx.stepsSpread ? ctx.stepsSpread(ref) : null, dv = K.STEPS_VAR[hb.stepsVar];
     if (spr) { sLo = stepCost(Math.min(steps, spr[0])); sHi = stepCost(Math.max(steps, spr[1])); }
     else if (dv) { sLo = stepCost(Math.max(0, steps - dv)); sHi = stepCost(steps + dv); }
