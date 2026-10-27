@@ -13102,6 +13102,8 @@ function installWeightConditionPicker(form, box) {
     FIELDS.concat(XF).forEach(function (x) { var v = parse(x.k, f[x.k].value); if (v === undefined) bad.push(x.l.replace(/ \(.*\)$/, '') + ' (' + HINT[x.k] + ')'); else vals[x.k] = v; });
     var ks = f.kcalState.value;
     if (ks === 'zero_confermato' && vals.kcal > 0) bad.push('Calorie: con «digiuno confermato» lascia vuoto o scrivi 0');
+    /* 0 calorie con «Completa» vuol dire digiuno: lo salvo come digiuno confermato */
+    if (vals.kcal === 0 && ks === 'completo' && date <= todayStr()) ks = 'zero_confermato';
     if (vals.kcal === 0 && ks !== 'zero_confermato') vals.kcal = null;
     if (vals.kcal > 0 && !ks) bad.push('Calorie del giorno: scegli se la giornata è completa o parziale');
     if (ks === 'completo' && date > todayStr()) bad.push('un giorno futuro non può essere completo');
