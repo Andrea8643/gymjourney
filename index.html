@@ -2985,7 +2985,8 @@ function fieldState(day, k, isToday) {
     return isToday ? 'parziale' : 'da_confermare';
   }
   /* passi: completi solo se la giornata è segnata completa; un giorno passato non basta (sezione 10) */
-  if (k === 'steps') return +v === 0 ? 'da_confermare' : isToday ? 'parziale' : day.st && (day.st.kcal === 'completo' || day.st.kcal === 'zero_confermato') ? 'completo' : 'da_confermare';
+  /* oggi: con la giornata segnata completa (o digiuno confermato) anche i passi scritti sono definitivi */
+  if (k === 'steps') { var closed = day.st && (day.st.kcal === 'completo' || day.st.kcal === 'zero_confermato'); return +v === 0 ? 'da_confermare' : closed ? 'completo' : isToday ? 'parziale' : 'da_confermare'; }
   return 'completo';
 }
 /* introito usabile: solo giornate dichiarate complete (o digiuno confermato) */
