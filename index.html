@@ -5064,36 +5064,39 @@ function planImpact(ctx, out, v, z, base, asOf) {
   if (!p.complete) { p.why = 'Servono giornate complete con un obiettivo calorico attivo.'; return p; }
   if (!dir || !(p.goalWeight > 0)) { p.why = 'Scostamenti disponibili; per confrontare le date serve un obiettivo di peso in deficit o surplus.'; return p; }
   if (!base.ok || !z || !(z.kcal > 0)) { p.why = 'Per confrontare le date servono un piano e un consumo stimato disponibili.'; return p; }
-  if (p.unknownTarget) { p.why = 'Mancano obiettivi storici: non posso ricostruire le due date in modo coerente.'; return p; }
-  var startWeights = weighIns(ctx, asOf).acc.filter(function (x) { return x.d === from; });
-  var initial = startWeights.length ? startWeights[0].w : versions.length && from === versions[0].from && ctx.profile && +ctx.profile.weight;
-  if (!(initial > 0) || !isFinite(initial)) { p.why = 'Manca un peso iniziale del percorso utilizzabile.'; return p; }
+  if (p.unknownTarget) { p.why = p.unknownTarget + (p.unknownTarget === 1 ? ' giorno' : ' giorni') + ' del periodo non hanno un obiettivo di calorie: non posso rifare il percorso in modo coerente.'; return p; }
+  var itDay = function (d) { var q = d.split('-'); return (+q[2]) + ' ' + ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'][+q[1] - 1]; };
+  var acc = weighIns(ctx, asOf).acc, startWeights = acc.filter(function (x) { return x.d === from; });
+  var near = startWeights.length ? [] : acc.filter(function (x) { return x.d > from && dDiff(from, x.d) <= 7; }).sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+  var profW = versions.length && from === versions[0].from && ctx.profile && +ctx.profile.weight;
+  var initial = startWeights.length ? startWeights[0].w : near.length ? near[0].w : profW;
+  if (!(initial > 0) || !isFinite(initial)) { p.why = 'Manca una pesata vicino all’inizio del piano (il ' + itDay(from) + ' o nei 7 giorni dopo): senza un peso di partenza non posso rifare il percorso.'; return p; }
   // Profile weight is the declared starting weight, not a later measurement silently moved to the start.
-  p.initialWeight = initial; p.initialOrigin = startWeights.length ? 'pesata di inizio percorso' : 'peso iniziale dichiarato nel profilo';
+  p.initialWeight = initial; p.initialOrigin = startWeights.length ? 'pesata di inizio percorso' : near.length ? 'prima pesata dopo l’inizio, il ' + itDay(near[0].d) : 'peso iniziale dichiarato nel profilo';
   if ((p.goalWeight - initial) * dir <= 0) { p.why = 'Il peso iniziale è già oltre il traguardo nella direzione del piano.'; return p; }
-  if (p.rows.some(function (x) { return x.B == null; })) { p.why = 'Consumo storico non disponibile per tutto il periodo.'; return p; }
+  if (p.rows.some(function (x) { return x.B == null; })) { p.why = 'Per alcuni giorni del periodo manca la stima del consumo: non posso rifare il percorso giorno per giorno.'; return p; }
   var slope = base.perKg || 0;
   function run(rho) {
-    var wp = initial, wr = initial, crossed = false, rr = rho !== K.RHO && base.rhoK && base.rhoK[rho] ? base.rhoK[rho] / base.k : 1;
+    var wp = initial, wr = initial, cp = null, cr = null, rr = rho !== K.RHO && base.rhoK && base.rhoK[rho] ? base.rhoK[rho] / base.k : 1;
     p.rows.forEach(function (x) {
       var bp = rr * (x.B + slope * (wp - x.W)), br = rr * (x.B + slope * (wr - x.W));
       wp -= (bp - (1 - K.TEF) * x.target) / (rho * rs);
       wr -= (br - (1 - K.TEF) * x.intake) / (rho * rs);
-      if ((wp - p.goalWeight) * dir >= 0 || (wr - p.goalWeight) * dir >= 0) crossed = true;
+      if (cp == null && (wp - p.goalWeight) * dir >= 0) cp = x.d;
+      if (cr == null && (wr - p.goalWeight) * dir >= 0) cr = x.d;
     });
-    if (crossed) return { why: 'Almeno uno scenario attraversa già il traguardo nel periodo storico: non mostro uno spostamento cumulativo della data.' };
     var futureFrom = dAdd(end, 1), futureB = base.Bh, refW = base.W;
     function arrive(w) {
       var n = arrival({ w0: w, B0: rr * (futureB + slope * (w - refW)), perKg: rr * slope, I: z.kcal, rho: rho * rs }, p.goalWeight, dir, K.ARR_MAX);
       return n == null ? null : dAdd(futureFrom, n);
     }
-    var planned = arrive(wp), recorded = arrive(wr);
+    var planned = cp || arrive(wp), recorded = cr || arrive(wr);
     return { planned: planned, recorded: recorded, shift: planned && recorded ? dDiff(planned, recorded) : null,
-      weightPlanned: wp, weightRecorded: wr, futureFrom: futureFrom };
+      weightPlanned: wp, weightRecorded: wr, futureFrom: futureFrom, plannedPast: !!cp, recordedPast: !!cr };
   }
   var rs = rhoScale(dir);
   p.comparison = run(K.RHO);
-  if (p.comparison.shift == null) p.why = p.comparison.why || 'Almeno uno scenario non raggiunge il traguardo entro tre anni: spostamento non disponibile.';
+  if (p.comparison.shift == null) p.why = p.comparison.why || 'Con l’obiettivo di calorie attuale la simulazione non arriva a ' + nf(p.goalWeight, 1) + ' kg entro tre anni, quindi non c’è una data da confrontare.';
   p.sensitivity = [K.RHO_LO, K.RHO_HI].map(function (rho) { var r = run(rho); return { rho: rho, shift: r.shift == null ? null : r.shift }; });
   return p;
 }
@@ -7450,7 +7453,7 @@ function renderPlanImpact() {
   var gg = function (n) { n = Math.abs(n); return n + (n === 1 ? ' giorno' : ' giorni'); };
   var title = !hasShift ? 'Effetto non ancora calcolabile' : shift > 0 ? '+' + gg(shift) : shift < 0 ? '−' + gg(shift) : 'Nessun ritardo';
   var F = E.forecast, arrival = F && !F.none && !F.done && F.plan && F.plan.central ? F.plan.central : null;
-  var heroText = !hasShift ? '' : (shift > 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sopra il target hanno spostato in avanti l’arrivo all’obiettivo di circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
+  var heroText = !hasShift ? esc(p.why || 'Mancano dati per rifare il percorso.') : (shift > 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sopra il target hanno spostato in avanti l’arrivo all’obiettivo di circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
       : shift < 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sotto il target ti hanno fatto guadagnare circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
       : 'Dal ' + fmtDay(p.from) + ' a oggi, gli scostamenti dal target si compensano: l’arrivo non si è spostato.')
     + (arrival ? ' <b>È già compreso nella tua data di arrivo prevista, il ' + fmtDay(arrival) + '.</b>' : '');
@@ -7465,7 +7468,6 @@ function renderPlanImpact() {
     + '<p class="impact-how">Rifacciamo il tuo percorso sulla carta due volte, partendo entrambe le volte da <b>' + fmt(p.initialWeight, 1) + ' kg il ' + fmtDay(p.from) + '</b> e da oggi con le stesse <b>' + kc(p.futureTarget) + ' al giorno</b>:</p>'
     + '<ol class="impact-sim"><li><span>Mangiando ogni giorno esattamente il target</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.planned) + '</b></li><li><span>Mangiando quello che hai registrato nel diario</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.recorded) + '</b></li></ol>'
     + '<p class="impact-how">La distanza fra le due date, <b>' + sgn(shift, 0) + ' giorni</b>, è l’effetto degli scostamenti. Le due date servono solo a questo confronto: non sono la tua data di arrivo, perché non partono dal peso che hai oggi sulla bilancia.' + (arrival ? ' La data da guardare è il <b>' + fmtDay(arrival) + '</b>, nel riquadro «Quando potresti arrivare».' : '') + '</p></div></details>';
-  else h += '<p class="muted small">' + esc(p.why || '') + '</p>';
   h += moreHTML('Cosa misura', '<p>Quanto le giornate sopra o sotto il target hanno spostato l’arrivo all’obiettivo. Non è una seconda previsione: la data di arrivo è una sola, nel riquadro «Quando potresti arrivare».</p>' + (p.partial ? '<p>' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>' : ''));
   h += '<details class="impact-details"><summary>Come si calcola</summary>'
     + (p.desiredDate ? '<p>Data desiderata: ' + fmtDay(p.desiredDate) + '. È un obiettivo scelto, distinto dalle date simulate.</p>' : '')
