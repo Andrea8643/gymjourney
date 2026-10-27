@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261027-obiettivi-amici1">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261027-obiettivi-amici2">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261027-obiettivi-amici1">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261027-obiettivi-amici1">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261027-obiettivi-amici1">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261027-obiettivi-amici1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261027-obiettivi-amici2">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261027-obiettivi-amici2">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261027-obiettivi-amici2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261027-obiettivi-amici2">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -11709,12 +11709,24 @@ function bindFriends() {
     var result;try{result=date===E.asOf?E:GJM.engine(D,date);}catch(e){result=null;}
     return (goalMemo.rows[date]=window.GJFriendGoals.snapshot(result,date));
   }
-  function goalRow(own,peer,allowed){
-    function card(side,g,ok){var x=ok?window.GJFriendGoals.view(g):{title:'Non condiviso',sub:'Obiettivo e previsione sono facoltativi.'};
-      return '<div class="fz-goal-person is-'+side+'"><b>'+esc(x.title)+'</b><small>'+esc(x.sub)+'</small>'+(x.range?'<span class="fz-goal-range">Intervallo indicativo<br>'+esc(x.range)+'</span>':'')+(x.far?'<span class="fz-goal-range">Oltre 12 settimane: indicativa</span>':'')+'</div>';}
-    return '<section class="fz-card fz-goal-card" data-metric="goals" aria-label="Obiettivo" style="--mc:#FFB340"><header class="fz-h"><span class="fz-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0"/></svg></span><h4>Obiettivo</h4></header><div class="fz-goal-pair">'+card('me',own,true)+card('pe',peer,allowed)+'</div><p class="fz-foot">Data di arrivo stimata seguendo il piano · calcolo al '+esc(fmtDay(comparisonDate()))+'. Non è la scadenza scelta nel profilo.</p></section>';
+  function goalRow(own,peer,allowed,peerName){
+    function card(side,label,g,ok){
+      var weight=g&&typeof g.target==='number'&&isFinite(g.target)&&g.target>0?fmt(g.target,1)+' kg':'—';
+      var title='In attesa';
+      if(!ok){title='Non condiviso';weight='—';}
+      else if(g){
+        if(g.status==='estimated'&&window.GJFriendGoals.validDate(g.arrival))title=new Date(g.arrival+'T12:00:00Z').toLocaleDateString('it-IT',{day:'numeric',month:'long',timeZone:'UTC'});
+        else if(g.status==='maintenance')title='Mantenimento';
+        else if(g.status==='reached')title='Raggiunto';
+        else if(g.status==='no_plan'){title='Nessun obiettivo';weight='—';}
+        else title='Data da stimare';
+      }
+      return '<div class="fz-wc fz-goal-cell is-'+side+'"><span>'+esc(label)+'</span><b>'+esc(title)+'</b><small>'+esc(weight)+'</small></div>';
+    }
+    var name=peerName||'Il tuo amico',pending=allowed&&!peer;
+    var foot=pending?'<p class="fz-goal-status">'+esc(name)+' deve aprire o ricaricare l’app aggiornata per inviare la previsione. La funzione è già attiva.</p>':'';
+    return '<section class="fz-card fz-goal-card" data-metric="goals" aria-label="Obiettivo" style="--mc:#FFB340"><header class="fz-h"><span class="fz-title"><span class="fz-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0"/></svg></span><h4>Obiettivo</h4></span></header><div class="fz-wo">'+card('me','Tu',own,true)+card('pe',fzShort(name),peer,allowed)+'</div>'+foot+'</section>';
   }
-
   function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=6;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
   var FA_IC={
@@ -11829,7 +11841,7 @@ function bindFriends() {
     return null;
   }
   function fzBadge(side,txt){return '<span class="fz-badge is-'+side+'">'+txt+'</span>';}
-  function fzHead(k,t,badge){return '<header class="fz-h"><span class="fz-ic" aria-hidden="true">'+FA_IC[k]+'</span><h4>'+t+'</h4>'+(badge||'')+'</header>';}
+  function fzHead(k,t,badge){return '<header class="fz-h"><span class="fz-title"><span class="fz-ic" aria-hidden="true">'+FA_IC[k]+'</span><h4>'+t+'</h4></span>'+(badge||'')+'</header>';}
   function fzMirror(a,b,max,tick){function half(side,v){return '<span class="is-'+side+'">'+(v!=null&&max>0?'<i style="width:'+(Math.max(0,Math.min(v,max))/max*100).toFixed(1)+'%"></i>':'')+(tick?'<em style="--t:'+tick+'%"></em>':'')+'</span>';}return '<div class="fz-mirror" aria-hidden="true">'+half('me',a)+half('pe',b)+'</div>';}
   function fzVal(side,s,big,small){if(s.miss)return '<span class="fz-v is-'+side+' is-miss"><b>—</b><small>'+esc(s.miss)+(s.sub?' · '+esc(s.sub):'')+'</small></span>';return '<span class="fz-v is-'+side+'"><b>'+big+'</b>'+(small?'<small>'+small+'</small>':'')+'</span>';}
   function fzRow(k,a,b,peerName,week,goals){
@@ -11870,7 +11882,7 @@ function bindFriends() {
     var peer7=r.days||[],cut=function(x){return week?x:x.slice(-1);},own=cut(own7),peer=cut(peer7);
     var goals={me:fzGoal(own7.slice(),week),pe:r.config.prefs.calories?fzGoal(peer7.slice(),week):null,peOk:!!r.config.prefs.calories};
     var rows=keys.map(function(k){return fzRow(k,sideStat(own,k,true,true),sideStat(peer,k,r.config.prefs[k],false),name,week,goals);});
-    if(!week){var ownGoal=goalAt(comparisonDate(),engineD(),state.E),peerGoal=peer.length&&peer[peer.length-1]?peer[peer.length-1].goal:null;var goalHtml=goalRow(ownGoal,peerGoal,r.config.prefs.goals!==false),wi=keys.indexOf('workouts');rows.splice(wi>=0?wi+1:rows.length,0,{html:goalHtml,lead:null,cmp:false});}
+    if(!week){var ownGoal=goalAt(comparisonDate(),engineD(),state.E),peerGoal=peer.length&&peer[peer.length-1]?peer[peer.length-1].goal:null;var goalHtml=goalRow(ownGoal,peerGoal,r.config.prefs.goals!==false,name),wi=keys.indexOf('workouts');rows.splice(wi>=0?wi+1:rows.length,0,{html:goalHtml,lead:null,cmp:false});}
     var me=rows.filter(function(x){return x.lead==='me';}).length,pe=rows.filter(function(x){return x.lead==='pe';}).length,cmp=rows.filter(function(x){return x.cmp;}).length;
     var chips=cmp?'<div class="fz-score">'+(me||pe?'<span class="is-me">Tu avanti in '+me+'</span><span class="is-pe">'+esc(short)+' in '+pe+'</span>':'<span class="is-tie">Per ora siete pari</span>')+'</div>':'';
     return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(rows.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
@@ -11930,7 +11942,7 @@ function bindFriends() {
   document.addEventListener('submit',function(e){if(e.target.id==='friend-request-form'){e.preventDefault();var code=e.target.elements.code.value;perform(function(){return request(code);});}if(e.target.id==='friend-sharing-form'){e.preventDefault();var form=e.target;perform(function(){return saveSharing(form);});}});
   document.addEventListener('click',function(e){var viewButton=e.target.closest('#tab-amici [data-friends-view],#tab-amici [data-friends-view-go]');if(viewButton){setFriendsView(viewButton.dataset.friendsView||viewButton.dataset.friendsViewGo,false,true);return;}var b=e.target.closest('[data-friend-action]');if(!b)return;var a=b.dataset.friendAction,k=b.dataset.key;
     if(a==='date-prev'||a==='date-next'||a==='date-today'){setComparisonDate(a==='date-today'?todayStr():FD.add(comparisonDate(),a==='date-prev'?-1:1));return;}if(a==='select'){subscribePeer(k);render();return;}if(a==='invite'){invite();return;}if(a==='period'){F.period=k==='week'?'week':'today';if(F.selected)subscribePeer(F.selected);render();return;}
-    if(a==='refresh'){Games.refresh();if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
+    if(a==='refresh'){queuePublish();Games.refresh();if(!F.ready||!F.profile){if(F.uid)load(F.uid);}else if(F.selected)subscribePeer(F.selected);return;}
     perform(async function(){if(a==='activate')return activate();if(a==='copy'){if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(F.profile.code);F.message='Codice copiato.';}else{F.message='Il tuo codice: '+F.profile.code;}return;}
       if(a==='accept'){await fs.doc('friendships/'+k).update({status:'accepted',acceptedAt:stamp()});F.message='Amicizia accettata. Scegli cosa condividere nelle impostazioni.';}
       if(a==='decline')await fs.doc('friendships/'+k).delete();
@@ -15323,8 +15335,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici2') center/contain no-repeat}
 
 
 
@@ -16920,7 +16932,19 @@ html body #tab-amici .fz-h:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f)::afte
 
 </script>
 
-</body></html>
+<style id="friend-goals-polish-style">
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-h{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:8px!important;grid-template-columns:none!important;min-width:0}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-h::after{display:none!important;content:none!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-title{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;max-width:100%;min-width:0;margin:0 auto}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-title .fz-ic{flex:0 0 30px!important;margin:0!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-title h4{flex:0 0 auto!important;width:auto!important;margin:0!important;text-align:left!important;line-height:30px!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-badge{display:inline-block!important;grid-column:auto!important;grid-row:auto!important;margin:0!important;max-width:100%;text-align:center!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell{display:flex!important;flex-direction:column!important;align-items:flex-start!important;text-align:left!important;gap:5px!important;min-width:0!important;padding:14px!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell>b{font-size:1.2rem!important;line-height:1.25!important;overflow-wrap:anywhere}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell>small{font-size:.9rem!important;font-weight:700!important;margin:0!important}
+html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-status{margin:0!important;color:#aaa;font-size:.75rem;line-height:1.5;text-align:center}
+@media(max-width:380px){html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell{padding:12px 10px!important}html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell>b{font-size:1.05rem!important}}
+</style></body></html>
 
 
 
