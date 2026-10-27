@@ -1,14 +1,14 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="Il tuo percorso in un solo spazio: progressi, allenamenti, ricette e dati da Google Drive."><title>GymJourney — Il tuo percorso</title>
-<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261024-traiettoria2">
+<link rel="manifest" href="manifest.webmanifest?v=mosaico-20261027-obiettivi-amici1">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="GymJourney">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261024-traiettoria2">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261024-traiettoria2">
-<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261024-traiettoria2">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261024-traiettoria2">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=mosaico-20261027-obiettivi-amici1">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png?v=mosaico-20261027-obiettivi-amici1">
+<link rel="icon" type="image/svg+xml" href="brand-icon.svg?v=mosaico-20261027-obiettivi-amici1">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=mosaico-20261027-obiettivi-amici1">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -1634,6 +1634,14 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 .df-card{width:min(100%,520px);background:var(--bg-2)}
 .df-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .df-card input,.df-card textarea{width:100%;box-sizing:border-box}
+</style><style id="friend-goals-style">
+#tab-amici .fz-goal-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-top:12px}
+#tab-amici .fz-goal-person{min-width:0;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;padding:12px 6px}
+#tab-amici .fz-goal-person>b{font-size:1.2rem;line-height:1.4;font-weight:800;overflow-wrap:anywhere}
+#tab-amici .fz-goal-person>small{font-size:.77rem;line-height:1.6;color:var(--muted,#aaa)}
+#tab-amici .fz-goal-person.is-me>b{color:#FFB08A}#tab-amici .fz-goal-person.is-pe>b{color:#8CC5FF}
+#tab-amici .fz-goal-range{display:block;font-size:.7rem;line-height:1.55;color:#aaa}
+@media(max-width:420px){#tab-amici .fz-goal-pair{gap:8px}#tab-amici .fz-goal-person{padding:8px 2px}#tab-amici .fz-goal-person>b{font-size:1rem}}
 </style></head><body>
 <div id="intro" class="intro" role="dialog" aria-label="Benvenuto">
   <button type="button" class="in-skip">Salta</button>
@@ -1690,7 +1698,7 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 <script>
 (function(root){
 'use strict';
-var KEYS=['calories','macros','steps','workouts','weight'];
+var KEYS=['calories','macros','steps','workouts','weight','goals'];
 function add(d,n){return new Date(Date.parse(d+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);}
 function value(v,max){return v!==null&&v!==''&&v!==undefined&&isFinite(+v)&&+v>=0&&+v<=max?+v:null;}
 function status(day,key,isToday,M){var s=M.fieldState(day,key,isToday);return ['completo','parziale','da_confermare','mancante','zero_confermato'].indexOf(s)>=0?s:'mancante';}
@@ -11579,6 +11587,35 @@ root.GJGameUI={create:create};
 
 
 
+(function(root){
+'use strict';
+function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&isFinite(Date.parse(s+'T00:00:00Z'))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;}
+function snapshot(E,date){
+ var goal=E&&E.plan&&E.plan.version&&E.plan.version.goal||{},f=E&&E.forecast,phase=['cut','surplus','mantenimento'].indexOf(goal.phase)>=0?goal.phase:'none';
+ var out={asOf:date,phase:phase,status:'unavailable',target:typeof goal.goalWeight==='number'&&isFinite(goal.goalWeight)&&goal.goalWeight>0?goal.goalWeight:null,arrival:null,from:null,to:null,far:false};
+ if(!E||E.status==='nessun_piano'||phase==='none'){out.status='no_plan';return out;}
+ if(!f||f.none)return out;
+ if(f.maint){out.status='maintenance';return out;}
+ if(f.done){out.status='reached';return out;}
+ if(f.plan&&validDate(f.plan.central)){out.status='estimated';out.arrival=f.plan.central;out.from=validDate(f.plan.from)?f.plan.from:null;out.to=validDate(f.plan.to)?f.plan.to:null;out.far=!!f.plan.far;}
+ return out;
+}
+function view(g){
+ if(!g||!validDate(g.asOf))return {title:'Non disponibile',sub:'La previsione non è ancora stata condivisa per questo giorno.'};
+ var label=g.phase==='cut'?'Cut':g.phase==='surplus'?'Massa':g.phase==='mantenimento'?'Mantenimento':'';
+ var kg=typeof g.target==='number'&&g.target>0&&isFinite(g.target)?g.target.toLocaleString('it-IT',{maximumFractionDigits:1,minimumFractionDigits:1})+' kg':null;
+ var goal=label+(kg?' · '+kg:'');
+ if(g.status==='maintenance')return {title:'Mantenimento',sub:'Stabilità del peso: nessuna data di arrivo.'};
+ if(g.status==='reached')return {title:'Obiettivo raggiunto',sub:goal+' · secondo la stima del modello'};
+ if(g.status==='no_plan')return {title:'Nessun obiettivo',sub:'Nessun percorso attivo in questa data.'};
+ if(g.status!=='estimated'||!validDate(g.arrival))return {title:'Data non stimabile',sub:goal||'Servono un piano e dati sufficienti.'};
+ var fmt=function(d){return new Date(d+'T12:00:00Z').toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});};
+ return {title:fmt(g.arrival),sub:goal+' · seguendo il piano',range:validDate(g.from)&&validDate(g.to)?fmt(g.from)+' - '+fmt(g.to):'',far:!!g.far};
+}
+var api={snapshot:snapshot,view:view,validDate:validDate};
+if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.GJFriendGoals=api;
+})(typeof window!=='undefined'?window:this);
+
 /* Social data uses separate Firestore paths; the private users/{uid} archive is untouched. */
 function bindFriends() {
   var F={uid:null,profile:null,config:null,links:[],blocks:[],selected:null,period:'today',date:null,view:'list',remote:null,error:'',message:'',busy:false,ready:false,opened:false,unsub:[],peerUnsub:null,epoch:0,publishHash:'',timer:0,publishing:false,interacting:false,gameQueued:false,renderQueued:false};
@@ -11586,8 +11623,8 @@ function bindFriends() {
   var Photos=window.GJFriendAvatars.create({esc:esc,own:function(){return state.avatarUid===F.uid?state.avatar:null;},ready:function(){return !!F.uid&&state.avatarUid===F.uid;},changed:function(){if(!F.opened)return;refreshGamePanel();refreshAvatars();var s=$('.friends-photo-setting');if(s){var h=Photos.settingsHTML();if(s.outerHTML!==h)s.outerHTML=h;}}});
   var Games=window.GJGameUI.create({esc:esc,env:function(){return {uid:F.uid,opened:F.opened,selected:F.selected,friends:friendList().map(function(x){return {uid:relationPeer(x),name:relationName(x)};})};},days:function(){return state.days;},avatar:function(uid){return Photos.image(uid);},milestones:function(){return {days:Object.fromEntries(Array.from(state.days.entries()).map(function(x){return [x[0],typeof recipeReconciledView==='function'?recipeReconciledView(x[1]).day:x[1]];})),workouts:Array.from((state.workouts||new Map()).values()),targets:function(d){return typeof dayTarget==='function'?dayTarget(d):{};}};},ready:function(){return !!loaded2.days&&!!window.GJ_user&&GJ_user.uid===F.uid&&!!window.GJ_sync&&GJ_sync.serverOk()&&!GJ_sync.status().pending;},name:function(){return F.profile&&F.profile.nickname||'Tu';},changed:function(){updateRequestBadge();if(F.opened){refreshGamePanel();}},settings:function(){setFriendsView('settings',true,true);},select:function(uid){subscribePeer(uid);render();setFriendsView('games',false,true);},openDay:function(date){if(window.openDayForm)window.openDayForm(date);}});
   try{window.GJGameAPI=Games;}catch(e){}
-  var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Allenamenti: nome delle sedute e riposo',weight:'Peso (facoltativo)'};
-  var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false};};
+  var labels={calories:'Calorie e target',macros:'Proteine, carboidrati e grassi',steps:'Passi',workouts:'Allenamenti: nome delle sedute e riposo',weight:'Peso (facoltativo)',goals:'Obiettivo e data stimata di arrivo'};
+  var emptyPrefs=function(){return {calories:false,macros:false,steps:false,workouts:false,weight:false,goals:true};};
   function defaults(){return {enabled:false,prefs:emptyPrefs(),revision:'initial-not-shared',nickname:F.profile?F.profile.nickname:'Utente'};}
   function stamp(){return firebase.firestore.FieldValue.serverTimestamp();}
   function randomCode(){var b=new Uint8Array(12);crypto.getRandomValues(b);return Array.from(b,function(x){return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'[x%32];}).join('');}
@@ -11653,7 +11690,7 @@ function bindFriends() {
     if(!F.profile){fillPanels('<div class="friends-list-heading"><h3>I tuoi amici <span>0</span></h3></div><div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Apri le impostazioni per creare il tuo codice e aggiungere le persone che conosci.</p><button type="button" class="btn fit small" data-friends-view-go="settings">Aggiungi il tuo primo amico</button></div>','<div class="friends-onboarding"><div class="friends-symbol" aria-hidden="true">＋</div><h2>Crea il tuo codice amico</h2><p>Nessun dato del diario viene condiviso finché non lo scegli.</p><label class="f"><span>Nome visibile agli amici</span><input id="friend-nickname" maxlength="40" value="'+esc(safeName(S().name)||'Utente')+'" autocomplete="nickname"></label>'+actionButton('activate','Crea il mio codice amico')+'</div>');return;}
     var cfg=F.config||defaults(),friends=friendList(),incoming=incomingRequests(),outgoing=F.links.filter(function(x){return x.status==='pending'&&x.from===F.uid;});
     var h='<div class="friends-top-grid"><div class="friends-code-card"><small>Il tuo codice amico</small><b>'+fmtCode(F.profile.code)+'</b><span>Condividilo con chi vuoi aggiungere.</span>'+'<div class="friends-invite-row">'+inviteButton('Invita un amico')+actionButton('copy','Copia codice')+'</div></div><form id="friend-request-form" class="friends-add"><label class="f"><span>Aggiungi un amico</span><input name="code" placeholder="Codice amico" maxlength="20" autocomplete="off" spellcheck="false" required></label><button class="btn fit small"'+(F.busy?' disabled':'')+'>Invia richiesta</button></form></div>';
-    h+='<details class="friends-settings"><summary>La tua condivisione <span class="friends-state">'+(cfg.enabled?'Attiva':'Disattivata')+'</span></summary><div class="friends-settings-body" data-ib-keep><form id="friend-sharing-form"><label class="f"><span>Nome visibile</span><input name="nickname" maxlength="40" value="'+esc(F.profile.nickname)+'" required></label><label class="friends-check friends-master"><input type="checkbox" name="enabled"'+(cfg.enabled?' checked':'')+'>Condividi i riepiloghi con gli amici accettati</label><div class="friends-pref-grid">'+FD.KEYS.map(function(k){return '<label class="friends-check"><input type="checkbox" name="'+k+'"'+(cfg.prefs[k]?' checked':'')+'>'+labels[k]+'</label>';}).join('')+'</div><p class="friends-help">Solo i riepiloghi selezionati degli ultimi 14 giorni vengono aggiornati. Pasti, note, email e dettagli degli allenamenti restano privati. La condivisione si aggiorna quando apri l’app online e il diario è salvato.</p><button class="btn fit small"'+(F.busy?' disabled':'')+'>Salva condivisione</button></form></div></details>';
+    h+='<details class="friends-settings"><summary>La tua condivisione <span class="friends-state">'+(cfg.enabled?'Attiva':'Disattivata')+'</span></summary><div class="friends-settings-body" data-ib-keep><form id="friend-sharing-form"><label class="f"><span>Nome visibile</span><input name="nickname" maxlength="40" value="'+esc(F.profile.nickname)+'" required></label><label class="friends-check friends-master"><input type="checkbox" name="enabled"'+(cfg.enabled?' checked':'')+'>Condividi i riepiloghi con gli amici accettati</label><div class="friends-pref-grid">'+FD.KEYS.map(function(k){return '<label class="friends-check"><input type="checkbox" name="'+k+'"'+((k==='goals'?cfg.prefs.goals!==false:cfg.prefs[k])?' checked':'')+'>'+labels[k]+'</label>';}).join('')+'</div><p class="friends-help">Solo i riepiloghi selezionati degli ultimi 14 giorni vengono aggiornati. Obiettivo e data stimata sono inclusi di default nella condivisione Amici; puoi disattivarli qui. Pasti, note, email e dettagli degli allenamenti restano privati. La condivisione si aggiorna quando apri l’app online e il diario è salvato.</p><button class="btn fit small"'+(F.busy?' disabled':'')+'>Salva condivisione</button></form></div></details>';
     var requests='';if(incoming.length||outgoing.length){requests+='<div class="friends-requests"><h3>Richieste</h3>';incoming.forEach(function(x){requests+='<div class="friends-person-row"><div class="friends-person"><span class="friends-avatar">'+esc(x.fromName.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.fromName)+'</b><small>Vuole aggiungerti agli amici</small></div></div><div class="friends-actions">'+actionButton('accept','Accetta',x.id)+actionButton('decline','Rifiuta',x.id)+'</div></div>';});outgoing.forEach(function(x){requests+='<div class="friends-person-row"><div><b>'+esc(x.toName)+'</b><small>Richiesta inviata · in attesa</small></div>'+actionButton('decline','Annulla',x.id)+'</div>';});requests+='</div>';}
     var list='<div class="friends-list-heading"><h3>I tuoi amici <span>'+friends.length+'</span></h3><div class="friends-invite-row">'+inviteButton('Invita')+actionButton('refresh','Aggiorna')+'</div></div>';
     if(!friends.length)list+='<div class="friends-empty"><b>Il primo confronto inizia con un amico</b><p>Mandagli un invito con il tuo codice: quando ti aggiunge, qui vedi il confronto. Anche senza uno storico puoi iniziare: i dati mancanti verranno indicati.</p><div class="friends-invite-row">'+inviteButton('Invita un amico')+'<button type="button" class="btn ghost fit small" data-friends-view-go="settings">Ho un codice</button></div></div>';
@@ -11664,6 +11701,20 @@ function bindFriends() {
   function comparisonDate(){return F.date||todayStr();}
   function setComparisonDate(d){if(!window.GJGame.date(d)||d>todayStr())return;F.date=d;if(F.selected)subscribePeer(F.selected);render();}
   function comparisonNavigator(){var d=comparisonDate();return '<div class="friends-date-nav"><button type="button" data-friend-action="date-prev" aria-label="Giorno precedente del confronto">‹</button><label class="friends-date-picker"><span>'+esc(fmtDay(d))+'</span><span aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4m8-4v4M3 11h18M8 15h3v3H8z"/></svg></span><input type="date" data-friend-date value="'+d+'" max="'+todayStr()+'" min="1900-01-01" aria-label="Scegli la data del confronto"></label><button type="button" data-friend-action="date-next" aria-label="Giorno successivo del confronto"'+(d>=todayStr()?' disabled':'')+'>›</button>'+(d!==todayStr()?'<button type="button" data-friend-action="date-today">Oggi</button>':'')+'</div>';}
+
+  var goalMemo={E:null,rows:{}};
+  function goalAt(date,D,E){
+    if(goalMemo.E!==E){goalMemo={E:E,rows:{}};}
+    if(goalMemo.rows[date])return goalMemo.rows[date];
+    var result;try{result=date===E.asOf?E:GJM.engine(D,date);}catch(e){result=null;}
+    return (goalMemo.rows[date]=window.GJFriendGoals.snapshot(result,date));
+  }
+  function goalRow(own,peer,allowed){
+    function card(side,g,ok){var x=ok?window.GJFriendGoals.view(g):{title:'Non condiviso',sub:'Obiettivo e previsione sono facoltativi.'};
+      return '<div class="fz-goal-person is-'+side+'"><b>'+esc(x.title)+'</b><small>'+esc(x.sub)+'</small>'+(x.range?'<span class="fz-goal-range">Intervallo indicativo<br>'+esc(x.range)+'</span>':'')+(x.far?'<span class="fz-goal-range">Oltre 12 settimane: indicativa</span>':'')+'</div>';}
+    return '<section class="fz-card fz-goal-card" data-metric="goals" aria-label="Obiettivo" style="--mc:#FFB340"><header class="fz-h"><span class="fz-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0"/></svg></span><h4>Obiettivo</h4></header><div class="fz-goal-pair">'+card('me',own,true)+card('pe',peer,allowed)+'</div><p class="fz-foot">Data di arrivo stimata seguendo il piano · calcolo al '+esc(fmtDay(comparisonDate()))+'. Non è la scadenza scelta nel profilo.</p></section>';
+  }
+
   function localRows(){var D=engineD(),E=state.E,t=todayStr(),anchor=comparisonDate(),out=[];for(var i=6;i>=0;i--)out.push(FD.makeDay(D,E,{calories:true,macros:true,steps:true,workouts:true,weight:true},FD.add(anchor,-i),t,GJM));return out;}
   function val(n,unit){return n==null?'—':fmt(n,unit==='kg'?1:0)+(unit?' '+unit:'');}
   var FA_IC={
@@ -11808,7 +11859,7 @@ function bindFriends() {
   function comparisonHTML(){
     var link=friendList().find(function(x){return relationPeer(x)===F.selected;});if(!link)return '<div class="friends-empty">Seleziona un amico per confrontare i dati.</div>';
     var r=F.remote,week=F.period==='week',dates=[],i;for(i=6;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
-    var own7=localRows(),name=relationName(link),short=fzShort(name),keys=FD.KEYS.filter(function(k){return k!=='weight'&&((F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]));});
+    var own7=localRows(),name=relationName(link),short=fzShort(name),keys=FD.KEYS.filter(function(k){return k!=='weight'&&k!=='goals'&&((F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]));});
     var ctrl='<h3 class="fa-sr">Tu e '+esc(name)+' · '+(week?'7 giorni fino al '+fmtDay(comparisonDate()):fmtDay(comparisonDate()))+'</h3><div class="fz-ctrl"><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator()+'</div>';
     var manage='<details class="fz-manage"><summary>Gestisci l’amicizia con '+esc(short)+'</summary><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></details>';
     var myName=(F.profile&&F.profile.nickname)||S().name||'Tu',wMe=fzWeight(own7,dates,true);
@@ -11819,9 +11870,10 @@ function bindFriends() {
     var peer7=r.days||[],cut=function(x){return week?x:x.slice(-1);},own=cut(own7),peer=cut(peer7);
     var goals={me:fzGoal(own7.slice(),week),pe:r.config.prefs.calories?fzGoal(peer7.slice(),week):null,peOk:!!r.config.prefs.calories};
     var rows=keys.map(function(k){return fzRow(k,sideStat(own,k,true,true),sideStat(peer,k,r.config.prefs[k],false),name,week,goals);});
+    if(!week){var ownGoal=goalAt(comparisonDate(),engineD(),state.E),peerGoal=peer.length&&peer[peer.length-1]?peer[peer.length-1].goal:null;var goalHtml=goalRow(ownGoal,peerGoal,r.config.prefs.goals!==false),wi=keys.indexOf('workouts');rows.splice(wi>=0?wi+1:rows.length,0,{html:goalHtml,lead:null,cmp:false});}
     var me=rows.filter(function(x){return x.lead==='me';}).length,pe=rows.filter(function(x){return x.lead==='pe';}).length,cmp=rows.filter(function(x){return x.cmp;}).length;
     var chips=cmp?'<div class="fz-score">'+(me||pe?'<span class="is-me">Tu avanti in '+me+'</span><span class="is-pe">'+esc(short)+' in '+pe+'</span>':'<span class="is-tie">Per ora siete pari</span>')+'</div>':'';
-    return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(keys.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
+    return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(rows.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
   }
   function refreshAvatars(){document.querySelectorAll('#tab-amici .friends-pill[data-key]').forEach(function(b){var i=b.querySelector('i'),h=faAvatar(b.dataset.key,b.textContent);if(i&&i.innerHTML!==h)i.innerHTML=h;});var d=$('#friend-comparison .fz-hero');if(d){var link=friendList().find(function(x){return relationPeer(x)===F.selected;}),me=d.querySelector('.fz-p.is-me .fz-av>i'),pe=d.querySelector('.fz-p.is-pe .fz-av>i'),hm=faAvatar(F.uid,(F.profile&&F.profile.nickname)||S().name),hp=link?faAvatar(F.selected,relationName(link)):'';if(me&&me.innerHTML!==hm)me.innerHTML=hm;if(pe&&link&&pe.innerHTML!==hp)pe.innerHTML=hp;}}
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
@@ -11868,10 +11920,10 @@ function bindFriends() {
   async function disconnect(uid,block){await Games.cancelPeer(uid);if(!friendList().some(function(x){return relationPeer(x)===uid;}))problem('Amicizia non trovata.');var refs=[fs.doc('friendships/'+F.uid+'~'+uid),fs.doc('friendships/'+uid+'~'+F.uid)];await fs.runTransaction(async function(tx){var ss=await Promise.all(refs.map(function(r){return tx.get(r);}));ss.forEach(function(s,i){if(s.exists)tx.delete(refs[i]);});if(block)tx.set(profileRef().collection('blocks').doc(uid),{createdAt:stamp()});});stopPeer();F.selected=null;F.message=block?'Utente bloccato.':'Amicizia rimossa e accesso ai riepiloghi revocato.';}
   async function publish(){
     if(F.publishing||!F.uid||!window.GJ_user||GJ_user.uid!==F.uid||!liveProfile()||!F.config.enabled||!loaded2.days||!loaded2.piano||!loaded2.workouts||!window.GJ_sync||!GJ_sync.serverOk()||GJ_sync.status().pending)return;
-    var uid=F.uid,cfg=F.config,D=engineD(),E=state.E,rows=[];for(var i=13;i>=0;i--)rows.push(FD.makeDay(D,E,cfg.prefs,FD.add(todayStr(),-i),todayStr(),GJM));
-    var hash=JSON.stringify({uid:uid,revision:cfg.revision,rows:rows});if(hash===F.publishHash)return;F.publishing=true;
-    try{var batch=fs.batch();rows.forEach(function(row){batch.set(fs.doc('friendShares/'+uid+'/days/'+row.date),Object.assign({},row,{revision:cfg.revision,updatedAt:stamp()}));});batch.update(fs.doc('friendShares/'+uid),{updatedAt:stamp()});await batch.commit();if(F.uid===uid&&F.config.revision===cfg.revision)F.publishHash=hash;
-    }catch(e){if(F.opened){F.error=report(e);note();}}finally{F.publishing=false;if(F.uid===uid&&F.config&&F.config.enabled&&F.config.revision!==cfg.revision)queuePublish();}
+    var uid=F.uid,cfg=F.config,D=engineD(),E=state.E,rows=[];F.publishing=true;try{for(var i=13;i>=0;i--){var date=FD.add(todayStr(),-i),row=FD.makeDay(D,E,cfg.prefs,date,todayStr(),GJM);if(cfg.prefs.goals!==false){await new Promise(function(resolve){setTimeout(resolve,0);});if(F.uid!==uid||!F.config||F.config.revision!==cfg.revision||!F.config.enabled)return;row.goal=goalAt(date,D,E);}rows.push(row);}
+    var hash=JSON.stringify({uid:uid,revision:cfg.revision,rows:rows});if(hash===F.publishHash)return;
+    var batch=fs.batch();rows.forEach(function(row){batch.set(fs.doc('friendShares/'+uid+'/days/'+row.date),Object.assign({},row,{revision:cfg.revision,updatedAt:stamp()}));});batch.update(fs.doc('friendShares/'+uid),{updatedAt:stamp()});await batch.commit();if(F.uid===uid&&F.config.revision===cfg.revision)F.publishHash=hash;
+    }catch(e){if(F.opened){F.error=report(e);note();}}finally{F.publishing=false;if(F.uid===uid&&F.config&&F.config.enabled&&(F.config.revision!==cfg.revision||state.E!==E))queuePublish();}
   }
   function queuePublish(){Games.localChanged();clearTimeout(F.timer);F.timer=setTimeout(publish,900);if(F.opened){refreshComparison();refreshGamePanel();}}
   async function perform(fn){if(F.busy)return;F.busy=true;F.error='';F.message='';note();try{await fn();}catch(e){F.error=report(e);}finally{F.busy=false;render();}}
@@ -15271,8 +15323,8 @@ body #tab-ricette .recipe-prep-details>.recipe-preparation:not(#z):not(#y){displ
 }
 
 /* Approved Percorso Mosaico identity, shared with the installed app icon. */
-body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria2') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261024-traiettoria2')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
-.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261024-traiettoria2') center/contain no-repeat}
+body .nav-brand b:not(#z):not(#y)::before{content:''!important;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1') center/contain no-repeat!important;background-image:url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1')!important;border-radius:9px!important;box-shadow:none!important;color:transparent!important;-webkit-text-fill-color:transparent!important;vertical-align:middle}
+.intro-brand::before,#gj-login form>b:first-child::before{content:'';display:inline-block;vertical-align:middle;width:42px;height:42px;margin-right:12px;border-radius:10px;background:#19171D url('brand-icon.svg?v=mosaico-20261027-obiettivi-amici1') center/contain no-repeat}
 
 
 

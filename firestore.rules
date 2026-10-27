@@ -6,8 +6,8 @@ service cloud.firestore {
     function nick(n) { return n is string && n.size() >= 1 && n.size() <= 40; }
     function prefs(p) {
       return p is map && p.keys().hasAll(['calories','macros','steps','workouts','weight'])
-        && p.keys().hasOnly(['calories','macros','steps','workouts','weight'])
-        && p.calories is bool && p.macros is bool && p.steps is bool && p.workouts is bool && p.weight is bool;
+        && p.keys().hasOnly(['calories','macros','steps','workouts','weight','goals'])
+        && p.calories is bool && p.macros is bool && p.steps is bool && p.workouts is bool && p.weight is bool && (!('goals' in p) || p.goals is bool);
     }
     function unblocked(a, b) {
       return !exists(/databases/$(database)/documents/socialProfiles/$(a)/blocks/$(b))
@@ -95,21 +95,33 @@ service cloud.firestore {
       function status(s) { return s in ['completo','parziale','da_confermare','mancante','zero_confermato']; }
       function allowedFields(d, p) {
         return (!('calories' in d) || p.calories) && (!('macros' in d) || p.macros)
-          && (!('steps' in d) || p.steps) && (!('workouts' in d) || p.workouts) && (!('workoutNames' in d) || p.workouts) && (!('weight' in d) || p.weight);
+          && (!('steps' in d) || p.steps) && (!('workouts' in d) || p.workouts) && (!('workoutNames' in d) || p.workouts) && (!('weight' in d) || p.weight) && (!('goal' in d) || p.get('goals',true));
       }
       function validWorkoutName(a, i) { return a.size() <= i || (a[i] is string && a[i].size() <= 120); }
       function validWorkoutNames(a) { return a is list && a.size() <= 10
         && validWorkoutName(a,0) && validWorkoutName(a,1) && validWorkoutName(a,2) && validWorkoutName(a,3) && validWorkoutName(a,4)
         && validWorkoutName(a,5) && validWorkoutName(a,6) && validWorkoutName(a,7) && validWorkoutName(a,8) && validWorkoutName(a,9); }
+      function goalDate(v) { return v == null || (v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')); }
+      function validGoal(g, date) {
+        return g is map && g.keys().hasAll(['asOf','phase','status','target','arrival','from','to','far'])
+          && g.keys().hasOnly(['asOf','phase','status','target','arrival','from','to','far'])
+          && g.asOf == date && g.phase in ['cut','surplus','mantenimento','none']
+          && g.status in ['estimated','reached','maintenance','unavailable','no_plan']
+          && num(g.target,1000) && (g.target == null || g.target > 0) && g.far is bool
+          && goalDate(g.arrival) && goalDate(g.from) && goalDate(g.to)
+          && (g.status != 'estimated' || (g.arrival is string && g.target is number))
+          && (g.status == 'estimated' || (g.arrival == null && g.from == null && g.to == null));
+      }
       function validDay(d, date) {
         return d.keys().hasAll(['date','revision','updatedAt'])
-          && d.keys().hasOnly(['date','revision','updatedAt','calories','macros','steps','workouts','weight','workoutNames'])
+          && d.keys().hasOnly(['date','revision','updatedAt','calories','macros','steps','workouts','weight','workoutNames','goal'])
           && d.date == date && date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
           && d.updatedAt == request.time && d.revision == share().revision && allowedFields(d, share().prefs)
           && (!('calories' in d) || (d.calories is map && d.calories.keys().hasAll(['value','target','state']) && d.calories.keys().hasOnly(['value','target','state']) && num(d.calories.value,50000) && num(d.calories.target,50000) && status(d.calories.state)))
           && (!('macros' in d) || (d.macros is map && d.macros.keys().hasAll(['protein','carbs','fat','state']) && d.macros.keys().hasOnly(['protein','carbs','fat','state']) && num(d.macros.protein,10000) && num(d.macros.carbs,10000) && num(d.macros.fat,10000) && status(d.macros.state)))
           && (!('steps' in d) || (d.steps is map && d.steps.keys().hasAll(['value','state']) && d.steps.keys().hasOnly(['value','state']) && num(d.steps.value,200000) && status(d.steps.state)))
           && (!('workoutNames' in d) || (('workouts' in d) && validWorkoutNames(d.workoutNames) && d.workoutNames.size() <= d.workouts))
+          && (!('goal' in d) || validGoal(d.goal,date))
           && (!('workouts' in d) || num(d.workouts,100)) && (!('weight' in d) || num(d.weight,1000));
       }
       match /days/{date} {
