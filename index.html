@@ -6920,7 +6920,7 @@ function renderWeekCard() {
   if (!E || !E.week) { box.innerHTML = '<p class="p2-empty">Serve un piano attivo.</p>'; $('#wk-range').textContent = ''; return; }
   var W = E.week, k = W.counts;
   $('#wk-range').textContent = fmtShort(W.from) + ' – ' + fmtShort(W.to);
-  var st = function (x) { return x.kind === 'futuro' ? 'previsto' : x.kind === 'oggi' ? 'in corso' : x.usable ? 'completo' : x.intake != null ? lb('fstate', x.state).toLowerCase() : 'senza calorie'; };
+  var st = function (x) { return x.kind === 'futuro' ? 'previsto' : x.usable ? (x.state === 'zero_confermato' ? 'digiuno confermato' : 'completo') : x.kind === 'oggi' ? 'in corso' : x.intake != null ? lb('fstate', x.state).toLowerCase() : 'senza calorie'; };
   var top = 1; W.days.forEach(function (x) { top = Math.max(top, x.target || 0, x.kind !== 'futuro' && x.intake || 0); }); top *= 1.12;
   var days = W.days.map(function (x) {
     var pd = parseD(x.d), eat = x.intake != null && x.kind !== 'futuro' ? x.intake : null;
