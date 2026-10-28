@@ -4228,7 +4228,7 @@ function arrivalRange(base, I, goal, dir, from) {
   out.rho = {}; out.rho[K.RHO_LO] = lo != null ? dAdd(from, lo) : null; out.rho[K.RHO_HI] = hi != null ? dAdd(from, hi) : null; out.rhoScale = base.rhoScale || 1;
   return out;
 }
-M.arrivalRange = arrivalRange;
+M.arrivalRange = arrivalRange; M.scenarioOf = scenarioOf;
 
 /* ===================== motore: un solo punto che produce tutti i risultati =====================
    engine(D, asOf, opts) usa solo dati con data ≤ asOf (pesate, calorie, sedute, versioni del piano).
@@ -7303,14 +7303,22 @@ function renderWeightChart() {
   var gw = s.goalWeight > 0 ? s.goalWeight : null, showFc = state.wRange === 'prev' || state.wRange === 'tutto', shortFc = !showFc;
   var x0 = state.wRange === '4w' ? addDays(t, -27) : state.wRange === 'fase' || state.wRange === 'prev' ? phase0 : ((ws[0] && ws[0].d) || phase0), x1 = t;
   if (x0 > t) x0 = addDays(t, -27);
-  var arr = null, proj = null;
+  var arr = null, proj = null, fcPath = null;
+  /* la previsione giorno per giorno: lo stesso simulatore della data di arrivo, con le calorie del piano */
+  var fcPathOf = function (n) {
+    try { var sc = GJM.scenarioOf(f.simPlan || f.sim, f.plan.I, 1, 0, GJM.K.RHO), sm = GJM.simulate(Object.assign({}, sc, { days: n }));
+      return sm.map(function (w, i) { return { d: addDays(f.from, i), v: w }; }); } catch (e) { return null; }
+  };
   if (showFc && f && f.plan && f.plan.central && gw) {
     var pEnd = f.plan.to || addDays(f.from, GJM.K.HORIZON);
+    fcPath = fcPathOf(diffDays(f.from, f.plan.central));
     proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: f.plan.central, v: gw } };
     if (f.plan.from) arr = { a: f.plan.from, b: pEnd };
     if (pEnd > x1) x1 = addDays(pEnd, 4);
   } else if (shortFc && f && f.plan && f.plan.central && gw && f.w0 != null) {
-    var sh = 14, sb = addDays(f.from, sh), stot = Math.max(1, diffDays(f.from, f.plan.central)), sv = f.w0 + (gw - f.w0) * Math.min(1, sh / stot);
+    /* «1 mese» e «Fase»: le prossime due settimane, oppure fino all'arrivo se arriva prima */
+    var stot = Math.max(1, diffDays(f.from, f.plan.central)), sh = Math.min(14, stot), sb = addDays(f.from, sh), sv = f.w0 + (gw - f.w0) * Math.min(1, sh / stot);
+    fcPath = fcPathOf(sh); if (fcPath && fcPath.length) sv = fcPath[fcPath.length - 1].v;
     proj = { a: { d: f.from, v: Math.round(f.w0 * 10) / 10 }, b: { d: sb, v: Math.round(sv * 10) / 10 } };
     if (sb > x1) x1 = addDays(sb, 1);
   }
@@ -7327,7 +7335,7 @@ function renderWeightChart() {
   if (!vals.length) vals = [s.startWeight || 70];
   var ymin = Math.min.apply(null, vals), ymax = Math.max.apply(null, vals);
   var W = chartW(svg), narrow = W < 520;
-  var sig = JSON.stringify([W, state.wRange, x0, x1, ymin, ymax, wv.length, av.length && av[av.length - 1], proj, arr, gw, plan]);
+  var sig = JSON.stringify([W, state.wRange, x0, x1, ymin, ymax, wv.length, av.length && av[av.length - 1], proj, arr, gw, plan, fcPath && fcPath.length]);
   var evs = planEvents(x0, x1);
   /* gli eventi del percorso: nel grafico solo una tacca sull'asse; cosa sono è scritto dietro la «i» */
   var wl = $('#w-evl'); if (!wl) { wl = document.createElement('p'); wl.id = 'w-evl'; wl.className = 'caption w-evl2'; var rd = $('#w-readout'); if (rd) rd.parentNode.insertBefore(wl, rd); }
@@ -7375,8 +7383,9 @@ function renderWeightChart() {
   }
   if (!narrow && tr && !tr.none && tr.method === 'retta') G.appendChild(el('line', { class: 'w-trend', x1: xs(tr.from), y1: ys(tr.v - tr.slope * diffDays(tr.from, t)), x2: xs(t), y2: ys(tr.v) }));
   if (proj) {
-    G.appendChild(el('path', { class: 'w-proj', d: 'M' + xs(proj.a.d).toFixed(1) + ' ' + ys(proj.a.v).toFixed(1) + ' L' + xs(proj.b.d).toFixed(1) + ' ' + ys(proj.b.v).toFixed(1), stroke: hex }));
-    G.appendChild(el('circle', { class: 'w-pend', cx: xs(proj.b.d), cy: ys(proj.b.v), r: 4.5 }));
+    var fcD = fcPath && fcPath.length > 1 ? fcPath.map(function (p, i) { return (i ? ' L' : 'M') + xs(p.d).toFixed(1) + ' ' + ys(p.v).toFixed(1); }).join('') : 'M' + xs(proj.a.d).toFixed(1) + ' ' + ys(proj.a.v).toFixed(1) + ' L' + xs(proj.b.d).toFixed(1) + ' ' + ys(proj.b.v).toFixed(1);
+    G.appendChild(el('path', { class: 'w-proj', d: fcD, stroke: hex }));
+    var atGoal = gw && Math.abs(proj.b.v - gw) < 0.05; G.appendChild(el('circle', { class: 'w-pend' + (atGoal ? '' : ' is-mid'), cx: xs(proj.b.d), cy: ys(proj.b.v), r: 4.5 }));
   }
   /* etichette fuori dal ritaglio: obiettivo a destra, peso di adesso sul punto */
   var tag = function (x, y, txt, cls, anchor) {
@@ -7395,7 +7404,10 @@ function renderWeightChart() {
   /* eventi: tacche numerate sotto l'asse, senza linee verticali che coprono il peso */
   evs.forEach(function (ev) { var ex = xs(ev.d); if (ex < m.l || ex > vb.w - m.r) return; svg.appendChild(el('path', { class: 'w-ev', d: 'M' + ex.toFixed(1) + ' ' + (m.t + ph + 3) + ' l4 7 h-8 z' })); });
   var guide = el('line', { class: 'guide' }); svg.appendChild(guide);
-  hover(svg, vb, wv.map(function (p) { return { x: xs(p.d), y: ys(p.w), text: cap(fmtLong(p.d)) + ' · Pesata ' + fmt(p.w) + ' kg · Media di 7 giorni ' + fmt(avgMap[p.d], 1) + ' kg' }; }), guide, m.t, m.t + ph);
+  var hv = wv.map(function (p) { return { x: xs(p.d), y: ys(p.w), text: cap(fmtLong(p.d)) + ' · Pesata ' + fmt(p.w) + ' kg · Media di 7 giorni ' + fmt(avgMap[p.d], 1) + ' kg' }; });
+  /* la previsione si legge giorno per giorno come le pesate */
+  if (fcPath) fcPath.forEach(function (p, i) { if (!inR(p.d) || wv.some(function (q) { return q.d === p.d; })) return; var last = i === fcPath.length - 1 && showFc; hv.push({ x: xs(p.d), y: ys(p.v), text: cap(fmtLong(p.d)) + ' · Previsione: circa ' + fmt(p.v, 1) + ' kg · ' + (last ? 'arrivo previsto all’obiettivo' : 'con ' + fmt(f.plan.I, 0) + ' kcal al giorno') }); });
+  hover(svg, vb, hv, guide, m.t, m.t + ph);
 }
 function planEvents(x0, x1) {
   var out = [], p = planDoc() || {};
@@ -16898,6 +16910,7 @@ html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):
 html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell>small{font-size:.9rem!important;font-weight:700!important;margin:0!important}
 html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-status{margin:0!important;color:#aaa;font-size:.75rem;line-height:1.5;text-align:center}
 @media(max-width:380px){html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell{padding:12px 10px!important}html body #tab-amici #friend-comparison:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f) .fz-goal-cell>b{font-size:1.05rem!important}}
+html body #w-chart .w-pend.is-mid:not(#a):not(#b):not(#c):not(#d){stroke:#0A84FF!important;fill:#1C1C1E!important}
 </style></body></html>
 
 
