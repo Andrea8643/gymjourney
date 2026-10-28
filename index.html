@@ -5283,6 +5283,13 @@ function el(name, attrs, text) {
 /* ---------- render: intestazione e KPI ---------- */
 /* ---------- riepilogo settimane/mesi ---------- */
 /* media di un macro solo sui giorni in cui è scritto: un macro mancante non vale 0 g */
+function isFast(v) { return !!(v && v.st && v.st.kcal === 'zero_confermato'); }
+function hasKcal(v) { return !!v && (v.kcal > 0 || isFast(v)); }
+function dayClosed(d, v) { return !!v && GJM.intakeOf(v, d === todayStr()).usable; }
+/* un giorno entra nelle medie se è passato, oppure se è oggi e la giornata è già chiusa */
+function countable(d, v) { return d < todayStr() || dayClosed(d, v); }
+/* nei digiuni confermati i macro valgono zero, come le calorie */
+function fastMacros(x) { return isFast(x) ? Object.assign({}, x, { protein: x.protein != null ? x.protein : 0, carbs: x.carbs != null ? x.carbs : 0, fat: x.fat != null ? x.fat : 0 }) : x; }
 function mmean(arr, k) { return mean(arr.filter(function (x) { return x[k] != null && !isNaN(x[k]); }).map(function (x) { return x[k]; })); }
 /* a quale settimana appartiene il fabbisogno usato per un giorno (per la scritta tra parentesi nel Giorno) */
 
@@ -5298,8 +5305,8 @@ function renderCalendar() {
   var html = DOW.map(function (x) { return '<div class="dow">' + x + '</div>'; }).join('');
   for (var i = 0; i < lead; i++) html += '<div class="blank cell"></div>';
   for (var d = 1; d <= nd; d++) {
-    var ds = ym + '-' + pad(d), v = state.days.get(ds), k = v && v.kcal > 0 ? v.kcal : 0, st = kcalStatus(k, ds);
-    html += '<button class="cell ' + (st === 'none' ? '' : st) + (ds === state.sel ? ' sel' : '') + (ds === t ? ' today' : '') + '" data-day="' + ds + '" aria-label="' + fmtLong(ds) + (k ? ', ' + fmt(k, 0) + ' kcal' : ', nessun dato') + '"><span class="d">' + d + '</span><span class="k">' + (k ? fmt(k, 0) : '') + '</span></button>';
+    var ds = ym + '-' + pad(d), v = state.days.get(ds), k = v && v.kcal > 0 ? v.kcal : 0, fz = isFast(v), st = fz ? 'under' : kcalStatus(k, ds);
+    html += '<button class="cell ' + (st === 'none' ? '' : st) + (ds === state.sel ? ' sel' : '') + (ds === t ? ' today' : '') + '" data-day="' + ds + '" aria-label="' + fmtLong(ds) + (k ? ', ' + fmt(k, 0) + ' kcal' : fz ? ', digiuno confermato' : ', nessun dato') + '"><span class="d">' + d + '</span><span class="k">' + (k ? fmt(k, 0) : fz ? '0' : '') + '</span></button>';
   }
   $('#cal').innerHTML = html;
 }
@@ -6853,14 +6860,18 @@ function renderNeed() {
   rows.push(p2tile('Macro', M ? macroHTML(M) : '—', M ? (M.mode !== 'manuale' ? lb('macros', M.mode) : 'Grammi del giorno secondo il piano') + (M.locked.length && M.mode !== 'manuale' ? ' · fissati: ' + M.locked.map(function (k) { return { p: 'proteine', c: 'carboidrati', f: 'grassi' }[k]; }).join(', ') : '') + (M.mode !== 'manuale' ? ' · preferenza ' + lb('pref', M.pref).toLowerCase() + ' · ' + esc(M.policy || '') : '') + (M.weightRef ? ' · peso di riferimento ' + fmt(M.weightRef.v, 1) + ' kg (' + lb('wref', M.weightRef.mode).toLowerCase() + ')' : '') : 'Non disponibili senza un obiettivo calorico', { cls: 'wide', rule: 'macro' }));
   /* 3. consumo stimato */
   var A = C && C.A, parts = A && A.ok ? A.orig : null;
-  var cSub = C ? (C.lo != null && C.hi != null ? 'intervallo ' + fmt(C.lo, 0) + '–' + fmt(C.hi, 0) + ' · ' : '') + 'giornata in corso, prevista con ' + (parts ? 'passi: ' + esc(parts.steps || '—') + '; palestra: ' + esc((A.gym && A.gym.orig) || '—') : 'il consumo manuale') + ' · digestione calcolata sull\'obiettivo di oggi' : (E.base && !E.base.ok ? esc(E.base.why) : 'Non stimabile');
+  var cSub = C ? (C.lo != null && C.hi != null ? 'intervallo ' + fmt(C.lo, 0) + '–' + fmt(C.hi, 0) + ' · ' : '') + (C.closed ? 'giornata chiusa, ricostruita con ' : 'giornata in corso, prevista con ') + (parts ? 'passi: ' + esc(parts.steps || '—') + '; palestra: ' + esc((A.gym && A.gym.orig) || '—') : 'il consumo manuale') + (C.closed ? ' · digestione sulle calorie confermate' : ' · digestione calcolata sull\'obiettivo di oggi') : (E.base && !E.base.ok ? esc(E.base.why) : 'Non stimabile');
   rows.push(p2tile('Consumo stimato di oggi', C ? kc(C.v) : '—', cSub + (E.verifiedOn ? ' · ultimo confronto col diario: ' + fmtDay(E.verifiedOn.d) : ''), { rule: 'consumo', t: 'Perché oggi consumi circa ' + (C ? kc(C.v) : '—') }));
   /* il consumo medio della settimana appena finita, ricostruito giorno per giorno con i dati di quei giorni */
   var LW = lastWeekNeed();
   rows.push(p2tile('Consumo medio della settimana scorsa', LW ? kc(LW.v) + '<small class="p2-per">al giorno, dal ' + fmtShort(LW.from) + ' al ' + fmtShort(LW.to) + '</small>' : '—', LW ? 'Media del consumo stimato dal ' + fmtDay(LW.from) + ' al ' + fmtDay(LW.to) + ', ricostruito giorno per giorno con passi, sedute e lavoro di quei giorni' + (LW.lo != null ? ' (intervallo ' + fmt(LW.lo, 0) + '–' + fmt(LW.hi, 0) + ' kcal)' : '') + '. ' + (LW.n < 7 ? 'Giorni stimabili: ' + LW.n + ' su 7. ' : '') + (LW.full ? LW.full + (LW.full === 1 ? ' giornata ha' : ' giornate hanno') + ' le calorie complete; per le altre la digestione è calcolata sull\'obiettivo. ' : 'Nessuna giornata con le calorie complete: la digestione è calcolata sull\'obiettivo. ') + 'È una stima, non una misura: il piano usa il consumo di riferimento (' + (B ? kc(B.R) : '—') + ').' : 'Servono i dati della settimana scorsa e un profilo completo.', { rule: 'consumo' }));
   /* 4. deficit / equilibrio / surplus atteso rispetto al piano */
   var bTxt = '—', bSub = '';
-  if (B) {
+  if (B && C && C.closed && C.assumeIntake != null) {
+    var real = C.v - C.assumeIntake, rw = Math.abs(real) < 50 ? 'Equilibrio' : real > 0 ? 'Deficit di oggi' : 'Surplus di oggi';
+    bTxt = Math.abs(real) < 50 ? rw : '<em>' + rw + '</em>' + kc(Math.abs(real));
+    bSub = 'Giornata chiusa: consumo stimato ' + fmt(C.v, 0) + ' − calorie confermate ' + fmt(C.assumeIntake, 0) + ' kcal. È lo stesso bilancio del Giorno e della Settimana in corso. Il mantenimento medio della routine è ' + fmt(B.R, 0) + ' kcal al giorno.';
+  } else if (B) {
     var ex = B.expected, word = Math.abs(ex) < 50 ? 'Equilibrio' : ex > 0 ? 'Deficit atteso' : 'Surplus atteso';
     bTxt = Math.abs(ex) < 50 ? word : '<em>' + word + '</em>' + kc(Math.abs(ex));
     bSub = 'Consumo stimato con le calorie del piano ' + fmt(B.expected + B.T, 0) + ' − obiettivo ' + fmt(B.T, 0) + ' kcal. Il bilancio reale del diario usa invece le calorie effettivamente confermate. Il mantenimento medio della routine è ' + fmt(B.R, 0) + ' kcal al giorno.';
@@ -7008,7 +7019,7 @@ function renderTomorrow() {}
 /* settimana in corso: oggi non è né passato né futuro, lo dico esplicitamente (la settimana finisce sempre di domenica) */
 function wkRest(k) {
   var today = k.completi + k.parziali + k.vuoti + k.futuri < 7, parts = [];
-  if (today) parts.push('oggi in corso');
+  if (today) parts.push(dayClosed(todayStr(), state.days.get(todayStr())) ? 'oggi completo' : 'oggi in corso');
   if (k.futuri === 1) parts.push('domenica da venire'); else if (k.futuri > 1) parts.push(k.futuri + ' giorni da venire');
   return parts.length ? parts.join(' · ') : 'settimana conclusa';
 }
@@ -7586,16 +7597,16 @@ function renderSummary() {
   state.workouts.forEach(function (w) { if (w.date >= start && w.date <= t0) g(keyFn(w.date)).work++; });
   var keys = Array.from(groups.keys()).sort();
   if (!keys.length) { $('#summary').innerHTML = '<div class="empty">Qui compariranno le settimane e i mesi del tuo percorso dal ' + fmtDay(start) + '.</div>'; return; }
-  var rows = [], prevW = null, bad = isOutlier(), t = addDays(t0, -1);
+  var rows = [], prevW = null, bad = isOutlier(), t = dayClosed(t0, state.days.get(t0)) ? t0 : addDays(t0, -1);
   keys.forEach(function (k) {
     var gr0 = groups.get(k), ds = gr0.days;
     var w = mean(ds.filter(function (x) { return x.weight > 0 && !bad[x.d]; }).map(function (x) { return x.weight; }));
-    var kd = ds.filter(function (x) { return (x.kcal > 0 || (x.st && x.st.kcal === 'zero_confermato')) && x.d < t0; }), kc0 = kd.filter(function (x) { return balOf(x.d); });
+    var kd = ds.filter(function (x) { return hasKcal(x) && countable(x.d, x); }).map(fastMacros), kc0 = kd.filter(function (x) { return balOf(x.d); });
     var label, sub, span;
     if (isWeek) { var n = Math.floor(diffDays(weekStart(start), k) / 7) + 1, sun = addDays(k, 6); label = 'Settimana ' + n + (sun >= t0 ? ' (in corso)' : ''); sub = fmtShort(k < start ? start : k) + '–' + fmtShort(sun); span = Math.max(0, diffDays(k < start ? start : k, sun < t ? sun : t) + 1); }
     else { var p = k.split('-'), first = k + '-01', last = k + '-' + pad(new Date(+p[0], +p[1], 0).getDate()); label = cap(MESI_L[+p[1] - 1]) + ' ' + p[0] + (k === t0.slice(0, 7) ? ' (in corso)' : ''); sub = ''; span = Math.max(0, diffDays(first < start ? start : first, last < t ? last : t) + 1); }
     rows.push({ label: label, sub: sub, w: w, dw: w != null && prevW != null ? w - prevW : null, k: mean(kd.map(function (x) { return x.kcal; })), bal: kc0.length ? mean(kc0.map(function (x) { return balOf(x.d).v; })) : null, nb: kc0.length,
-      p: mmean(kd, 'protein'), c: mmean(kd, 'carbs'), f: mmean(kd, 'fat'), st: mean(ds.filter(function (x) { return x.steps > 0 && x.d < t0; }).map(function (x) { return x.steps; })), sl: mean(ds.filter(function (x) { return x.sleepH > 0; }).map(function (x) { return x.sleepH; })), work: gr0.work, nd: kd.length, span: span });
+      p: mmean(kd, 'protein'), c: mmean(kd, 'carbs'), f: mmean(kd, 'fat'), st: mean(ds.filter(function (x) { return x.steps > 0 && countable(x.d, x); }).map(function (x) { return x.steps; })), sl: mean(ds.filter(function (x) { return x.sleepH > 0; }).map(function (x) { return x.sleepH; })), work: gr0.work, nd: kd.length, span: span });
     prevW = w;
   });
   rows.reverse();
@@ -7638,7 +7649,7 @@ function buildReport(wsDate) {
   for (var i = 0; i < 7; i++) days.push(addDays(wsDate, i));
   var recs = days.map(function (d) { return { d: d, v: state.days.get(d) || {}, b: balOf(d), T: dayTarget(d) }; });
   var bad = isOutlier(), ww = recs.filter(function (r) { return r.v.weight > 0 && !bad[r.d]; }).map(function (r) { return r.v.weight; });
-  var kk = recs.filter(function (r) { return (r.v.kcal > 0 || (r.v.st && r.v.st.kcal === 'zero_confermato')) && r.d < t; }), kb = kk.filter(function (r) { return r.b; });
+  var kk = recs.filter(function (r) { return hasKcal(r.v) && r.d <= t && countable(r.d, r.v); }), kb = kk.filter(function (r) { return r.b; });
   var n = Math.floor(diffDays(weekStart(s.startDate || wsDate), wsDate) / 7) + 1, we = days[6];
   var a = parseD(wsDate), b = parseD(we), Y = b.getFullYear();
   var range = a.getMonth() === b.getMonth() ? a.getDate() + ' - ' + b.getDate() + ' ' + MESI_L[b.getMonth()].toUpperCase() + ' ' + Y : a.getDate() + ' ' + MESI_L[a.getMonth()].toUpperCase() + ' - ' + b.getDate() + ' ' + MESI_L[b.getMonth()].toUpperCase() + ' ' + Y;
@@ -7651,13 +7662,13 @@ function buildReport(wsDate) {
     else L.push('• Bilancio stimato: N/D (nessuna giornata dichiarata completa)');
     var tAvg = mean(kk.filter(function (r) { return r.T.kcal > 0; }).map(function (r) { return r.T.kcal; }));
     L.push('• Introito Calorico Medio: ' + fmt(kAvg, 0) + ' kcal/die' + (tAvg ? ' (obiettivo medio ' + fmt(tAvg, 0) + ') — ' + judge(kAvg, tAvg) : ''));
-    var kv = kk.map(function (r) { return r.v; }), pAvg = mmean(kv, 'protein'), cAvg = mmean(kv, 'carbs'), fAvg = mmean(kv, 'fat'), T0 = dayTarget(wsDate > t ? t : wsDate);
+    var kv = kk.map(function (r) { return fastMacros(r.v); }), pAvg = mmean(kv, 'protein'), cAvg = mmean(kv, 'carbs'), fAvg = mmean(kv, 'fat'), T0 = dayTarget(wsDate > t ? t : wsDate);
     var nm = function (k) { var c = kv.filter(function (x) { return x[k] != null; }).length; return c < kv.length ? ' (' + c + 'gg)' : ''; };
     L.push('• Media Proteine' + nm('protein') + ': ' + (pAvg != null ? fmt(pAvg, 1) + ' g/die' + (ww.length ? ' (' + fmt(pAvg / mean(ww), 1) + ' g/kg)' : '') + (T0.p ? ' — ' + judge(pAvg, T0.p) : '') : 'N/D'));
     L.push('• Media Carboidrati' + nm('carbs') + ': ' + (cAvg != null ? fmt(cAvg, 1) + ' g/die' + (T0.c ? ' — ' + judge(cAvg, T0.c) : '') : 'N/D'));
     L.push('• Media Grassi' + nm('fat') + ': ' + (fAvg != null ? fmt(fAvg, 1) + ' g/die' + (T0.f ? ' — ' + judge(fAvg, T0.f) : '') : 'N/D'));
   } else L.push('• Calorie e macro: N/D');
-  var st = recs.filter(function (r) { return r.v.steps > 0; }).map(function (r) { return r.v.steps; });
+  var st = recs.filter(function (r) { return r.v.steps > 0 && r.d <= t && countable(r.d, r.v); }).map(function (r) { return r.v.steps; });
   if (st.length) L.push('• Media Passi quotidiani (palestra esclusa): ' + fmt(mean(st), 0) + ' passi/die');
   var sl = recs.filter(function (r) { return r.v.sleepH > 0; }).map(function (r) { return r.v.sleepH; });
   var wk = Array.from(state.workouts.values()).filter(function (w) { return w.date >= wsDate && w.date <= we; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; });
@@ -7665,9 +7676,10 @@ function buildReport(wsDate) {
   L.push('', 'DETTAGLIO GIORNALIERO:', '');
   recs.forEach(function (r) {
     var v = r.v, p = parseD(r.d);
-    if (!(v.kcal > 0 || v.weight > 0 || v.steps > 0)) return;
+    if (!(hasKcal(v) || v.weight > 0 || v.steps > 0)) return;
     var parts = ['Peso ' + (v.weight > 0 ? fmt(v.weight, 1) + ' kg' : 'N/D')];
-    if (v.kcal > 0) parts.push('In: ' + fmt(v.kcal, 0) + ' kcal' + (r.b ? '' : ' (' + lb('fstate', GJM.fieldState(v, 'kcal', r.d === t)).toLowerCase() + ')'), 'Bilancio stimato: ' + (r.b ? plainSgn(Math.round(r.b.v), 0) + ' kcal' : 'N/D'), 'P: ' + (v.protein != null ? fmt(v.protein, 0) + 'g' : 'N/D'), 'C: ' + (v.carbs != null ? fmt(v.carbs, 0) + 'g' : 'N/D'), 'F: ' + (v.fat != null ? fmt(v.fat, 0) + 'g' : 'N/D'));
+    if (isFast(v)) parts.push('In: 0 kcal (digiuno confermato)', 'Bilancio stimato: ' + (r.b ? plainSgn(Math.round(r.b.v), 0) + ' kcal' : 'N/D'));
+    else if (v.kcal > 0) parts.push('In: ' + fmt(v.kcal, 0) + ' kcal' + (r.b ? '' : ' (' + lb('fstate', GJM.fieldState(v, 'kcal', r.d === t)).toLowerCase() + ')'), 'Bilancio stimato: ' + (r.b ? plainSgn(Math.round(r.b.v), 0) + ' kcal' : 'N/D'), 'P: ' + (v.protein != null ? fmt(v.protein, 0) + 'g' : 'N/D'), 'C: ' + (v.carbs != null ? fmt(v.carbs, 0) + 'g' : 'N/D'), 'F: ' + (v.fat != null ? fmt(v.fat, 0) + 'g' : 'N/D'));
     if (v.steps > 0) parts.push('Passi: ' + fmt(v.steps, 0));
     if (v.note) parts.push('Note: ' + v.note);
     L.push('- ' + cap(DOW[(p.getDay() + 6) % 7]) + ' ' + pad(p.getDate()) + '/' + pad(p.getMonth() + 1) + ': ' + parts.join(' | '));
@@ -11941,9 +11953,9 @@ function profileJourneyHTML(start,goal,lw,phase,from){
   if(!(start>0&&goal>0)||start===goal)return '';
   if(!lw||from&&lw.d<from)return '<div class="pf-journey-note">La barra del percorso comparirà con la prima pesata di questa fase.</div>';
   var raw=(lw.w-start)/(goal-start),fraction=Math.max(0,Math.min(1,raw)),pct=raw>=1?100:Math.min(99,Math.round(fraction*100));
-  var status=raw>=1?'Peso obiettivo raggiunto nell’ultima pesata.':'Distanza dall’obiettivo: '+fmt(Math.abs(lw.w-goal),1)+' kg';
-  var desc='Partenza '+fmt(start,1)+' kg; ultima pesata '+fmt(lw.w,1)+' kg del '+fmtDay(lw.d)+'; obiettivo '+fmt(goal,1)+' kg.';
-  return '<div class="pf-journey"><div class="pf-journey-heading"><span>Il tuo percorso in peso</span><b>'+pct+'%</b></div><div class="pf-journey-track" role="progressbar" aria-label="Percorso verso il peso obiettivo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+(Math.round(fraction*1000)/10)+'" aria-valuetext="'+esc(desc)+'" style="--journey-progress:'+(Math.round(fraction*10000)/100)+'%"><span class="pf-journey-fill"></span><span class="pf-journey-marker" aria-hidden="true"></span></div><div class="pf-journey-meta"><span>'+status+'</span><small>In base all’ultima pesata</small></div></div>';
+  var status=raw>=1?(lw.trend?'Peso obiettivo raggiunto secondo la tendenza.':'Peso obiettivo raggiunto nell’ultima pesata.'):'Distanza dall’obiettivo: '+fmt(Math.abs(lw.w-goal),1)+' kg';
+  var desc='Partenza '+fmt(start,1)+' kg; '+(lw.trend?'tendenza del peso ':'ultima pesata ')+fmt(lw.w,1)+' kg del '+fmtDay(lw.d)+'; obiettivo '+fmt(goal,1)+' kg.';
+  return '<div class="pf-journey"><div class="pf-journey-heading"><span>Il tuo percorso in peso</span><b>'+pct+'%</b></div><div class="pf-journey-track" role="progressbar" aria-label="Percorso verso il peso obiettivo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+(Math.round(fraction*1000)/10)+'" aria-valuetext="'+esc(desc)+'" style="--journey-progress:'+(Math.round(fraction*10000)/100)+'%"><span class="pf-journey-fill"></span><span class="pf-journey-marker" aria-hidden="true"></span></div><div class="pf-journey-meta"><span>'+status+'</span><small>'+(lw.trend?'In base alla tendenza del peso, come in Oggi':'In base all’ultima pesata')+'</small></div></div>';
 }
 
 PATHS.piano_mio.t='Ho già calorie e macro';PATHS.piano_mio.s='Inserisci i tuoi valori e mantienili sotto il tuo controllo.';
@@ -11991,7 +12003,7 @@ function renderProfileIdentity(){
   h+='<span class="pe-acts"><button type="button" class="pe-link" data-photo>'+(state.avatar?'Cambia foto':'Aggiungi foto')+'</button><button type="button" class="pe-link" data-profile-open="tu">Dati personali</button>'+(state.avatar?'<button type="button" class="pe-link" data-photo-del>Rimuovi foto</button>':'')+'</span></div>';
   h+=profileLevelHTML(G.p);
   h+='<div class="pe-nums">'+tile(G.p?fmt(G.p.complete||0,0):'—','giorni completi')+tile(fmt(ses,0),ses===1?'seduta':'sedute')+tile(dlt!=null?(dlt>0.05?'+':dlt<-0.05?'−':'')+fmt(Math.abs(dlt),1):'—','kg di tendenza')+'</div>';
-  if(v)h+=profileJourneyHTML(start,goal,lw,g.phase,from);
+  if(v)h+=profileJourneyHTML(start,goal,now&&now.w!=null?{d:t,w:now.w,trend:true}:lw,g.phase,from);
   h+=profileShelfHTML(G.m,G.owned);
   if(state.photoMsg)h+='<p class="pf-photo-msg" role="status">'+esc(state.photoMsg)+'</p>';
   if(card._h!==h){card._h=h;card.innerHTML=h;}
@@ -12313,7 +12325,7 @@ function routineEnergyHTML(r) {
   if(j&&j.days&&j.days.length)a.push('<span><b>Lavoro</b>'+j.days.length+' giorni × '+fmt(j.hours,1)+' h · '+esc(j.days.map(function(x){return WD[x];}).join(', '))+'</span>');
   else if(j&&j.hoursWeek>0)a.push('<span><b>Lavoro</b>'+fmt(j.hoursWeek,0)+' h/settimana · giorni non specificati</span>');
   else a.push('<span><b>Lavoro</b>Nessun contributo lavorativo impostato</span>');
-  a.push('<span><b>Allenamento</b>'+(R.trainPerWeek!=null?fmt(R.trainPerWeek,R.trainPerWeek%1?1:0)+' sedute/settimana · '+(R.trainObserved?'dallo storico Hevy':'dal profilo'):'Frequenza da completare')+'</span>');
+  a.push('<span><b>Allenamento</b>'+(R.trainPerWeek!=null?fmt(R.trainPerWeek,R.trainPerWeek%1?1:0)+' sedute/settimana · '+(R.trainObserved?'ultime 4 settimane importate da Hevy':'dal profilo'):'Frequenza da completare')+'</span>');
   a.push('<span><b>Passi abituali</b>'+(r.unknown.some(function(x){return x.indexOf('Passi abituali')===0;})?'Da completare':R.steps!=null?fmt(R.steps,0)+' al giorno':'Da completare')+'</span>');
   return '<div class="maintenance-routine">'+a.join('')+'</div>';
 }
@@ -12511,20 +12523,21 @@ function renderTodayRings() {
   var filled = [d.weight > 0, d.kcal > 0 || (d.st && d.st.kcal === 'zero_confermato'), d.steps > 0 || (d.st && d.st.steps === 'zero_confermato')].filter(Boolean).length;
   var pct = $('#ht-pct'); pct.textContent = 'Diario ' + filled + '/3'; pct.classList.toggle('over', false); pct.classList.toggle('full', filled === 3);
   /* il numero protagonista */
-  var T = dayTarget(day), goal = T && T.kcal > 0 ? T.kcal : M[0].g, kc = d.kcal > 0 ? d.kcal : 0, left = goal > 0 ? goal - kc : null, rg = !kRange(day).fixed;
+  var T = dayTarget(day), goal = T && T.kcal > 0 ? T.kcal : M[0].g, kc = d.kcal > 0 ? d.kcal : 0, left = goal > 0 ? goal - kc : null, rg = !kRange(day).fixed, fast = isFast(d);
   var lh;
-  if (!(goal > 0)) lh = '<small>Calorie</small><b>' + (kc ? fmt(kc, 0) : '—') + '</b><span>nessun obiettivo nel piano</span>';
+  if (fast) lh = '<small>Digiuno confermato</small><b>0</b><span>kcal ' + (isT ? 'oggi' : 'quel giorno') + (goal > 0 ? ' · obiettivo ' + (rg ? kRange(day).label : fmt(goal, 0)) : '') + '</span>';
+  else if (!(goal > 0)) lh = '<small>Calorie</small><b>' + (kc ? fmt(kc, 0) : '—') + '</b><span>nessun obiettivo nel piano</span>';
   else if (left >= 0) lh = '<small>' + (kc ? 'Rimangono' : 'Obiettivo') + '</small><b>' + fmt(left, 0) + '</b><span>' + (kc ? 'kcal per arrivare a ' + (rg ? kRange(day).label : fmt(goal, 0)) : 'kcal ' + (isT ? 'da mangiare oggi' : 'previste quel giorno')) + '</span>';
   else lh = '<small>Oltre l’obiettivo</small><b class="over">+' + fmt(-left, 0) + '</b><span>kcal sopra ' + (rg ? kRange(day).label : fmt(goal, 0)) + '</span>';
   $('#ht-left').innerHTML = lh;
   $('#ht-legend').innerHTML = R3.map(function (m) {
-    var has = m.v > 0, st = htState(m), rg2 = m.k === 'kcal' && rg;
+    var has = m.v > 0 || (fast && m.k !== 'steps'), st = htState(m), rg2 = m.k === 'kcal' && rg;
     var lab = m.n + ' ' + (has ? m.f(m.v) : 'nessun dato') + ' su ' + (rg2 ? kRange(day).label : m.f(m.g)) + m.u + (st === 'ok' ? ', nel target' : st === 'over' ? ', sopra il target' : '') + '. Apri il giorno in Progressi';
-    return '<button type="button" class="ht-row" data-htk="' + m.k + '" aria-label="' + esc(lab) + '"><i style="background:' + m.c + '"></i><span class="v">' + (has ? m.f(m.v) : '–') + '</span><span class="n">/ ' + (rg2 ? kRange(day).label : m.g > 0 ? m.f(m.g) : '—') + (m.k === 'kcal' ? ' kcal' : m.k === 'protein' ? ' g proteine' : ' passi') + '</span>' + (st === 'ok' ? '<em aria-hidden="true">✓</em>' : st === 'over' ? '<em class="over" aria-hidden="true">▲</em>' : '') + '</button>';
+    return '<button type="button" class="ht-row" data-htk="' + m.k + '" aria-label="' + esc(lab) + '"><i style="background:' + m.c + '"></i><span class="v">' + (has ? m.f(m.v || 0) : '–') + '</span><span class="n">/ ' + (rg2 ? kRange(day).label : m.g > 0 ? m.f(m.g) : '—') + (m.k === 'kcal' ? ' kcal' : m.k === 'protein' ? ' g proteine' : ' passi') + '</span>' + (st === 'ok' ? '<em aria-hidden="true">✓</em>' : st === 'over' ? '<em class="over" aria-hidden="true">▲</em>' : '') + '</button>';
   }).join('');
   $('#ht-macros').innerHTML = [M[1], M[2], M[3]].map(function (m) {
     var f = m.g > 0 && m.v > 0 ? Math.min(1, m.v / m.g) : 0, st = htState(m);
-    return '<div class="htm' + (st === 'over' ? ' is-over' : '') + '"><small>' + m.n + '</small><b>' + (m.v > 0 ? m.f(m.v) : '–') + '<em> / ' + (m.g > 0 ? m.f(m.g) : '—') + ' g</em></b><span class="htm-bar"><i style="width:' + (f * 100).toFixed(1) + '%;background:' + m.c + '"></i></span></div>';
+    return '<div class="htm' + (st === 'over' ? ' is-over' : '') + '"><small>' + m.n + '</small><b>' + (m.v > 0 ? m.f(m.v) : fast ? '0' : '–') + '<em> / ' + (m.g > 0 ? m.f(m.g) : '—') + ' g</em></b><span class="htm-bar"><i style="width:' + (f * 100).toFixed(1) + '%;background:' + m.c + '"></i></span></div>';
   }).join('');
   var Q = [['weight', 'Peso', HEX.accent || '#0A84FF', '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10a3 3 0 0 1 6 0M12 10l1.5-2"/>'], ['kcal', 'Calorie', HEX.kcal, '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.6 2.4-5 .4 1.5 1.1 2.3 2.1 2.6C11.4 8 11 5.6 12 3z"/>'], ['steps', 'Passi', HEX.steps, '<path d="M8 3c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM6 15h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2.5 3 5s-1 4-3 4-3-1.5-3-4 1-5 3-5zM14 19h4v.5a2 2 0 0 1-4 0z"/>']];
   var have = { weight: d.weight > 0, kcal: d.kcal > 0, steps: d.steps > 0 };
