@@ -1705,7 +1705,7 @@ function status(day,key,isToday,M){var s=M.fieldState(day,key,isToday);return ['
 function makeDay(D,E,prefs,date,today,M){
  var x=(D.days||{})[date]||{},s=status(x,'kcal',date===today,M),it=M.intakeOf(x,date===today),o={date:date};
  if(prefs.calories){var target=E&&E.dayOf?E.dayOf(date):null;o.calories={value:it.state==='zero_confermato'?0:value(x.kcal,50000),target:target?value(target.target,50000):null,state:s};}
- if(prefs.macros)o.macros={protein:value(x.protein,10000),carbs:value(x.carbs,10000),fat:value(x.fat,10000),state:s};
+ if(prefs.macros){var zf=s==='zero_confermato',zv=function(v){return zf&&v==null?0:v;};o.macros={protein:zv(value(x.protein,10000)),carbs:zv(value(x.carbs,10000)),fat:zv(value(x.fat,10000)),state:s};}
  if(prefs.steps)o.steps={value:value(x.steps,200000),state:status(x,'steps',date===today,M)};
  if(prefs.weight)o.weight=value(x.weight,1000);
  if(prefs.workouts){var sessions=(D.workouts||[]).filter(function(w){return w.date===date;}),count=sessions.length;
@@ -11498,7 +11498,7 @@ function create(ctx){
     var list=past.length?'<section class="gg-card gz-days"><div class="gz-dh"><h3>Giorno per giorno</h3><small>un gettone per ogni diario completo</small></div>'+past.slice(0,4).map(dayRow).join('')+(past.length>4?'<details class="gz-more"><summary>Mostra '+(past.length===5?'l’altro giorno':'gli altri '+(past.length-4)+' giorni')+' ›</summary>'+past.slice(4).map(dayRow).join('')+'</details>':'')+'</section>':'';
     var cta=open?'<div class="gz-cta-wrap">'+button('open-day','Completa il diario di oggi · +'+gain,currentDay,'primary')+'</div>':phase==='active'?'<p class="gz-done">'+(todayRow&&todayRow.state==='pending'?'Diario di oggi completo: i punti arrivano appena si sincronizza.':'Oggi hai fatto il tuo passo: il diario completo è già conteggiato.')+'</p>':phase==='settling'?'<p class="gz-done">C’è ancora tempo per sincronizzare. Chiusura dei risultati: '+stamp(g.settleMs)+'.</p>':g.status==='settled'?'<div class="gz-cta-wrap">'+button('invite','La rivincita?',peer,'primary')+'</div>':phase==='finished'?'<div class="gz-cta-wrap">'+button('refresh','Aggiorna risultati',null,'primary')+'</div>':'';
     var tt=value.teamTotal||0,dm=Math.min(mine.days,10),dp=Math.min(theirs.days,10-dm),needT=Math.max(0,10-tt),needM=Math.max(0,4-mine.days),needP=Math.max(0,4-theirs.days),left=[];
-    if(needT)left.push('mancano '+needT+(needT===1?' giornata':' giornate')+' in totale');
+    if(needT)left.push((needT===1?'manca 1 giornata':'mancano '+needT+' giornate')+' in totale');
     if(needP)left.push(esc(short)+' deve farne ancora '+needP);
     if(needM)left.push('tu ancora '+needM);
     var teamTxt=value.cooperative?'Obiettivo raggiunto insieme.':left.length?left.join(', ').replace(/^./,function(c){return c.toUpperCase();})+'.':'Ci siete: il premio arriva alla chiusura.';
