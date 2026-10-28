@@ -5075,10 +5075,12 @@ function planImpact(ctx, out, v, z, base, asOf) {
   var acc = weighIns(ctx, asOf).acc, startWeights = acc.filter(function (x) { return x.d === from; });
   var near = startWeights.length ? [] : acc.filter(function (x) { return x.d > from && dDiff(from, x.d) <= 7; }).sort(function (a, b) { return a.d < b.d ? -1 : 1; });
   var profW = versions.length && from === versions[0].from && ctx.profile && +ctx.profile.weight;
-  var initial = startWeights.length ? startWeights[0].w : near.length ? near[0].w : profW;
+  /* lo stesso peso di partenza del piano, della linea «Piano» nel grafico e di «kg dal …» nella tendenza */
+  var planStart = +g.startWeight > 0 && g.startDate === from ? +g.startWeight : null;
+  var initial = planStart || (startWeights.length ? startWeights[0].w : near.length ? near[0].w : profW);
   if (!(initial > 0) || !isFinite(initial)) { p.why = 'Manca una pesata vicino all’inizio del piano (il ' + itDay(from) + ' o nei 7 giorni dopo): senza un peso di partenza non posso rifare il percorso.'; return p; }
   // Profile weight is the declared starting weight, not a later measurement silently moved to the start.
-  p.initialWeight = initial; p.initialOrigin = startWeights.length ? 'pesata di inizio percorso' : near.length ? 'prima pesata dopo l’inizio, il ' + itDay(near[0].d) : 'peso iniziale dichiarato nel profilo';
+  p.initialWeight = initial; p.initialOrigin = planStart ? 'peso di partenza del piano' : startWeights.length ? 'pesata di inizio percorso' : near.length ? 'prima pesata dopo l’inizio, il ' + itDay(near[0].d) : 'peso iniziale dichiarato nel profilo';
   if ((p.goalWeight - initial) * dir <= 0) { p.why = 'Il peso iniziale è già oltre il traguardo nella direzione del piano.'; return p; }
   if (p.rows.some(function (x) { return x.B == null; })) { p.why = 'Per alcuni giorni del periodo manca la stima del consumo: non posso rifare il percorso giorno per giorno.'; return p; }
   var slope = base.perKg || 0;
