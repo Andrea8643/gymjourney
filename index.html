@@ -7571,7 +7571,7 @@ function renderTotal() {
   }
   var amount = Math.abs(Math.round(total));
   $('#tot-title').textContent = 'Bilancio stimato dal ' + fmtDay(from);
-  countTo($('#tot-v'), rows.length ? amount : null, 0); $('#tot-u').textContent = rows.length ? 'kcal ' + (total <= 0 ? 'di deficit' : 'di surplus') + ' in ' + rows.length + ' giornate complete' : 'kcal';
+  countTo($('#tot-v'), rows.length ? amount : null, 0); $('#tot-u').textContent = rows.length ? 'kcal ' + (total <= 0 ? 'di deficit' : 'di surplus') + ' in ' + rows.length + ' giornate complete, fino a ieri' : 'kcal';
   $('#tot-chips').innerHTML = rows.length ? '<span class="chip context-chip context-note">Equivalente teorico: ' + fmt(amount / KCAL_KG, 1) + ' kg a 7.700 kcal/kg; non misura il grasso</span>' : '';
   $('#tot-text').textContent = 'Somma di calorie registrate meno consumo stimato di ogni giorno, solo per le giornate dichiarate complete.' + (skipped ? ' ' + skipped + ' giornate con calorie parziali o da confermare non sono contate.' : '') + ' Se il diario sottostima sempre le calorie, il consumo stimato è più basso dello stesso errore: il bilancio resta comunque un\'ipotesi.';
   box.innerHTML = rows.length ? '<details class="more" data-ibfold><summary>Controlla il calcolo giorno per giorno</summary><div class="in"><div class="tw"><table><thead><tr><th>Data</th><th>Mangiate</th><th>Consumo stimato</th><th>Bilancio</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr><td>' + fmtShort(r.d) + '</td><td>' + fmt(r.kcal, 0) + '</td><td>' + fmt(r.td, 0) + '</td><td>' + sgn(r.delta, 0) + '</td></tr>'; }).join('') + '</tbody></table></div></div></details>' : '';
