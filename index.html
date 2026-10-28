@@ -7565,7 +7565,7 @@ function renderTotal() {
   var s = S(), t = todayStr(), box = $('#tot-body'), rows = [], total = 0, skipped = 0, from = s.startDate || firstVersion().from;
   if (!from || !state.E) { $('#tot-v').textContent = '—'; $('#tot-chips').innerHTML = ''; $('#tot-text').textContent = 'Serve un piano attivo.'; box.innerHTML = ''; return; }
   for (var d = from; d < t; d = addDays(d, 1)) {
-    var v = state.days.get(d); if (!v || !(v.kcal > 0)) continue;
+    var v = state.days.get(d); if (!v || !(v.kcal > 0 || (v.st && v.st.kcal === 'zero_confermato'))) continue;
     var b = balOf(d); if (!b) { skipped++; continue; }
     total += b.v; rows.push({ d: d, kcal: b.intake, td: b.C, delta: b.v });
   }
@@ -7590,7 +7590,7 @@ function renderSummary() {
   keys.forEach(function (k) {
     var gr0 = groups.get(k), ds = gr0.days;
     var w = mean(ds.filter(function (x) { return x.weight > 0 && !bad[x.d]; }).map(function (x) { return x.weight; }));
-    var kd = ds.filter(function (x) { return x.kcal > 0 && x.d < t0; }), kc0 = kd.filter(function (x) { return balOf(x.d); });
+    var kd = ds.filter(function (x) { return (x.kcal > 0 || (x.st && x.st.kcal === 'zero_confermato')) && x.d < t0; }), kc0 = kd.filter(function (x) { return balOf(x.d); });
     var label, sub, span;
     if (isWeek) { var n = Math.floor(diffDays(weekStart(start), k) / 7) + 1, sun = addDays(k, 6); label = 'Settimana ' + n + (sun >= t0 ? ' (in corso)' : ''); sub = fmtShort(k < start ? start : k) + '–' + fmtShort(sun); span = Math.max(0, diffDays(k < start ? start : k, sun < t ? sun : t) + 1); }
     else { var p = k.split('-'), first = k + '-01', last = k + '-' + pad(new Date(+p[0], +p[1], 0).getDate()); label = cap(MESI_L[+p[1] - 1]) + ' ' + p[0] + (k === t0.slice(0, 7) ? ' (in corso)' : ''); sub = ''; span = Math.max(0, diffDays(first < start ? start : first, last < t ? last : t) + 1); }
@@ -7638,7 +7638,7 @@ function buildReport(wsDate) {
   for (var i = 0; i < 7; i++) days.push(addDays(wsDate, i));
   var recs = days.map(function (d) { return { d: d, v: state.days.get(d) || {}, b: balOf(d), T: dayTarget(d) }; });
   var bad = isOutlier(), ww = recs.filter(function (r) { return r.v.weight > 0 && !bad[r.d]; }).map(function (r) { return r.v.weight; });
-  var kk = recs.filter(function (r) { return r.v.kcal > 0 && r.d < t; }), kb = kk.filter(function (r) { return r.b; });
+  var kk = recs.filter(function (r) { return (r.v.kcal > 0 || (r.v.st && r.v.st.kcal === 'zero_confermato')) && r.d < t; }), kb = kk.filter(function (r) { return r.b; });
   var n = Math.floor(diffDays(weekStart(s.startDate || wsDate), wsDate) / 7) + 1, we = days[6];
   var a = parseD(wsDate), b = parseD(we), Y = b.getFullYear();
   var range = a.getMonth() === b.getMonth() ? a.getDate() + ' - ' + b.getDate() + ' ' + MESI_L[b.getMonth()].toUpperCase() + ' ' + Y : a.getDate() + ' ' + MESI_L[a.getMonth()].toUpperCase() + ' - ' + b.getDate() + ' ' + MESI_L[b.getMonth()].toUpperCase() + ' ' + Y;
@@ -12551,8 +12551,8 @@ function renderStreakCard() {
     var cls = ok ? 'ok' : dd === t ? 'now' : dd > t ? 'next' : 'miss';
     return '<div class="sk-d ' + cls + '"><span>' + lab + '</span><i aria-hidden="true">' + (ok ? '✓' : dd === t ? '•' : '') + '</i></div>';
   }).join('');
-  var d = state.days.get(t) || {}, todayOk = d.kcal > 0 && GJM.fieldState(d, 'kcal', true) === 'completo';
-  var miss = [!(d.weight > 0) && 'peso', !(d.kcal > 0) && 'calorie', !(d.steps > 0) && 'passi'].filter(Boolean);
+  var d = state.days.get(t) || {}, todayOk = GJM.intakeOf(d, true).usable;
+  var miss = [!(d.weight > 0) && 'peso', !(d.kcal > 0 || (d.st && d.st.kcal === 'zero_confermato')) && 'calorie', !(d.steps > 0) && 'passi'].filter(Boolean);
   var mission = todayOk ? '<div class="sk-m is-done"><div><b>Diario di oggi completo</b><small>Ottimo, la giornata conta per serie e sfide.</small></div><span class="sk-ok" aria-hidden="true">✓</span></div>'
     : '<button type="button" class="sk-m" data-adddata="today"><div><b>Completa il diario di oggi</b><small>' + (miss.length ? 'Mancano ' + miss.join(', ') : 'Segna la giornata come completa') + '</small></div><span class="sk-go" aria-hidden="true">›</span></button>';
   var html = '<div class="sk-head"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + PF_IC.fire + '</svg>' + (n > 0 ? n + (n === 1 ? ' settimana' : ' settimane') + ' di fila in palestra' : 'La tua settimana') + '</h2><span class="sk-chip">' + done + '/7 giorni completi</span></div><div class="sk-week" aria-label="Giorni completi di questa settimana">' + dots + '</div>' + mission;
@@ -12870,7 +12870,7 @@ function monthStats(ym) {
   var t = todayStr(), first = ym + '-01', p = parseD(first), last = addDays(ymd(new Date(p.getFullYear(), p.getMonth() + 1, 1)), -1), end = last < t ? last : t;
   var days = [], d = first; while (d <= end) { days.push(d); d = addDays(d, 1); }
   var rows = days.map(function (x) { return [x, state.days.get(x) || {}]; });
-  var comp = rows.filter(function (r) { return r[1].kcal > 0 && GJM.fieldState(r[1], 'kcal', r[0] === t) === 'completo'; });
+  var comp = rows.filter(function (r) { return GJM.intakeOf(r[1], r[0] === t).usable; });
   var mean0 = function (a) { return a.length ? a.reduce(function (s, v) { return s + v; }, 0) / a.length : null; };
   var w0 = null, w1 = null; try { w0 = weightNow(first); w1 = weightNow(end); } catch (e) {}
   var ws = Array.from(state.workouts.entries()).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }).filter(function (w) { return w.date >= first && w.date <= end; });
@@ -12969,7 +12969,7 @@ var MonthStory = (function () {
     } catch (e) { return null; }
   }
   function todayComplete() {
-    try { var d = state.days.get(todayStr()); if (!d || !(d.kcal > 0)) return false; return GJM.fieldState(d, 'kcal', true) === 'completo'; } catch (e) { return false; }
+    try { var d = state.days.get(todayStr()); return !!d && GJM.intakeOf(d, true).usable; } catch (e) { return false; }
   }
   function check() {
     if (busy || !loaded2.days || !loaded2.workouts || Date.now() - t0 < 3500 || document.documentElement.classList.contains('intro-on')) return;
