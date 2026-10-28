@@ -2363,11 +2363,6 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
         <div class="panel-head"><div><span class="estimate-tag">Stima</span><h2>Consumo stimato di oggi</h2></div><button type="button" class="rq" data-rule="consumo" aria-label="Come si calcola" title="Come si calcola">?</button></div>
         <div id="energy-now-body"></div>
       </div>
-      <div class="panel tmw" data-cat="peso" id="tmw">
-        <div class="estimate-tag">Riferimento dal tuo storico</div><div class="panel-head"><div class="ph-t"><h2 id="tmw-title">La pesata rispetto al tuo andamento</h2><button type="button" class="rq" data-rule="domani" aria-label="Come si calcola" title="Come si calcola">?</button></div><span class="hint" id="tmw-date"></span></div>
-        <div class="daynav tmw-nav" aria-label="Giorno del riquadro, lo stesso della tua giornata"><button type="button" class="btn ghost icon" id="tm-prev" aria-label="Giorno precedente">‹</button><div class="dn-t" id="tm-day"></div><button type="button" class="btn ghost icon" id="tm-next" aria-label="Giorno successivo">›</button></div>
-        <div id="tmw-body"></div><p class="estimate-note">È una previsione del modello, non una misurazione. Le oscillazioni di un giorno e la composizione corporea non si possono determinare dai soli dati del diario.</p>
-      </div>
       <div class="panel sumbox">
         <div class="sem" id="sum-sem" role="img"></div>
         <div style="min-width:0"><div class="ph-t"><h2 id="sum-head">Come stai andando</h2><button type="button" class="rq" data-rule="semaforo" aria-label="Come si calcola" title="Come si calcola">?</button></div><div class="kvl" id="sum-kv"></div><details class="more" id="sum-more"><summary><span class="disclosure-copy"><b>I 5 numeri, spiegati uno per uno</b><small>Significato · dati utilizzati · come leggere il risultato</small></span></summary><div class="sumlines in" id="sum-lines"></div></details></div>
@@ -5891,10 +5886,8 @@ function ringGo(n) { var t = todayStr(), d = addDays(ringDay(), n); if (d > t) d
 /* ---------- domani sulla bilancia ---------- */
 /* il riquadro segue il giorno scelto con le freccette in «La tua giornata» (state.ringSel): oggi mostra il mattino dopo l'ultimo giorno
    con le calorie, un giorno passato mostra la previsione per quella mattina, rifatta come la sera prima, e il confronto con la sua pesata */
-function tmRefresh(anim) {
-  try { renderTomorrow(); } catch (e) { $('#tmw').hidden = true; return; }
-  if (anim) { var b = $('#tmw-body'); b.classList.remove('swap'); void b.offsetWidth; b.classList.add('swap'); }
-}
+/* «Dove ci aspettavamo la bilancia» è stato tolto: niente da aggiornare */
+function tmRefresh() {}
 function tmNav(R, t) {
   var nb = $('#tm-day'); if (!nb) return;
   if (!nb.dataset.bound) {
@@ -7010,52 +7003,7 @@ function phaseDayText() {
 /* ---------- «bilancia di domani»: intervallo descrittivo, separato dalle previsioni d'arrivo ---------- */
 /* Riferimento descrittivo dalla tendenza; non è una previsione alimentare o un giudizio sulla pesata. */
 document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('tmw-fold')) state.tmwOpen = e.target.open; }, true);
-function renderTomorrow() {
-  var t = todayStr(), R = ringDay(), box = $('#tmw-body'); $('#tmw').hidden = false; tmNav(R, t);
-  var asOf = addDays(R, -1), tm = null;
-  try { tm = GJM.tomorrowScale(GJM.prepare(engineD(), asOf), asOf); } catch (e) { tm = null; }
-  $('#tmw-title').textContent = 'La pesata rispetto al tuo andamento';
-  $('#tmw-date').textContent = fmtDay(R);
-  var meas = state.days.get(R), mw = meas && meas.weight > 0 ? +meas.weight : null;
-  var past = R < t, mwTxt = mw != null ? fmt(mw, 1) : null;
-  if (!tm || tm.none) {
-    box.innerHTML = '<div class="bs-wait bs-start"><b>Il tuo storico si costruisce una pesata alla volta</b><p>'
-      + (mw != null ? 'Pesata registrata: <strong>' + mwTxt + ' kg</strong>. ' : 'Puoi iniziare registrando il tuo peso. ')
-      + 'La fascia compare quando ci sono almeno ' + GJM.K.TREND_MIN + ' pesate confrontabili nei ' + GJM.K.TREND_DAYS + ' giorni precedenti, con una pesata negli ultimi 7 giorni. Fino ad allora non mostriamo un intervallo stimato.</p>'
-      + (!past && mw == null ? '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>' : '')
-      + '</div><div class="weigh-explain"><b>Dati disponibili</b>' + esc(tm && tm.why || 'Storico momentaneamente non disponibile') + '. Le pesate della sera o dopo mangiato non vengono usate per questo confronto.</div>';
-    return;
-  }
-  var mattina = past ? 'quella mattina' : 'stamattina', ieri = past ? 'il giorno prima' : 'ieri';
-  var html = '<div class="bs-hero"><small>Dove ci aspettavamo la bilancia ' + mattina + '</small><div class="bs-big bs-range-main"><b>' + fmt(tm.lo, 1) + ' – ' + fmt(tm.hi, 1) + '</b><span>kg</span></div>'
-    + '<p class="bs-range">Peso atteso prima della pesata: <b>' + fmt(tm.c, 1) + ' kg</b></p>' + moreHTML('Come lo calcoliamo', '<p>Il peso atteso è ' + (tm.by === 'calorie' ? 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio (' + fmt(tm.base, 1) + ' kg), più l\'effetto di quello che hai mangiato ' + ieri + ' (' + fmt(tm.kcal, 0) + ' kcal)' : 'il tuo peso di ' + ieri + ' senza acqua e cibo di passaggio, con l\'andamento recente') + '.</p><p>La fascia è l\'oscillazione normale della bilancia attorno al peso atteso (acqua, intestino, ora della pesata). Non è un obiettivo.</p>') + '</div>';
-  // A symmetric display scale keeps the trend at the center, including outlying weigh-ins.
-  var radius = Math.max(tm.c - tm.lo, tm.hi - tm.c, mw != null ? Math.abs(mw - tm.c) : 0, 0.3);
-  var extent = radius + Math.max(0.25, radius * 0.18), lo = tm.c - extent, hi = tm.c + extent;
-  var P = function (x) { return ((x - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
-  var inside = mw != null && mw >= tm.lo && mw <= tm.hi, diff = mw != null ? mw - tm.c : null;
-  // Neutral styling in both cases: outside the descriptive band is not a failed objective.
-  html += '<div class="bs-scale bs-neutral" role="img" aria-label="Oscillazione normale ' + fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg; peso atteso ' + fmt(tm.c, 1) + ' kg' + (mw != null ? '; pesata registrata ' + mwTxt + ' kg' : '') + '"><div class="bs-axis">'
-    + (mw != null ? (function () { var x = (mw - lo) / (hi - lo) * 100, al = x < 18 ? 'left' : x > 82 ? 'right' : 'center'; return '<div class="bs-pinrow"><div class="bs-pinlab bs-al-' + al + '" style="left:' + x.toFixed(2) + '%"><span>Tu · ' + mwTxt + ' kg</span></div><i class="bs-pintick" style="left:' + x.toFixed(2) + '%"></i></div>'; })() : '<div class="bs-pin bs-pin-wait"><span>Pesata non ancora inserita</span></div>')
-    + '<div class="bs-track"><span class="bs-band" style="left:' + P(tm.lo) + ';width:calc(' + P(tm.hi) + ' - ' + P(tm.lo) + ')"></span><span class="bs-mid" style="left:' + P(tm.c) + '"></span>' + (mw != null ? '<span class="bs-me" style="left:' + P(mw) + '"></span>' : '') + '</div>'
-    + '<div class="bs-ticks"><span><b>' + fmt(lo, 1) + '</b></span><span class="bs-tc"><b>' + fmt(tm.c, 1) + '</b>atteso</span><span><b>' + fmt(hi, 1) + '</b></span></div></div><div class="bs-scale-note">Scala in kg · centrata sul peso atteso</div>'
-    + '<div class="bs-key"><span class="k-band">oscillazione normale</span><span class="k-mid">peso atteso</span>' + (mw != null ? '<span class="k-me">la tua pesata</span>' : '') + '</div></div>';
-  if (mw == null) html += '<div class="bs-wait"><p>' + (past ? 'Nessuna pesata registrata per questo giorno.' : 'Inserisci il peso di stamattina per confrontarlo con il tuo andamento.') + '</p>' + (past ? '' : '<button type="button" class="btn fit small" data-adddata="today">Inserisci il peso</button>') + '</div>';
-  else {
-    var word = inside ? 'Nell\'oscillazione normale' : diff > 0 ? 'Sopra l\'oscillazione normale' : 'Sotto l\'oscillazione normale';
-    var after = null; try { after = weightNow(R); } catch (e) { after = null; }
-    var moved = after && after.w != null ? after.w - tm.c : null;
-    html += '<div class="bs-res bs-neutral"><div class="bs-res-h"><b>Il tuo confronto</b><span class="bs-badge">' + word + '</span></div>'
-      + '<div class="bs-nums"><div><small>Atteso</small><b>' + fmt(tm.c, 1) + '<i>kg</i></b></div><div class="bs-n-me"><small>Pesata</small><b>' + mwTxt + '<i>kg</i></b></div><div><small>Differenza</small><b>' + sgn(diff, 1) + '<i>kg</i></b></div></div>'
-      + (moved != null ? '<p class="bs-say">Dopo aver letto questa pesata, la tendenza del peso è <b>' + fmt(after.w, 1) + ' kg</b>' + (Math.abs(moved) < 0.05 ? ': quasi uguale al peso atteso' : ' (' + sgn(moved, 2) + ' kg rispetto al peso atteso)') + (!inside ? '. La pesata è fuori dall\'oscillazione normale: il calcolo la attribuisce soprattutto ad acqua e cibo di passaggio e le dà poco peso' : '') + '.</p>' : '')
-      + '<p class="bs-say bs-say-note">Conta l’andamento nel tempo, non la singola pesata.</p></div>';
-  }
-  html += '<div class="weigh-explain"><b>Peso atteso e tendenza: che differenza c\'è</b>Sono lo stesso peso «di fondo», senza acqua e cibo di passaggio, in due momenti. Il <b>peso atteso</b> è calcolato prima della pesata, con i dati fino al ' + fmtDay(asOf) + ': serve a giudicare la pesata, quindi non può contenerla. La <b>tendenza del peso</b> è lo stesso calcolo dopo aver letto la pesata: di solito si sposta di pochi grammi.</div>'
-    + '<div class="weigh-explain"><b>Come leggere la fascia</b>È l\'oscillazione tipica delle tue pesate nelle ultime ' + (GJM.K.TREND_DAYS / 7) + ' settimane attorno al tuo andamento, almeno ±0,3 kg. Non è una probabilità né un limite di peso normale.</div>'
-    + '<div class="weigh-explain"><b>Cosa può spostare la bilancia di più</b>Dopo una giornata insolita (molto cibo, sale, carboidrati) la bilancia può salire anche di qualche chilo per acqua e cibo nell\'intestino. In quei giorni la pesata conta meno nel calcolo, senza essere scartata, e torna normale in pochi giorni.</div>';
-  var foldTxt = fmt(tm.lo, 1) + '–' + fmt(tm.hi, 1) + ' kg · ' + (mw != null ? 'pesata ' + mwTxt + ' kg' + (inside ? ': nell’oscillazione normale' : ': fuori dall’oscillazione normale') : 'pesata non ancora inserita');
-  box.innerHTML = '<details class="tmw-fold"' + (state.tmwOpen ? ' open' : '') + '><summary><span><b>Dove ci aspettavamo la bilancia</b><small>' + foldTxt + '</small></span><span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary>' + html + '</details>';
-}
+function renderTomorrow() {}
 
 /* settimana in corso: oggi non è né passato né futuro, lo dico esplicitamente (la settimana finisce sempre di domenica) */
 function wkRest(k) {
@@ -12471,7 +12419,6 @@ window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: fun
   afterLead(dsec('calorie'), document.getElementById('energy-now'));
   afterLead(dsec('storico'), oggi.querySelector(':scope > .sumbox'));
   var pz = dsec('peso'), chartP = document.getElementById('w-chart').closest('.panel');
-  afterLead(pz, document.getElementById('tmw'));
   pz.appendChild(chartP);
   /* «Come leggere numeri, stime e previsioni» va dietro la «i» del grafico */
   chartP.appendChild(oggi.querySelector(':scope > .model-note'));
