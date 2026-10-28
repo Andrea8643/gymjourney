@@ -11820,18 +11820,25 @@ function bindFriends() {
   }
   var FZ_COL={calories:'#FF4D7A',macros:'#B8FF3A',steps:'#3EE6FF',workouts:'#D08BF5'};
   function fzShort(n){n=String(n||'');return n.length>12&&n.indexOf(' ')>0?n.split(' ')[0]:n;}
-  function fzWeight(rows,dates,allowed){
+  /* Giorno: solo la pesata di quel giorno. 7 giorni: media delle pesate presenti, aggiornata a ogni nuova pesata. */
+  function fzWeight(rows,dates,allowed,week){
     if(!allowed)return {miss:'peso non condiviso'};
     if(!rows)return {miss:'in attesa dei dati'};
     var pts=[];rows.forEach(function(x,i){if(x&&x.weight!=null)pts.push({v:x.weight,d:dates[i]});});
-    if(!pts.length)return {miss:'nessuna pesata in 7 giorni'};
-    var a=pts[0],b=pts[pts.length-1],o={v:b.v,d:b.d};
-    if(pts.length>1&&a.d!==b.d){o.delta=b.v-a.v;o.span=Math.round((Date.parse(b.d)-Date.parse(a.d))/864e5);}
-    return o;
+    var last=dates[dates.length-1];
+    if(week){
+      if(!pts.length)return {miss:'nessuna pesata in 7 giorni'};
+      return {v:pts.reduce(function(t,p){return t+p.v;},0)/pts.length,n:pts.length,week:true};
+    }
+    var today=pts.length&&pts[pts.length-1].d===last?pts[pts.length-1]:null;
+    if(!today)return {miss:last===todayStr()?'non ancora pesato oggi':'nessuna pesata il '+fmtShort(last)};
+    var prev=pts.length>1?pts[pts.length-2]:null;
+    return {v:today.v,d:today.d,prev:prev};
   }
   function fzPerson(side,uid,name,label,w){
-    var wt=w.miss?'<span class="fz-w is-miss">—</span><span class="fz-wd">'+esc(w.miss)+'</span>':'<span class="fz-w">'+fmt(w.v,1)+'<small> kg</small></span><span class="fz-wd">'+(w.delta!=null?(Math.abs(w.delta)<0.05?'stabile':(w.delta>0?'+':'−')+fmt(Math.abs(w.delta),1)+' kg')+' in '+w.span+(w.span===1?' giorno':' giorni'):w.d===comparisonDate()?'pesata del giorno':'pesata del '+esc(fmtShort(w.d)))+'</span>';
-    return '<div class="fz-p is-'+side+'"><span class="fz-av" aria-hidden="true"><i>'+faAvatar(uid,name)+'</i></span><b class="fz-n">'+esc(label)+'</b>'+wt+'</div>';
+    var sub=w.miss?esc(w.miss):w.week?(w.n===1?'1 pesata nei 7 giorni':'media di '+w.n+' pesate'):w.prev?(Math.abs(w.v-w.prev.v)<0.05?'uguale':(w.v>w.prev.v?'+':'−')+fmt(Math.abs(w.v-w.prev.v),1)+' kg')+' dal '+esc(fmtShort(w.prev.d)):'pesata del giorno';
+    var wt=w.miss?'<span class="fz-w is-miss">—</span>':'<span class="fz-w">'+fmt(w.v,1)+'<small> kg</small></span>';
+    return '<div class="fz-p is-'+side+'"><span class="fz-av" aria-hidden="true"><i>'+faAvatar(uid,name)+'</i></span><b class="fz-n">'+esc(label)+'</b>'+wt+'<span class="fz-wd">'+sub+'</span></div>';
   }
   function fzGoal(rows,week){
     var ts=(rows||[]).map(function(x){return x&&x.calories&&x.calories.target>0?x.calories.target:null;});
@@ -11874,7 +11881,7 @@ function bindFriends() {
     var own7=localRows(),name=relationName(link),short=fzShort(name),keys=FD.KEYS.filter(function(k){return k!=='weight'&&k!=='goals'&&((F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]));});
     var ctrl='<h3 class="fa-sr">Tu e '+esc(name)+' · '+(week?'7 giorni fino al '+fmtDay(comparisonDate()):fmtDay(comparisonDate()))+'</h3><div class="fz-ctrl"><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator()+'</div>';
     var manage='<details class="fz-manage"><summary>Gestisci l’amicizia con '+esc(short)+'</summary><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></details>';
-    var myName=(F.profile&&F.profile.nickname)||S().name||'Tu',wMe=fzWeight(own7,dates,true);
+    var myName=(F.profile&&F.profile.nickname)||S().name||'Tu',wMe=fzWeight(own7,dates,true,week);
     function hero(wPe,chips){return '<section class="fz-hero" aria-label="Tu e '+esc(name)+': peso">'+fzPerson('me',F.uid,myName,'Tu',wMe)+'<span class="fz-vs" aria-hidden="true">VS</span>'+fzPerson('pe',F.selected,name,short,wPe)+(chips||'')+'</section>';}
     var hist=comparisonDate()<FD.add(todayStr(),-13)?'<p class="friends-history-note">Il riepilogo condiviso dall’amico copre gli ultimi 14 giorni. Per le date precedenti i suoi dati possono non essere disponibili.</p>':'';
     if(!r)return ctrl+'<div class="fz-board">'+hero({miss:'caricamento…'})+'<div class="friends-empty">Caricamento dei riepiloghi condivisi…</div></div>'+manage;
@@ -11885,7 +11892,7 @@ function bindFriends() {
     if(!week){var ownGoal=goalAt(comparisonDate(),engineD(),state.E),peerGoal=peer.length&&peer[peer.length-1]?peer[peer.length-1].goal:null;var goalHtml=goalRow(ownGoal,peerGoal,r.config.prefs.goals!==false,name),wi=keys.indexOf('workouts');rows.splice(wi>=0?wi+1:rows.length,0,{html:goalHtml,lead:null,cmp:false});}
     var me=rows.filter(function(x){return x.lead==='me';}).length,pe=rows.filter(function(x){return x.lead==='pe';}).length,cmp=rows.filter(function(x){return x.cmp;}).length;
     var chips=cmp?'<div class="fz-score">'+(me||pe?'<span class="is-me">Tu avanti in '+me+'</span><span class="is-pe">'+esc(short)+' in '+pe+'</span>':'<span class="is-tie">Per ora siete pari</span>')+'</div>':'';
-    return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight),chips)+(rows.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
+    return ctrl+hist+'<div class="fz-board">'+hero(fzWeight(peer7,dates,r.config.prefs.weight,week),chips)+(rows.length?rows.map(function(x){return x.html;}).join(''):'<div class="friends-empty">Nessun altro dato selezionato per il confronto.</div>')+'<p class="fz-help">Ognuno ha il proprio obiettivo: le calorie si leggono in percentuale del proprio target. Le medie usano solo giornate complete. I dati di '+esc(short)+' si aggiornano quando apre l’app online.</p></div>'+manage;
   }
   function refreshAvatars(){document.querySelectorAll('#tab-amici .friends-pill[data-key]').forEach(function(b){var i=b.querySelector('i'),h=faAvatar(b.dataset.key,b.textContent);if(i&&i.innerHTML!==h)i.innerHTML=h;});var d=$('#friend-comparison .fz-hero');if(d){var link=friendList().find(function(x){return relationPeer(x)===F.selected;}),me=d.querySelector('.fz-p.is-me .fz-av>i'),pe=d.querySelector('.fz-p.is-pe .fz-av>i'),hm=faAvatar(F.uid,(F.profile&&F.profile.nickname)||S().name),hp=link?faAvatar(F.selected,relationName(link)):'';if(me&&me.innerHTML!==hm)me.innerHTML=hm;if(pe&&link&&pe.innerHTML!==hp)pe.innerHTML=hp;}}
   function refreshComparison(){var x=$('#friend-comparison');if(x)x.innerHTML=comparisonHTML();}
