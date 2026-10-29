@@ -95,8 +95,12 @@ service cloud.firestore {
       function status(s) { return s in ['completo','parziale','da_confermare','mancante','zero_confermato']; }
       function allowedFields(d, p) {
         return (!('calories' in d) || p.calories) && (!('macros' in d) || p.macros)
-          && (!('steps' in d) || p.steps) && (!('workouts' in d) || p.workouts) && (!('workoutNames' in d) || p.workouts) && (!('weight' in d) || p.weight) && (!('goal' in d) || p.get('goals',true));
+          && (!('steps' in d) || p.steps) && (!('workouts' in d) || p.workouts) && (!('workoutNames' in d) || p.workouts) && (!('weight' in d) || p.weight);
       }
+      // The goal (target weight and estimated arrival) is always shared with accepted friends.
+      // With summaries switched off, a day may carry only its date and the goal.
+      function goalOnly(d) { return d.keys().hasOnly(['date','revision','updatedAt','goal']); }
+      function visible(d, s) { return (s.enabled && allowedFields(d, s.prefs)) || (!s.enabled && goalOnly(d)); }
       function validWorkoutName(a, i) { return a.size() <= i || (a[i] is string && a[i].size() <= 120); }
       function validWorkoutNames(a) { return a is list && a.size() <= 10
         && validWorkoutName(a,0) && validWorkoutName(a,1) && validWorkoutName(a,2) && validWorkoutName(a,3) && validWorkoutName(a,4)
@@ -116,7 +120,7 @@ service cloud.firestore {
         return d.keys().hasAll(['date','revision','updatedAt'])
           && d.keys().hasOnly(['date','revision','updatedAt','calories','macros','steps','workouts','weight','workoutNames','goal'])
           && d.date == date && date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-          && d.updatedAt == request.time && d.revision == share().revision && allowedFields(d, share().prefs)
+          && d.updatedAt == request.time && d.revision == share().revision && visible(d, share())
           && (!('calories' in d) || (d.calories is map && d.calories.keys().hasAll(['value','target','state']) && d.calories.keys().hasOnly(['value','target','state']) && num(d.calories.value,50000) && num(d.calories.target,50000) && status(d.calories.state)))
           && (!('macros' in d) || (d.macros is map && d.macros.keys().hasAll(['protein','carbs','fat','state']) && d.macros.keys().hasOnly(['protein','carbs','fat','state']) && num(d.macros.protein,10000) && num(d.macros.carbs,10000) && num(d.macros.fat,10000) && status(d.macros.state)))
           && (!('steps' in d) || (d.steps is map && d.steps.keys().hasAll(['value','state']) && d.steps.keys().hasOnly(['value','state']) && num(d.steps.value,200000) && status(d.steps.state)))
@@ -125,11 +129,11 @@ service cloud.firestore {
           && (!('workouts' in d) || num(d.workouts,100)) && (!('weight' in d) || num(d.weight,1000));
       }
       match /days/{date} {
-        allow get: if owner(uid) || (signed() && accepted(request.auth.uid,uid) && share().enabled
+        allow get: if owner(uid) || (signed() && accepted(request.auth.uid,uid)
           && (!exists(/databases/$(database)/documents/friendShares/$(uid)/days/$(date))
-            || (resource.data.revision == share().revision && allowedFields(resource.data, share().prefs))));
+            || (resource.data.revision == share().revision && visible(resource.data, share()))));
         allow list: if false;
-        allow create, update: if owner(uid) && share().enabled && validDay(request.resource.data,date);
+        allow create, update: if owner(uid) && validDay(request.resource.data,date);
         allow delete: if owner(uid);
       }
     }
