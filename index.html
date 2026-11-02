@@ -2212,7 +2212,7 @@ if(typeof module==='object'&&module.exports)module.exports=V;else root.GJEnergyS
           </div>
           <div class="hero-stats" id="h-stats"></div>
           <div class="nc-why" id="h-why" hidden>
-            <p><b>Tendenza stimata</b> è il peso indicato dalle pesate degli ultimi 14 giorni: una retta che una pesata isolata non riesce a spostare. Si muove meno della bilancia e dice meglio dove stai andando.</p>
+            <p><b>Tendenza stimata</b> è il tuo peso «di fondo», lo stesso usato in tutti i calcoli: unisce le pesate con le calorie e l’attività, così una pesata isolata o una giornata molto abbondante non lo spostano. Prima che il mantenimento sia calibrato è una retta sulle pesate degli ultimi 14 giorni. Si muove meno della bilancia e dice meglio dove stai andando.</p>
             <p><b>Ritmo</b> sono i kg a settimana che stai cambiando adesso, accanto a quelli previsti dal piano. <b>Ti mancano</b> sono i kg fino al tuo obiettivo, <b>Giorni</b> quelli fino alla scadenza.</p>
             <button type="button" class="linkbtn small" data-gorule="peso-adesso">Come si calcola, passo per passo ›</button>
           </div>
@@ -3345,13 +3345,41 @@ function trendAt(ctx, asOf) {
   out.datato = age > 7;
   return (ctx.memo[key] = out);
 }
-/* peso usato per l'attività di un giorno: tendenza fino a quel giorno, altrimenti il peso del profilo */
+/* Peso usato nei calcoli di un giorno (attività, metabolismo a riposo, ritmo in % del peso, grammi per kg, fasi): lo
+   stesso «Tendenza del peso» mostrato nell'app. Con il mantenimento calibrato è il livello del filtro di quel giorno
+   (stimato con i dati fino a quel giorno), che dopo una giornata molto abbondante non sale con il cibo e l'acqua di
+   passaggio; altrimenti la retta delle pesate fino a quel giorno, e senza pesate il peso del profilo.
+   Il livello viene dal filtro, che a sua volta usa il peso per l'attività: la prima volta che serve un peso il filtro
+   gira con la retta, poi tutti i calcoli ripartono con i livelli ottenuti. Il peso pesa poco sull'attività (qualche
+   decina di kcal per un paio di kg), quindi una passata basta: la differenza col livello finale resta sotto 0,05 kg. */
 function makeWeightAt(ctx) {
-  return function (d) {
+  var line = function (d) {
     var t = trendAt(ctx, d < ctx.asOf ? d : ctx.asOf);
     if (!t.none) return t.v;
     return ctx.profile && ctx.profile.weight > 0 ? ctx.profile.weight : null;
   };
+  var lv = null, busy = false;
+  var at = function (d) {
+    if (lv === null && !busy) {
+      busy = true;
+      try { lv = M.LEGACY ? false : levelHistory(ctx) || false; } catch (e) { lv = false; } finally { busy = false; }
+      if (lv) ctx.memo = {};
+    }
+    if (lv) { var q = d < ctx.asOf ? d : ctx.asOf; if (lv[q] != null) return lv[q]; }
+    return line(d);
+  };
+  at.line = line;
+  return at;
+}
+/* livelli del filtro giorno per giorno (null se il filtro non è calibrato alla data: allora vale la retta) */
+function levelHistory(ctx) {
+  var v = versionAt(ctx.versions, ctx.asOf), cfg = v ? tdeeCfg(ctx, v) : null;
+  if (!cfg || !cfg.ok || !cfg.adaptive || !cfg.useProfile || !cfg.anchor) return null;
+  var run = kalmanRun(ctx, cfg), now = run.days[ctx.asOf];
+  if (!now || !now.ready || !run.list.some(function (r) { return r.d <= ctx.asOf && r.ready; })) return null;
+  var out = {};
+  Object.keys(run.days).forEach(function (d) { if (d <= ctx.asOf && isFinite(run.days[d].L)) out[d] = run.days[d].L; });
+  return out;
 }
 /* «bilancia di domani»: la tendenza spostata di un giorno e la dispersione tipica delle tue pesate attorno ad essa.
    È un intervallo descrittivo, non una probabilità; sale, liquidi, intestino e orario non sono noti. */
@@ -3452,12 +3480,18 @@ function weightTransitions(ctx) {
   out.sort(function (a, b) { return a.d < b.d ? -1 : 1; });
   return (ctx.memo.wt = out);
 }
+function jobWeekHours(j) { return j.days && j.days.length ? j.days.length * (+j.hours || 0) : +j.hoursWeek || 0; }
 function structuralChanges(ctx) {
   if (ctx.memo.sc) return ctx.memo.sc;
-  var out = [];
-  (ctx.events || []).forEach(function (e) { if (STRUCT[e.kind] && dValid(e.from)) out.push({ d: e.from, kind: e.kind, label: e.label || STRUCT[e.kind] }); });
+  /* un solo cambio per giorno: l'evento «nuovo lavoro» e il lavoro dichiarato nel Profilo con la stessa data sono lo
+     stesso cambio, e contarli due volte raddoppierebbe l'incertezza sul consumo */
+  var out = [], seen = {};
+  function add(c) { if (!seen[c.d]) { seen[c.d] = 1; out.push(c); } }
+  (ctx.events || []).forEach(function (e) { if (STRUCT[e.kind] && dValid(e.from)) add({ d: e.from, kind: e.kind, label: e.label || STRUCT[e.kind] }); });
+  /* il lavoro è un cambio solo se cambia il carico: tipo di lavoro diverso o almeno 2 ore a settimana in più o in meno.
+     Le stesse ore scritte in un altro modo (giorni fissi oppure giorni variabili) danno lo stesso consumo nella settimana */
   var pj = null;
-  (ctx.jobs || []).forEach(function (j) { if (!pj || j.type !== pj.type || j.hours !== pj.hours || j.hoursWeek !== pj.hoursWeek || String(j.days) !== String(pj.days)) out.push({ d: j.from, kind: 'lavoro', label: pj ? 'lavoro dichiarato diverso' : 'inizio del lavoro dichiarato' }); pj = j; });
+  (ctx.jobs || []).forEach(function (j) { if (!pj || j.type !== pj.type || Math.abs(jobWeekHours(j) - jobWeekHours(pj)) >= 2) add({ d: j.from, kind: 'lavoro', label: pj ? 'lavoro dichiarato diverso' : 'inizio del lavoro dichiarato' }); pj = j; });
   out.sort(function (a, b) { return a.d < b.d ? -1 : 1; });
   return (ctx.memo.sc = out);
 }
@@ -3739,7 +3773,7 @@ function kalmanRun(ctx, cfg, rho) {
     if (x) histB.push(x[1] * prevA);
     if (x) {
       var ready = nW >= K.MIN_W && dDiff(firstW, d) >= K.MIN_SPAN;
-      var r = { d: d, k: x[1], kSD: Math.sqrt(Math.max(0, P[1][1])), L: x[0], LSD: Math.sqrt(Math.max(0, P[0][0])), u: x[2], z: z, weight: used, imputed: !it.usable, transition: lvl[d] ? lvl[d].labels.join(', ') : null, excessKcal: excess, ready: ready };
+      var r = { d: d, k: x[1], LkCov: P[0][1], kSD: Math.sqrt(Math.max(0, P[1][1])), L: x[0], LSD: Math.sqrt(Math.max(0, P[0][0])), u: x[2], z: z, weight: used, imputed: !it.usable, transition: lvl[d] ? lvl[d].labels.join(', ') : null, excessKcal: excess, ready: ready };
       res.days[d] = r; if (z != null) res.list.push(r);
       seq.push({ r: r, x: x.slice(), P: P.map(function (q) { return q.slice(); }), F: F, xp: xp, Pp: Pp });
     }
@@ -3790,13 +3824,16 @@ function kHistory(ctx, asOf, cfg) {
     kPrev = rec.kAfter; out.push(rec);
   });
   var now = run.days[asOf], ok = !!(lastCal && now && now.ready);
-  var k = ok ? now.k : cfg.k0, sdF = ok ? now.kSD : cfg.sd0, rhoK = null, sdR = 0;
+  var k = ok ? now.k : cfg.k0, sdF = ok ? now.kSD : cfg.sd0, rhoK = null, rhoL = null, sdR = 0;
+  /* correlazione fra livello del peso e fattore: le stesse pesate li stimano insieme (un livello più alto del previsto
+     vuol dire che hai consumato meno), quindi la previsione li sposta insieme invece di trattarli come indipendenti */
+  var corr = ok && now.kSD > 0 && now.LSD > 0 && isFinite(now.LkCov) ? Math.max(-1, Math.min(1, now.LkCov / (now.kSD * now.LSD))) : 0;
   if (ok) {
     var lo = kalmanRun(ctx, cfg, K.RHO_LO).days[asOf], hi = kalmanRun(ctx, cfg, K.RHO_HI).days[asOf];
-    if (lo && hi) { rhoK = {}; rhoK[K.RHO_LO] = lo.k; rhoK[K.RHO_HI] = hi.k; sdR = Math.abs(hi.k - lo.k) / 4; }
+    if (lo && hi) { rhoK = {}; rhoK[K.RHO_LO] = lo.k; rhoK[K.RHO_HI] = hi.k; sdR = Math.abs(hi.k - lo.k) / 4; rhoL = {}; rhoL[K.RHO_LO] = lo.L; rhoL[K.RHO_HI] = hi.L; }
   }
   var pend = ok && run.pending ? run.pending(asOf) : 0;
-  return (ctx.memo[key] = { k: k, list: out, last: out.length ? out[out.length - 1] : null, lastCal: lastCal, kSDlast: Math.sqrt(sdF * sdF + sdR * sdR + pend), kSDf: Math.sqrt(sdF * sdF + pend), kSDpend: Math.sqrt(pend), kSDrho: sdR, rhoK: rhoK, next: dAdd(asOf, 1), method: 'filtro', start: run.start, ready: ok,
+  return (ctx.memo[key] = { k: k, list: out, last: out.length ? out[out.length - 1] : null, lastCal: lastCal, kSDlast: Math.sqrt(sdF * sdF + sdR * sdR + pend), kSDf: Math.sqrt(sdF * sdF + pend), kSDpend: Math.sqrt(pend), kSDrho: sdR, rhoK: rhoK, rhoL: rhoL, corrLk: corr, next: dAdd(asOf, 1), method: 'filtro', start: run.start, ready: ok,
     /* fattore a posteriori di un giorno passato (stima migliore con tutti i dati di oggi) */
     smooth: function (d) { if (!ok) return cfg.k0; var x = run.days[d]; return x && x.kS != null ? x.kS : d < run.start ? (run.days[run.start] ? run.days[run.start].kS : k) : k; },
     level: ok && now ? { v: now.L, se: now.LSD } : null });
@@ -4057,8 +4094,16 @@ M.simulate = simulate; M.arrival = arrival; M.requiredIntake = requiredIntake; M
    piano manuale le calorie restano fisse e il ritmo si attenua da solo. */
 function scenarioOf(base, I, m, e, rho) {
   var r = base.rhoK && rho !== K.RHO && base.rhoK[rho] ? base.rhoK[rho] : 1, sc = base.rhoScale || 1, w0 = base.w0, pk = base.perKg || 0;
+  var dw = base.rhoW && rho !== K.RHO && isFinite(base.rhoW[rho]) ? base.rhoW[rho] : 0;
   var In = base.closed && typeof I === 'number' ? function (t, w) { return I + pk * (w - w0) / (1 - K.TEF); } : I;
-  return { w0: base.w0 + e, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: In, rho: rho * sc };
+  return { w0: base.w0 + e + dw, B0: base.B0 * m * r, perKg: base.perKg * m * r, I: In, rho: rho * sc };
+}
+/* fonti d'incertezza a una deviazione, indipendenti fra loro: (1) consumo, con lo spostamento del livello che il filtro
+   gli associa (correlazione c); (2) la parte del livello non spiegata dal consumo, se·√(1−c²); (3) energia per kg.
+   Con c = 0 sono le tre voci separate di prima. */
+function shiftsOf(base) {
+  var f = base.kSDrel || 0, se = base.se || 0, c = Math.max(-1, Math.min(1, base.corr || 0));
+  return { f: f, eK: c * se, eL: se * Math.sqrt(Math.max(0, 1 - c * c)) };
 }
 function spreadOf(central, pairs) {
   var early = 0, late = 0, open = false;
@@ -4070,27 +4115,27 @@ function spreadOf(central, pairs) {
    per i primi K.LEARN_DAYS giorni (tempo tipico perché il calcolo se ne accorga e il piano lo corregga); dopo, lo
    scostamento accumulato resta ma non cresce. Con un piano manuale (calorie fisse) l'errore cresce per tutta la durata. */
 function weightBand(base, I, days) {
-  var f = base.kSDrel || 0, se = base.se || 0, cl = base.closed ? Math.min(days, K.LEARN_DAYS) : days;
+  var sh = shiftsOf(base), f = sh.f, cl = base.closed ? Math.min(days, K.LEARN_DAYS) : days;
   var at = function (m, e, rho, n) { return simulate(Object.assign(scenarioOf(base, I, m, e, rho), { days: n }))[n]; };
   var c = at(1, 0, K.RHO, days), cc = at(1, 0, K.RHO, cl);
-  var s = spreadOf(cc, [[at(1 + f, 0, K.RHO, cl), at(Math.max(.1, 1 - f), 0, K.RHO, cl), 1], [cc + se, cc - se, 1], [at(1, 0, K.RHO_LO, cl), at(1, 0, K.RHO_HI, cl), 0.5]]);
+  var s = spreadOf(cc, [[at(1 + f, sh.eK, K.RHO, cl), at(Math.max(.1, 1 - f), -sh.eK, K.RHO, cl), 1], [cc + sh.eL, cc - sh.eL, 1], [at(1, 0, K.RHO_LO, cl), at(1, 0, K.RHO_HI, cl), 0.5]]);
   return { c: c, lo: c - s.early, hi: c + s.late, closed: !!base.closed };
 }
 /* data di arrivo: il giorno esatto in cui la simulazione tocca l'obiettivo (fabbisogno stimato che scende col peso,
    digestione sulle calorie dello scenario, ÷ ρ kcal/kg), con la fascia descritta sopra. La ricerca va fino a ARR_MAX
    giorni, oltre HORIZON la data è indicativa. */
 function arrivalRange(base, I, goal, dir, from) {
-  var H = K.ARR_MAX, out = { I: I }, f = base.kSDrel || 0, se = base.se || 0;
+  var H = K.ARR_MAX, out = { I: I }, sh = shiftsOf(base), f = sh.f, se = base.se || 0;
   var at = function (m, e, rho) { return arrival(scenarioOf(base, I, m, e, rho), goal, dir, H); };
   var c = at(1, 0, K.RHO), lo = at(1, 0, K.RHO_LO), hi = at(1, 0, K.RHO_HI);
-  var pairs = [[at(1 + f, 0, K.RHO), at(Math.max(.1, 1 - f), 0, K.RHO), 1], [at(1, se, K.RHO), at(1, -se, K.RHO), 1], [lo, hi, 0.5]];
+  var pairs = [[at(1 + f, sh.eK, K.RHO), at(Math.max(.1, 1 - f), -sh.eK, K.RHO), 1], [at(1, sh.eL, K.RHO), at(1, -sh.eL, K.RHO), 1], [lo, hi, 0.5]];
   out.central = c != null ? dAdd(from, c) : null; out.days = c;
   out.far = c != null && c > K.HORIZON;
   /* piano che si aggiorna: lo scostamento del peso dopo K.LEARN_DAYS giorni, convertito in giorni al ritmo medio */
   if (c != null && base.closed && c > K.LEARN_DAYS) {
     var n = K.LEARN_DAYS, wAt = function (m, e, rho) { return simulate(Object.assign(scenarioOf(base, I, m, e, rho), { days: n }))[n]; };
     var wc = wAt(1, 0, K.RHO), pace = Math.abs(goal - base.w0) / c, toD = function (w) { return (w - wc) * (-dir) / pace; };
-    pairs = [[toD(wAt(1 + f, 0, K.RHO)), toD(wAt(Math.max(.1, 1 - f), 0, K.RHO)), 1], [toD(wc + se), toD(wc - se), 1], [toD(wAt(1, 0, K.RHO_LO)), toD(wAt(1, 0, K.RHO_HI)), 0.5]];
+    pairs = [[toD(wAt(1 + f, sh.eK, K.RHO)), toD(wAt(Math.max(.1, 1 - f), -sh.eK, K.RHO)), 1], [toD(wc + sh.eL), toD(wc - sh.eL), 1], [toD(wAt(1, 0, K.RHO_LO)), toD(wAt(1, 0, K.RHO_HI)), 0.5]];
     pairs = pairs.map(function (p) { return [c + p[0], c + p[1], p[2]]; });
     out.closed = true;
   }
@@ -4105,7 +4150,9 @@ function arrivalRange(base, I, goal, dir, from) {
     out.why = 'con queste calorie il peso non arriva all\'obiettivo (il consumo scende fino a pareggiare le calorie, oppure servono più di 3 anni)';
   }
   out.sens = { from: out.from, to: out.to };
-  out.se = se; out.kSDrel = f; out.intervalKind = 'circa_95';
+  out.se = se; out.kSDrel = f; out.corr = base.corr || 0; out.intervalKind = 'circa_95';
+  /* contributo di ogni fonte (giorni prima e dopo la data centrale, a una deviazione), per spiegare la fascia */
+  if (c != null) { out.parts = {}; ['consumo', 'livello', 'energia'].forEach(function (k, i) { var p = pairs[i]; out.parts[k] = { a: p[0] != null ? (p[0] - c) * p[2] : null, b: p[1] != null ? (p[1] - c) * p[2] : null }; }); }
   out.rho = {}; out.rho[K.RHO_LO] = lo != null ? dAdd(from, lo) : null; out.rho[K.RHO_HI] = hi != null ? dAdd(from, hi) : null; out.rhoScale = base.rhoScale || 1;
   return out;
 }
@@ -4215,7 +4262,7 @@ function baseAt(ctx, cfg, d, kh) {
   if (tr && !filt) kSD = Math.max(kSD, cfg.sd0, Math.abs(k - cfg.k0));
   var staleDays = kh && kh.lastCal ? Math.max(0, dDiff(kh.lastCal.d, d) - 7) : 0;
   if (!filt) kSD = Math.sqrt(kSD * kSD + Math.pow(Math.min(0.25, staleDays * 0.005), 2));
-  return { ok: true, transfer: tr ? { d: tr.d, label: tr.label, why: 'il fattore personale è stato calcolato prima di «' + tr.label + '» ' + delIt(tr.d) + ': conta meno, con l\'incertezza dell\'inizio, finché non ci sono abbastanza dati nuovi' } : null, R: k * hm.A / (1 - K.TEF), Bh: k * hm.A, k: k, kSD: kSD, kSDf: filt ? kh.kSDf : kSD, kSDrho: filt ? kh.kSDrho : 0, rhoK: filt ? kh.rhoK : null, calibrated: !!(filt && kh.ready), level: filt ? kh.level : null, perKg: cfg.useProfile ? k * hm.perKg : 0, W: W, hm: hm, provider: 'stima_operativa', label: cfg.mode === 'manuale_da_calibrare' ? 'Consumo manuale calibrato sul diario' : 'Consumo stimato' };
+  return { ok: true, transfer: tr ? { d: tr.d, label: tr.label, why: 'il fattore personale è stato calcolato prima di «' + tr.label + '» ' + delIt(tr.d) + ': conta meno, con l\'incertezza dell\'inizio, finché non ci sono abbastanza dati nuovi' } : null, R: k * hm.A / (1 - K.TEF), Bh: k * hm.A, k: k, kSD: kSD, kSDf: filt ? kh.kSDf : kSD, kSDrho: filt ? kh.kSDrho : 0, rhoK: filt ? kh.rhoK : null, rhoL: filt ? kh.rhoL : null, corrLk: filt ? kh.corrLk || 0 : 0, calibrated: !!(filt && kh.ready), level: filt ? kh.level : null, perKg: cfg.useProfile ? k * hm.perKg : 0, W: W, hm: hm, provider: 'stima_operativa', label: cfg.mode === 'manuale_da_calibrare' ? 'Consumo manuale calibrato sul diario' : 'Consumo stimato' };
 }
 
 /* ---------- risoluzione di una versione del piano a una data (validazione condivisa, sezione 14) ---------- */
@@ -4875,7 +4922,10 @@ function forecastOf(ctx, v, z, base, tr, asOf, out) {
   /* incertezza del consumo a una deviazione: dopo la calibrazione quella del filtro (l'energia per kg è un'altra voce,
      accoppiata); prima, almeno la metà di ARR_ERR (±10% come due deviazioni) */
   var rk = calF && base.rhoK ? (function () { var o = {}; o[K.RHO_LO] = base.rhoK[K.RHO_LO] / base.k; o[K.RHO_HI] = base.rhoK[K.RHO_HI] / base.k; return o; })() : null;
-  var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: calF ? base.kSDf / base.k : Math.max(K.ARR_ERR / 2, base.kSD&&base.k>0?base.kSD/base.k/2:0), se: W0se, rhoK: rk, rhoScale: rhoScale(g.phase === 'surplus' ? 1 : g.phase === 'cut' ? -1 : 0), rho: K.RHO * rhoScale(g.phase === 'surplus' ? 1 : -1) };
+  /* con 5.000 o 9.400 kcal/kg il filtro trova anche un livello diverso (le giornate abbondanti diventano più o meno kg):
+     lo scenario parte da quel livello, non solo da un fattore diverso */
+  var rw = calF && base.rhoL && base.level ? (function () { var o = {}; o[K.RHO_LO] = base.rhoL[K.RHO_LO] - base.level.v; o[K.RHO_HI] = base.rhoL[K.RHO_HI] - base.level.v; return o; })() : null;
+  var sim = { w0: W0, B0: base.Bh+(base.perKg||0)*(W0-base.W), perKg: base.perKg, kSDrel: calF ? base.kSDf / base.k : Math.max(K.ARR_ERR / 2, base.kSD&&base.k>0?base.kSD/base.k/2:0), se: W0se, corr: calF ? base.corrLk || 0 : 0, rhoK: rk, rhoW: rw, rhoScale: rhoScale(g.phase === 'surplus' ? 1 : g.phase === 'cut' ? -1 : 0), rho: K.RHO * rhoScale(g.phase === 'surplus' ? 1 : -1) };
   f.from = start; f.w0 = W0; f.w0Se = W0se; f.sim = sim; f.startOrigin = calF ? 'filtro' : 'traiettoria';
   /* le calorie del piano si aggiornano da sole o con proposte: la previsione «con il piano» tiene conto delle correzioni */
   var updating = !!(v.kcal && v.kcal.mode !== 'manuale'), simPlan = Object.assign({}, sim, { closed: updating });
@@ -6436,7 +6486,7 @@ function weightNow(asOf) {
   else tr = E && E.weight ? E.weight.trend : null;
   if (!tr) { var ws = weightsSeries(); if (!ws.length) return null; var l = ws[ws.length - 1]; return { w: l.w, method: 'ultima', last: { d: l.d, w: l.w }, n: 1, at: l.d, from: l.d, to: l.d, age: diffDays(l.d, todayStr()) }; }
   if (tr.none) return null;
-  return { w: tr.v, method: tr.method, slope: tr.slope, n: tr.n, from: tr.from, to: tr.to, last: tr.last, at: asOf || todayStr(), age: tr.age, estrapolato: tr.estrapolato, datato: tr.datato, s: tr.s };
+  return { w: tr.v, method: tr.method, ref: tr.ref, line: tr.line, slope: tr.slope, n: tr.n, from: tr.from, to: tr.to, last: tr.last, at: asOf || todayStr(), age: tr.age, estrapolato: tr.estrapolato, datato: tr.datato, s: tr.s };
 }
 function trendRate() { var n = weightNow(); return n && n.slope != null ? { perWeek: n.slope * 7, n: n.n, from: n.from, to: n.to } : null; }
 /* ritmo previsto dal piano attivo (kg a settimana, con il segno); null se il piano non lo definisce */
@@ -6836,6 +6886,7 @@ function renderHero() {
   var s = S(), t = todayStr(), E = state.E, NW = weightNow(), tr = E && E.weight ? E.weight.trend : null, v = activeVersion();
   var last = NW ? NW.last : null, lastAvg = NW ? NW.w : null, dir = goalDir();
   $('#h-lbl').innerHTML = '<span class="hl-t">Tendenza del peso</span><span class="hero-sub">' + (!NW ? 'Ancora nessuna pesata: aggiungila dal pulsante sotto i cerchi'
+    : NW.ref === 'filtro' ? 'Stimata da pesate e calorie: ' + NW.n + ' pesate dal ' + fmtShort(NW.from) + ' al ' + fmtShort(NW.to)
     : NW.method === 'retta' ? 'Retta robusta su ' + NW.n + ' pesate dal ' + fmtShort(NW.from) + ' al ' + fmtShort(NW.to) + (NW.estrapolato ? ', prolungata di ' + NW.age + ' giorni' : '')
     : NW.method === 'mediana7' ? (NW.n === 1 ? 'Una sola pesata negli ultimi 7 giorni' : 'Mediana delle ' + NW.n + ' pesate degli ultimi 7 giorni') : 'Ultima pesata, ' + fmtShort(last.d)) + '</span>';
   countTo($('#h-weight'), lastAvg, 1);
@@ -6867,7 +6918,7 @@ function renderHero() {
       : '<div class="hs"><div class="l">Ti mancano</div><div class="v acc">' + (rem != null ? fmt(Math.abs(rem), 1) + ' kg' : '—') + '</div><div class="s">' + (s.goalWeight > 0 ? 'per arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'mantenimento') + '</div></div>')
     + '<div class="hs"><div class="l">' + (left == null ? 'Data' : left >= 0 ? 'Giorni' : 'Oltre la data') + '</div><div class="v">' + (left == null ? '—' : Math.abs(left)) + '</div><div class="s">' + (left == null ? 'nessuna data obiettivo' : (left >= 0 ? 'fino al ' : 'dal ') + fmtShort(s.endDate)) + '</div></div>';
   var hw = $('#h-why');
-  if (hw && !hw.dataset.v2) { hw.dataset.v2 = '1'; hw.innerHTML = '<p><b>Tendenza</b> è il peso indicato dalle pesate delle ultime due settimane: una retta robusta (Theil–Sen), poco sensibile a una pesata strana. Non toglie acqua, glicogeno o creatina: queste cose rendono il peso meno leggibile, ma non le sottraggo con un numero inventato.</p><p><b>Ritmo</b> sono i kg a settimana della retta, accanto a quelli del piano. Il confronto dice se la bilancia si muove come previsto, non perché.</p><button type="button" class="linkbtn small" data-gorule="tendenza">Come si calcola, passo per passo ›</button>'; }
+  if (hw && !hw.dataset.v2) { hw.dataset.v2 = '1'; hw.innerHTML = '<p><b>Tendenza</b> è il tuo peso «di fondo», lo stesso usato in tutti i calcoli. Quando il mantenimento è calibrato è il peso stimato dallo stesso calcolo, che unisce pesate, calorie e attività: dopo una giornata molto abbondante il cibo e l’acqua di passaggio non lo trascinano. Prima della calibrazione è una retta robusta (Theil–Sen) sulle pesate delle ultime due settimane. Acqua, glicogeno e creatina non vengono sottratti con un numero inventato: il calcolo li riconosce dalle pesate dei giorni seguenti.</p><p><b>Ritmo</b> sono i kg a settimana della tendenza, accanto a quelli del piano. Il confronto dice se la bilancia si muove come previsto, non perché.</p><button type="button" class="linkbtn small" data-gorule="tendenza">Come si calcola, passo per passo ›</button>'; }
 }
 function renderHeader() {
   var s = S(), now = new Date(), t = todayStr();
@@ -6909,6 +6960,24 @@ function alD(pre, d) { var n = dayN(d); return pre + (n === 8 || n === 11 ? 'l�
 function sensText(a) { return a && a.sens && a.sens.from ? ilD(a.sens.from) + (a.sens.to ? ' e ' + ilD(a.sens.to) : ' e oltre 3 anni') : '—'; }
 /* G3 · spiegazioni dietro un tocco: una riga sotto il numero, il resto si apre */
 function moreHTML(label, inner) { return '<details class="g3-more"><summary>' + label + '<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary><div class="g3-more-body">' + inner + '</div></details>'; }
+/* perché la fascia d'arrivo è ampia: quanto sposta la data ogni fonte d'incertezza, con i numeri di oggi */
+function bandWhyHTML(f) {
+  var p = f && f.plan, sp = f && f.simPlan, dir = goalDir();
+  if (!p || !p.central || !p.parts || !sp || !(sp.B0 > 0) || !dir) return '';
+  var tef = GJM.K.TEF, C = sp.B0 + tef * p.I, d0 = (C - p.I) * -dir, m2 = 2 * (p.kSDrel || 0) * sp.B0, nm = dir < 0 ? 'deficit' : 'surplus';
+  var r10 = function (x) { return fmt(Math.round(x / 10) * 10, 0); };
+  var side = function (q) { var a = q.a, b = q.b, early = null, late = null; [a, b].forEach(function (x) { if (x == null) { late = Infinity; return; } if (x < 0) early = Math.max(early || 0, -2 * x); else if (late !== Infinity) late = Math.max(late || 0, 2 * x); }); return { early: early, late: late }; };
+  var gg = function (n) { return n === Infinity ? 'oltre 3 anni' : Math.round(n) + (Math.round(n) === 1 ? ' giorno' : ' giorni'); };
+  var c = side(p.parts.consumo), l = side(p.parts.livello), e = side(p.parts.energia);
+  var small = Math.max(l.early || 0, l.late || 0, e.early || 0, e.late || 0);
+  var h = '<p>La data centrale usa il tuo consumo stimato con queste calorie: circa <b>' + r10(C) + ' kcal al giorno</b>, quindi un ' + nm + ' di circa <b>' + r10(d0) + ' kcal</b>. '
+    + 'Con le pesate e le calorie che hai registrato finora il consumo è noto con un margine di <b>±' + r10(m2) + ' kcal</b> (95%): il ' + nm + ' vero può stare fra circa ' + r10(Math.max(0, d0 - m2)) + ' e ' + r10(d0 + m2) + ' kcal al giorno.</p>'
+    + '<p>' + (Math.max(c.early || 0, c.late || 0) >= 1.5 * small ? 'È questo margine a fare quasi tutta la fascia: da solo' : 'Da solo questo margine') + ' può anticipare l’arrivo di ' + gg(c.early || 0) + ' o ritardarlo di ' + gg(c.late || 0) + '.'
+    + (c.late != null && c.early != null && c.late > c.early * 1.2 ? ' Il ritardo possibile è più lungo dell’anticipo perché con un ' + nm + ' più piccolo ogni kg richiede più giorni.' : '') + '</p>'
+    + '<p>Il resto dell’incertezza sul peso di partenza e l’energia contenuta in un kg di peso (fra 5.000 e 9.400 kcal) spostano la data al massimo di ' + gg(small) + '.</p>'
+    + '<p>' + (p.closed ? 'Le calorie del piano vengono corrette con le tue pesate, quindi un errore sul consumo pesa solo nelle prime settimane.' : 'Con calorie fisse un errore sul consumo non viene corretto: si somma ogni giorno fino all’arrivo.') + ' Ogni settimana di pesate e giornate complete rende il consumo più preciso e la fascia più stretta.</p>';
+  return moreHTML('Perché la fascia è così ampia', h);
+}
 function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia probabile (95%): fra ' + sensText(a) + '.' : ''; }
 function renderSummaryBox() {
   var E = state.E, NW = weightNow(), al = state.alerts || [], f = E && E.forecast, s = S();
@@ -6928,7 +6997,7 @@ function renderSummaryBox() {
 function summaryExplanationHTML() {
   var E = state.E, n = weightNow(), f = E && E.forecast, al = state.alerts || [], cards = [];
   cards.push(explainBlock('trend', 'weight', '1 · Tendenza del peso', n ? fmt(n.w, 1) + ' kg' : 'Dati insufficienti', 'Il livello di peso indicato dalle pesate recenti. Serve a leggere la direzione quando la bilancia oscilla.', n ? [
-    n.method === 'retta' ? 'Uso <b>' + n.n + ' pesate</b> dal ' + fmtShort(n.from) + ' al ' + fmtShort(n.to) + ' e una retta robusta (Theil–Sen): la mediana delle pendenze fra tutte le coppie di pesate.' : 'Con meno di 4 pesate negli ultimi 14 giorni uso la mediana delle pesate degli ultimi 7 giorni, o l\'ultima pesata.',
+    n.ref === 'filtro' ? 'Unisco le pesate con le calorie e l\'attività nello stesso calcolo del mantenimento: le giornate molto abbondanti contano come cibo e acqua di passaggio, non come grasso.' + (n.line && n.line.v != null ? ' La sola retta delle ' + n.n + ' pesate dal ' + fmtShort(n.from) + ' al ' + fmtShort(n.to) + ' darebbe <b>' + fmt(n.line.v, 1) + ' kg</b>.' : '') : n.method === 'retta' ? 'Uso <b>' + n.n + ' pesate</b> dal ' + fmtShort(n.from) + ' al ' + fmtShort(n.to) + ' e una retta robusta (Theil–Sen): la mediana delle pendenze fra tutte le coppie di pesate.' : 'Con meno di 4 pesate negli ultimi 14 giorni uso la mediana delle pesate degli ultimi 7 giorni, o l\'ultima pesata.',
     'Le pesate segnalate come poco plausibili restano nel diario ma non entrano finché non le confermi. Nessuna quantità d\'acqua viene sottratta.',
     'L\'ultima pesata è <b>' + fmt(n.last.w, 1) + ' kg</b> (' + fmtDay(n.last.d) + ').'
   ] : ['Aggiungi le pesate al diario.'], 'È una stima del peso, non della composizione corporea. Senza pesate da più di 7 giorni la tendenza non viene prolungata e la fiducia è bassa.'));
@@ -7349,7 +7418,7 @@ function renderForecast() {
   renderPlanImpact();
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
   var fcOrigin = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg '+alD('al',f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
-  (function () { var o = $('#fc-origin'); if (!o) return; if (f && f.w0 != null) o.innerHTML = 'Parte da <b>' + fmt(f.w0, 1) + ' kg</b> al ' + esc(fmtDay(f.from)) + '.' + moreHTML('Da dove parte', '<p>' + esc(fcOrigin) + '</p>'); else o.textContent = fcOrigin; })();
+  (function () { var o = $('#fc-origin'); if (!o) return; if (f && f.w0 != null) o.innerHTML = 'Parte da <b>' + fmt(f.w0, 1) + ' kg</b> al ' + esc(fmtDay(f.from)) + '.' + moreHTML('Da dove parte', '<p>' + esc(fcOrigin) + '</p>') + bandWhyHTML(f); else o.textContent = fcOrigin; })();
   $('#fc-title').textContent = s.goalWeight > 0 ? 'Quando potresti arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'Peso nelle prossime settimane';
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
@@ -8478,7 +8547,7 @@ function rulesData() {
   /* ---------- previsioni ---------- */
   add({ id: 'arrivo', g: 'previsione', t: 'Quando potresti arrivare all\'obiettivo', w: 'Progressi › Previsioni, Oggi',
     what: 'Una simulazione dalla traiettoria aggiornata con calorie, attività e pesate: con le calorie del piano, con la media delle giornate complete delle ultime 2 settimane e, se c\'è una data, le calorie costanti necessarie. Oltre ' + K.HORIZON + ' giorni la data è indicativa.',
-    how: fx(L(O('Ogni giorno'), 'peso − (consumo − calorie) ÷ ' + C(F(K.RHO, 0))), L('Consumo', 'consumo di riferimento senza digestione + variazione per kg di peso + ' + C(pct(K.TEF)) + ' delle calorie dello scenario'), L('Stato iniziale', 'riferimento energetico corretto da un filtro delle pesate; componente temporanea distinta dal livello di fondo'), L('Ordine', 'pesata mattutina, poi calorie del giorno, poi stato del mattino successivo'), L('Data', 'primo giorno in cui la simulazione tocca l\'obiettivo'), L('Finestra', 'scenari con consumo e livello iniziale incerti, e 5.000–9.400 kcal/kg: sensibilità del modello, non probabilità garantite'), L('Non quantificati', 'giorni diversi dallo scenario, errori del diario, acqua'), L('Sensibilità', 'stesse date con ' + C(F(K.RHO_LO, 0)) + ' e ' + C(F(K.RHO_HI, 0)) + ' kcal/kg')) + rg('livello') + rg('orizzonte'),
+    how: fx(L(O('Ogni giorno'), 'peso − (consumo − calorie) ÷ ' + C(F(K.RHO, 0))), L('Consumo', 'consumo di riferimento senza digestione + variazione per kg di peso + ' + C(pct(K.TEF)) + ' delle calorie dello scenario'), L('Stato iniziale', 'riferimento energetico corretto da un filtro delle pesate; componente temporanea distinta dal livello di fondo'), L('Ordine', 'pesata mattutina, poi calorie del giorno, poi stato del mattino successivo'), L('Data', 'primo giorno in cui la simulazione tocca l\'obiettivo'), L('Finestra', 'tre scenari a una deviazione combinati in quadratura e moltiplicati per due (circa 95%): consumo incerto insieme al livello iniziale che il calcolo gli associa, il resto dell\'incertezza sul livello, e 5.000–9.400 kcal/kg con il livello e il consumo ricalcolati a quella energia. Sensibilità del modello, non probabilità garantite'), L('Non quantificati', 'giorni diversi dallo scenario, errori del diario, acqua'), L('Sensibilità', 'stesse date con ' + C(F(K.RHO_LO, 0)) + ' e ' + C(F(K.RHO_HI, 0)) + ' kcal/kg')) + rg('livello') + rg('orizzonte'),
     why: 'Sono scenari condizionati: le calorie aggiornano la traiettoria, le pesate la correggono e la calibrazione esistente aggiorna il consumo. Ogni giornata entra una volta sola. Non aggiungere i giorni equivalenti alla data già aggiornata.',
     ex: function () { if (!f || f.none) return row('Previsione', f && f.none || '—'); return (f.plan ? row('Con le calorie del piano', arrText(f.plan, false)) : '') + (f.logged ? row('Con le calorie registrate', arrText(f.logged, false)) : row('Con le calorie registrate', esc(f.loggedWhy || '—'))) + (f.required ? row('Calorie per la data', f.required.conflict ? (f.required.impossible ? 'impossibile' : F(f.required.kcal, 0) + ', sconsigliato: ' + esc(f.required.why)) : F(f.required.kcal, 0)) : ''); } });
   add({ id: 'prospetto', g: 'previsione', t: 'Prospetto a 12 settimane', w: 'Progressi › Previsioni',
@@ -11929,7 +11998,7 @@ function pedStoryHTML(o, pv) {
   return h;
 }
 /* un'alternativa del motore detta in una frase che regge da sola */
-function altText(a, endDate) { return a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.tipo === 'obiettivo' && a.w > 0 ? (endDate ? 'per ' + ilD(endDate) + ' ' : '') + 'puntare a circa ' + fmt(a.w, 1) + ' kg' : pedMsg(a.msg); }
+function altText(a, endDate) { return a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.tipo === 'obiettivo' && a.w > 0 ? (endDate ? 'per ' + ilD(endDate) + ' ' : '') + 'puntare a circa ' + fmt(a.w, 1) + ' kg' : pedMsg(a.msg).replace(/^oppure /, ''); }
 function pedMsg(m) { return String(m || '').replace(/servirebbe (\d+(?:,\d+)?)% del peso/g, function (x, n) { return 'servirebbe un ritmo ' + (/^(1|8|11)(,|$)/.test(n) ? 'dell’' : 'del ') + n + '% del peso'; }).replace(/consumo di riferimento/g, 'mantenimento').replace(/\bdel 1%/g, 'dell’1%').replace(/\bdel 11%/g, 'dell’11%').replace(/(oppure )?inserire un piano manuale o professionale/g, '$1scegliere tu le calorie (passo «Calorie», «Le scelgo io»)').replace(/serve un piano manuale o professionale/g, 'scegli tu le calorie (passo «Calorie», «Le scelgo io»)'); }
 function pedIssuesHTML(o) {
   if (!o.ok) return '';
