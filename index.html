@@ -7370,8 +7370,13 @@ function renderForecast() {
 
   if (f.required && f.required.conflict) rows += '<p class="p2-warn" id="fc-conflict">' + (f.required.impossible
     ? 'Arrivare all\'obiettivo entro ' + ilD(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
-    : 'Per arrivarci entro ' + ilD(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(f.required.why) + '.')
-    + ' Meglio ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.msg); }).join('; ') + '.</p>';
+    : 'Per arrivarci entro ' + ilD(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(pedMsg(f.required.why)) + '.')
+    + (function () {
+      /* con calorie scelte da te: «spostare la data» a dopo l'arrivo del tuo piano, o «passare a un piano manuale», non avrebbero senso */
+      var av = activeVersion(), manual = av && av.kcal && av.kcal.mode === 'manuale', arr = f.plan && f.plan.central;
+      var alts = manual ? [] : f.required.alternatives.filter(function (a) { return !(a.tipo === 'data' && arr && arr <= a.date); });
+      return (manual && arr ? ' Con le tue calorie arrivi ' + ilD(arr) + '.' : '') + (alts.length ? ' Meglio ' + alts.map(function (a) { return esc(altText(a, f.required.date)); }).join(', oppure ') + '.' : '');
+    })() + '</p>';
   $('#fc-rows').innerHTML = rows;
 }
 function renderProjection() {
@@ -11832,7 +11837,12 @@ function pedFacts(pv) {
   o.kgW = o.bal != null && Math.abs(o.bal) >= 1 ? Math.abs(o.bal) * 7 / (GJM.K.RHO * GJM.rhoScale(o.bal > 0 ? -1 : 1)) : null;
   o.z = r.T != null ? GJM.freeze(r) : null;
   o.f = pv.E && pv.E.forecast; o.week = pv.E && pv.E.week;
-  o.errors = r.errors || []; o.warnings = r.warnings || [];
+  o.errors = r.errors || []; o.warnings = (r.warnings || []).slice();
+  if (o.manual && o.dir && o.T != null && o.R != null && o.bal != null && o.bal * o.dir < 0) {
+    var plannedC = (1 - GJM.K.TEF) * o.R + GJM.K.TEF * o.T, frac = Math.abs(o.bal) / plannedC, pctW = o.kgW != null && r.W > 0 ? o.kgW / r.W * 100 : 0;
+    var maxF = o.dir < 0 ? GJM.K.CUT_FRAC : GJM.K.SUR_FRAC, maxP = o.dir < 0 ? GJM.K.CUT_PCT : GJM.K.SUR_PCT;
+    if (frac > maxF + 1e-9 || pctW > maxP + 1e-9) o.warnings.push({ code: 'oltre_limiti', msg: 'con queste calorie ' + (o.dir < 0 ? 'il deficit' : 'il surplus') + ' è circa il ' + fmt(frac * 100, 0) + '% del consumo (' + fmt(pctW, 1) + '% del peso a settimana): più dei limiti che l’app usa quando calcola lei le calorie (' + Math.round(maxF * 100) + '% del consumo e ' + fmt(maxP, maxP % 1 ? 1 : 0) + '% del peso a settimana). Restano le calorie che hai scelto' });
+  }
   return o;
 }
 function pedTdeeText(v, R) {
@@ -11864,6 +11874,10 @@ function pedLiveHTML(o) {
 }
 /* riga sotto le calorie scelte da te */
 function pedKcalLine(o) {
+  var lim = o.ok && o.warnings.filter(function (w) { return w.code === 'oltre_limiti'; })[0];
+  return pedKcalLine0(o) + (lim ? '<br><span class="ped-warn-t">Nota: ' + esc(lim.msg) + '.</span>' : '');
+}
+function pedKcalLine0(o) {
   if (!o.ok || o.T == null) return o.ok ? 'Scrivi le calorie: subito qui sotto vedi che cosa significano rispetto al tuo mantenimento.' : '';
   if (o.R == null) return 'Il mantenimento non è ancora stimabile: le calorie restano le tue, deficit e previsioni compaiono con i primi dati.';
   var b = o.bal;
@@ -11876,7 +11890,7 @@ function pedPaceText(o) {
 /* riga sotto il ritmo, quando le calorie le calcola l'app */
 function pedAutoLine(o) {
   if (!o.ok) return '';
-  if (o.T == null) { var alt = o.errors.filter(function (e) { return e.alternatives && e.alternatives.length; })[0]; return o.errors.length ? '<span class="ped-bad">Calorie non calcolabili: ' + esc(o.errors.map(function (e) { return pedMsg(e.msg); }).join('; ')) + '.</span>' + (alt ? ' Puoi ' + esc(alt.alternatives.map(function (a) { return pedMsg(a.msg); }).join('; ')) + '.' : '') : 'Completa le scelte qui sopra.'; }
+  if (o.T == null) { var alt = o.errors.filter(function (e) { return e.alternatives && e.alternatives.length; })[0]; return o.errors.length ? '<span class="ped-bad">Calorie non calcolabili: ' + esc(o.errors.map(function (e) { return pedMsg(e.msg); }).join('; ')) + '.</span>' + (alt ? ' Puoi ' + esc(alt.alternatives.map(function (a) { return altText(a, o.g.endDate); }).join(', oppure ')) + '.' : '') : 'Completa le scelte qui sopra.'; }
   if (!o.dir || o.r.reached) return 'Calorie calcolate: <b>' + kc(o.T) + '</b>, uguali al mantenimento' + (o.r.reached ? ' (sei già dentro il margine attorno all’obiettivo)' : '') + '.';
   return 'Calorie calcolate: <b>' + kc(o.T) + '</b>, cioè ' + kc(Math.abs(o.R - o.T)) + (o.dir < 0 ? ' in meno' : ' in più') + ' del mantenimento (' + kc(o.R) + ') per ' + pedPaceText(o) + '. Il ' + (o.dir < 0 ? 'deficit' : 'surplus') + ' vero è circa <b>' + kc(Math.abs(o.bal)) + '</b> al giorno: anche la digestione cambia con quello che mangi.';
 }
@@ -11902,7 +11916,10 @@ function pedStoryHTML(o, pv) {
   if (ar) {
     var s = '<b>Obiettivo ' + fmt(g.goalWeight, 1) + ' kg</b>: ' + (ar.a ? 'con queste calorie l’arrivo previsto è ' + ilD(ar.a.central).replace(/^(il |l’)/, '$1<b>') + '</b>' + (ar.a.sens && ar.a.sens.from ? ' (quasi sicuramente fra ' + sensText(ar.a) + ')' : '') : ar.t === 'già raggiunto' ? 'già raggiunto' : 'la data di arrivo ' + (ar.t === 'non raggiungibile' ? 'non si può calcolare: ' : 'ancora non si può prevedere: ') + esc(ar.s)) + '.';
     var rq = o.f && o.f.required;
-    if (g.endDate && rq) s += rq.conflict ? ' Entro ' + ilD(g.endDate) + ' non ci arrivi: servirebbe un ritmo oltre i limiti che l’app considera sicuri. Puoi ' + esc(rq.alternatives.filter(function (a) { return a.tipo !== 'modalita'; }).map(function (a) { return a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.msg; }).join(', oppure ') || 'scegliere una data più lontana') + '.' : ar.late ? ' Per arrivare entro ' + ilD(g.endDate) + ' servirebbero circa ' + kc(Math.round(rq.kcal / 10) * 10) + ' al giorno.' : ' Arrivi in tempo per ' + ilD(g.endDate) + '.';
+    if (g.endDate && rq) {
+      var alts = rq.alternatives.filter(function (a) { return a.tipo !== 'modalita' && !(a.tipo === 'data' && ar.a && ar.a.central <= a.date); });
+      s += rq.conflict ? ' Entro ' + ilD(g.endDate) + ' non ci arrivi: servirebbe un ritmo oltre i limiti che l’app considera sicuri.' + (o.manual ? '' : alts.length ? ' Puoi ' + esc(alts.map(function (a) { return altText(a, g.endDate); }).join(', oppure ')) + '.' : '') : ar.late ? ' Per arrivare entro ' + ilD(g.endDate) + ' servirebbero circa ' + kc(Math.round(rq.kcal / 10) * 10) + ' al giorno.' : ' Arrivi in tempo per ' + ilD(g.endDate) + '.';
+    }
     li.push(s);
   } else if (!o.dir) li.push('<b>Obiettivo: mantenere il peso</b>' + (g.goalWeight > 0 ? ' attorno a ' + fmt(g.goalWeight, 1) + ' kg' : '') + '.');
   if (o.week && o.week.target > 0) li.push('<b>Budget della settimana: ' + kc(o.week.target) + '</b>, la somma delle calorie dei 7 giorni' + (v.days && v.days.mode === 'allenamento_riposo' ? ', con più calorie nei giorni di allenamento' : '') + '.');
@@ -11911,10 +11928,12 @@ function pedStoryHTML(o, pv) {
   h += '<p class="ped-story-n">Dal ' + fmtDay(from) + ' cambiano l’obiettivo di Oggi, il budget della settimana, i colori del calendario, la previsione del peso e l’obiettivo che vedono i tuoi amici. ' + (cur ? 'I giorni prima restano con il piano di allora' + (prevT > 0 ? ' (' + kc(prevT) + ')' : '') + ': grafici e bilanci del passato non cambiano. ' : '') + 'Il diario non viene toccato.</p>';
   return h;
 }
-function pedMsg(m) { return String(m || '').replace(/consumo di riferimento/g, 'mantenimento').replace(/(oppure )?inserire un piano manuale o professionale/g, '$1scegliere tu le calorie (passo «Calorie», «Le scelgo io»)').replace(/serve un piano manuale o professionale/g, 'scegli tu le calorie (passo «Calorie», «Le scelgo io»)'); }
+/* un'alternativa del motore detta in una frase che regge da sola */
+function altText(a, endDate) { return a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.tipo === 'obiettivo' && a.w > 0 ? (endDate ? 'per ' + ilD(endDate) + ' ' : '') + 'puntare a circa ' + fmt(a.w, 1) + ' kg' : pedMsg(a.msg); }
+function pedMsg(m) { return String(m || '').replace(/servirebbe (\d+(?:,\d+)?)% del peso/g, function (x, n) { return 'servirebbe un ritmo ' + (/^(1|8|11)(,|$)/.test(n) ? 'dell’' : 'del ') + n + '% del peso'; }).replace(/consumo di riferimento/g, 'mantenimento').replace(/\bdel 1%/g, 'dell’1%').replace(/\bdel 11%/g, 'dell’11%').replace(/(oppure )?inserire un piano manuale o professionale/g, '$1scegliere tu le calorie (passo «Calorie», «Le scelgo io»)').replace(/serve un piano manuale o professionale/g, 'scegli tu le calorie (passo «Calorie», «Le scelgo io»)'); }
 function pedIssuesHTML(o) {
   if (!o.ok) return '';
-  var h = o.errors.map(function (e) { return '<p class="p2-warn"><b>Da sistemare:</b> ' + esc(pedMsg(e.msg)) + (e.alternatives && e.alternatives.length ? '. Puoi ' + esc(e.alternatives.map(function (a) { return pedMsg(a.msg); }).join('; ')) : '') + '.</p>'; }).join('');
+  var h = o.errors.map(function (e) { return '<p class="p2-warn"><b>Da sistemare:</b> ' + esc(pedMsg(e.msg)) + (e.alternatives && e.alternatives.length ? '. Puoi ' + esc(e.alternatives.map(function (a) { return altText(a, o.g.endDate); }).join(', oppure ')) : '') + '.</p>'; }).join('');
   h += o.warnings.filter(function (w) { return w.code !== 'obiettivo_entro_fascia'; }).map(function (w) { return '<p class="p2-note">Nota: ' + esc(pedMsg(w.msg)) + '.</p>'; }).join('');
   return h;
 }
@@ -16596,6 +16615,7 @@ html body #tab-dati .ped-v2 .pf-macro-card .settings-fields:not(#a):not(#b):not(
 html body #tab-dati .ped-v2 .pf-macro-card:not(#a):not(#b):not(#c):not(#d){padding:12px 14px}
 html body #tab-dati .ped-v2 .pf-macro-card h4:not(#a):not(#b):not(#c):not(#d){margin:0 0 8px}
 html body #profile-dialog [data-profile-commit]:not(#a):not(#b):not(#c):not(#d):not(:disabled){background:#D10D45!important;border-color:#D10D45!important;color:#fff!important}
+html body #tab-dati .ped-v2 .ped-warn-t:not(#a):not(#b):not(#c):not(#d){display:inline-block;margin-top:8px;color:#FFE79A}
 </style></body></html>
 
 
