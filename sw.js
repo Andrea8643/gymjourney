@@ -1,5 +1,5 @@
 /* GymJourney · Percorso Mosaico · app shell, Firebase SDK and fonts, so the app also opens without a connection. */
-var CACHE = 'gymjourney-coerenza-20261030-a';
+var CACHE = 'gymjourney-piano-20261102-a';
 /* librerie con la versione nell'indirizzo: non cambiano mai, quindi restano in una cache a parte anche dopo un aggiornamento */
 var LIB = 'gymjourney-lib-firebase-10.12.2';
 var FONTS = 'gymjourney-fonts-1';

@@ -5914,7 +5914,7 @@ function rchFill(opening) {
   var wkN = Math.floor(diffDays(s.startDate, P.from) / 7) + 1;
   var per = mode === 'w' ? (P.cur ? 'Settimana in corso' : wkN >= 1 ? 'Settimana ' + wkN : 'Settimana') + ', ' + (sameM ? p0.getDate() + '–' + p1.getDate() + ' ' + MESI_L[p1.getMonth()] : fmtDay(P.from) + ' – ' + fmtDay(P.to))
     : mode === 'm' ? cap(MESI_L[p0.getMonth()]) + (P.cur ? ', mese in corso' : ' ' + p0.getFullYear())
-    : 'Dal ' + fmtDay(P.from) + ' a oggi, ' + P.dates.length + ' giorni';
+    : '' + alD('Dal', P.from) + ' a oggi, ' + P.dates.length + ' giorni';
   $('.rch-p', sec).textContent = per;
   /* numeri del periodo: solo i giorni fino a oggi */
   var past = P.dates.filter(function (d) { return d <= t; }), withV = past.filter(function (d) { return rchVal(k, d) != null; });
@@ -5954,7 +5954,7 @@ function rchFill(opening) {
     + (k === 'kcal' ? '<span><i style="background:none;border-top:2px dashed var(--ink-3);height:0;border-radius:0;vertical-align:3px"></i>Consumo di riferimento</span>' : '');
   var notes = [];
   var firstV = null; for (var i = 0; i < P.dates.length; i++) if (rchVal(k, P.dates[i]) != null) { firstV = P.dates[i]; break; }
-  if (k === 'sleep' && mode === 'a' && firstV && firstV > P.from) notes.push('Il sonno è nel diario dal ' + fmtDay(firstV) + ': i giorni prima sono vuoti.');
+  if (k === 'sleep' && mode === 'a' && firstV && firstV > P.from) notes.push('Il sonno è nel diario ' + alD('dal', firstV) + ': i giorni prima sono vuoti.');
   if (past.length > n) notes.push('Le lineette grigie sono giorni senza dati nel diario.');
   notes.push(mode === 'a' ? 'Tocca o passa sulle barre per leggere ogni giorno; la barra evidenziata è il giorno scelto in alto.' : 'Tocca o passa sulle barre per leggere ogni giorno; il periodo segue il giorno scelto con le freccette in alto.');
   $('.rch-note', sec).textContent = notes.join(' ');
@@ -5989,6 +5989,8 @@ function rchChart(svg, k, P, grow) {
   var ys = function (v) { return m.t + (1 - Math.min(v, hi) / hi) * (vb.h - m.t - m.b); };
   var ax = function (v) { return k === 'sleep' ? fmt(v, 0) + 'h' : k === 'steps' && v >= 1000 ? fmt(v / 1000, v % 1000 ? 1 : 0) + 'k' : fmt(v, 0); };
   var tgy = tgLines.map(ys);
+  var rRuns = targetRuns(dates, function (d) { var sd = dayS(d), kd = kRange(d), tv = { kcal: sd.kcalMin, protein: sd.protein, carbs: sd.carbs, fat: sd.fat, steps: sd.stepsMin, sleep: sg }[k]; if (!(tv > 0)) return null; return { lines: k === 'kcal' && !kd.fixed ? [sd.kcalMin, sd.kcalMax] : [tv], band: k === 'kcal' ? [kd.lo, kd.hi] : k === 'carbs' ? [sd.carbs * 0.95, sd.carbs * 1.15] : k === 'fat' ? [sd.fat * 0.95, sd.fat * 1.25] : null }; });
+  if (rRuns.length < 2) rRuns = null;
   ticks.forEach(function (tk) {
     svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: vb.w - m.r, y1: ys(tk), y2: ys(tk) }));
     if (!tgy.some(function (y) { return Math.abs(y - ys(tk)) < 16; })) svg.appendChild(el('text', { x: m.l - 8, y: ys(tk) + 4, 'text-anchor': 'end' }, ax(tk)));
@@ -5997,7 +5999,7 @@ function rchChart(svg, k, P, grow) {
   /* il giorno scelto in alto: colonna evidenziata */
   var si = dates.indexOf(P.R);
   if (si >= 0) svg.appendChild(el('rect', { class: 'rch-sel', x: m.l + slot * si + 1, y: m.t - 4, width: Math.max(2, slot - 2), height: vb.h - m.t - m.b + 4, rx: Math.min(8, slot / 2) }));
-  if (band) svg.appendChild(el('rect', { class: 'band', x: m.l, width: vb.w - m.l - m.r, y: ys(band[1]), height: Math.max(1, ys(band[0]) - ys(band[1])), rx: 3 }));
+  if (band && !rRuns) svg.appendChild(el('rect', { class: 'band', x: m.l, width: vb.w - m.l - m.r, y: ys(band[1]), height: Math.max(1, ys(band[0]) - ys(band[1])), rx: 3 }));
   var defs = el('defs');
   [['ok', M.hex, 1, .5], ['un', M.hex, .42, .12], ['hi', HEX.warn, 1, .45], ['lo', '#FF7A85', 1, .45]].forEach(function (g) {
     var lg = el('linearGradient', { id: 'rchg-' + g[0], x1: 0, y1: 0, x2: 0, y2: 1 });
@@ -6033,8 +6035,9 @@ function rchChart(svg, k, P, grow) {
     svg.appendChild(el('line', { class: 'l-target', x1: xa, x2: xb, y1: y, y2: y }));
     if (xb - xa >= 34) svg.appendChild(el('text', { class: 't-week', x: (xa + xb) / 2, y: y - 7, 'text-anchor': 'middle', style: 'fill:var(--ink-2)' }, fmt(g.v, 0)));
   });
+  if (rRuns) drawTargetRuns(svg, rRuns, m, slot, ys);
   tgLines.forEach(function (v, j) {
-    svg.appendChild(el('line', { class: 'l-goal', x1: m.l, x2: vb.w - m.r, y1: ys(v), y2: ys(v) }));
+    if (!rRuns) svg.appendChild(el('line', { class: 'l-goal', x1: m.l, x2: vb.w - m.r, y1: ys(v), y2: ys(v) }));
     svg.appendChild(el('text', { class: 't-goal', x: m.l - 8, y: tgy[j] + 4, 'text-anchor': 'end' }, ax(v)));
   });
   var guide = el('line', { class: 'guide' }); svg.appendChild(guide);
@@ -6258,7 +6261,7 @@ function renderWorkouts() {
   var nDays = diffDays(from, to) + 1;
   $('#heat-hint').textContent = (isMonth
     ? (to === t ? 'Solo le sedute di ' + mName(state.calMonth) + ', dal 1° a oggi (' + nDays + (nDays === 1 ? ' giorno' : ' giorni') + '). Con le frecce vedi i mesi precedenti.' : 'Le sedute di tutto ' + mName(state.calMonth) + '.')
-    : 'Gli ultimi 30 giorni fino a oggi, dal ' + fmtDay(from) + ' al ' + fmtDay(t) + ', anche a cavallo di due mesi.') + ' Tocca un giorno per i dettagli.';
+    : 'Gli ultimi 30 giorni fino a oggi, ' + alD('dal', from) + ' ' + alD('al', t) + ', anche a cavallo di due mesi.') + ' Tocca un giorno per i dettagli.';
   renderCalDetail();
   $('#heat-legend').innerHTML = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).map(function (g) {
     return '<span><i style="background:' + GROUP[g].c + ';border-radius:50%"></i>' + esc(g) + ' (' + esc(GROUP[g].s) + '): <b style="color:var(--ink)">' + counts[g] + '</b></span>';
@@ -6717,7 +6720,7 @@ function renderNeed() {
   var conflict = E.states.controllo === 'conflitto_vincoli' || E.states.controllo === 'fuori_ambito_automatico';
   /* 1. obiettivo calorico */
   var oL = T ? cap(T.origin) : '', mL = T ? lb('kcal', T.mode) : '';
-  var tSub = T ? (String(oL).toLowerCase() === String(mL).toLowerCase() ? esc(mL) : esc(oL) + ' · ' + mL) + (T.mode !== 'manuale' ? ' · aggiornamenti: ' + lb('update', T.update).toLowerCase() : '') + ' · in vigore dal ' + fmtDay(T.from) + (E.plan.reconstructed ? ' · valori ricostruiti alla data di inizio del piano' : '') : '';
+  var tSub = T ? (String(oL).toLowerCase() === String(mL).toLowerCase() ? esc(mL) : esc(oL) + ' · ' + mL) + (T.mode !== 'manuale' ? ' · aggiornamenti: ' + lb('update', T.update).toLowerCase() : '') + ' · in vigore ' + alD('dal', T.from) + (E.plan.reconstructed ? ' · valori ricostruiti alla data di inizio del piano' : '') : '';
   if (!T) tSub = conflict ? 'Nessun obiettivo generato: ' + esc((fr.errors || []).map(function (e) { return e.msg; }).join('; ')) : 'Obiettivo non disponibile';
   var dayMode = v && v.days && v.days.mode === 'allenamento_riposo' ? ' · obiettivo diverso fra giorni di allenamento e di riposo' : '';
   var wbud = E.week && E.week.budget, wkConf = wbud && wbud.status === 'conflitto' ? '<div class="p2-warn" id="need-week-conflict">' + esc(wbud.text || wbud.msg) + '</div>' : '';
@@ -6733,7 +6736,7 @@ function renderNeed() {
   rows.push(p2tile('Consumo stimato di oggi', C ? kc(C.v) : '—', cSub + (E.verifiedOn ? ' · ultimo confronto col diario: ' + fmtDay(E.verifiedOn.d) : ''), { rule: 'consumo', t: 'Perché oggi consumi circa ' + (C ? kc(C.v) : '—') }));
   /* il consumo medio della settimana appena finita, ricostruito giorno per giorno con i dati di quei giorni */
   var LW = lastWeekNeed();
-  rows.push(p2tile('Consumo medio della settimana scorsa', LW ? kc(LW.v) + '<small class="p2-per">al giorno, dal ' + fmtShort(LW.from) + ' al ' + fmtShort(LW.to) + '</small>' : '—', LW ? 'Media del consumo stimato dal ' + fmtDay(LW.from) + ' al ' + fmtDay(LW.to) + ', ricostruito giorno per giorno con passi, sedute e lavoro di quei giorni' + (LW.lo != null ? ' (intervallo ' + fmt(LW.lo, 0) + '–' + fmt(LW.hi, 0) + ' kcal)' : '') + '. ' + (LW.n < 7 ? 'Giorni stimabili: ' + LW.n + ' su 7. ' : '') + (LW.full ? LW.full + (LW.full === 1 ? ' giornata ha' : ' giornate hanno') + ' le calorie complete; per le altre la digestione è calcolata sull\'obiettivo. ' : 'Nessuna giornata con le calorie complete: la digestione è calcolata sull\'obiettivo. ') + 'È una stima, non una misura: il piano usa il consumo di riferimento (' + (B ? kc(B.R) : '—') + ').' : 'Servono i dati della settimana scorsa e un profilo completo.', { rule: 'consumo' }));
+  rows.push(p2tile('Consumo medio della settimana scorsa', LW ? kc(LW.v) + '<small class="p2-per">al giorno, dal ' + fmtShort(LW.from) + ' al ' + fmtShort(LW.to) + '</small>' : '—', LW ? 'Media del consumo stimato ' + alD('dal', LW.from) + ' ' + alD('al', LW.to) + ', ricostruito giorno per giorno con passi, sedute e lavoro di quei giorni' + (LW.lo != null ? ' (intervallo ' + fmt(LW.lo, 0) + '–' + fmt(LW.hi, 0) + ' kcal)' : '') + '. ' + (LW.n < 7 ? 'Giorni stimabili: ' + LW.n + ' su 7. ' : '') + (LW.full ? LW.full + (LW.full === 1 ? ' giornata ha' : ' giornate hanno') + ' le calorie complete; per le altre la digestione è calcolata sull\'obiettivo. ' : 'Nessuna giornata con le calorie complete: la digestione è calcolata sull\'obiettivo. ') + 'È una stima, non una misura: il piano usa il consumo di riferimento (' + (B ? kc(B.R) : '—') + ').' : 'Servono i dati della settimana scorsa e un profilo completo.', { rule: 'consumo' }));
   /* 4. deficit / equilibrio / surplus atteso rispetto al piano */
   var bTxt = '—', bSub = '';
   if (B && C && C.closed && C.assumeIntake != null) {
@@ -6752,13 +6755,13 @@ function renderNeed() {
   rows.push(p2tile('Fiducia nella stima del fabbisogno', lb('conf', cf.level), esc(confidenceDetail(E).summary), { rule: 'margine' }));
   /* 6. peso */
   var tr = E.weight && E.weight.trend;
-  rows.push(p2tile('Peso, tendenza', tr && !tr.none ? fmt(tr.v, 1) + ' kg' : '—', tr && !tr.none ? 'Tendenza ' + fmt(tr.v, 1) + ' kg · ultima pesata ' + fmt(tr.last.w, 1) + ' kg il ' + fmtDay(tr.last.d) + ' · ' + (tr.method === 'retta' ? 'retta robusta su ' + tr.n + ' pesate dal ' + fmtDay(tr.from) + (tr.slope != null ? ', ' + sgn(tr.slope * 7, 1) + ' kg a settimana' : '') : tr.method === 'mediana7' ? (tr.n === 1 ? 'una sola pesata negli ultimi 7 giorni' : 'mediana di ' + tr.n + ' pesate degli ultimi 7 giorni') : 'una sola pesata recente') + (tr.datato ? ' · dato vecchio: fiducia bassa' : '') + (v && v.goal && v.goal.phase === 'surplus' ? ' · Prestazioni registrate: ' + esc(E.performance ? E.performance.text : '—') : '') : 'Nessuna pesata nel diario', { t: 'Peso, tendenza', rule: 'tendenza' }));
+  rows.push(p2tile('Peso, tendenza', tr && !tr.none ? fmt(tr.v, 1) + ' kg' : '—', tr && !tr.none ? 'Tendenza ' + fmt(tr.v, 1) + ' kg · ultima pesata ' + fmt(tr.last.w, 1) + ' kg ' + ilD(tr.last.d) + ' · ' + (tr.method === 'retta' ? 'retta robusta su ' + tr.n + ' pesate ' + alD('dal', tr.from) + (tr.slope != null ? ', ' + sgn(tr.slope * 7, 1) + ' kg a settimana' : '') : tr.method === 'mediana7' ? (tr.n === 1 ? 'una sola pesata negli ultimi 7 giorni' : 'mediana di ' + tr.n + ' pesate degli ultimi 7 giorni') : 'una sola pesata recente') + (tr.datato ? ' · dato vecchio: fiducia bassa' : '') + (v && v.goal && v.goal.phase === 'surplus' ? ' · Prestazioni registrate: ' + esc(E.performance ? E.performance.text : '—') : '') : 'Nessuna pesata nel diario', { t: 'Peso, tendenza', rule: 'tendenza' }));
   /* 7. revisione: esito, cosa cambia, da quando, perché, dati, bloccati, prossima rivalutazione */
   var rv = E.review || {}, rev = E.revision || {}, rx = '', rvis = '';
-  var dataTxt = rv.data ? 'Dati: dal ' + fmtDay(rv.data.period.from) + ' al ' + fmtDay(rv.data.period.to) + (rv.data.completeness ? ', giornate complete ' + Math.round(rv.data.completeness.frac * 100) + '%' : '') + (rv.data.slope != null ? ', tendenza ' + sgn(rv.data.slope * 7, 1) + ' kg a settimana' : '') + '.' : '';
+  var dataTxt = rv.data ? 'Dati: ' + alD('dal', rv.data.period.from) + ' ' + alD('al', rv.data.period.to) + (rv.data.completeness ? ', giornate complete ' + Math.round(rv.data.completeness.frac * 100) + '%' : '') + (rv.data.slope != null ? ', tendenza ' + sgn(rv.data.slope * 7, 1) + ' kg a settimana' : '') + '.' : '';
   if ((rv.n === 5 || (rv.n === 6 && rv.goalReached)) && rev.candidate) {
     var z = rev.candidate.resolved || {};
-    rx = '<div class="p2-prop"><b>' + (rev.kind === 'da_applicare' ? 'Aggiornamento applicato' : 'Proposta') + (rev.goalReached ? ' di mantenimento' : '') + ' dal ' + fmtDay(rev.date) + '</b><p>Calorie ' + kc(z.kcal) + ', macro ' + macroLine(z, rv.locked) + '. Motivo: ' + esc(rev.why) + '. ' + dataTxt + (rv.locked && rv.locked.length ? ' Restano bloccati: ' + rv.locked.join(', ').replace('p', 'proteine').replace('c', 'carboidrati').replace('f', 'grassi') + '.' : '') + '</p></div>';
+    rx = '<div class="p2-prop"><b>' + (rev.kind === 'da_applicare' ? 'Aggiornamento applicato' : 'Proposta') + (rev.goalReached ? ' di mantenimento' : '') + ' ' + alD('dal', rev.date) + '</b><p>Calorie ' + kc(z.kcal) + ', macro ' + macroLine(z, rv.locked) + '. Motivo: ' + esc(rev.why) + '. ' + dataTxt + (rv.locked && rv.locked.length ? ' Restano bloccati: ' + rv.locked.join(', ').replace('p', 'proteine').replace('c', 'carboidrati').replace('f', 'grassi') + '.' : '') + '</p></div>';
     rvis = '<div class="p2-act"><span>' + (rev.kind === 'da_applicare' ? 'Applicato' : 'Proposta') + ' dal ' + fmtShort(rev.date) + ': ' + kc(z.kcal) + '</span>'
       + (rev.kind === 'proposta' && !proposalDismissed(E) ? '<div class="row"><button type="button" class="btn fit small" data-rev-apply>Applica dal ' + fmtShort(rev.date) + '</button><button type="button" class="btn ghost fit small" data-rev-skip>Non ora</button></div>' : proposalDismissed(E) ? '<small>Non applicata: resta il piano attuale.</small>' : '') + '</div>';
   } else if (rv.alternatives && rv.alternatives.length) rx = '<ul class="p2-alt">' + rv.alternatives.map(function (a) { return '<li>' + esc(a.msg) + '</li>'; }).join('') + '</ul>';
@@ -6896,12 +6899,17 @@ function wkRest(k) {
 function arrText(a, short) {
   if (!a || !a.central) return a && a.why ? (short ? 'non raggiungibile' : a.why) : '—';
   if (short) return fmtDay(a.central);
-  return 'il ' + fmtDay(a.central) + (a.far ? ', oltre 12 settimane: indicativa' : '');
+  return '' + ilD(a.central) + (a.far ? ', oltre 12 settimane: indicativa' : '');
 }
-function sensText(a) { return a && a.sens && a.sens.from ? fmtDay(a.sens.from) + (a.sens.to ? ' e il ' + fmtDay(a.sens.to) : ' e oltre 3 anni') : '—'; }
+/* «il 3 marzo», ma «l’8 marzo» e «l’11 marzo» */
+function dayN(d) { try { var p = d ? parseD(d) : null; return p && !isNaN(p.getTime()) ? p.getDate() : 0; } catch (e) { return 0; } }
+function ilD(d) { var n = dayN(d); return (n === 8 || n === 11 ? 'l’' : 'il ') + fmtDay(d); }
+/* «al 3 marzo», «dall’8 marzo» */
+function alD(pre, d) { var n = dayN(d); return pre + (n === 8 || n === 11 ? 'l’' : ' ') + fmtDay(d); }
+function sensText(a) { return a && a.sens && a.sens.from ? ilD(a.sens.from) + (a.sens.to ? ' e ' + ilD(a.sens.to) : ' e oltre 3 anni') : '—'; }
 /* G3 · spiegazioni dietro un tocco: una riga sotto il numero, il resto si apre */
 function moreHTML(label, inner) { return '<details class="g3-more"><summary>' + label + '<span class="disclosure-cue" aria-hidden="true"><span class="cue-open">Apri</span><span class="cue-close">Chiudi</span><svg class="disclosure-arrow" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></span></summary><div class="g3-more-body">' + inner + '</div></details>'; }
-function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia probabile (95%): fra il ' + sensText(a) + '.' : ''; }
+function winText(a) { return a && a.central && a.sens && a.sens.from ? 'Fascia probabile (95%): fra ' + sensText(a) + '.' : ''; }
 function renderSummaryBox() {
   var E = state.E, NW = weightNow(), al = state.alerts || [], f = E && E.forecast, s = S();
   $('#sum-head').textContent = 'Il percorso in breve';
@@ -6911,7 +6919,7 @@ function renderSummaryBox() {
     tile('trend', 'weight', 'Tendenza del peso', NW ? fmt(NW.w, 1) + ' kg' : '—', NW ? 'Pesate dal ' + fmtShort(NW.from) + ' al ' + fmtShort(NW.to) : 'Nessuna pesata'),
     tile('energy', 'energy', E && E.base && E.base.ok ? esc(E.base.label) : 'Consumo', E && E.base && E.base.ok ? kc(E.base.R) + ' al giorno' : '—', E ? lb('origine', E.states.origine) + ' · fiducia ' + confLabel(E).toLowerCase() : 'Nessun piano'),
     tile('checks', 'check', 'Controlli dei dati', al.length + ' ' + (al.length === 1 ? 'segnalazione' : 'segnalazioni'), al.length ? 'Da guardare in Progressi > Giorno' : 'Nessuna segnalazione da questi controlli'),
-    tile('last', 'weight', 'Ultima pesata', NW ? fmt(NW.last.w, 1) + ' kg' : '—', NW ? 'Registrata il ' + fmtDay(NW.last.d) : 'Nessuna pesata accettata'),
+    tile('last', 'weight', 'Ultima pesata', NW ? fmt(NW.last.w, 1) + ' kg' : '—', NW ? 'Registrata ' + ilD(NW.last.d) : 'Nessuna pesata accettata'),
     tile('goal', 'goal', 'Arrivo con le calorie del piano', arr, f && f.plan ? 'Intervallo da consumo e livello del peso incerti; non è una scadenza' : f && f.none ? esc(f.none) : 'Nessun obiettivo di peso')
   ].join('');
   $('#sum-lines').innerHTML = summaryExplanationHTML();
@@ -6925,14 +6933,14 @@ function summaryExplanationHTML() {
     'L\'ultima pesata è <b>' + fmt(n.last.w, 1) + ' kg</b> (' + fmtDay(n.last.d) + ').'
   ] : ['Aggiungi le pesate al diario.'], 'È una stima del peso, non della composizione corporea. Senza pesate da più di 7 giorni la tendenza non viene prolungata e la fiducia è bassa.'));
   cards.push(explainBlock('energy', 'energy', '2 · Consumo di riferimento', E && E.base && E.base.ok ? kc(E.base.R) + ' al giorno' : '—', 'Il consumo usato dal piano per calcolare deficit o surplus. Le abitudini dichiarate e i dati del diario lo descrivono; non è una misura.', E && E.base && E.base.ok ? [
-    'Origine: <b>' + lb('origine', E.states.origine) + '</b>' + (E.verifiedOn ? ', ultimo confronto col diario il ' + fmtDay(E.verifiedOn.d) : '') + '.',
+    'Origine: <b>' + lb('origine', E.states.origine) + '</b>' + (E.verifiedOn ? ', ultimo confronto col diario ' + ilD(E.verifiedOn.d) : '') + '.',
     E.cfg.mode === 'manuale_fisso' ? 'È il valore che hai inserito: l\'app non lo cambia.' : 'Parte dalla stima iniziale e ogni 7 giorni si aggiorna con il tuo diario e le tue pesate delle ultime 4 settimane, se i dati sono completi.',
     'Fiducia: <b>' + confLabel(E) + '</b>. ' + esc(E.confidence && E.confidence.why || '')
   ] : ['Serve un piano attivo con un consumo definito.'], 'Il dettaglio dei componenti e delle revisioni è in Progressi > Calorie.'));
   cards.push(explainBlock('checks', 'check', '3 · Controlli dei dati', al.length + ' ' + (al.length === 1 ? 'segnalazione' : 'segnalazioni'), 'Controlli del diario e delle tendenze che l\'app esegue davvero.', al.length ? al.map(function (a) { return '<b>' + esc(a.t) + '.</b> ' + esc(a.x); }) : ['Nessuna segnalazione.'], '«Nessun avviso» non significa salute certificata né consumo esatto.'));
   cards.push(explainBlock('last', 'weight', '4 · Ultima pesata', n ? fmt(n.last.w, 1) + ' kg' : 'Nessuna pesata', 'L\'osservazione più recente accettata.', [esc(wCountsText())], 'Una pesata da sola non dice quanta parte sia acqua, contenuto intestinale o tessuto.'));
   cards.push(explainBlock('goal', 'goal', '5 · Arrivo con le calorie del piano', f && f.plan ? arrText(f.plan, false) : '—', 'Simulazione giorno per giorno con le calorie del piano e il consumo stimato che cambia con il peso.', f && f.plan ? [
-    'Parto dal riferimento aggiornato con calorie e pesate di <b>' + fmt(f.w0, 1) + ' kg</b> al ' + fmtDay(f.from) + ', incerta di circa ±' + fmt(f.w0Se, 1) + ' kg (acqua, sale e orario spostano la bilancia).',
+    'Parto dal riferimento aggiornato con calorie e pesate di <b>' + fmt(f.w0, 1) + ' kg</b> ' + alD('al', f.from) + ', incerta di circa ±' + fmt(f.w0Se, 1) + ' kg (acqua, sale e orario spostano la bilancia).',
     winText(f.plan),
     'Con 5.000 kcal/kg: ' + (f.plan.rho[5000] ? fmtDay(f.plan.rho[5000]) : 'non raggiunto') + '; con 9.400: ' + (f.plan.rho[9400] ? fmtDay(f.plan.rho[9400]) : 'non raggiunto') + '.'
   ] : [f && f.none ? esc(f.none) : 'Serve un obiettivo di peso.'], 'Non è una probabilità né una scadenza. L\'intervallo non comprende i giorni diversi dal piano, gli errori del diario e l\'acqua dopo un cambio di routine: con questi è più largo. Oltre 12 settimane la previsione non è disponibile.'));
@@ -6982,7 +6990,7 @@ function calibrationHTML(E) {
     var fq = E.filterQuality || c || {}, w = fq.window, cp = fq.completeness, R = E.base && E.base.ok ? E.base.R : null, sdR = E.confidence && E.confidence.maintenanceSD;
     h += '<p><b>Come si adatta a te:</b> ogni giorno il calcolo confronta le calorie che registri con l\'andamento delle tue pesate. Se il peso scende più (o meno) di quanto le calorie farebbero prevedere, il mantenimento viene corretto. Usa tutto il tuo storico, dando più peso ai dati recenti, così segue anche i cambiamenti del tuo corpo.</p>';
     h += '<p class="muted small">Gli sbalzi della bilancia dovuti ad acqua e cibo non vengono scambiati per grasso: dopo un cambio di fase, con la creatina, in malattia o dopo una giornata molto sopra il solito, le pesate dei giorni seguenti contano meno. Le giornate non registrate per intero vengono stimate e contano con più incertezza.</p>';
-    if (w) h += '<p class="muted small"><b>Dati usati:</b> dal ' + fmtDay(w.from) + ', ' + w.nW + ' pesate' + (cp ? ', giornate alimentari complete ' + Math.round(cp.frac * 100) + '%' : '') + '.' + (R ? ' Mantenimento attuale ' + kc(R) + (sdR ? ' (± ' + fmt(sdR, 0) + ')' : '') + '. ' : ' ') + lb('qualita', fq.status) + ': ' + esc(fq.reasons && fq.reasons[0] || '') + '</p>';
+    if (w) h += '<p class="muted small"><b>Dati usati:</b> ' + alD('dal', w.from) + ', ' + w.nW + ' pesate' + (cp ? ', giornate alimentari complete ' + Math.round(cp.frac * 100) + '%' : '') + '.' + (R ? ' Mantenimento attuale ' + kc(R) + (sdR ? ' (± ' + fmt(sdR, 0) + ')' : '') + '. ' : ' ') + lb('qualita', fq.status) + ': ' + esc(fq.reasons && fq.reasons[0] || '') + '</p>';
     var rows = kh.list.filter(function (x) { return x.evidence; }).slice(-14).reverse();
     if (rows.length) h += '<div class="tw"><table class="p2-parts"><thead><tr><th>Pesata</th><th>Mantenimento</th><th>Nota</th></tr></thead><tbody>' + rows.map(function (x) { return '<tr><td>' + fmtShort(x.d) + '</td><td>' + (Math.abs(x.step) >= 1 ? sgn(x.step, 0) + ' kcal' : 'invariato') + '</td><td>' + esc(x.why || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
     else h += '<p class="muted small">Servono almeno ' + GJM.K.MIN_W + ' pesate su ' + GJM.K.MIN_SPAN + ' giorni: fino ad allora vale la stima dal profilo.</p>';
@@ -7302,20 +7310,20 @@ function renderPlanImpact() {
   var gg = function (n) { n = Math.abs(n); return n + (n === 1 ? ' giorno' : ' giorni'); };
   var title = !hasShift ? 'Effetto non ancora calcolabile' : shift > 0 ? '+' + gg(shift) : shift < 0 ? '−' + gg(shift) : 'Nessun ritardo';
   var F = E.forecast, arrival = F && !F.none && !F.done && F.plan && F.plan.central ? F.plan.central : null;
-  var heroText = !hasShift ? esc(p.why || 'Mancano dati per rifare il percorso.') : (shift > 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sopra il target hanno spostato in avanti l’arrivo all’obiettivo di circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
-      : shift < 0 ? 'Dal ' + fmtDay(p.from) + ' a oggi, le giornate sotto il target ti hanno fatto guadagnare circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
-      : 'Dal ' + fmtDay(p.from) + ' a oggi, gli scostamenti dal target si compensano: l’arrivo non si è spostato.')
-    + (arrival ? ' <b>È già compreso nella tua data di arrivo prevista, il ' + fmtDay(arrival) + '.</b>' : '');
+  var heroText = !hasShift ? esc(p.why || 'Mancano dati per rifare il percorso.') : (shift > 0 ? '' + alD('Dal', p.from) + ' a oggi, le giornate sopra il target hanno spostato in avanti l’arrivo all’obiettivo di circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
+      : shift < 0 ? '' + alD('Dal', p.from) + ' a oggi, le giornate sotto il target ti hanno fatto guadagnare circa ' + gg(shift) + ' rispetto a seguire il piano alla lettera.'
+      : '' + alD('Dal', p.from) + ' a oggi, gli scostamenti dal target si compensano: l’arrivo non si è spostato.')
+    + (arrival ? ' <b>È già compreso nella tua data di arrivo prevista, ' + ilD(arrival) + '.</b>' : '');
   var tile = function (name, value, sub, tone) { return '<div class="impact-tile impact-' + (tone || 'blue') + '"><small>' + name + '</small><b>' + value + '</b>' + (sub ? '<span>' + sub + '</span>' : '') + '</div>'; };
-  var h = '<p class="impact-period">Dal ' + fmtDay(p.from) + ' al ' + fmtDay(p.to) + ' · ' + p.complete + ' giornate complete' + (p.includesToday ? ' · oggi incluso' : '') + '</p>'
+  var h = '<p class="impact-period">Dal ' + fmtDay(p.from) + ' ' + alD('al', p.to) + ' · ' + p.complete + ' giornate complete' + (p.includesToday ? ' · oggi incluso' : '') + '</p>'
     + '<div class="impact-hero impact-hero2"><small>' + (hasShift && shift < 0 ? 'Tempo guadagnato rispetto al piano' : 'Tempo perso rispetto al piano') + '</small><b>' + title + '</b><span>' + heroText + (p.partial ? ' Calcolo parziale: alcune giornate non hanno calorie complete.' : '') + '</span></div>'
     + '<div class="impact-grid">'
     + tile('Giorni sopra il target', p.above + ' su ' + p.complete, 'giornate complete', 'blue')
     + tile(p.net < 0 ? 'Calorie in meno del target' : 'Calorie in più del target', kc(Math.abs(p.net)), 'in tutto il periodo · come circa ' + fmt(Math.abs(p.energyKg), 1) + ' kg di peso', 'orange')
     + '</div>';
   if (hasShift) h += '<details class="impact-details impact-reconstruction"><summary><span class="impact-summary-copy"><b>Come calcoliamo ' + (shift === 0 ? 'l’effetto' : 'i ' + title.replace('−', '') ) + '</b><small>Due simulazioni a confronto, non previsioni</small></span></summary><div class="impact-reconstruction-body" data-ib-keep>'
-    + '<p class="impact-how">Rifacciamo il tuo percorso sulla carta due volte, partendo entrambe le volte da <b>' + fmt(p.initialWeight, 1) + ' kg il ' + fmtDay(p.from) + '</b> e da oggi con le stesse <b>' + kc(p.futureTarget) + ' al giorno</b>:</p>'
-    + '<ol class="impact-sim"><li><span>Mangiando ogni giorno esattamente il target</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.planned) + '</b></li><li><span>Mangiando quello che hai registrato nel diario</span><b>' + fmt(p.goalWeight, 1) + ' kg il ' + fmtDay(c.recorded) + '</b></li></ol>'
+    + '<p class="impact-how">Rifacciamo il tuo percorso sulla carta due volte, partendo entrambe le volte da <b>' + fmt(p.initialWeight, 1) + ' kg ' + ilD(p.from) + '</b> e da oggi con le stesse <b>' + kc(p.futureTarget) + ' al giorno</b>:</p>'
+    + '<ol class="impact-sim"><li><span>Mangiando ogni giorno esattamente il target</span><b>' + fmt(p.goalWeight, 1) + ' kg ' + ilD(c.planned) + '</b></li><li><span>Mangiando quello che hai registrato nel diario</span><b>' + fmt(p.goalWeight, 1) + ' kg ' + ilD(c.recorded) + '</b></li></ol>'
     + '<p class="impact-how">La distanza fra le due date, <b>' + sgn(shift, 0) + ' giorni</b>, è l’effetto degli scostamenti. Le due date servono solo a questo confronto: non sono la tua data di arrivo, perché non partono dal peso che hai oggi sulla bilancia.' + (arrival ? ' La data da guardare è il <b>' + fmtDay(arrival) + '</b>, nel riquadro «Quando potresti arrivare».' : '') + '</p></div></details>';
   h += moreHTML('Cosa misura', '<p>Quanto le giornate sopra o sotto il target hanno spostato l’arrivo all’obiettivo. Non è una seconda previsione: la data di arrivo è una sola, nel riquadro «Quando potresti arrivare».</p>' + (p.partial ? '<p>' + p.missing + ' giornate parziali o mancanti; ' + p.unknownTarget + ' senza target. Non aggiungono scostamenti: nei due scenari i giorni senza calorie complete sono ipotizzati identici al piano.</p>' : ''));
   h += '<details class="impact-details"><summary>Come si calcola</summary>'
@@ -7340,30 +7348,30 @@ function trajectoryExplanationHTML(f) {
 function renderForecast() {
   renderPlanImpact();
   var E = state.E, s = S(), f = E && E.forecast, big = $('#fc-v');
-  var fcOrigin = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg al '+fmtDay(f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
+  var fcOrigin = f && f.w0 != null ? 'Peso di riferimento stimato: '+fmt(f.w0,1)+' kg '+alD('al',f.from)+(f.trajectory&&f.trajectory.observations?'. Aggiornato con calorie, attività e pesate.':'. Stima iniziale dal peso del profilo, ancora da verificare con le pesate.')+(f.trajectory&&f.trajectory.provisionalToday?' Oggi è parziale: per ora sono ipotizzate '+kc(f.trajectory.todayAssumed)+', almeno quanto già registrato.':f.trajectory&&f.trajectory.includesToday?' La giornata completa di oggi è già inclusa.':' La giornata di oggi è ancora aperta: lo scenario futuro usa il piano.') : 'La previsione sarà disponibile con un piano attivo e un peso iniziale.';
   (function () { var o = $('#fc-origin'); if (!o) return; if (f && f.w0 != null) o.innerHTML = 'Parte da <b>' + fmt(f.w0, 1) + ' kg</b> al ' + esc(fmtDay(f.from)) + '.' + moreHTML('Da dove parte', '<p>' + esc(fcOrigin) + '</p>'); else o.textContent = fcOrigin; })();
   $('#fc-title').textContent = s.goalWeight > 0 ? 'Quando potresti arrivare a ' + fmt(s.goalWeight, 1) + ' kg' : 'Peso nelle prossime settimane';
   if (!f || f.none) { big.textContent = '—'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">' + esc(f && f.none ? 'Previsione non disponibile: ' + f.none : 'Serve un piano attivo con pesate recenti.') + '</p>'; return; }
   var line = function (l, sub, v, win) { return '<div class="fc-line"><div><strong>' + l + '</strong><small>' + sub + '</small>' + (win ? '<small class="fc-win">' + win + '</small>' : '') + '</div><b>' + v + '</b></div>'; };
   var rng = function (a) { return !a ? '—' : arrText(a, true); };
-  if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg il ' + fmtDay(f.in28.d) + (f.in28.lo != null ? ' (fascia probabile ' + fmt(f.in28.lo, 1) + '–' + fmt(f.in28.hi, 1) + ' kg' + (f.planUpdates ? ', con le revisioni settimanali delle calorie' : '') + ')' : '') : '—') + '.' + (f.glycogen ? ' Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua: non è grasso.' : '') + ' È una simulazione, non una misura.</p>'; return; }
+  if (f.maint) { big.textContent = f.in28 ? fmt(f.in28.c, 1) + ' kg' : '—'; $('#fc-chips').innerHTML = '<span class="chip context-chip context-note">Scenario a 4 settimane con le calorie del piano</span>'; $('#fc-rows').innerHTML = '<p class="muted small">Mantenimento: con le calorie del piano la simulazione dà circa ' + (f.in28 ? fmt(f.in28.c, 1) + ' kg ' + ilD(f.in28.d) + (f.in28.lo != null ? ' (fascia probabile ' + fmt(f.in28.lo, 1) + '–' + fmt(f.in28.hi, 1) + ' kg' + (f.planUpdates ? ', con le revisioni settimanali delle calorie' : '') + ')' : '') : '—') + '.' + (f.glycogen ? ' Fino ' + alD('al', f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua: non è grasso.' : '') + ' È una simulazione, non una misura.</p>'; return; }
   if (f.done) { big.textContent = 'Obiettivo raggiunto'; $('#fc-chips').innerHTML = ''; $('#fc-rows').innerHTML = '<p class="muted small">La tendenza è già oltre l\'obiettivo: il piano andrebbe portato al mantenimento (Profilo).</p>'; return; }
   big.textContent = rng(f.plan);
-  (function(){var sub=$('#fc-sub');if(!sub)return;var w=winText(f.plan);sub.innerHTML=f.plan&&f.plan.central?'Se da oggi segui il piano: <b>'+kc(f.plan.I)+' al giorno</b>.'+(w?' '+esc(w.replace('Fascia probabile (95%): fra il ','Quasi sicuramente fra il ')):'')+' Tiene già conto di tutto quello che hai fatto finora, perché parte dal tuo peso di oggi.'+(f.plan.far?' Oltre 12 settimane la data è indicativa.':''):'';})();
+  (function(){var sub=$('#fc-sub');if(!sub)return;var w=winText(f.plan);sub.innerHTML=f.plan&&f.plan.central?'Se da oggi segui il piano: <b>'+kc(f.plan.I)+' al giorno</b>.'+(w?' '+esc(w.replace('Fascia probabile (95%): fra ','Quasi sicuramente fra ')):'')+' Tiene già conto di tutto quello che hai fatto finora, perché parte dal tuo peso di oggi.'+(f.plan.far?' Oltre 12 settimane la data è indicativa.':''):'';})();
   $('#fc-chips').innerHTML = (f.plan && f.plan.central ? '<span class="chip context-chip context-note">Calcolo con il tuo fabbisogno stimato e le calorie del piano</span>' : '') + (f.plan && f.plan.far ? '<span class="chip context-chip context-neutral">Oltre 12 settimane: indicativa</span>' : '');
   var rows = '<h3 class="fc-alt-h">E se invece…</h3><div class="fc-grid">'
     + line('Se mantieni la media recente', f.logged ? fmt(f.logged.I, 0) + ' kcal al giorno: media delle giornate complete nelle ultime 2 settimane' : 'non disponibile', f.logged ? rng(f.logged) : '—', winText(f.logged))
     + (f.required ? (f.required.conflict
-      ? line('Per arrivare entro il ' + fmtDay(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
-      : line('Per arrivare entro il ' + fmtDay(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
+      ? line('Per arrivare entro ' + ilD(f.required.date), f.required.impossible ? 'impossibile anche senza mangiare nulla' : 'calorie al giorno da oggi, fuori dai limiti: lo sconsiglio fortemente', f.required.impossible ? 'impossibile' : kc(Math.round(f.required.kcal / 10) * 10))
+      : line('Per arrivare entro ' + ilD(f.required.date), 'calorie al giorno da oggi' + (f.required.beyondHorizon ? ', solo indicativo' : ''), kc(Math.round(f.required.kcal / 10) * 10))) : '')
     + '</div>'+trajectoryExplanationHTML(f)
     + (f.planUpdates && f.plan && f.plan.closed ? '<p class="caption">La fascia «con il piano» considera che le calorie vengono corrette ogni settimana con le tue pesate.</p>' : '')
-    + (f.glycogen ? '<p class="caption">Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua, oltre al peso previsto: non è grasso.</p>' : '');
+    + (f.glycogen ? '<p class="caption">Fino ' + alD('al', f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'salire' : 'scendere') + ' di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua, oltre al peso previsto: non è grasso.</p>' : '');
 
   if (f.required && f.required.conflict) rows += '<p class="p2-warn" id="fc-conflict">' + (f.required.impossible
-    ? 'Arrivare all\'obiettivo entro il ' + fmtDay(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
-    : 'Per arrivarci entro il ' + fmtDay(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(f.required.why) + '.')
-    + ' Meglio ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data al ' + fmtDay(a.date) + ' o dopo' : a.msg); }).join('; ') + '.</p>';
+    ? 'Arrivare all\'obiettivo entro ' + ilD(f.required.date) + ' non è possibile nemmeno a digiuno completo.'
+    : 'Per arrivarci entro ' + ilD(f.required.date) + ' dovresti mangiare circa <b>' + kc(Math.round(f.required.kcal / 10) * 10) + ' al giorno</b> da oggi. <b>Lo sconsiglio fortemente: non è il modo giusto di dimagrire</b>, perché ' + esc(f.required.why) + '.')
+    + ' Meglio ' + f.required.alternatives.map(function (a) { return esc(a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.msg); }).join('; ') + '.</p>';
   $('#fc-rows').innerHTML = rows;
 }
 function renderProjection() {
@@ -7388,8 +7396,8 @@ function renderProjection() {
   box.innerHTML = '<div class="proj-table-wrap"><table class="proj-table"><thead><tr><th scope="col">Tra</th><th scope="col" class="pt-plan"><i></i>Col piano</th><th scope="col" class="pt-diary"><i></i>Con la media</th></tr></thead><tbody>'
     + marks.map(function (k) { return '<tr><th scope="row">' + k / 7 + ' settimane<small><time datetime="' + addDays(f.from, k) + '">' + fmtShort(addDays(f.from, k)) + '</time></small></th>' + cell(T, k, f.simPlan) + cell(Il, k) + '</tr>'; }).join('')
     + '</tbody></table></div><p class="proj-legend">Peso in kg; sotto, la fascia del modello.' + (Il == null ? ' Media recente: servono giornate complete sufficienti.' : '') + '</p>';
-  $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, dal '+fmtDay(f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
-  $('#proj-note').textContent = (f.planUpdates ? 'Con il piano la fascia considera che le calorie vengono corrette ogni settimana con le tue pesate: un errore del mantenimento non si accumula. Con la media recente le calorie restano fisse, quindi la fascia si allarga col tempo. ' : 'Il piano ha calorie fisse: la fascia si allarga col tempo perché un errore del mantenimento non viene corretto. ') + (f.glycogen ? 'Fino al ' + fmtDay(f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'stare sopra' : 'stare sotto') + ' questi valori di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua. ' : '') + 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
+  $('#proj-text').textContent = 'Simulazioni dal riferimento aggiornato con calorie e pesate, '+alD('dal',f.from)+'. La giornata completa di oggi, se presente, è già inclusa nella partenza.';
+  $('#proj-note').textContent = (f.planUpdates ? 'Con il piano la fascia considera che le calorie vengono corrette ogni settimana con le tue pesate: un errore del mantenimento non si accumula. Con la media recente le calorie restano fisse, quindi la fascia si allarga col tempo. ' : 'Il piano ha calorie fisse: la fascia si allarga col tempo perché un errore del mantenimento non viene corretto. ') + (f.glycogen ? 'Fino ' + alD('al', f.glycogen.to) + ' la bilancia può ' + (f.glycogen.dir > 0 ? 'stare sopra' : 'stare sotto') + ' questi valori di circa ' + fmt(f.glycogen.lo, 1) + '–' + fmt(f.glycogen.hi, 1) + ' kg per glicogeno e acqua. ' : '') + 'Sono scenari condizionati, non misure né previsioni garantite. Oltre l’obiettivo la simulazione mostrata si ferma al traguardo.';
   $('#proj-more').innerHTML = '<p>'+(f.startOrigin==='filtro'?'La partenza è il peso stimato dallo stesso calcolo del mantenimento, senza le oscillazioni d\'acqua.':'La partenza usa la traiettoria energetica corretta dalle pesate.')+' Consumo senza digestione alla partenza: '+kc(f.sim.B0)+', variazione '+fmt(B.perKg,1)+' kcal per kg. Digestione: 10% delle calorie. Energia per kg: '+fmt(f.sim.rho||7700,0)+' kcal/kg'+((f.sim.rho||7700)<7700?' (in surplus una parte del peso preso è muscolo)':'')+'. La fascia unisce tre incertezze: il consumo (±'+fmt(kd*100,1)+'%), il peso di partenza (±'+fmt(f.w0Se,1)+' kg) e l\'energia per kg (5.000–9.400 kcal/kg'+(f.sim.rhoK?', ricalcolando ogni volta anche il mantenimento':'')+'). È circa il 95% se le ipotesi del modello reggono; non è una garanzia.</p>';
 
 }
@@ -7432,10 +7440,12 @@ function renderKcalChart() {
   segs.forEach(function (w) { if (w.v * 1.1 > max) max = w.v * 1.1; });
   $('#cal-range').textContent = 'Ultime 4 settimane';
   $('#k-leg-goal').textContent = 'Obiettivo ' + KR.label;
-  barChart($('#k-chart'), { dates: dates, ymax: max, min: KR.lo || 0, max: KR.hi || 0, weeks: segs, targets: KR.none ? [] : KR.fixed ? [KR.T] : [KR.lo, KR.hi], val: function (d) { var v = state.days.get(d); return v ? v.kcal || 0 : 0; } });
+  var kAt = function (d) { var r = kRange(d); return r.none ? null : { lines: r.fixed ? [r.T] : [r.lo, r.hi], band: [r.lo, r.hi] }; }, kRuns = targetRuns(dates, kAt).filter(function (u) { return u.r; });
+  barChart($('#k-chart'), { dates: dates, ymax: max, min: KR.lo || 0, max: KR.hi || 0, weeks: segs, targets: KR.none ? [] : KR.fixed ? [KR.T] : [KR.lo, KR.hi], targetAt: kAt, val: function (d) { var v = state.days.get(d); return v ? v.kcal || 0 : 0; } });
+  if (kRuns.length > 1) $('#k-leg-goal').textContent = 'Obiettivo di ogni giorno (oggi ' + KR.label + ')';
   $('#k-leg-wk').hidden = !on;
   $('#k-leg-td').textContent = 'Mantenimento medio attuale (' + (R ? fmt(R, 0) : '—') + ')';
-  $('#k-readout').textContent = (KR.none ? 'Nessun obiettivo attivo.' : KR.fixed ? 'La linea verde è l\'obiettivo di oggi (' + KR.label + ' kcal); i colori dei giorni usano l\'obiettivo attivo quel giorno, con 50 kcal di tolleranza.' : 'La fascia verde è l\'intervallo del piano: ' + KR.label + ' kcal.') + ' La linea tratteggiata è il consumo di riferimento del piano. Sopra l\'obiettivo e sopra il consumo sono confronti diversi.';
+  $('#k-readout').textContent = (KR.none ? 'Nessun obiettivo attivo.' : kRuns.length > 1 ? 'La linea verde segue l\'obiettivo di ogni giorno: ' + kRuns.map(function (u, j) { var lab = u.r.lines.length > 1 ? fmt(u.r.lines[0], 0) + '–' + fmt(u.r.lines[1], 0) : fmt(u.r.lines[0], 0); return lab + ' kcal ' + (j === kRuns.length - 1 ? 'dal ' + fmtShort(dates[u.i0]) : 'fino al ' + fmtShort(dates[u.i1])); }).join(', ') + '. I colori dei giorni usano l\'obiettivo di quel giorno, con 50 kcal di tolleranza.' : KR.fixed ? 'La linea verde è l\'obiettivo di oggi (' + KR.label + ' kcal); i colori dei giorni usano l\'obiettivo attivo quel giorno, con 50 kcal di tolleranza.' : 'La fascia verde è l\'intervallo del piano: ' + KR.label + ' kcal.') + ' La linea tratteggiata è il mantenimento. Sopra l\'obiettivo e sopra il consumo sono confronti diversi.';
 }
 /* bilancio stimato cumulativo: solo giornate complete, consumo ricostruito di ciascun giorno */
 function renderTotal() {
@@ -7447,7 +7457,7 @@ function renderTotal() {
     total += b.v; rows.push({ d: d, kcal: b.intake, td: b.C, delta: b.v });
   }
   var amount = Math.abs(Math.round(total));
-  $('#tot-title').textContent = 'Bilancio stimato dal ' + fmtDay(from);
+  $('#tot-title').textContent = 'Bilancio stimato ' + alD('dal', from);
   countTo($('#tot-v'), rows.length ? amount : null, 0); $('#tot-u').textContent = rows.length ? 'kcal ' + (total <= 0 ? 'di deficit' : 'di surplus') + ' in ' + rows.length + ' giornate complete, fino a ieri' : 'kcal';
   $('#tot-chips').innerHTML = rows.length ? '<span class="chip context-chip context-note">Equivalente teorico: ' + fmt(amount / KCAL_KG, 1) + ' kg a 7.700 kcal/kg; non misura il grasso</span>' : '';
   $('#tot-text').textContent = 'Somma di calorie registrate meno consumo stimato di ogni giorno, solo per le giornate dichiarate complete.' + (skipped ? ' ' + skipped + ' giornate con calorie parziali o da confermare non sono contate.' : '') + ' Se il diario sottostima sempre le calorie, il consumo stimato è più basso dello stesso errore: il bilancio resta comunque un\'ipotesi.';
@@ -7462,7 +7472,7 @@ function renderSummary() {
   state.days.forEach(function (v, d) { if (d >= start && d <= t0) g(keyFn(d)).days.push(Object.assign({ d: d }, v)); });
   state.workouts.forEach(function (w) { if (w.date >= start && w.date <= t0) g(keyFn(w.date)).work++; });
   var keys = Array.from(groups.keys()).sort();
-  if (!keys.length) { $('#summary').innerHTML = '<div class="empty">Qui compariranno le settimane e i mesi del tuo percorso dal ' + fmtDay(start) + '.</div>'; return; }
+  if (!keys.length) { $('#summary').innerHTML = '<div class="empty">Qui compariranno le settimane e i mesi del tuo percorso ' + alD('dal', start) + '.</div>'; return; }
   var rows = [], prevW = null, bad = isOutlier(), t = dayClosed(t0, state.days.get(t0)) ? t0 : addDays(t0, -1);
   keys.forEach(function (k) {
     var gr0 = groups.get(k), ds = gr0.days;
@@ -7580,11 +7590,30 @@ function bindModel() {
     if ((b = e.target.closest('[data-goplan]'))) { e.preventDefault(); show('dati'); setTimeout(function () { var p = $('#plan-panel'); if (p) p.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); }, 300); }
   });
 }
+/* obiettivo giorno per giorno: tratti consecutivi con lo stesso obiettivo. Quando il piano cambia dentro il periodo
+   del grafico, la linea verde fa un gradino il giorno del cambio, così ogni barra si confronta con il suo obiettivo. */
+function targetRuns(dates, fn) {
+  var runs = [];
+  dates.forEach(function (d, i) { var r = fn(d), key = r ? JSON.stringify(r) : ''; var L = runs[runs.length - 1]; if (L && L.key === key) L.i1 = i; else runs.push({ key: key, i0: i, i1: i, r: r }); });
+  return runs;
+}
+function drawTargetRuns(svg, runs, m, slot, ys) {
+  var prev = null;
+  runs.forEach(function (u) {
+    if (!u.r) { prev = null; return; }
+    var xa = m.l + slot * u.i0, xb = m.l + slot * (u.i1 + 1);
+    if (u.r.band && u.r.band[1] > u.r.band[0]) svg.appendChild(el('rect', { class: 'band', x: xa, width: xb - xa, y: ys(u.r.band[1]), height: Math.max(1, ys(u.r.band[0]) - ys(u.r.band[1])), rx: 3 }));
+    u.r.lines.forEach(function (v) { svg.appendChild(el('line', { class: 'l-goal', x1: xa, x2: xb, y1: ys(v), y2: ys(v) })); });
+    if (prev && prev.lines[0] !== u.r.lines[0]) svg.appendChild(el('line', { class: 'l-goal', x1: xa, x2: xa, y1: ys(prev.lines[0]), y2: ys(u.r.lines[0]) }));
+    prev = u.r;
+  });
+}
 function barChart(svg, cfg) {
   var vals = cfg.dates.map(cfg.val), R = TD();
   var W = chartW(svg), narrow = W < 520;
   var wks = cfg.weeks || [];
-  var sig = JSON.stringify([W, cfg.dates[0], vals, cfg.min, cfg.max, cfg.ymax, R, wks, cfg.targets, state.E && state.E.version]);
+  var runs = cfg.targetAt ? targetRuns(cfg.dates, cfg.targetAt) : null; if (runs && runs.length < 2) runs = null;
+  var sig = JSON.stringify([W, cfg.dates[0], vals, cfg.min, cfg.max, cfg.ymax, R, wks, cfg.targets, runs && runs.map(function (u) { return u.key + u.i0; }), state.E && state.E.version]);
   if (svg.dataset.sig === sig) return;
   svg.dataset.sig = sig;
   var vb = { w: W, h: narrow ? 210 : 250 }, m = { l: 44, r: 14, t: 20, b: 30 };
@@ -7608,7 +7637,7 @@ function barChart(svg, cfg) {
     svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: vb.w - m.r, y1: ys(t), y2: ys(t) }));
     if (!tgy.some(function (y) { return Math.abs(y - ys(t)) < 13; })) svg.appendChild(el('text', { x: m.l - 8, y: ys(t) + 4, 'text-anchor': 'end' }, fmt(t, 0)));
   });
-  if (cfg.max > 0) svg.appendChild(el('rect', { class: 'band', x: m.l, width: vb.w - m.l - m.r, y: ys(cfg.max), height: Math.max(1, ys(cfg.min) - ys(cfg.max)), rx: 3 }));
+  if (cfg.max > 0 && !runs) svg.appendChild(el('rect', { class: 'band', x: m.l, width: vb.w - m.l - m.r, y: ys(cfg.max), height: Math.max(1, ys(cfg.min) - ys(cfg.max)), rx: 3 }));
   var n = cfg.dates.length, slot = (vb.w - m.l - m.r) / n, bw = Math.max(3, slot * 0.62), items = [];
   cfg.dates.forEach(function (d, i) {
     var v = vals[i], cx = m.l + slot * i + slot / 2;
@@ -7622,13 +7651,14 @@ function barChart(svg, cfg) {
     items.push({ x: cx, y: v > 0 ? ys(Math.min(v, hi)) : ys(0), text: fmtShort(d) + ' · ' + (v > 0 ? fmt(v, 0) + ' kcal' + (T ? ' · obiettivo ' + fmt(T, 0) : '') + (C != null ? ' · consumo stimato ' + fmt(C, 0) : '') + (b ? ' · bilancio stimato ' + sgn(b.v, 0) : ' · giornata non completa: niente bilancio') : 'Nessun dato') });
     if (i % (narrow ? 7 : n > 21 ? 7 : n > 10 ? 3 : 1) === 0) svg.appendChild(el('text', { x: cx, y: vb.h - 8, 'text-anchor': 'middle' }, fmtShort(d)));
   });
+  if (runs) drawTargetRuns(svg, runs, m, slot, ys);
   tgs.forEach(function (v, k) {
-    svg.appendChild(el('line', { class: 'l-goal', x1: m.l, x2: vb.w - m.r, y1: ys(v), y2: ys(v) }));
+    if (!runs) svg.appendChild(el('line', { class: 'l-goal', x1: m.l, x2: vb.w - m.r, y1: ys(v), y2: ys(v) }));
     svg.appendChild(el('text', { class: 't-goal', x: m.l - 8, y: tgy[k] + 4, 'text-anchor': 'end' }, fmt(v, 0)));
   });
   if (R > 0) {
     svg.appendChild(el('line', { class: 'l-target', x1: m.l, x2: vb.w - m.r, y1: ys(R), y2: ys(R) }));
-    if (!wks.length) svg.appendChild(el('text', { x: vb.w - m.r, y: ys(R) - 7, 'text-anchor': 'end' }, 'consumo di riferimento ' + fmt(R, 0)));
+    if (!wks.length) svg.appendChild(el('text', { x: vb.w - m.r, y: ys(R) - 7, 'text-anchor': 'end' }, 'mantenimento ' + fmt(R, 0)));
   }
   /* interruttore acceso: un tratto per ogni giorno passato, all'altezza del suo consumo ricostruito */
   wks.forEach(function (w) {
@@ -7751,7 +7781,7 @@ function pedSave() {
   v.reason = (state.ped.v.note || '').trim() || 'modifica dal Profilo';
   delete v.note;
   var p = clone(state.piano || { schema: 2, profile: {}, versions: [] }); p.versions = (p.versions || []).concat([v]);
-  state.ped = null; state.pedMsg = 'Nuova versione salvata: vale dal ' + fmtDay(v.from) + '. Le versioni precedenti restano nella cronologia.';
+  state.ped = null; state.pedMsg = 'Nuova versione salvata: vale ' + alD('dal', v.from) + '. Le versioni precedenti restano nella cronologia.';
   savePlan(p, 'nuova versione dal ' + v.from);
   pfRefresh(['piano', 'modifica', 'storia']);
 }
@@ -7862,11 +7892,11 @@ function pedPrevHTML(pv) {
   var rows = [], dd = function (a, b, u) { return a != null && b != null && Math.round(a) !== Math.round(b) ? ' <small>(' + sgn(a - b, 0) + ' ' + u + ' rispetto a ora)</small>' : ''; };
   rows.push(kvr('Stato', '', esc(lb('stato', r.status))));
   rows.push(kvr('Calorie', esc(r.Torigin || ''), r.T != null ? kc(r.T) + dd(r.T, cur && cur.kcal, 'kcal') : 'non calcolabili'));
-  if (r.R != null) rows.push(kvr('Consumo di riferimento', esc(E2.base && E2.base.label || ''), kc(r.R)));
+  if (r.R != null) rows.push(kvr('Mantenimento', esc(E2.base && E2.base.label || ''), kc(r.R)));
   if (r.T != null && r.R != null) { var d0 = r.deficit; rows.push(kvr(Math.abs(d0) < 1 ? 'Equilibrio' : d0 > 0 ? 'Deficit atteso' : 'Surplus atteso', 'bilancio della settimana tipo, digestione inclusa', kc(Math.abs(d0)))); }
   if (r.pace) rows.push(kvr('Ritmo', esc(lb('pace', r.pace.mode)), fmt(r.pace.kgWeek, 1) + ' kg a settimana (' + fmt(r.pace.pct, 1) + '%)'));
   if (z && (z.p != null || z.c != null || z.f != null)) rows.push(kvr('Macro', 'peso di riferimento ' + (r.weightRef && r.weightRef.v ? fmt(r.weightRef.v, 1) + ' kg (' + lb('wref', r.weightRef.mode).toLowerCase() + ')' : '—'), gr(z.p) + ' P · ' + gr(z.c) + ' C · ' + gr(z.f) + ' G' + (cur && cur.p != null ? '<small> ora ' + gr(cur.p) + ' · ' + gr(cur.c) + ' · ' + gr(cur.f) + '</small>' : '')));
-  var h = '<h3 class="ped-h">Effetto della modifica, dal ' + fmtDay(pv.v.from) + '</h3><div class="kvl">' + rows.join('') + '</div>';
+  var h = '<h3 class="ped-h">Effetto della modifica, ' + alD('dal', pv.v.from) + '</h3><div class="kvl">' + rows.join('') + '</div>';
   if (r.errors.length) h += r.errors.map(function (e) { return '<p class="p2-warn"><b>Da risolvere:</b> ' + esc(e.msg) + (e.alternatives && e.alternatives.length ? '<br>Alternative: ' + e.alternatives.map(function (a) { return esc(a.msg); }).join('; ') : '') + '</p>'; }).join('');
   if (r.warnings.length) h += r.warnings.map(function (w) { return '<p class="p2-note">' + esc(w.msg) + '</p>'; }).join('');
   var gsh = E2 && E2.forecast && E2.forecast.glycogen;
@@ -7881,9 +7911,9 @@ var pedTimer = 0;
 function pedSchedule() {
   clearTimeout(pedTimer);
   pedTimer = setTimeout(function () {
-    var b = $('#ped-prev'); if (!b || !state.ped) return;
+    var b = $('#ped-prev') || $('#ped-live'); if (!b || !state.ped) return;
     var pv = pedPreview(), why = pedBlocked(pv), sb = $('[data-pa=ped-save]'), m = $('#ped-msg');
-    b.innerHTML = pedPrevHTML(pv);
+    pedRefresh(pv);
     if (sb) sb.disabled = !!why;
     if (m) m.textContent = why ? 'Non salvabile: ' + why + '.' : '';
   }, 250);
@@ -7921,7 +7951,7 @@ function historyHTML() {
   return '<div class="pl-list">' + vs.map(function (v) {
     var z = v.resolved || {}, man = v.kcal && v.kcal.mode === 'manuale' && v.kcal.manual ? v.kcal.manual.v : null;
     var st = v.status !== 'attiva' ? 'annullata' : v === act ? 'attiva oggi' : v.from > t ? 'programmata' : 'precedente';
-    return plItem({ cur: v === act, t: 'Dal ' + fmtDay(v.from) + ' · ' + esc(ORI[v.origin] || v.origin || '—'), badge: st,
+    return plItem({ cur: v === act, t: '' + alD('Dal', v.from) + ' · ' + esc(ORI[v.origin] || v.origin || '—'), badge: st,
       v: (man || z.kcal ? fmt(man || z.kcal, 0) + ' kcal' : 'calorie ricostruite') + (z.p != null ? ' · P ' + fmt(z.p, 0) + ' · C ' + fmt(z.c, 0) + ' · G ' + fmt(z.f, 0) + ' g' : ''),
       s: (v.reason ? esc(cap(v.reason)) + '. ' : '') + (z.method ? 'Calcolata con ' + esc(z.method) + '.' : ''),
       act: v.status === 'attiva' && v.from > t ? '<button type="button" class="linkbtn small" data-pa="ver-cancel" data-id="' + esc(v.id) + '">Annulla</button>' : v.status === 'attiva' && v !== act ? '<button type="button" class="linkbtn small" data-pa="ver-restore" data-id="' + esc(v.id) + '">Ripristina</button>' : '' });
@@ -7991,7 +8021,7 @@ function migrHTML() {
     + '<ul class="p2-evl">' + (rec.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
   h += confirmHTML(tc);
   if (rc.length) h += '<h3 class="ped-h">Pasti e totale diversi: ' + rc.length + '</h3><ul class="p2-evl">' + rc.slice(0, 30).map(function (x) { return '<li><button type="button" class="linkbtn" data-day="' + x.d + '">' + fmtShort(x.d) + '</button> totale ' + fmt(x.r.kcal, 0) + ' kcal, pasti ' + fmt(x.r.pasti, 0) + ' kcal</li>'; }).join('') + '</ul>';
-  if (rec.stepsUnknown) h += '<p class="muted small">Passi dal ' + fmtDay(rec.stepsUnknown.from) + ' al ' + fmtDay(rec.stepsUnknown.to) + ': significato non noto. Puoi dichiararlo nella sezione «Passi: significato dei dati».</p>';
+  if (rec.stepsUnknown) h += '<p class="muted small">Passi ' + alD('dal', rec.stepsUnknown.from) + ' ' + alD('al', rec.stepsUnknown.to) + ': significato non noto. Puoi dichiararlo nella sezione «Passi: significato dei dati».</p>';
   h += '<details class="more"' + (state.migArm ? ' open' : '') + '><summary>Annulla la migrazione</summary><div class="in"><p class="muted small">Toglie il piano migrato e tutte le versioni successive (ne resta una copia nel registro); il diario e le vecchie impostazioni non cambiano. Potrai rifarla da qui.</p><button type="button" class="btn ghost fit small" data-pa="mig-undo">' + (state.migArm ? 'Tocca di nuovo per confermare' : 'Annulla la migrazione') + '</button></div></details>';
   return h;
 }
@@ -8047,7 +8077,11 @@ function bindPlan(box) {
     if (wd && state.ped) { var hb = state.ped.v.habits, i = +wd.dataset.wd, l = (hb.trainDays || []).filter(function (x) { return x !== i; }); if (wd.checked) l.push(i); hb.trainDays = l.sort(); pedSchedule(); }
   });
   box.addEventListener('submit', function (e) { if (e.target.id === 'prof-form') { e.preventDefault(); profSave(e.target); } });
+  /* «Altre opzioni» del piano restano aperte o chiuse anche quando l'editor si ridisegna */
+  box.addEventListener('toggle', function (e) { var d = e.target; if (d && d.dataset && d.dataset.pdkey && state.ped) { state.ped.openD = state.ped.openD || {}; state.ped.openD[d.dataset.pdkey] = d.open; } }, true);
   box.addEventListener('click', function (e) {
+    var ps = e.target.closest('[data-pset]');
+    if (ps && state.ped) { profileChanged(ps); pedSet(ps.dataset.pset, ps.dataset.v); return; }
     var p = e.target.closest('[data-path]');
     if (p && state.ped) { state.ped.msgs = []; applyPath(state.ped.v, p.dataset.path); fixCompat(state.ped.v, state.ped.msgs); pedRender(); return; }
     var b = e.target.closest('[data-pa]'); if (!b) return;
@@ -8357,7 +8391,7 @@ function rulesData() {
     what: 'L\'ultima pesata è un dato osservato; la tendenza è una stima. Le mostro separate, con la data della pesata.',
     how: fx(L(P('Ultima pesata'), 'il valore del diario, com\'è'), L(O('Tendenza'), 'vedi «Tendenza del peso»')),
     why: 'Una singola pesata oscilla di 0,5–1 kg per acqua e contenuto intestinale: non la uso da sola per decidere.',
-    ex: function () { return (NW ? row('Ultima pesata', F(NW.last.w, 1) + ' kg il ' + fmtDay(NW.last.d)) + row('Tendenza', F(NW.w, 1) + ' kg') : row('Pesate', 'nessuna')) + row('Pesate incluse ed escluse', esc(wCountsText())); } });
+    ex: function () { return (NW ? row('Ultima pesata', F(NW.last.w, 1) + ' kg ' + ilD(NW.last.d)) + row('Tendenza', F(NW.w, 1) + ' kg') : row('Pesate', 'nessuna')) + row('Pesate incluse ed escluse', esc(wCountsText())); } });
   add({ id: 'media7', g: 'peso', t: 'Media di 7 giorni', w: 'Progressi › Peso (linea del grafico)',
     what: 'La media semplice delle pesate accettate nei 7 giorni fino a ogni data. È la linea continua del grafico, il metodo «senza correzioni» con cui confronto la tendenza.',
     how: fx(L(O('Media'), 'somma delle ' + P('pesate') + ' degli ultimi 7 giorni ÷ quante sono')),
@@ -8469,7 +8503,7 @@ function rulesData() {
     how: fx(L('Calorie', KC('calorie') + ' ÷ obiettivo del giorno'), L('Macro', 'grammi ÷ obiettivo della versione'), L('Passi', PA('passi quotidiani') + ' ÷ obiettivo minimo')),
     why: 'Un giorno passato resta confrontato con il piano di allora.' });
   add({ id: 'grafico-kcal', g: 'medie', t: 'Grafico delle calorie', w: 'Progressi › Calorie',
-    what: 'Le calorie delle ultime 4 settimane. Il colore di ogni giorno usa l\'obiettivo attivo quel giorno (±' + TOL_VIEW + ' kcal); la linea verde è l\'obiettivo di oggi, il tratteggio il consumo di riferimento. Con l\'interruttore vedi il consumo ricostruito di ogni giorno passato.',
+    what: 'Le calorie delle ultime 4 settimane. Il colore di ogni giorno usa l\'obiettivo attivo quel giorno (±' + TOL_VIEW + ' kcal); la linea verde è l\'obiettivo di ogni giorno (fa un gradino quando cambi il piano), il tratteggio il mantenimento. Con l\'interruttore vedi il consumo ricostruito di ogni giorno passato.',
     how: fx(L('Barra', KC('calorie') + ' del giorno'), L('Tratteggio', KC('consumo di riferimento')), L('Tratti per giorno', 'consumo ricostruito')),
     why: 'Sopra l\'obiettivo e sopra il consumo sono confronti diversi.' });
 
@@ -8952,7 +8986,7 @@ function renderBody() {
   });
   $('#body-scale').hidden = view !== 'heat';
   $('#body-scale-max').textContent = fmt(max, 1) + ' serie a settimana';
-  $('#body-period').textContent = 'Dal ' + fmtDay(st.from) + ' a oggi: ' + st.n + (st.n === 1 ? ' seduta' : ' sedute') + ' in Hevy.';
+  $('#body-period').textContent = '' + alD('Dal', st.from) + ' a oggi: ' + st.n + (st.n === 1 ? ' seduta' : ' sedute') + ' in Hevy.';
 
   /* dettaglio muscolo */
   var k = state.bodySel, m = M[k], ti = trendInfo(m.trend);
@@ -8976,7 +9010,7 @@ function renderBody() {
         + '<div class="ds" style="--c:#5DD6C3"><div class="l"><i></i>Ultima volta</div><div class="v" style="font-size:1.15rem">' + (m.last ? fmtShort(m.last) : '—') + '</div><div class="s">' + (m.last ? (diffDays(m.last, todayStr()) === 0 ? 'oggi' : diffDays(m.last, todayStr()) + ' giorni fa') : 'solo come secondario') + '</div></div></div>'
         + '<div tabindex="0" role="group" aria-label="Serie a settimana, ultime 8 settimane"><div class="small muted" style="margin:14px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>'
         + (exRows ? '<div><div class="small muted" style="margin:10px 0 2px">Esercizi e progressione (carico migliore, prime sedute contro ultime)</div>' + exRows + '</div>' : '')
-      : '<div class="empty">Non hai allenato questo muscolo nel periodo scelto.' + (function () { var a = bodyStats('all').M[k]; return a.last ? ' L\'ultima volta è stata il ' + fmtDay(a.last) + '.' : ' Nelle sedute di Hevy non c\'è nessun esercizio che lo alleni.'; })() + '</div><div tabindex="0" role="group" aria-label="Serie a settimana, ultime 8 settimane"><div class="small muted" style="margin:10px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>');
+      : '<div class="empty">Non hai allenato questo muscolo nel periodo scelto.' + (function () { var a = bodyStats('all').M[k]; return a.last ? ' L\'ultima volta è stata ' + ilD(a.last) + '.' : ' Nelle sedute di Hevy non c\'è nessun esercizio che lo alleni.'; })() + '</div><div tabindex="0" role="group" aria-label="Serie a settimana, ultime 8 settimane"><div class="small muted" style="margin:10px 0 4px">Serie a settimana, ultime 8 settimane</div>' + bars + '</div>');
   if (state.bodyPop) { state.bodyPop = false; box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop'); }
 
   /* equilibrio */
@@ -10481,7 +10515,7 @@ function introText() {
   if (word) $('#in-title').innerHTML = 'nel tuo percorso di <em>' + word + '</em>'; else $('#in-title').textContent = 'Il tuo prossimo passo inizia qui';
   var okD = function (x) { return typeof x === 'string' && /^\d{4}-\d\d-\d\d$/.test(x); };
   var tot = okD(s.startDate) && okD(s.endDate) ? diffDays(s.startDate, s.endDate) + 1 : 0, n = okD(s.startDate) ? diffDays(s.startDate, t) + 1 : 0;
-  $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + (s.goalWeight > 0 ? 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg' + (okD(s.endDate) ? ' entro il ' + fmtDay(s.endDate) : '') : '');
+  $('#in-day').textContent = (n >= 1 && n <= tot ? 'Giorno ' + n + ' di ' + tot + ' · ' : '') + (s.goalWeight > 0 ? 'obiettivo ' + fmt(s.goalWeight, 1) + ' kg' + (okD(s.endDate) ? ' entro ' + ilD(s.endDate) : '') : '');
 }
 function introStats() {
   var box = $('#in-stats'); if (!box || intro.gone) return;
@@ -11564,7 +11598,7 @@ function bindFriends() {
     var link=friendList().find(function(x){return relationPeer(x)===F.selected;});if(!link)return '<div class="friends-empty">Seleziona un amico per confrontare i dati.</div>';
     var r=F.remote,week=F.period==='week',dates=[],i;for(i=6;i>=0;i--)dates.push(FD.add(comparisonDate(),-i));
     var own7=localRows(),name=relationName(link),short=fzShort(name),keys=FD.KEYS.filter(function(k){return k!=='weight'&&k!=='goals'&&((F.config&&F.config.prefs[k])||(r&&r.config&&r.config.prefs[k]));});
-    var ctrl='<h3 class="fa-sr">Tu e '+esc(name)+' · '+(week?'7 giorni fino al '+fmtDay(comparisonDate()):fmtDay(comparisonDate()))+'</h3><div class="fz-ctrl"><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator()+'</div>';
+    var ctrl='<h3 class="fa-sr">Tu e '+esc(name)+' · '+(week?'7 giorni fino '+alD('al',comparisonDate()):fmtDay(comparisonDate()))+'</h3><div class="fz-ctrl"><div class="friends-period" role="group" aria-label="Periodo del confronto"><button type="button" data-friend-action="period" data-key="today" aria-pressed="'+(F.period==='today')+'">Giorno</button><button type="button" data-friend-action="period" data-key="week" aria-pressed="'+(F.period==='week')+'">7 giorni</button></div>'+comparisonNavigator()+'</div>';
     var manage='<details class="fz-manage"><summary>Gestisci l’amicizia con '+esc(short)+'</summary><div class="friends-actions">'+actionButton('remove','Rimuovi amico',F.selected)+actionButton('block','Blocca',F.selected)+'</div></details>';
     var myName=(F.profile&&F.profile.nickname)||S().name||'Tu',wMe=fzWeight(own7,dates,true,week);
     function hero(wPe,chips){return '<section class="fz-hero" aria-label="Tu e '+esc(name)+': peso">'+fzPerson('me',F.uid,myName,'Tu',wMe)+'<span class="fz-vs" aria-hidden="true">VS</span>'+fzPerson('pe',F.selected,name,short,wPe)+(chips||'')+'</section>';}
@@ -11713,7 +11747,7 @@ function renderProfileIdentity(){
   var G=profileGameData(),ses=0,seen={};(state.workouts||new Map()).forEach(function(w){if(w&&w.date&&w.date<=t){var k=w.id||w.date+'|'+w.title+'|'+(w.start||'');if(!seen[k]){seen[k]=1;ses++;}}});
   var now=null;try{now=weightNow();}catch(e){}var dlt=now&&now.w!=null&&start?now.w-start:null;
   var tile=function(v2,l){return '<div class="pe-num"><b>'+v2+'</b><small>'+l+'</small></div>';};
-  var h='<div class="pe-top"><button type="button" class="pe-av" data-photo aria-label="Cambia la foto del profilo">'+avatarHTML(name)+'</button><b class="pe-name">'+esc(name)+'</b><span class="pe-phase">'+esc(phase)+(from?' · dal '+fmtDay(from):'')+'</span>';
+  var h='<div class="pe-top"><button type="button" class="pe-av" data-photo aria-label="Cambia la foto del profilo">'+avatarHTML(name)+'</button><b class="pe-name">'+esc(name)+'</b><span class="pe-phase">'+esc(phase)+(from?' · '+alD('dal',from):'')+'</span>';
   h+='<span class="pe-acts"><button type="button" class="pe-link" data-photo>'+(state.avatar?'Cambia foto':'Aggiungi foto')+'</button><button type="button" class="pe-link" data-profile-open="tu">Dati personali</button>'+(state.avatar?'<button type="button" class="pe-link" data-photo-del>Rimuovi foto</button>':'')+'</span></div>';
   h+=profileLevelHTML(G.p);
   h+='<div class="pe-nums">'+tile(G.p?fmt(G.p.complete||0,0):'—','giorni completi')+tile(fmt(ses,0),ses===1?'seduta':'sedute')+tile(dlt!=null?(dlt>0.05?'+':dlt<-0.05?'−':'')+fmt(Math.abs(dlt),1):'—','kg di tendenza')+'</div>';
@@ -11732,35 +11766,271 @@ function planNowHTML(){
   var E=state.E,v=activeVersion();if(!v)return '<div class="pf-empty"><b>Costruiamo il tuo primo piano</b><p>Parti dai valori che conosci oppure lascia che l’app ti guidi.</p><button type="button" class="btn fit" data-profile-edit>Crea il piano</button></div>';
   var z=E&&E.plan?E.plan.active:v.resolved,g=v.goal||{},fr=E&&E.plan&&E.plan.fresh;
   var mac=function(k,n,c){return '<span class="pv-mac" style="--mc:'+c+'"><i>'+n+'</i><b>'+(z&&z[k]!=null?fmt(z[k],0):'—')+'<small>g</small></b></span>';};
-  var h='<div class="pf-plan-top"><span class="pf-active-badge">Attivo dal '+fmtDay(v.from)+'</span><button type="button" class="btn ghost fit small" data-profile-edit>Modifica il piano</button></div>';
+  var h='<div class="pf-plan-top"><span class="pf-active-badge">Attivo '+alD('dal',v.from)+'</span><button type="button" class="btn ghost fit small" data-profile-edit>Modifica il piano</button></div>';
   h+='<div class="pv-hero"><div class="pv-kc"><small>Calorie del giorno</small><b>'+(z&&z.kcal!=null?fmt(z.kcal,0):'—')+'<span>kcal</span></b></div><div class="pv-macs">'+mac('p','Proteine',HEX.prot)+mac('c','Carboidrati',HEX.carb)+mac('f','Grassi',HEX.fat)+'</div></div>';
-  h+='<div class="pf-plan-facts">'+pfMini('Il tuo obiettivo',esc(profilePhase(g.phase)),g.goalWeight?'Verso '+fmt(g.goalWeight,1)+' kg'+(g.endDate?' · '+fmtDay(g.endDate):''):'Peso stabile secondo il piano')+pfMini('Calorie',v.kcal&&v.kcal.mode==='manuale'?'Scelte da te':'Calcolate dall’app',v.kcal&&v.kcal.mode==='manuale'?'Il target rimane quello inserito':esc(lb('update',v.kcal&&v.kcal.update||'proposta')))+pfMini('Macro',v.macros&&v.macros.mode==='manuale'?'Scelti da te':v.macros&&v.macros.mode==='ibrido'?'In parte fissati':'Calcolati dall’app','Proteine, carboidrati e grassi')+pfMini('Mantenimento',v.tdee&&v.tdee.mode==='manuale_fisso'?'Valore fisso':v.tdee&&v.tdee.mode==='manuale_da_calibrare'?'Valore personalizzato':'Adattivo al diario','Il consumo aggiornato si trova in Oggi')+'</div>';
-  h+=pfMore('Come è impostato questo piano','<div class="pv-list">'+pvRow('Punto di partenza',esc((PATHS[v.path]||{}).t||'Piano importato'))+pvRow('Stima del mantenimento',esc(MODE_TXT[(v.tdee||{}).mode]||''))+pvRow('Calorie',esc(MODE_TXT[(v.kcal||{}).mode]||''))+pvRow('Macro',esc(MACRO_TXT[(v.macros||{}).mode]||''))+(v.reason?pvRow('Ultima modifica',esc(v.reason)):'')+'</div>');
+  /* quattro fatti in parole semplici: chi decide le calorie, dove porta il piano, il mantenimento, i macro */
+  var man=v.kcal&&v.kcal.mode==='manuale',f=E&&E.forecast,dir=g.phase==='cut'?-1:g.phase==='surplus'?1:0,arr='';
+  if(dir&&g.goalWeight>0){var a=f&&!f.none&&!f.done&&f.plan&&f.plan.central?f.plan.central:null;arr=f&&f.done?'Già raggiunto':a?'Arrivo previsto '+ilD(a)+(g.endDate?(a>g.endDate?'; la data che ti sei dato ('+fmtDay(g.endDate)+') con queste calorie non si raggiunge':'; in tempo per '+ilD(g.endDate)):''):'Arrivo previsto non ancora calcolabile';}
+  var R=E&&E.base&&E.base.ok?E.base.R:null,tm=(v.tdee||{}).mode,msum=z&&z.p!=null&&z.c!=null&&z.f!=null?4*z.p+4*z.c+9*z.f:null;
+  h+='<div class="pf-plan-facts">'
+    +pfMini('Calorie',man?'Scelte da te':'Calcolate dall’app',man?'L’app usa questo numero così com’è e non lo cambia: cambiano solo deficit e previsioni.':(v.kcal&&v.kcal.update==='automatico'?'Partono dal mantenimento e si aggiornano da sole quando cambia (al massimo una volta a settimana).':'Partono dal mantenimento: quando cambia ti propongo il nuovo valore e decidi tu.'))
+    +pfMini('Il tuo obiettivo',esc(profilePhase(g.phase))+(g.goalWeight?' · '+fmt(g.goalWeight,1)+' kg':''),dir?esc(arr):'Peso stabile secondo il piano')
+    +pfMini('Mantenimento',R!=null?kc(R):'—',tm==='manuale_fisso'?'Il valore che hai scritto: resta sempre questo.':tm==='manuale_da_calibrare'?'Parte dal tuo valore e si corregge ogni giorno con diario e bilancia.':'Stimato dall’app: si aggiorna ogni giorno con diario e bilancia.')
+    +pfMini('Macro',v.macros&&v.macros.mode==='manuale'?'Scelti da te':v.macros&&v.macros.mode==='ibrido'?'In parte scelti da te':'Calcolati dall’app',msum!=null?'Fanno '+kc(msum)+(z.kcal!=null&&Math.abs(msum-z.kcal)>25?', '+fmt(Math.abs(msum-z.kcal),0)+' '+(msum>z.kcal?'più':'meno')+' delle calorie del giorno':'')+'.':'Proteine, carboidrati e grassi')+'</div>';
   if(E&&E.plan&&E.plan.reconstructed)h+='<p class="p2-note">I valori di questo piano sono stati ricostruiti alla sua data di inizio.</p>';
-  if(fr&&fr.errors&&fr.errors.length)h+='<p class="p2-warn">Da verificare con i dati di oggi: '+esc(fr.errors.map(function(e){return e.msg;}).join('; '))+'. Il piano salvato resta attivo.</p>';
+  if(fr&&fr.errors&&fr.errors.length)h+='<p class="p2-warn">Da verificare con i dati di oggi: '+esc(fr.errors.map(function(e){return pedMsg(e.msg);}).join('; '))+'. Il piano salvato resta attivo.</p>';
   return h;
 }
 
-function pedHTML(){
-  var root=document.createElement('div');root.innerHTML=profilePedSourceHTML();
-  var fields=Array.prototype.slice.call(root.querySelectorAll(':scope > fieldset.ped-sec'));
-  if(fields.length!==8)return root.innerHTML;
-  var titles=['Il punto di partenza','Obiettivo','Come stimare il mantenimento','Calorie del giorno','Proteine, carboidrati e grassi','Distribuzione nella settimana','La tua routine','Data di attivazione'];
-  fields.forEach(function(f,i){var l=f.querySelector('legend');if(l)l.textContent=titles[i];});
-  var pathNote=fields[0].querySelector('p');if(pathNote)pathNote.remove();
-  var labelNames={'v.goal.phase':'Obiettivo del percorso','v.tdee.mode':'Come vuoi stimare il mantenimento?','v.kcal.mode':'Come scegli le calorie?','v.macros.mode':'Come scegli i macro?','v.habits.steps':'Passi in una giornata abituale','v.habits.trainPerWeek':'Allenamenti ogni settimana','v.habits.trainMin':'Minuti per allenamento'};
-  Object.keys(labelNames).forEach(function(k){var c=root.querySelector('[data-pk="'+k+'"]'),l=c&&c.closest('label');if(l)for(var j=0;j<l.childNodes.length;j++)if(l.childNodes[j].nodeType===3){l.childNodes[j].textContent=labelNames[k];break;}});
-  var choiceNames={'v.goal.phase':{cut:'Dimagrimento',surplus:'Aumento di peso',mantenimento:'Mantenimento'},'v.tdee.mode':{manuale_fisso:'Uso un valore fisso',manuale_da_calibrare:'Parto dal mio valore e lo adatto',profilo_adattivo:'Stima dal profilo e dal diario'},'v.kcal.mode':{manuale:'Le inserisco io',da_consumo_manuale:'Dal mantenimento che ho inserito',da_stima_adattiva:'Dal mantenimento stimato'},'v.macros.mode':{manuale:'Li inserisco io',automatico:'Li calcola l’app',ibrido:'Fisso alcuni valori'}};
-  Object.keys(choiceNames).forEach(function(k){var c=root.querySelector('[data-pk="'+k+'"]');if(c)c.querySelectorAll('option').forEach(function(o){if(choiceNames[k][o.value])o.textContent=choiceNames[k][o.value];});});
-  var policies=root.querySelector('[data-pk="v.macros.policy"]');if(policies)Array.prototype.forEach.call(policies.options,function(o){if(o.value==='allenamento_v1')o.textContent='Per chi si allena';if(o.value==='generale_amdr_v1')o.textContent='Intervalli generali';});
-  root.querySelectorAll('.ped-path').forEach(function(b,i){b.insertAdjacentHTML('afterbegin','<span class="ped-path-number" aria-hidden="true">'+(i+1)+'</span>');});
-  root.querySelectorAll('.ped-macro').forEach(function(grid){var custom=grid.classList.contains('ped-pol'),cards=MK3.map(function(m){var key='v.macros.'+(custom?'custom.':'')+m[0],a=grid.querySelector('[data-pk="'+key+(custom?'.lo':'.v')+'"]'),b=grid.querySelector('[data-pk="'+key+(custom?'.hi':'.unit')+'"]'),unit=custom?grid.querySelector('[data-pk="'+key+'.unit"]'):null,lock=grid.querySelector('[data-pk="'+key+'.locked"]');if(!a||!b)return '';return '<div class="pf-macro-card"><h4>'+m[1]+'</h4><div class="settings-fields">'+pfField(custom?'Minimo':'Quantità',a.outerHTML)+pfField(custom?'Massimo':'Unità',b.outerHTML)+(unit?pfField('Unità',unit.outerHTML):'')+'</div>'+(lock?'<label class="ped-chk">'+lock.outerHTML+' Mantieni questo valore fisso</label>':'')+'</div>';}).join('');if(cards){grid.className='pf-macro-editor';grid.innerHTML=cards;}});
-  var prefix=Array.prototype.filter.call(root.children,function(x){return x.tagName==='P';}).map(function(x){return x.outerHTML;}).join('');
-  var preview=root.querySelector('#ped-prev'),save=preview&&preview.nextElementSibling;
-  if(save){var sb=save.querySelector('[data-pa="ped-save"]');if(sb)sb.textContent='Salva il piano';}
-  var steps=[{name:'Scelta',copy:'Scegli da quali informazioni vuoi partire.',html:fields[0].outerHTML},{name:'Obiettivi',copy:'Definisci cosa vuoi ottenere e le calorie da seguire.',html:fields[1].outerHTML+fields[2].outerHTML+fields[3].outerHTML},{name:'Routine',copy:'Completa i macro e le abitudini usate nelle stime.',html:fields[4].outerHTML+fields[5].outerHTML+fields[6].outerHTML},{name:'Riepilogo',copy:'Controlla l’anteprima e scegli da quando attivare il piano.',html:fields[7].outerHTML+(preview?preview.outerHTML:'')+(save?save.outerHTML:'')}];
-  var at=Math.max(0,Math.min(3,state.ped.uiStep||0));
-  return '<div class="profile-wizard"><div class="profile-wizard-head"><div><span class="profile-eyebrow">MODIFICA IL PIANO</span><h3>Un passaggio alla volta</h3><p>I cambiamenti restano in bozza fino al salvataggio.</p></div><button type="button" class="linkbtn small" data-pa="ped-cancel">Annulla</button></div><nav class="profile-steps" aria-label="Passaggi del piano">'+steps.map(function(x,i){return '<button type="button" data-profile-step="'+i+'"'+(at===i?' aria-current="step"':'')+'><span>'+(i+1)+'</span>'+x.name+'</button>';}).join('')+'</nav>'+prefix+steps.map(function(x,i){return '<section class="profile-step" data-profile-stage="'+i+'"'+(i!==at?' hidden':'')+'><p class="profile-step-copy">'+x.copy+'</p>'+x.html+'</section>';}).join('')+(at<3?'<div class="profile-step-actions">'+(at?'<button type="button" class="btn ghost fit" data-profile-step="'+(at-1)+'">Indietro</button>':'')+'<button type="button" class="btn fit" data-profile-step="'+(at+1)+'">Continua</button></div>':'<button type="button" class="linkbtn small" data-profile-step="2">Torna alla routine</button>')+'</div>';
+/* ===================== modifica del piano: domande semplici, effetto visibile subito =====================
+   Quattro passi: obiettivo, calorie (chi le decide e da quale mantenimento si parte), macro e abitudini, riepilogo.
+   Ogni scelta scrive gli stessi campi della versione del piano: stesso motore, stessi controlli. I testi dicono
+   sempre che cosa scrivi tu, che cosa calcola l'app e che cosa cambia nel resto dell'app. */
+function pedPathOf(v) {
+  var km = v.kcal && v.kcal.mode, mm = v.macros && v.macros.mode, tm = v.tdee && v.tdee.mode;
+  if (km === 'manuale') return mm === 'manuale' ? 'piano_mio' : 'so_calorie';
+  return tm === 'profilo_adattivo' ? 'aiutami' : 'so_mantenimento';
+}
+function pedChoice(set, val, on, title, sub, extra) {
+  return '<button type="button" class="ped-path ped-choice' + (on ? ' on' : '') + '" data-pset="' + set + '" data-v="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '"><b>' + title + '</b><span>' + sub + '</span>' + (extra ? '<em class="ped-choice-x">' + extra + '</em>' : '') + '</button>';
+}
+/* una scelta a schede: aggiorna la bozza e ridisegna (i valori scritti nei campi restano nella bozza) */
+function pedSet(kind, val) {
+  var P = state.ped; if (!P) return; var v = P.v; P.mem = P.mem || {};
+  /* valori di partenza per i campi che diventano tuoi: quelli che il piano usa adesso, da cambiare se vuoi */
+  var now = (kind === 'kcal' && val === 'manuale') || (kind === 'macros' && val !== 'automatico') ? pedFacts(pedPreview()) : null;
+  if (kind === 'phase') { v.goal.phase = val; if (val === 'mantenimento') v.goal.paceMode = 'standard'; else if (v.goal.paceMode === 'data' && !v.goal.endDate) v.goal.paceMode = 'standard'; }
+  else if (kind === 'kcal') {
+    if (v.kcal && v.kcal.mode === 'manuale' && v.kcal.manual) P.mem.kcal = clone(v.kcal.manual);
+    if (val === 'manuale') { v.kcal = { mode: 'manuale', manual: v.kcal && v.kcal.manual || P.mem.kcal || { v: null, origin: 'utente' }, update: 'mai' }; if (v.kcal.manual.v == null && now && now.T != null) v.kcal.manual.v = Math.round(now.T / 10) * 10; }
+    else v.kcal = { mode: v.tdee.mode === 'manuale_fisso' ? 'da_consumo_manuale' : 'da_stima_adattiva', update: v.kcal && v.kcal.update && v.kcal.update !== 'mai' ? v.kcal.update : 'proposta' };
+  }
+  else if (kind === 'tdee') {
+    if (v.tdee && v.tdee.manual) P.mem.tdee = clone(v.tdee.manual);
+    v.tdee = { mode: val, manual: v.tdee && v.tdee.manual || P.mem.tdee, compare: v.tdee && v.tdee.compare };
+    if (!v.tdee.manual) delete v.tdee.manual; if (!v.tdee.compare) delete v.tdee.compare;
+    if (v.kcal.mode !== 'manuale') v.kcal.mode = val === 'manuale_fisso' ? 'da_consumo_manuale' : 'da_stima_adattiva';
+  }
+  else if (kind === 'pace') v.goal.paceMode = val;
+  else if (kind === 'macros') {
+    v.macros.mode = val;
+    if (val !== 'automatico' && now && now.z) MK3.forEach(function (m) { var f = v.macros[m[0]] || {}; if (f.v == null && now.z[m[0]] != null) v.macros[m[0]] = { v: Math.round(now.z[m[0]]), unit: 'g', locked: val === 'manuale' || !!f.locked }; });
+  }
+  v.path = pedPathOf(v);
+  var drop = []; fixCompat(v, drop); state.pedMsg = '';
+  pedRender();
+}
+/* numeri dell'anteprima, letti dal motore con la bozza */
+function pedFacts(pv) {
+  var o = { ok: false };
+  if (!pv || pv.err || !pv.res) { o.err = pv && pv.err ? pv.err : pv && pv.E ? ((pv.E.messages || []).join(' ') || 'anteprima non disponibile') : 'anteprima non disponibile'; return o; }
+  var r = pv.res, v = pv.v, g = v.goal || {};
+  o.ok = true; o.r = r; o.v = v; o.g = g; o.T = r.T; o.R = r.R; o.E = pv.E;
+  o.manual = v.kcal.mode === 'manuale';
+  o.dir = g.phase === 'cut' ? -1 : g.phase === 'surplus' ? 1 : 0;
+  o.bal = r.deficit != null ? r.deficit : null;
+  o.kgW = o.bal != null && Math.abs(o.bal) >= 1 ? Math.abs(o.bal) * 7 / (GJM.K.RHO * GJM.rhoScale(o.bal > 0 ? -1 : 1)) : null;
+  o.z = r.T != null ? GJM.freeze(r) : null;
+  o.f = pv.E && pv.E.forecast; o.week = pv.E && pv.E.week;
+  o.errors = r.errors || []; o.warnings = r.warnings || [];
+  return o;
+}
+function pedTdeeText(v, R) {
+  var m = v.tdee && v.tdee.mode;
+  return m === 'manuale_fisso' ? 'il tuo valore, sempre fisso' : m === 'manuale_da_calibrare' ? 'il tuo valore, corretto dal diario' : 'stimato dall’app con diario e bilancia';
+}
+function pedArrival(o) {
+  var f = o.f, g = o.g;
+  if (!o.dir || !(g.goalWeight > 0)) return null;
+  if (!f || f.none) return { t: 'non disponibile', s: f && f.none ? f.none : 'servono pesate recenti' };
+  if (f.done) return { t: 'già raggiunto', s: 'la tendenza è già oltre l’obiettivo' };
+  var a = f.plan; if (!a || !a.central) return { t: 'non raggiungibile', s: a && a.why ? a.why : 'con queste calorie il peso non va verso l’obiettivo' };
+  var late = g.endDate && a.central > g.endDate;
+  return { t: fmtDay(a.central), s: g.endDate ? (late ? 'dopo la data che hai scelto (' + fmtDay(g.endDate) + ')' : 'in tempo per ' + ilD(g.endDate)) : 'previsione con queste calorie', late: late, a: a };
+}
+/* riquadro con l'effetto delle scelte, sempre visibile mentre modifichi */
+function pedLiveHTML(o) {
+  if (!o.ok) return '<p class="p2-warn">' + esc(o.err) + '</p>';
+  var cell = function (k, v, s, cls) { return '<div class="ped-live-c' + (cls ? ' ' + cls : '') + '"><span>' + k + '</span><b>' + v + '</b><small>' + s + '</small></div>'; };
+  var h = cell('Calorie del giorno', o.T != null ? kc(o.T) : 'da completare', o.T == null ? 'vedi sotto cosa manca' : o.manual ? 'le scegli tu' : 'calcolate dall’app');
+  h += cell('Mantenimento', o.R != null ? kc(o.R) : '—', pedTdeeText(o.v, o.R));
+  if (o.T != null && o.R != null) {
+    var b = o.bal, lab = Math.abs(b) < 1 ? 'Bilancio' : b > 0 ? 'Deficit al giorno' : 'Surplus al giorno', wrong = o.dir && b != null && ((o.dir < 0 && b <= 0) || (o.dir > 0 && b >= 0));
+    h += cell(lab, Math.abs(b) < 1 ? 'in pari' : kc(Math.abs(b)), wrong ? (o.dir < 0 ? 'con queste calorie non dimagrisci' : 'con queste calorie non aumenti') : o.kgW != null ? 'all’inizio circa ' + fmt(o.kgW, 2) + ' kg a settimana' : 'il peso resta stabile', wrong ? 'is-warn' : '');
+  }
+  var ar = pedArrival(o);
+  if (ar) h += cell('Arrivo a ' + fmt(o.g.goalWeight, 1) + ' kg', esc(ar.t), esc(ar.s), ar.late ? 'is-warn' : '');
+  return '<p class="ped-live-t">Con le scelte di adesso</p><div class="ped-live-g">' + h + '</div>';
+}
+/* riga sotto le calorie scelte da te */
+function pedKcalLine(o) {
+  if (!o.ok || o.T == null) return o.ok ? 'Scrivi le calorie: subito qui sotto vedi che cosa significano rispetto al tuo mantenimento.' : '';
+  if (o.R == null) return 'Il mantenimento non è ancora stimabile: le calorie restano le tue, deficit e previsioni compaiono con i primi dati.';
+  var b = o.bal;
+  return 'Il tuo mantenimento è circa <b>' + kc(o.R) + '</b>: con <b>' + kc(o.T) + '</b> mangi ' + kc(Math.abs(o.R - o.T)) + (o.T < o.R ? ' in meno' : ' in più') + ' del mantenimento, ' + (Math.abs(b) < 1 ? 'cioè sei in pari.' : 'cioè ' + (b > 0 ? 'un deficit' : 'un surplus') + ' vero di circa <b>' + kc(Math.abs(b)) + '</b> al giorno: anche la digestione cambia con quello che mangi.');
+}
+function pedPaceText(o) {
+  var p = o.r && o.r.pace; if (!p) return '';
+  return p.mode === 'data' ? 'arrivare entro ' + ilD(o.g.endDate) : p.mode === 'kcal' ? 'il ' + (o.dir < 0 ? 'deficit' : 'surplus') + ' che hai scelto' : 'il ritmo «' + lb('pace', p.mode).toLowerCase() + '» (circa ' + fmt(p.kgWeek, 2) + ' kg a settimana)';
+}
+/* riga sotto il ritmo, quando le calorie le calcola l'app */
+function pedAutoLine(o) {
+  if (!o.ok) return '';
+  if (o.T == null) { var alt = o.errors.filter(function (e) { return e.alternatives && e.alternatives.length; })[0]; return o.errors.length ? '<span class="ped-bad">Calorie non calcolabili: ' + esc(o.errors.map(function (e) { return pedMsg(e.msg); }).join('; ')) + '.</span>' + (alt ? ' Puoi ' + esc(alt.alternatives.map(function (a) { return pedMsg(a.msg); }).join('; ')) + '.' : '') : 'Completa le scelte qui sopra.'; }
+  if (!o.dir || o.r.reached) return 'Calorie calcolate: <b>' + kc(o.T) + '</b>, uguali al mantenimento' + (o.r.reached ? ' (sei già dentro il margine attorno all’obiettivo)' : '') + '.';
+  return 'Calorie calcolate: <b>' + kc(o.T) + '</b>, cioè ' + kc(Math.abs(o.R - o.T)) + (o.dir < 0 ? ' in meno' : ' in più') + ' del mantenimento (' + kc(o.R) + ') per ' + pedPaceText(o) + '. Il ' + (o.dir < 0 ? 'deficit' : 'surplus') + ' vero è circa <b>' + kc(Math.abs(o.bal)) + '</b> al giorno: anche la digestione cambia con quello che mangi.';
+}
+/* controllo dei macro: quante calorie fanno i grammi rispetto alle calorie del giorno */
+function pedMacroLine(o) {
+  if (!o.ok || !o.z || o.z.p == null || o.z.c == null || o.z.f == null) return '';
+  var sum = 4 * o.z.p + 4 * o.z.c + 9 * o.z.f, d = Math.round(sum - o.T);
+  var s = gr(o.z.p) + ' di proteine × 4 + ' + gr(o.z.c) + ' di carboidrati × 4 + ' + gr(o.z.f) + ' di grassi × 9 = <b>' + kc(sum) + '</b>';
+  return Math.abs(d) <= 25 ? s + ': uguale alle calorie del giorno.' : '<span class="ped-bad">' + s + ': ' + fmt(Math.abs(d), 0) + ' kcal ' + (d > 0 ? 'in più' : 'in meno') + ' delle calorie del giorno (' + kc(o.T) + ').</span> Il diario confronta i macro con questi grammi e le calorie con ' + kc(o.T) + '.';
+}
+/* il riepilogo in frasi: che cosa succede salvando */
+function pedStoryHTML(o, pv) {
+  if (!o.ok) return '<p class="p2-warn">' + esc(o.err) + '</p>';
+  var v = o.v, g = o.g, li = [], from = v.from, cur = activeVersion(addDays(from, -1));
+  if (o.T != null) {
+    if (o.manual) li.push('<b>Calorie: ' + kc(o.T) + ' al giorno</b>, ' + (v.kcal.manual && v.kcal.manual.origin === 'professionista' ? 'indicate da un professionista' : 'scelte da te') + '. L’app le usa così come sono e non le cambia mai: se il mantenimento stimato cambia, cambiano solo deficit e previsioni.');
+    else li.push('<b>Calorie: ' + kc(o.T) + ' al giorno</b>, calcolate dall’app' + (o.dir && !o.r.reached ? ' (mantenimento ' + kc(o.R) + (o.dir < 0 ? ' meno ' : ' più ') + kc(Math.abs(o.R - o.T)) + ' per ' + pedPaceText(o) + ')' : ', uguali al mantenimento') + '. ' + (v.kcal.update === 'automatico' ? 'Quando il mantenimento stimato cambia, le aggiorna da sola (al massimo una volta a settimana) e te lo segnala.' : 'Quando il mantenimento stimato cambia, te lo propone in Oggi e decidi tu se applicarlo.'));
+  }
+  if (o.z && o.z.p != null) { var sum = 4 * o.z.p + 4 * o.z.c + 9 * o.z.f; li.push('<b>Macro: ' + gr(o.z.p) + ' di proteine, ' + gr(o.z.c) + ' di carboidrati, ' + gr(o.z.f) + ' di grassi</b> (' + kc(sum) + '), ' + (v.macros.mode === 'manuale' ? 'scelti da te.' : v.macros.mode === 'ibrido' ? 'in parte fissati da te, il resto calcolato dall’app.' : 'calcolati dall’app.')); }
+  if (o.R != null) li.push('<b>Mantenimento: ' + kc(o.R) + '</b>, ' + (v.tdee.mode === 'manuale_fisso' ? 'il valore che hai scritto: resta sempre questo.' : v.tdee.mode === 'manuale_da_calibrare' ? 'parte dal valore che hai scritto e si corregge ogni giorno con diario e bilancia.' : 'stimato dall’app: si aggiorna da solo ogni giorno con diario e bilancia. Non dipende dal piano, ma da quello che mangi e da come cambia il peso.'));
+  if (o.T != null && o.R != null && o.dir) { var b = o.bal; li.push(Math.abs(b) < 1 ? '<b>Bilancio in pari</b>: con queste calorie il peso resta stabile.' : '<b>' + (b > 0 ? 'Deficit' : 'Surplus') + ' di circa ' + kc(Math.abs(b)) + ' al giorno</b>' + (o.kgW != null ? ', all’inizio circa ' + fmt(o.kgW, 2) + ' kg a settimana' : '') + '.'); }
+  var ar = pedArrival(o);
+  if (ar) {
+    var s = '<b>Obiettivo ' + fmt(g.goalWeight, 1) + ' kg</b>: ' + (ar.a ? 'con queste calorie l’arrivo previsto è ' + ilD(ar.a.central).replace(/^(il |l’)/, '$1<b>') + '</b>' + (ar.a.sens && ar.a.sens.from ? ' (quasi sicuramente fra ' + sensText(ar.a) + ')' : '') : ar.t === 'già raggiunto' ? 'già raggiunto' : 'la data di arrivo ' + (ar.t === 'non raggiungibile' ? 'non si può calcolare: ' : 'ancora non si può prevedere: ') + esc(ar.s)) + '.';
+    var rq = o.f && o.f.required;
+    if (g.endDate && rq) s += rq.conflict ? ' Entro ' + ilD(g.endDate) + ' non ci arrivi: servirebbe un ritmo oltre i limiti che l’app considera sicuri. Puoi ' + esc(rq.alternatives.filter(function (a) { return a.tipo !== 'modalita'; }).map(function (a) { return a.tipo === 'data' ? 'spostare la data ' + alD('al', a.date) + ' o dopo' : a.msg; }).join(', oppure ') || 'scegliere una data più lontana') + '.' : ar.late ? ' Per arrivare entro ' + ilD(g.endDate) + ' servirebbero circa ' + kc(Math.round(rq.kcal / 10) * 10) + ' al giorno.' : ' Arrivi in tempo per ' + ilD(g.endDate) + '.';
+    li.push(s);
+  } else if (!o.dir) li.push('<b>Obiettivo: mantenere il peso</b>' + (g.goalWeight > 0 ? ' attorno a ' + fmt(g.goalWeight, 1) + ' kg' : '') + '.');
+  if (o.week && o.week.target > 0) li.push('<b>Budget della settimana: ' + kc(o.week.target) + '</b>, la somma delle calorie dei 7 giorni' + (v.days && v.days.mode === 'allenamento_riposo' ? ', con più calorie nei giorni di allenamento' : '') + '.');
+  var prevT = cur && cur.kcal && cur.kcal.mode === 'manuale' && cur.kcal.manual ? cur.kcal.manual.v : cur && cur.resolved ? cur.resolved.kcal : null;
+  var h = '<ul class="ped-story-l">' + li.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>';
+  h += '<p class="ped-story-n">Dal ' + fmtDay(from) + ' cambiano l’obiettivo di Oggi, il budget della settimana, i colori del calendario, la previsione del peso e l’obiettivo che vedono i tuoi amici. ' + (cur ? 'I giorni prima restano con il piano di allora' + (prevT > 0 ? ' (' + kc(prevT) + ')' : '') + ': grafici e bilanci del passato non cambiano. ' : '') + 'Il diario non viene toccato.</p>';
+  return h;
+}
+function pedMsg(m) { return String(m || '').replace(/consumo di riferimento/g, 'mantenimento').replace(/(oppure )?inserire un piano manuale o professionale/g, '$1scegliere tu le calorie (passo «Calorie», «Le scelgo io»)').replace(/serve un piano manuale o professionale/g, 'scegli tu le calorie (passo «Calorie», «Le scelgo io»)'); }
+function pedIssuesHTML(o) {
+  if (!o.ok) return '';
+  var h = o.errors.map(function (e) { return '<p class="p2-warn"><b>Da sistemare:</b> ' + esc(pedMsg(e.msg)) + (e.alternatives && e.alternatives.length ? '. Puoi ' + esc(e.alternatives.map(function (a) { return pedMsg(a.msg); }).join('; ')) : '') + '.</p>'; }).join('');
+  h += o.warnings.filter(function (w) { return w.code !== 'obiettivo_entro_fascia'; }).map(function (w) { return '<p class="p2-note">Nota: ' + esc(pedMsg(w.msg)) + '.</p>'; }).join('');
+  return h;
+}
+function pedRefresh(pv) {
+  var o = pedFacts(pv), set = function (id, html) { var el = document.getElementById(id); if (el && el.innerHTML !== html) el.innerHTML = html; };
+  set('ped-live', pedLiveHTML(o)); set('ped-kline', pedKcalLine(o)); set('ped-aline', pedAutoLine(o)); set('ped-mline', pedMacroLine(o));
+  set('ped-story', pedStoryHTML(o, pv)); set('ped-issues', pedIssuesHTML(o)); set('ped-prev', pedPrevHTML(pv));
+}
+function pedHTML() {
+  var P = state.ped, v = P.v, g = v.goal || {}, td = v.tdee || {}, kc0 = v.kcal || {}, mc = v.macros || {}, hb = v.habits || {}, dm = v.days || {};
+  var pv = pedPreview(), o = pedFacts(pv), why = pedBlocked(pv), E = state.E, at = Math.max(0, Math.min(3, P.uiStep || 0)), op = P.openD || {};
+  var man = kc0.mode === 'manuale', dir = g.phase === 'cut' ? -1 : g.phase === 'surplus' ? 1 : 0, W = o.ok && o.r.W > 0 ? o.r.W : null;
+  var trendW = E && E.weight && E.weight.trend && !E.weight.trend.none ? E.weight.trend.v : null;
+  var q = function (title, copy) { return '<h4 class="ped-qt">' + title + '</h4>' + (copy ? '<p class="ped-qc">' + copy + '</p>' : ''); };
+  var more = function (key, title, body) { return '<details class="more pf-more ped-more" data-ib-keep data-pdkey="' + key + '"' + (op[key] ? ' open' : '') + '><summary>' + title + '</summary><div class="in">' + body + '</div></details>'; };
+  var prefix = (P.base ? '<p class="p2-note">Stai ripristinando le impostazioni di una versione precedente: controlla e salva per farle valere di nuovo da una data che scegli. Niente viene cancellato.</p>' : '') + P.msgs.map(function (m) { return '<p class="p2-note">' + esc(m) + '</p>'; }).join('');
+
+  /* 1 · obiettivo */
+  var s1 = '<section class="ped-sec2">' + q('Cosa vuoi fare?', '') + '<div class="ped-paths ped-choices ped-3">'
+    + pedChoice('phase', 'cut', g.phase === 'cut', 'Dimagrire', 'Perdere peso mangiando meno di quanto consumi.')
+    + pedChoice('phase', 'mantenimento', g.phase === 'mantenimento' || !g.phase, 'Mantenere il peso', 'Restare stabile: mangi quanto consumi.')
+    + pedChoice('phase', 'surplus', g.phase === 'surplus', 'Aumentare di peso', 'Mettere su peso mangiando più di quanto consumi.') + '</div>';
+  s1 += '<div class="settings-fields">' + pfField(dir ? 'Peso da raggiungere (kg)' : 'Peso attorno a cui restare (kg, facoltativo)', pinp('v.goal.goalWeight', g.goalWeight, 'num', ' type="number" step="0.1" inputmode="decimal"'), trendW ? 'La tendenza del tuo peso oggi è ' + fmt(trendW, 1) + ' kg.' : '');
+  if (dir) s1 += pfField('Entro quando? (facoltativo)', pinp('v.goal.endDate', g.endDate, 'date', ' type="date"'), man ? 'Non cambia le calorie, che scegli tu: l’app ti dice se con quelle ci arrivi per questa data.' : 'Al passo dopo puoi far calcolare le calorie per arrivarci proprio entro questa data.');
+  s1 += '</div>';
+  if (dir) s1 += more('band', 'Margine attorno all’obiettivo', pfField('Margine (± kg)', pinp('v.goal.band', g.band, 'num', ' type="number" step="0.1" min="0.2" max="5" inputmode="decimal"'), 'Quando il peso è dentro questo margine, l’obiettivo conta come raggiunto e le calorie calcolate dall’app tornano al mantenimento. Con le calorie scelte da te non cambia niente.'));
+  s1 += '</section>';
+
+  /* 2 · calorie e mantenimento */
+  var s2 = '<section class="ped-sec2">' + q('Chi decide le calorie di ogni giorno?', 'È la scelta più importante: obiettivo di Oggi, budget della settimana e previsioni partono da questo numero.') + '<div class="ped-paths ped-choices">'
+    + pedChoice('kcal', 'manuale', man, 'Le scelgo io', 'Scrivi tu il numero, per esempio quello della tua dieta o del nutrizionista. L’app lo usa così com’è e non lo cambia mai.')
+    + pedChoice('kcal', 'auto', !man, 'Le calcola l’app', 'L’app parte dal tuo mantenimento e toglie o aggiunge calorie in base al ritmo che scegli. Quando il mantenimento cambia, ricalcola.') + '</div>';
+  if (man) {
+    var rg = kc0.manual && kc0.manual.range || [];
+    s2 += '<div class="settings-fields">' + pfField('Calorie al giorno', pinp('v.kcal.manual.v', kc0.manual && kc0.manual.v, 'num', ' type="number" step="10" inputmode="numeric"')) + '</div><p class="ped-line" id="ped-kline" aria-live="polite">' + pedKcalLine(o) + '</p>';
+    s2 += more('kmore', 'Un intervallo invece di un numero, o calorie di un professionista', '<div class="settings-fields">' + pfField('Minimo (facoltativo)', pinp('v.kcal.manual.range.0', rg[0], 'num', ' type="number" step="10" inputmode="numeric"')) + pfField('Massimo (facoltativo)', pinp('v.kcal.manual.range.1', rg[1], 'num', ' type="number" step="10" inputmode="numeric"')) + pfField('Chi le ha decise', psel('v.kcal.manual.origin', { utente: 'Io', professionista: 'Un professionista (nutrizionista, medico)' }, kc0.manual && kc0.manual.origin || 'utente')) + '</div><p class="ped-qc">Con un intervallo, nel diario conta come «nell’obiettivo» tutto quello che sta fra minimo e massimo; il numero sopra resta quello usato per budget e previsioni.</p>');
+  } else {
+    if (dir) {
+      var pct = function (m) { var p = (GJM.PACE[g.phase] || {})[m]; return p != null ? 'circa ' + (W ? fmt(p / 100 * W, 2) + ' kg' : fmt(p, 2) + '% del peso') + ' a settimana' : ''; };
+      s2 += q('A che ritmo?', 'Più è veloce, più calorie l’app toglie (o aggiunge) rispetto al mantenimento.') + '<div class="ped-paths ped-choices ped-2c">'
+        + pedChoice('pace', 'graduale', g.paceMode === 'graduale', 'Graduale', pct('graduale'))
+        + pedChoice('pace', 'standard', (g.paceMode || 'standard') === 'standard', 'Standard', pct('standard'))
+        + pedChoice('pace', 'rapido', g.paceMode === 'rapido', 'Più rapido', pct('rapido'))
+        + pedChoice('pace', 'data', g.paceMode === 'data', 'Entro la mia data', g.endDate ? 'arrivare a ' + (g.goalWeight > 0 ? fmt(g.goalWeight, 1) + ' kg' : 'l’obiettivo') + ' entro ' + ilD(g.endDate) : 'scegli prima la data al passo «Obiettivo»')
+        + pedChoice('pace', 'kcal', g.paceMode === 'kcal', dir < 0 ? 'Con un deficit che scelgo' : 'Con un surplus che scelgo', 'scrivi tu quante calorie al giorno ' + (dir < 0 ? 'sotto' : 'sopra') + ' il mantenimento') + '</div>';
+      if (g.paceMode === 'kcal') s2 += '<div class="settings-fields">' + pfField((dir < 0 ? 'Deficit' : 'Surplus') + ' al giorno (kcal)', pinp('v.goal.kcalDelta', g.kcalDelta, 'num', ' type="number" step="10" min="1" max="3000" inputmode="numeric"'), 'Il bilancio che vuoi ottenere, digestione già considerata.') + '</div>';
+    }
+    s2 += '<p class="ped-line" id="ped-aline" aria-live="polite">' + pedAutoLine(o) + '</p>';
+    s2 += '<div class="settings-fields">' + pfField('Quando il mantenimento stimato cambia', psel('v.kcal.update', { proposta: 'Te lo propongo e decidi tu', automatico: 'Aggiorno le calorie da solo' }, kc0.update || 'proposta'), kc0.update === 'automatico' ? 'Al massimo una volta a settimana; ogni cambio resta nella cronologia del piano con il motivo.' : 'La proposta compare in Oggi: le calorie cambiano solo se la accetti.') + '</div>';
+  }
+  /* mantenimento */
+  s2 += '<div class="ped-split"></div>' + q('Il tuo mantenimento', 'Il mantenimento è quante calorie consumi in media al giorno: mangiandole, il peso resta uguale. Serve all’app per calcolare deficit e previsioni' + (man ? '' : ' e le tue calorie') + '.') + '<div class="ped-paths ped-choices ped-3">'
+    + pedChoice('tdee', 'profilo_adattivo', td.mode === 'profilo_adattivo', 'Lo stima l’app (consigliato)', 'Parte da sesso, età, altezza, peso e abitudini, poi si corregge ogni giorno con il diario e la bilancia.', td.mode === 'profilo_adattivo' && o.ok && o.R != null ? 'oggi ' + kc(o.R) : '')
+    + pedChoice('tdee', 'manuale_da_calibrare', td.mode === 'manuale_da_calibrare', 'Ne ho uno mio, poi correggilo', 'Per esempio da un nutrizionista: l’app parte dal tuo numero e lo aggiusta con il diario.')
+    + pedChoice('tdee', 'manuale_fisso', td.mode === 'manuale_fisso', 'Ne ho uno mio, tienilo fisso', 'L’app usa sempre il tuo numero, anche se diario e bilancia dicono altro.') + '</div>';
+  if (td.mode !== 'profilo_adattivo') {
+    var en = td.manual && td.manual.entered ? td.manual.entered : { v: td.manual && td.manual.v, unit: 'kcal' };
+    s2 += '<div class="settings-fields">' + pfField('Il tuo mantenimento', '<div class="pf-unit-pair">' + pinp('v.tdee.manual.entered.v', en.v, 'num', ' type="number" step="10" inputmode="numeric" aria-label="Il tuo mantenimento"') + psel('v.tdee.manual.entered.unit', { kcal: 'kcal al giorno', kJ: 'kJ al giorno' }, en.unit || 'kcal') + '</div>')
+      + pfField('Da dove viene', psel('v.tdee.manual.origin', { utente: 'Una mia stima', professionista: 'Un professionista', misura: 'Una misura (calorimetria)', app: 'Un’altra app o un dispositivo' }, td.manual && td.manual.origin || 'utente'))
+      + pfField('Valido dal', pinp('v.tdee.manual.date', td.manual && td.manual.date, 'date', ' type="date"')) + '</div>';
+    if (td.mode === 'manuale_fisso') s2 += '<label class="f ped-chk"><input type="checkbox" data-pk="v.tdee.compare" data-t="bool"' + (td.compare ? ' checked' : '') + '> Mostrami anche la stima dell’app come confronto (non cambia i calcoli)</label>';
+  }
+  s2 += '</section>';
+
+  /* 3 · macro, settimana e abitudini */
+  var s3 = '<section class="ped-sec2">' + q('Proteine, carboidrati e grassi: chi li decide?', '') + '<div class="ped-paths ped-choices ped-3">'
+    + pedChoice('macros', 'manuale', mc.mode === 'manuale', 'Li scelgo io', 'Scrivi i grammi di ognuno: restano così.')
+    + pedChoice('macros', 'automatico', mc.mode === 'automatico', 'Li calcola l’app', 'Li divide dentro le calorie del giorno, adatti a chi si allena.')
+    + pedChoice('macros', 'ibrido', mc.mode === 'ibrido', 'Ne scelgo alcuni', 'Fissi quelli che vuoi (per esempio le proteine); gli altri li calcola l’app.') + '</div>';
+  if (mc.mode !== 'automatico') {
+    s3 += '<div class="pf-macro-editor">' + MK3.map(function (m) {
+      var f = mc[m[0]] || {};
+      return '<div class="pf-macro-card"><h4>' + m[1] + '</h4><div class="settings-fields">' + pfField('Quantità', pinp('v.macros.' + m[0] + '.v', f.v, 'num', ' type="number" step="1" inputmode="decimal" aria-label="' + m[1] + '"')) + pfField('Unità', psel('v.macros.' + m[0] + '.unit', { g: 'grammi al giorno', 'g/kg': 'grammi per kg di peso', '%': '% delle calorie' }, f.unit || 'g', true)) + '</div>'
+        + (mc.mode === 'ibrido' ? '<label class="ped-chk"><input type="checkbox" data-pk="v.macros.' + m[0] + '.locked" data-t="bool" data-re="1"' + (f.locked ? ' checked' : '') + '> Lo scelgo io</label>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  s3 += '<p class="ped-line" id="ped-mline" aria-live="polite">' + pedMacroLine(o) + '</p>';
+  var usesKg = mc.mode === 'automatico' || MK3.some(function (m) { return (mc[m[0]] || {}).unit === 'g/kg'; });
+  var mopt = '';
+  if (mc.mode !== 'manuale') mopt += pfField('Preferenza', psel('v.macros.pref', LBL.pref, mc.pref || 'bilanciata'), 'Una tendenza, non un valore fisso.') + pfField('Intervalli usati', psel('v.macros.policy', { allenamento_v1: 'Per chi si allena', generale_amdr_v1: 'Intervalli generali', personalizzata: 'Personalizzati da me' }, mc.policy || 'allenamento_v1', true));
+  if (usesKg) mopt += pfField('Peso usato per i grammi per kg', psel('v.macros.weightRef.mode', LBL.wref, (mc.weightRef || {}).mode || 'tendenza', true), 'Mai la pesata di un giorno da sola.') + ((mc.weightRef || {}).mode === 'manuale' ? pfField('Peso (kg)', pinp('v.macros.weightRef.v', mc.weightRef.v, 'num', ' type="number" step="0.1" inputmode="decimal"')) : '');
+  if (mopt) s3 += more('mmore', 'Altre opzioni dei macro', '<div class="settings-fields">' + mopt + '</div>');
+  if (mc.mode !== 'manuale' && mc.policy === 'personalizzata') {
+    var cu = mc.custom || {};
+    s3 += '<div class="pf-macro-editor">' + MK3.map(function (m) { var b = cu[m[0]] || {}; return '<div class="pf-macro-card"><h4>' + m[1] + '</h4><div class="settings-fields">' + pfField('Minimo', pinp('v.macros.custom.' + m[0] + '.lo', b.lo, 'num', ' type="number" step="1"')) + pfField('Massimo', pinp('v.macros.custom.' + m[0] + '.hi', b.hi, 'num', ' type="number" step="1"')) + pfField('Unità', psel('v.macros.custom.' + m[0] + '.unit', { g: 'g', 'g/kg': 'g/kg', '%': '%' }, b.unit || 'g')) + '</div></div>'; }).join('') + '</div>';
+  }
+  s3 += '<div class="ped-split"></div>' + q('La settimana', '') + '<div class="settings-fields">' + pfField('Calorie nei giorni della settimana', psel('v.days.mode', { uguale: 'Uguali tutti i giorni', allenamento_riposo: 'Più calorie nei giorni di allenamento' }, dm.mode || 'uguale', true), dm.mode === 'allenamento_riposo' ? 'Il totale della settimana resta lo stesso: i giorni di riposo ne hanno un po’ meno.' : 'Lo stesso obiettivo ogni giorno.');
+  if (dm.mode === 'allenamento_riposo') s3 += pfField('Calorie in più nei giorni di allenamento', pinp('v.days.delta', dm.delta, 'num', ' type="number" step="10" min="0"'), (hb.trainDays || []).length ? '' : 'Scegli qui sotto i giorni in cui ti alleni di solito.');
+  s3 += '</div>' + more('locked', 'Giorni con calorie fissate (facoltativo)', '<div class="ped-week">' + WD.map(function (d, i) { return '<label class="f">' + d + pinp('v.days.locked.' + i, dm.locked && dm.locked[i] > 0 ? dm.locked[i] : '', 'num', ' type="number" step="10"') + '</label>'; }).join('') + '</div><p class="ped-qc">Un giorno fissato tiene le sue calorie; gli altri si dividono il resto della settimana.</p>');
+  s3 += more('habits', 'Le tue abitudini (facoltative)', '<p class="ped-qc">Servono a stimare il mantenimento finché il diario non basta e a prevedere i giorni che devono ancora arrivare. Se non sai un valore, lascialo vuoto.</p><div class="settings-fields">'
+    + pfField('Passi in un giorno normale, palestra esclusa', pinp('v.habits.steps', hb.steps, 'num', ' type="number" step="500" min="0" inputmode="numeric"'), 'Circa: se registri i passi nel diario uso quelli.')
+    + pfField('Passi nel fine settimana (se diversi)', pinp('v.habits.stepsWeekend', hb.stepsWeekend, 'num', ' type="number" step="500" min="0" inputmode="numeric"'))
+    + pfField('Quanto cambiano i passi da un giorno all’altro', psel('v.habits.stepsVar', LBL.stepsVar, hb.stepsVar || ''))
+    + pfField('Allenamenti a settimana', pinp('v.habits.trainPerWeek', hb.trainPerWeek, 'num', ' type="number" step="1" min="0" max="14"'))
+    + pfField('Tipo di allenamento', psel('v.habits.trainType', LBL.trainType, hb.trainType || ''))
+    + pfField('Minuti per allenamento', pinp('v.habits.trainMin', hb.trainMin, 'num', ' type="number" step="5" min="0" max="300"'), 'Vuoto: uso la durata tipica delle tue sedute in Hevy.')
+    + pfField('Obiettivo di passi: minimo', pinp('v.steps.min', v.steps && v.steps.min, 'num', ' type="number" step="500" min="0"'))
+    + pfField('Obiettivo di passi: massimo', pinp('v.steps.max', v.steps && v.steps.max, 'num', ' type="number" step="500" min="0"')) + '</div>'
+    + '<div class="ped-days"><span class="muted small">Giorni in cui ti alleni di solito (facoltativo):</span>' + WD.map(function (d, i) { return '<label class="ped-chk"><input type="checkbox" data-wd="' + i + '"' + ((hb.trainDays || []).indexOf(i) >= 0 ? ' checked' : '') + '> ' + d + '</label>'; }).join('') + '</div>'
+    + '<div class="ped-acts"><span class="muted small">Altre attività abituali non contate nei passi (bici, sport, lavoro fisico…):</span>' + (hb.acts || []).map(function (a, i) {
+      return '<div class="ped-act">' + psel('v.habits.acts.' + i + '.type', actTypes(), a.type || 'altro') + '<label class="f">minuti' + pinp('v.habits.acts.' + i + '.min', a.min, 'num', ' type="number" step="5" min="0"') + '</label><label class="f">volte a settimana' + pinp('v.habits.acts.' + i + '.perWeek', a.perWeek, 'num', ' type="number" step="1" min="0" max="14"') + '</label><button type="button" class="linkbtn small" data-pa="act-del" data-i="' + i + '">Togli</button></div>';
+    }).join('') + '<button type="button" class="btn ghost fit small" data-pa="act-add">Aggiungi un’attività</button></div>') + '</section>';
+
+  /* 4 · riepilogo */
+  var s4 = '<section class="ped-sec2"><div class="settings-fields">' + pfField('Da quando vale', pinp('v.from', v.from, 'date', ' type="date"'), 'I giorni prima restano con il piano di allora.') + '</div>'
+    + q('Che cosa succede salvando', '') + '<div class="ped-story" id="ped-story" aria-live="polite">' + pedStoryHTML(o, pv) + '</div><div id="ped-issues">' + pedIssuesHTML(o) + '</div>'
+    + more('calc', 'Dettagli del calcolo', '<div class="ped-prev" id="ped-prev" aria-live="polite">' + pedPrevHTML(pv) + '</div>')
+    + '<div class="settings-fields">' + pfField('Nota per ricordarti il perché (facoltativa)', pinp('v.note', v.note || '', 'str', ' type="text" maxlength="120"')) + '</div></section>'
+    + '<div class="row"><button type="button" class="btn fit" data-pa="ped-save"' + (why ? ' disabled' : '') + '>Salva il piano</button><button type="button" class="btn ghost fit" data-pa="ped-cancel">Annulla</button><span class="muted small" id="ped-msg">' + esc(why ? 'Non salvabile: ' + why + '.' : state.pedMsg || '') + '</span></div>';
+
+  var steps = [{ name: 'Obiettivo', copy: 'Che cosa vuoi ottenere. Le calorie arrivano al passo dopo.', html: s1 }, { name: 'Calorie', copy: 'Chi decide le calorie e da quale mantenimento si parte.', html: s2 }, { name: 'Macro', copy: 'Macro, settimana e abitudini.', html: s3 }, { name: 'Riepilogo', copy: 'Controlla che cosa cambia e scegli da quando vale.', html: s4 }];
+  return '<div class="profile-wizard ped-v2"><div class="profile-wizard-head"><div><span class="profile-eyebrow">MODIFICA IL PIANO</span><h3>Un passaggio alla volta</h3><p>I cambiamenti restano in bozza fino al salvataggio.</p></div><button type="button" class="linkbtn small" data-pa="ped-cancel">Annulla</button></div>'
+    + '<nav class="profile-steps" aria-label="Passaggi del piano">' + steps.map(function (x, i) { return '<button type="button" data-profile-step="' + i + '"' + (at === i ? ' aria-current="step"' : '') + '><span>' + (i + 1) + '</span>' + x.name + '</button>'; }).join('') + '</nav>' + prefix
+    + '<div class="ped-live" id="ped-live" aria-live="polite"' + (at === 3 ? ' hidden' : '') + '>' + pedLiveHTML(o) + '</div>'
+    + steps.map(function (x, i) { return '<section class="profile-step" data-profile-stage="' + i + '"' + (i !== at ? ' hidden' : '') + '><p class="profile-step-copy">' + x.copy + '</p>' + x.html + '</section>'; }).join('')
+    + (at < 3 ? '<div class="profile-step-actions">' + (at ? '<button type="button" class="btn ghost fit" data-profile-step="' + (at - 1) + '">Indietro</button>' : '') + '<button type="button" class="btn fit" data-profile-step="' + (at + 1) + '">Continua</button></div>' : '<button type="button" class="linkbtn small" data-profile-step="2">Torna ai macro</button>') + '</div>';
 }
 
 function profHTML(){
@@ -11773,7 +12043,7 @@ function profHTML(){
 
 function jobsHTML(){
   var js=((planDoc()||{}).jobs||[]).slice().sort(function(a,b){return a.from<b.from?-1:1;}),current=null;js.forEach(function(j){if(j.from<=todayStr())current=j;});
-  function jobCard(j){var days=j.days||[],hours=days.length?days.length*j.hours:j.hoursWeek||0;return '<div class="pl-it'+(j===current?' cur':'')+'"><div class="pl-top"><span class="pl-t">'+esc((GJM.JOB[j.type]||{}).nome||j.type)+'</span><span class="pl-b">'+(j===current?'Attuale':j.from>todayStr()?'Programmato':'Precedente')+'</span></div><div class="pl-v">'+(days.length?days.length+' giorni × '+fmt(j.hours,1)+' ore':fmt(hours,hours%1?1:0)+' ore a settimana')+'</div><small class="pl-s">Dal '+fmtDay(j.from)+(days.length?' · '+days.map(function(d){return cap(WD[d]);}).join(', '):' · giorni non specificati')+'</small><div class="pl-act"><button type="button" class="linkbtn small" data-pa="job-del" data-from="'+j.from+'" data-type="'+esc(j.type)+'">Rimuovi periodo</button></div></div>';}
+  function jobCard(j){var days=j.days||[],hours=days.length?days.length*j.hours:j.hoursWeek||0;return '<div class="pl-it'+(j===current?' cur':'')+'"><div class="pl-top"><span class="pl-t">'+esc((GJM.JOB[j.type]||{}).nome||j.type)+'</span><span class="pl-b">'+(j===current?'Attuale':j.from>todayStr()?'Programmato':'Precedente')+'</span></div><div class="pl-v">'+(days.length?days.length+' giorni × '+fmt(j.hours,1)+' ore':fmt(hours,hours%1?1:0)+' ore a settimana')+'</div><small class="pl-s">'+alD('Dal',j.from)+(days.length?' · '+days.map(function(d){return cap(WD[d]);}).join(', '):' · giorni non specificati')+'</small><div class="pl-act"><button type="button" class="linkbtn small" data-pa="job-del" data-from="'+j.from+'" data-type="'+esc(j.type)+'">Rimuovi periodo</button></div></div>';}
   var h=current?jobCard(current):'<p class="pl-empty">Nessun lavoro impostato: il lavoro non aggiunge energia al calcolo.</p>',others=js.filter(function(j){return j!==current;});if(others.length)h+=pfMore('Altri periodi di lavoro',others.map(jobCard).join(''));
   var days=current&&current.days||[],type=current&&current.type||'non_so';
   var form='<div class="settings-fields" id="job-new">'+pfField('Da quando vale','<input name="from" type="date" value="'+todayStr()+'">')+pfField('Attività lavorativa','<select name="type">'+opts(Object.keys(GJM.JOB).reduce(function(a,k){a[k]=GJM.JOB[k].nome;return a;},{}),type)+'</select>')+pfField('Ore per giornata lavorativa','<input name="hd" type="number" min="0" max="16" step="0.5" value="'+esc(days.length?current.hours:'')+'">','Indica poi i giorni della settimana.')+pfMore('Non hai giorni fissi? Usa le ore settimanali',pfField('Ore totali a settimana','<input name="hw" type="number" min="0" max="80" step="1" value="'+esc(current&&!days.length?current.hoursWeek||'':'')+'">','Lascia i giorni non selezionati per usare questo totale.'))+'</div><div class="ped-days pf-workdays"><span>Giorni in cui lavori</span>'+WD.map(function(d,i){return '<label class="ped-chk"><input type="checkbox" name="jd'+i+'"'+(days.indexOf(i)>=0?' checked':'')+'><span>'+cap(d)+'</span></label>';}).join('')+'</div><div class="pf-save-row"><button type="button" class="btn fit" data-pa="job-add">Salva questo periodo</button><span class="muted small" id="job-msg" role="status"></span></div>';
@@ -12004,19 +12274,19 @@ function renderHistoricalNeed(date,box){
   if(h)h.textContent='Mantenimento e piano del '+fmtDay(date);
   if(why)why.innerHTML='<p>Il piano e il consumo del giorno seguono il giorno scelto con le frecce. Il mantenimento medio, invece, è un unico riferimento per tutta la settimana da lunedì a domenica.</p><p>Per una settimana conclusa uso la stima aggiornata alla sua domenica; per quella in corso uso la stima aggiornata a oggi. La data di aggiornamento è indicata nel riquadro. Il consumo del singolo giorno è ricostruito con tutti i dati di oggi, come in Progressi: nuove pesate possono ritoccarlo di poco.</p><p>Nuovi dati o correzioni dello storico possono aggiornare il riferimento. Consultare lo storico non modifica il piano.</p>';
   if(context.error){box.innerHTML='<div class="p2-empty"><b>Non riesco a ricostruire questa data.</b><p>'+esc(String(context.error.message||context.error))+'</p></div>';return;}
-  if(!E||E.status==='nessun_piano'){box.innerHTML='<div class="p2-empty"><b>Nessun piano in vigore il '+fmtDay(date)+'.</b><p>Non ci sono obiettivi registrati per questa data.</p></div>';return;}
+  if(!E||E.status==='nessun_piano'){box.innerHTML='<div class="p2-empty"><b>Nessun piano in vigore '+ilD(date)+'.</b><p>Non ci sono obiettivi registrati per questa data.</p></div>';return;}
   var td=E.today||{},T=td.target,M=td.macros,B=td.balance,Rs=td.residual,cf=E.confidence||{},tr=E.weight&&E.weight.trend,rows=[];
   if(B&&context.day&&context.day.B!=null&&B.T!=null)B=Object.assign({},B,{expected:context.day.B-(1-GJM.K.TEF)*B.T});
-  var note=T?'È quanto prevedeva il piano per il '+fmtDay(date)+', in vigore dal '+fmtDay(T.from)+'. L’obiettivo alimentare è distinto dal consumo stimato.':'Nessun obiettivo disponibile per questa data.';
+  var note=T?'È quanto prevedeva il piano per '+ilD(date)+', in vigore '+alD('dal',T.from)+'. L’obiettivo alimentare è distinto dal consumo stimato.':'Nessun obiettivo disponibile per questa data.';
   rows.push(p2tile('Obiettivo calorico del giorno',T?kc(T.v):'—',note,{rule:'obiettivo-kcal'}));
   var balance='—',balanceNote='Bilancio del piano non disponibile.';
   if(B&&B.expected!=null){var ex=B.expected;balance=Math.abs(ex)<50?'Equilibrio':'<em>'+(ex>0?'Deficit atteso':'Surplus atteso')+'</em>'+kc(Math.abs(ex));balanceNote='Consumo stimato con le calorie del piano '+fmt(B.expected+B.T,0)+' − obiettivo '+fmt(B.T,0)+' kcal. Il bilancio del diario usa invece le calorie effettivamente confermate.';}
   if(Rs&&Rs.intake!=null)balanceNote+='<div class="p2-res"><span>Scostamento dalle calorie del piano</span><b>'+(Rs.v>=0?kc(Rs.v)+' sotto':kc(-Rs.v)+' sopra')+'</b><small>'+fmt(Rs.intake,0)+' kcal registrate · '+lb('fstate',Rs.state).toLowerCase()+'</small></div>';
   else balanceNote+='<p>Calorie del giorno non registrate: scostamento non disponibile.</p>';
   rows.push(p2tile('Rispetto al piano',balance,balanceNote,{rule:'deficit-sett'}));
-  rows.push(p2tile('Macro',M?macroHTML(M):'—','Quantità previste dal piano in vigore il '+fmtDay(date)+'.',{cls:'wide',rule:'macro'}));
-  rows.push(p2tile('Fiducia nella stima al '+fmtDay(date),lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
-  rows.push(p2tile('Peso, tendenza',tr&&!tr.none?fmt(tr.v,1)+' kg':'—',tr&&!tr.none?'Tendenza ricostruita con le pesate fino al '+fmtDay(date)+'. Ultima pesata: '+fmt(tr.last.w,1)+' kg il '+fmtDay(tr.last.d)+'.':'Nessuna pesata disponibile fino a questa data.',{rule:'tendenza'}));
+  rows.push(p2tile('Macro',M?macroHTML(M):'—','Quantità previste dal piano in vigore '+ilD(date)+'.',{cls:'wide',rule:'macro'}));
+  rows.push(p2tile('Fiducia nella stima '+alD('al',date),lb('conf',cf.level),esc(confidenceDetail(E).summary),{rule:'margine'}));
+  rows.push(p2tile('Peso, tendenza',tr&&!tr.none?fmt(tr.v,1)+' kg':'—',tr&&!tr.none?'Tendenza ricostruita con le pesate fino '+alD('al',date)+'. Ultima pesata: '+fmt(tr.last.w,1)+' kg '+ilD(tr.last.d)+'.':'Nessuna pesata disponibile fino a questa data.',{rule:'tendenza'}));
   box.innerHTML=needSummaryWrap(weekly.view,context.view,date,maintenanceHeroHTML(weekly.view,{historical:true,date:date,E:weekly.E,weekError:weekly.error})+dailyEnergyHTML(context.view,context)+'<div class="p2-tiles">'+rows.join('')+'</div>');
 }
 function routineEnergyHTML(r) {
@@ -12067,7 +12337,7 @@ function maintenanceHeroHTML(view,options) {
   if(change&&change.routine!=null)changeText+=' Routine e peso di riferimento: '+sgn(change.routine,0)+'; aggiornamento della calibrazione: '+sgn(change.calibration,0)+' kcal/giorno. È una scomposizione del modello, non una misura delle cause fisiologiche.';
   return '<section class="maintenance-hero" aria-label="Mantenimento medio stimato della settimana selezionata"><div class="maintenance-top"><span>SETTIMANA '+range+'</span><button type="button" class="rq" data-rule="fabbisogno" aria-label="Spiega il mantenimento">?</button></div><h3>Mantenimento medio della settimana</h3><div class="maintenance-value"><b>'+fmt(r.R,0)+'</b><span>kcal al giorno<br><small>media giornaliera della routine</small></span></div><p class="maintenance-cutoff">'+(current?'Aggiornato':'Ricostruito')+' al <b>'+fmtDay(cutoff)+'</b> · vale per tutta la settimana.</p><div class="maintenance-bottom"><span><small>Mantenimento × 7 giorni</small><b>'+kc(r.weekly)+'</b></span><span><small>Stato della stima</small><b>'+(r.manual?'Valore manuale':r.calibrated?'Adattata al diario':'Stima iniziale')+'</b></span><span><small>Fiducia nella stima</small><b>'+esc(confLabel({confidence:view.confidence||E&&E.confidence}))+'</b></span></div>'+routineEnergyHTML(r)
     +(r.unknown.length?'<div class="maintenance-missing"><b>Stima da completare</b><p>'+r.unknown.map(esc).join(' ')+'</p></div>':'')
-    +'<details class="maintenance-details"><summary>Totali della settimana e metodo di calcolo</summary><p>Il riferimento usa peso, routine e calibrazione disponibili fino al '+fmtDay(cutoff)+'. Per le settimane concluse la data è la domenica; per la settimana in corso è oggi. Non uso dati successivi a questa data. Nuove registrazioni o correzioni possono aggiornare il valore: non è un numero congelato.</p>'+maintenanceWeekDetailsHTML(view)+'<p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
+    +'<details class="maintenance-details"><summary>Totali della settimana e metodo di calcolo</summary><p>Il riferimento usa peso, routine e calibrazione disponibili fino '+alD('al',cutoff)+'. Per le settimane concluse la data è la domenica; per la settimana in corso è oggi. Non uso dati successivi a questa data. Nuove registrazioni o correzioni possono aggiornare il valore: non è un numero congelato.</p>'+maintenanceWeekDetailsHTML(view)+'<p>'+esc(changeText)+'</p><p>'+(r.verified?'Ultima calibrazione utilizzabile: '+fmtDay(r.verified)+'.':'Nessuna calibrazione personale utilizzabile: la stima parte dal profilo o dal valore manuale.')+' Il riferimento si aggiorna con pesate, dati corretti e cambiamenti della routine; i pasti parziali non diventano nuove prove del metabolismo.</p>'+(r.lo!=null?'<p>Intervallo indicativo del mantenimento medio: '+fmt(r.lo,0)+'–'+fmt(r.hi,0)+' kcal/giorno. Non è una precisione individuale certificata.</p>':'')+'<button type="button" class="context-link" data-rule="margine">Perché questo livello di fiducia?</button></details></section>';
 }
 function enRange(a,b){var A=a.split('-'),B=b.split('-');return A[1]===B[1]?(+A[2])+'–'+fmtShort(b):fmtShort(a)+'–'+fmtShort(b);}
 function energyWeeksHTML(view) {
@@ -16289,6 +16559,43 @@ html body #pf-card .pe-name:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(
 html body #tab-diario .dsec[data-dsec="curiosita"] .cu-index:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g){background:#9B3FD0!important}
 html body #tab-diario .cu-story .cu-index:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g){background:color-mix(in srgb,var(--c) 16%,#211D28)!important}
 html body .r-how3 li span:not(#a):not(#b):not(#c):not(#d):not(#e):not(#f):not(#g){color:#A1A1A6!important}
+/* ===== modifica del piano: domande semplici ===== */
+html body #tab-dati .ped-v2 .ped-qt:not(#a):not(#b):not(#c):not(#d){font-size:.95rem;font-weight:650;color:#F2F2F7;margin:18px 0 4px;line-height:1.35}
+html body #tab-dati .ped-v2 .ped-sec2>.ped-qt:first-child:not(#a):not(#b):not(#c):not(#d){margin-top:4px}
+html body #tab-dati .ped-v2 .ped-qc:not(#a):not(#b):not(#c):not(#d){font-size:.78rem;color:#AEAEB2;line-height:1.55;margin:0 0 10px}
+html body #tab-dati .ped-v2 .ped-choices:not(#a):not(#b):not(#c):not(#d){display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0 12px}
+@media(min-width:560px){html body #tab-dati .ped-v2 .ped-choices.ped-3:not(#a):not(#b):not(#c):not(#d){grid-template-columns:repeat(3,minmax(0,1fr))}html body #tab-dati .ped-v2 .ped-choices.ped-2c:not(#a):not(#b):not(#c):not(#d),html body #tab-dati .ped-v2 .ped-choices:not(.ped-3):not(#a):not(#b):not(#c):not(#d){grid-template-columns:repeat(2,minmax(0,1fr))}}
+html body #tab-dati .ped-v2 .ped-choice:not(#a):not(#b):not(#c):not(#d){min-height:0;padding:13px 14px;gap:5px;border-radius:14px}
+html body #tab-dati .ped-v2 .ped-choice b:not(#a):not(#b):not(#c):not(#d){font-size:.9rem}
+html body #tab-dati .ped-v2 .ped-choice>span:not(#a):not(#b):not(#c):not(#d){font-size:.76rem;line-height:1.5}
+html body #tab-dati .ped-v2 .ped-choice-x:not(#a):not(#b):not(#c):not(#d){font-style:normal;font-size:.72rem;font-weight:600;color:#FF9DB8;background:#FA114F1F;padding:3px 9px;border-radius:999px;margin-top:2px}
+html body #tab-dati .ped-v2 .ped-live:not(#a):not(#b):not(#c):not(#d){margin:4px 0 14px;padding:0}
+html body #tab-dati .ped-v2 .ped-live-g:not(#a):not(#b):not(#c):not(#d){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media(min-width:700px){html body #tab-dati .ped-v2 .ped-live-g:not(#a):not(#b):not(#c):not(#d){grid-template-columns:repeat(4,minmax(0,1fr))}}
+html body #tab-dati .ped-v2 .ped-live-c:not(#a):not(#b):not(#c):not(#d){display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:#232326;border:1px solid #ffffff12;min-width:0}
+html body #tab-dati .ped-v2 .ped-live-c>span:not(#a):not(#b):not(#c):not(#d){font-size:.68rem;color:#AEAEB2;line-height:1.35}
+html body #tab-dati .ped-v2 .ped-live-c>b:not(#a):not(#b):not(#c):not(#d){font-size:1rem;color:#fff;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+html body #tab-dati .ped-v2 .ped-live-c>small:not(#a):not(#b):not(#c):not(#d){font-size:.68rem;color:#A1A1A6;line-height:1.4}
+html body #tab-dati .ped-v2 .ped-live-c.is-warn:not(#a):not(#b):not(#c):not(#d){border-color:#FFD60A59;background:#FFD60A12}
+html body #tab-dati .ped-v2 .ped-live-c.is-warn>small:not(#a):not(#b):not(#c):not(#d){color:#FFE79A}
+html body #tab-dati .ped-v2 .ped-line:not(#a):not(#b):not(#c):not(#d){font-size:.8rem;color:#C7C7CC;line-height:1.6;margin:10px 0 2px}
+html body #tab-dati .ped-v2 .ped-line:empty:not(#a):not(#b):not(#c):not(#d){display:none}
+html body #tab-dati .ped-v2 .ped-line b:not(#a):not(#b):not(#c):not(#d),html body #tab-dati .ped-v2 .ped-story b:not(#a):not(#b):not(#c):not(#d){color:#fff;font-weight:650}
+html body #tab-dati .ped-v2 .ped-bad:not(#a):not(#b):not(#c):not(#d){color:#FFB4BC}
+html body #tab-dati .ped-v2 .ped-split:not(#a):not(#b):not(#c):not(#d){border-top:1px solid #ffffff12;margin:22px 0 4px}
+html body #tab-dati .ped-v2 .ped-more:not(#a):not(#b):not(#c):not(#d){margin-top:12px}
+html body #tab-dati .ped-v2 .ped-story:not(#a):not(#b):not(#c):not(#d){margin:6px 0 10px}
+html body #tab-dati .ped-v2 .ped-story-l:not(#a):not(#b):not(#c):not(#d){margin:0;padding:0 0 0 18px;display:grid;gap:9px}
+html body #tab-dati .ped-v2 .ped-story-l li:not(#a):not(#b):not(#c):not(#d){font-size:.83rem;color:#D1D1D6;line-height:1.6}
+html body #tab-dati .ped-v2 .ped-story-n:not(#a):not(#b):not(#c):not(#d){font-size:.76rem;color:#AEAEB2;line-height:1.6;margin:12px 0 0}
+html body #tab-dati .ped-v2 .pf-macro-editor:not(#a):not(#b):not(#c):not(#d){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+@media(max-width:600px){html body #tab-dati .ped-v2 .pf-macro-editor:not(#a):not(#b):not(#c):not(#d){grid-template-columns:1fr}}
+html body #tab-dati .ped-v2 .ped-line:not(#a):not(#b):not(#c):not(#d){margin-bottom:14px}
+html body #tab-dati .ped-v2 .ped-live-t:not(#a):not(#b):not(#c):not(#d){font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:#8E8E93;margin:0 0 6px;font-weight:600}
+html body #tab-dati .ped-v2 .pf-macro-card .settings-fields:not(#a):not(#b):not(#c):not(#d){grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)!important;gap:8px}
+html body #tab-dati .ped-v2 .pf-macro-card:not(#a):not(#b):not(#c):not(#d){padding:12px 14px}
+html body #tab-dati .ped-v2 .pf-macro-card h4:not(#a):not(#b):not(#c):not(#d){margin:0 0 8px}
+html body #profile-dialog [data-profile-commit]:not(#a):not(#b):not(#c):not(#d):not(:disabled){background:#D10D45!important;border-color:#D10D45!important;color:#fff!important}
 </style></body></html>
 
 
