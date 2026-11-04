@@ -1489,6 +1489,43 @@ details>summary,.rq,.metric-explain,.context-close,.context-link,.btn,.tab,.chip
 .df-card{width:min(100%,520px);background:var(--bg-2)}
 .df-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .df-card input,.df-card textarea{width:100%;box-sizing:border-box}
+</style><style id="avvisi-style">
+/* pallino sull'icona Profilo */
+.tabs .tab{position:relative}
+.tabs .tab .nav-badge{position:absolute;top:2px;left:calc(50% + 4px);min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#FA114F;color:#fff;font:700 .68rem/18px var(--f-body,system-ui),system-ui;text-align:center;box-shadow:0 0 0 2px #0e0e10;pointer-events:none;z-index:2}
+.tabs .tab .nav-badge[hidden]{display:none}
+@media (min-width:1024px){.tabs .tab .nav-badge{top:50%;left:auto;right:12px;transform:translateY(-50%)}}
+/* scheda Avvisi nel Profilo: tre sezioni */
+html body #tab-dati .profile-switch:not(#z):not(#y):not(#x):not(#w){grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,1.1fr)}
+html body #tab-dati .profile-switch:not(#z):not(#y):not(#x):not(#w) button:not(#a):not(#b):not(#c):not(#d):not(#e){padding-left:6px;padding-right:6px;white-space:nowrap;font-size:.9rem}
+@media (max-width:360px){html body #tab-dati .profile-switch:not(#z):not(#y):not(#x):not(#w) button:not(#a):not(#b):not(#c):not(#d):not(#e){white-space:normal;font-size:.82rem}}
+#tab-dati .profile-switch .notice-count{display:inline-block;min-width:18px;height:18px;margin-left:6px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#FA114F;color:#fff;font-size:.7rem;font-weight:700;line-height:18px;vertical-align:1px}
+#tab-dati .profile-switch .notice-count[hidden]{display:none}
+#tab-dati .profile-switch button[aria-selected=true] .notice-count{background:#fff;color:#FA114F}
+#notices-body{display:grid;gap:18px;margin-top:6px}
+#notices-body .notices-head h2{margin:0 0 4px;font-size:1.35rem}
+#notices-body .notices-head p{margin:0}
+#notices-body .notice-group h3{margin:0 0 2px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:#d7d7d7}
+#notices-body .notice-group>p{margin:0 0 10px}
+#notices-body .notice-list{display:grid;gap:10px}
+#notices-body .notice-list>.alert{margin:0;padding:12px 14px;border:1px solid #ffffff14;border-radius:14px;background:#191919}
+#notices-body .notice-list>.wcheck-notice{margin:0}
+#notices-body .al-act{margin-top:10px;gap:8px;flex-wrap:wrap}
+#notices-body .notice-empty{display:flex;align-items:center;gap:10px;padding:16px;border:1px solid #ffffff14;border-radius:14px;background:#151515}
+#notices-body .notice-empty span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#1f3b2c;color:#5FD49E;font-weight:700}
+.notice-link{margin-top:10px}
+/* avviso a comparsa */
+.gj-toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:9000;display:flex;align-items:center;gap:12px;width:min(calc(100% - 32px),520px);box-sizing:border-box;padding:12px 10px 12px 16px;border:1px solid #FA114F66;border-radius:16px;background:#1d1517;color:#fff;box-shadow:0 18px 40px -12px #000c;transform:translate(-50%,-16px);opacity:0;transition:transform .26s cubic-bezier(.2,.7,.3,1),opacity .26s}
+.gj-toast.in{transform:translate(-50%,0);opacity:1}
+.gj-toast.out{transform:translate(-50%,-16px);opacity:0}
+.gj-toast[hidden]{display:none}
+.gj-toast-dot{flex:none;width:10px;height:10px;border-radius:50%;background:#FA114F;box-shadow:0 0 0 4px #FA114F33}
+.gj-toast-copy{flex:1;min-width:0;display:grid;gap:2px;font-size:.86rem;line-height:1.35}
+.gj-toast-copy span{color:#d9c9cd}
+html body .gj-toast .btn:not(#a):not(#b):not(#c){flex:none;background:#E00D46!important;color:#fff!important}
+.gj-toast-x{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:#cfcfcf;font-size:1rem;cursor:pointer}
+.gj-toast-x:focus-visible,.gj-toast .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.gj-toast{transition:none}}
 </style><style id="friend-goals-style">
 </style></head><body>
 <div id="intro" class="intro" role="dialog" aria-label="Benvenuto">
@@ -9350,13 +9387,109 @@ function renderWCheckToday(al) {
   box.hidden = !w.length; oggi.classList.toggle('has-weight-check', !!w.length);
   box.setAttribute('aria-label', 'Pesate da verificare');
 }
+/* ---------- centro avvisi (Profilo › Avvisi) ----------
+   Una sola lista per tutta l'app. «Da fare»: pesate da confermare, giornate da confermare, proposte del piano: restano
+   contate finché non le sistemi. «Da controllare»: avvisi di attenzione, contati finché non apri gli avvisi.
+   «Da sapere»: informazioni, mai contate. Il numero compare sull'icona Profilo (da qualsiasi schermata) e sulla scheda
+   Avvisi; quando arriva qualcosa di nuovo da fare o da controllare compare anche un avviso in alto, una volta sola. */
+var NOTICE_SEEN = 'gj-avvisi-visti', NOTICE_TOLD = 'gj-avvisi-notificati';
+/* memoria per dispositivo: chiave → ultimo giorno in cui l'avviso c'era. Le cose da fare si dimenticano appena spariscono
+   (se tornano, vanno segnalate di nuovo); gli avvisi del calcolo restano ricordati 14 giorni, così un avviso che va e viene
+   non riaccende il numero ogni mattina. */
+function noticeStore(k, v) { try { if (v === undefined) { var x = JSON.parse(localStorage.getItem(k) || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return {}; } }
+function noticePrune(map, keys, today) {
+  var out = {};
+  Object.keys(map).forEach(function (k) { if (keys.indexOf(k) >= 0) out[k] = today; else if (k.indexOf('avviso:') === 0 && typeof map[k] === 'string' && diffDays(map[k], today) <= 14) out[k] = map[k]; });
+  return out;
+}
+function noticeItems() {
+  var E = state.E, items = [];
+  (state.alerts || []).forEach(function (a) {
+    if (a.wchk) items.push({ key: 'peso:' + a.wchk.d + ':' + a.wchk.w, kind: 'fare', a: a, weigh: true });
+    else if (a.t === 'Altre pesate da controllare') items.push({ key: 'peso:altre', kind: 'fare', a: a, weigh: true });
+    else if (a.t === 'Giornate da confermare') items.push({ key: 'conferma', kind: 'fare', a: a, confirm: true });
+    else items.push({ key: 'avviso:' + (a.id || a.t), kind: a.lvl === 'warn' || a.lvl === 'bad' ? 'controllare' : 'sapere', a: a });
+  });
+  var r = E && E.revision;
+  if (r && r.kind === 'proposta' && r.candidate && !proposalDismissed(E)) items.push({ key: 'proposta:' + r.candidate.previous + ':' + ((r.candidate.resolved || {}).kcal || ''), kind: 'fare', proposal: r });
+  return items;
+}
+function noticeProposalHTML(r) {
+  var z = r.candidate.resolved || {};
+  return '<div class="alert notice-prop" style="--c:' + LVL_C.warn + '"><i></i><div><div class="at">' + (r.goalReached ? 'Obiettivo raggiunto: proposta di mantenimento' : 'Proposta di revisione del piano') + '</div><div class="ax">Dal ' + esc(fmtDay(r.date)) + ': ' + kc(z.kcal) + ' al giorno. ' + esc(cap(r.why || '')) + '.</div>'
+    + '<div class="row al-act"><button type="button" class="btn fit small" data-rev-apply>Applica</button><button type="button" class="btn ghost fit small" data-rev-skip>Non ora</button></div></div></div>';
+}
+function noticeItemHTML(x) {
+  if (x.proposal) return noticeProposalHTML(x.proposal);
+  if (x.confirm) return '<div class="alert" style="--c:' + LVL_C.warn + '"><i></i><div><div class="at">' + esc(x.a.t) + '</div><div class="ax">' + esc(x.a.x) + '</div><div class="row al-act"><button type="button" class="btn fit small" data-goto-confirm>Conferma le giornate</button></div></div></div>';
+  return alertHTML(x.a);
+}
+function noticeToast(n, line) {
+  var t = document.getElementById('gj-toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = 'gj-toast'; t.className = 'gj-toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); t.hidden = true;
+    t.innerHTML = '<span class="gj-toast-dot" aria-hidden="true"></span><div class="gj-toast-copy"><b></b><span></span></div><button type="button" class="btn fit small" data-open-notices>Apri</button><button type="button" class="gj-toast-x" data-toast-close aria-label="Chiudi l\'avviso">✕</button>';
+    document.body.appendChild(t);
+  }
+  t.querySelector('b').textContent = n === 1 ? 'Hai 1 avviso da controllare' : 'Hai ' + n + ' avvisi da controllare';
+  t.querySelector('.gj-toast-copy span').textContent = (line ? cap(line) + (n > 1 ? ' e altro' : '') + '. ' : '') + (n > 1 ? 'Li trovi' : 'Lo trovi') + ' in Profilo › Avvisi.';
+  t.hidden = false; t.classList.remove('out'); void t.offsetWidth; t.classList.add('in');
+  clearTimeout(t._h); t._h = setTimeout(function () { noticeToastHide(); }, 12000);
+}
+function noticeToastHide() { var t = document.getElementById('gj-toast'); if (!t || t.hidden) return; t.classList.remove('in'); t.classList.add('out'); setTimeout(function () { t.hidden = true; }, RM ? 0 : 260); }
+function openNotices() {
+  noticeToastHide(); show('dati');
+  setTimeout(function () { try { buildProfile(); profileSetView('notices'); var p = $('#profile-notices-panel'); if (p) p.scrollIntoView({ block: 'start', behavior: 'auto' }); window.scrollTo(0, 0); } catch (e) {} }, 60);
+}
+function renderNotices(markSeen) {
+  if (!state.E && !(state.alerts || []).length) return;
+  var it = noticeItems(), keys = it.map(function (x) { return x.key; }), today = todayStr();
+  var seen = noticePrune(noticeStore(NOTICE_SEEN), keys, today), told = noticePrune(noticeStore(NOTICE_TOLD), keys, today);
+  var panel = $('#profile-notices-panel'), viewing = !!(panel && !panel.hidden && onScreen(panel));
+  if (markSeen || viewing) it.forEach(function (x) { if (x.kind !== 'fare') seen[x.key] = today; });
+  noticeStore(NOTICE_SEEN, seen);
+  var nWeigh = (state.wOutliers || []).length;
+  var todo = it.filter(function (x) { return x.kind === 'fare'; }), check = it.filter(function (x) { return x.kind === 'controllare'; }), know = it.filter(function (x) { return x.kind === 'sapere'; });
+  var count = nWeigh + todo.filter(function (x) { return !x.weigh; }).length + check.filter(function (x) { return !seen[x.key]; }).length;
+  /* pallino sull'icona Profilo (barra in basso o laterale) */
+  $$('.tabs .tab[data-tab="dati"]').forEach(function (b) {
+    var bd = b.querySelector('.nav-badge'); if (!bd) { bd = document.createElement('span'); bd.className = 'nav-badge'; bd.setAttribute('aria-hidden', 'true'); b.appendChild(bd); }
+    bd.textContent = count > 9 ? '9+' : String(count); bd.hidden = !count;
+    b.setAttribute('aria-label', count ? 'Profilo, ' + count + (count === 1 ? ' avviso da controllare' : ' avvisi da controllare') : 'Profilo');
+  });
+  var cnt = $('#profile-tab-notices .notice-count'); if (cnt) { cnt.textContent = count > 9 ? '9+' : String(count); cnt.hidden = !count; }
+  var tabN = $('#profile-tab-notices'); if (tabN) tabN.setAttribute('aria-label', count ? 'Avvisi, ' + count + ' da controllare' : 'Avvisi');
+  /* elenco in Profilo › Avvisi */
+  var body = $('#notices-body');
+  if (body) {
+    var sect = function (title, sub, list) { return list.length ? '<section class="notice-group"><h3>' + title + '</h3><p class="muted small">' + sub + '</p><div class="notice-list">' + list.map(noticeItemHTML).join('') + '</div></section>' : ''; };
+    var html = '<div class="notices-head"><h2>Avvisi</h2><p class="muted">' + (count ? (count === 1 ? 'C\'è 1 cosa da controllare.' : 'Ci sono ' + count + ' cose da controllare.') : it.length ? 'Niente da fare per ora: qui sotto le informazioni sul tuo percorso.' : 'Nessun avviso. Quando c\'è qualcosa da controllare compare qui, con il numero sull\'icona Profilo.') + '</p></div>'
+      + sect('Da fare', 'Pesate e giornate da confermare, proposte del piano: restano qui finché non le sistemi.', todo)
+      + sect('Da controllare', 'Segnali sui tuoi dati da leggere con attenzione.', check)
+      + sect('Da sapere', 'Informazioni sul calcolo e sul percorso.', know)
+      + (it.length ? '' : '<div class="notice-empty"><span aria-hidden="true">✓</span><b>Tutto a posto</b></div>');
+    if (body._html !== html) { body.innerHTML = html; body._html = html; }
+  }
+  /* avviso a comparsa, una volta per ogni cosa nuova da fare o da controllare (non mentre stai già guardando gli avvisi) */
+  var fresh = todo.concat(check).filter(function (x) { return !told[x.key] && !seen[x.key]; });
+  if (fresh.length) {
+    fresh.forEach(function (x) { told[x.key] = today; });
+    if (!viewing && !document.getElementById('gj-welcome') && count) noticeToast(count, fresh[0].proposal ? 'proposta di revisione del piano' : fresh[0].a.short || fresh[0].a.t);
+  }
+  noticeStore(NOTICE_TOLD, told);
+}
+document.addEventListener('click', function (e) {
+  if (e.target.closest('[data-open-notices]')) { e.preventDefault(); openNotices(); return; }
+  if (e.target.closest('[data-toast-close]')) { noticeToastHide(); }
+});
 function renderAlerts() {
   var al = state.alerts = wCheckAlerts().concat(computeAlerts());
   renderWCheckToday(al);
+  try { renderNotices(false); } catch (e) { console.error(e); }
   $('#al-count').textContent = al.length ? al.length + (al.length === 1 ? ' avviso' : ' avvisi') : 'Nessun avviso';
   $('#alerts').innerHTML = al.length ? al.map(function (a) {
     return alertHTML(a);
-  }).join('') : '<div class="alert" style="--c:' + LVL_C.info + '"><i></i><div><div class="at">Nessuna anomalia dei dati rilevata</div><div class="ax">Questo controllo non valuta salute, composizione corporea o precisione del consumo stimato.</div></div></div>';
+  }).join('') + '<button type="button" class="linkbtn small notice-link" data-open-notices>Tutti gli avvisi in Profilo › Avvisi</button>' : '<div class="alert" style="--c:' + LVL_C.info + '"><i></i><div><div class="at">Nessuna anomalia dei dati rilevata</div><div class="ax">Questo controllo non valuta salute, composizione corporea o precisione del consumo stimato.</div></div></div>';
 }
 function renderSplitBox(id) {
   var box = $('#' + id); if (!box) return;
@@ -12321,10 +12454,10 @@ function buildProfile(){
   var sec=$('#tab-dati'),box=$('#plan-box');if(!sec||!box||sec.dataset.pf)return;sec.dataset.pf='seven';sec.setAttribute('data-ib-keep','');
   var setPanel=box.closest('.panel'),acct=$('#acct-out').closest('.panel'),hevy=$('#hevy-panel'),legacy=$('#sync-btn')&&$('#sync-btn').closest('.panel'),backup=Array.prototype.filter.call(sec.querySelectorAll('.panel'),function(p){return !!p.querySelector('#bk-down');})[0];
   var lead=sec.querySelector('.area-lead');if(lead)lead.remove();
-  var nav=document.createElement('div');nav.className='profile-navigation';nav.innerHTML='<div class="segbar profile-switch" role="tablist" aria-label="Sezioni del profilo"><button type="button" role="tab" id="profile-tab-journey" data-profile-view="journey" aria-controls="profile-journey-panel" aria-selected="true" tabindex="0">Il mio percorso</button><button type="button" role="tab" id="profile-tab-settings" data-profile-view="settings" aria-controls="profile-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><button type="button" class="profile-help" data-profile-help><span aria-hidden="true">?</span> Come funziona</button>';
+  var nav=document.createElement('div');nav.className='profile-navigation';nav.innerHTML='<div class="segbar profile-switch" role="tablist" aria-label="Sezioni del profilo"><button type="button" role="tab" id="profile-tab-journey" data-profile-view="journey" aria-controls="profile-journey-panel" aria-selected="true" tabindex="0">Il mio percorso</button><button type="button" role="tab" id="profile-tab-notices" data-profile-view="notices" aria-controls="profile-notices-panel" aria-selected="false" tabindex="-1">Avvisi<span class="notice-count" hidden></span></button><button type="button" role="tab" id="profile-tab-settings" data-profile-view="settings" aria-controls="profile-settings-panel" aria-selected="false" tabindex="-1">Impostazioni</button></div><button type="button" class="profile-help" data-profile-help><span aria-hidden="true">?</span> Come funziona</button>';
   var old=sec.querySelector(':scope > .segbar');if(old)old.replaceWith(nav);else sec.insertBefore(nav,setPanel);
   var notice=document.createElement('div');notice.id='profile-notice';notice.className='profile-notice';notice.hidden=true;notice.innerHTML='<span role="status" aria-live="polite"></span><button type="button" class="linkbtn small" data-profile-resume>Apri</button>';sec.insertBefore(notice,setPanel);
-  setPanel.classList.add('pf-settings');box.innerHTML='<section id="profile-journey-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-journey"><div class="panel pf-card" id="pf-card"></div><div id="profile-current-plan"></div></section><section id="profile-settings-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-settings" hidden><div class="profile-settings-intro"><h2>Le tue impostazioni</h2><p>Apri una voce per vedere e modificare i tuoi dati.</p></div><div id="profile-settings-menu"></div></section>';
+  setPanel.classList.add('pf-settings');box.innerHTML='<section id="profile-journey-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-journey"><div class="panel pf-card" id="pf-card"></div><div id="profile-current-plan"></div></section><section id="profile-notices-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-notices" hidden><div id="notices-body"></div></section><section id="profile-settings-panel" class="profile-view" role="tabpanel" aria-labelledby="profile-tab-settings" hidden><div class="profile-settings-intro"><h2>Le tue impostazioni</h2><p>Apri una voce per vedere e modificare i tuoi dati.</p></div><div id="profile-settings-menu"></div></section>';
   var groups={},menu=$('#profile-settings-menu'),advanced=document.createElement('details');advanced.className='profile-archive';advanced.id='profile-advanced';advanced.innerHTML='<summary><span><b>Archivio e dettagli dei dati</b><small>Piani precedenti, dati importati e controlli</small></span></summary><div class="profile-archive-body"></div>';
   PF_ROWS.forEach(function(r){
     var d=document.createElement(r.id==='piano'?'section':'details');d.className='pf-row'+(r.id==='piano'?' pf-plan-card':' profile-menu-row');d.id='pf-'+r.id;d.dataset.ibt=r.t;
@@ -12340,12 +12473,14 @@ function buildProfile(){
   var dialog=document.createElement('dialog');dialog.id='profile-dialog';dialog.className='profile-modal';dialog.setAttribute('aria-labelledby','profile-dialog-title');dialog.setAttribute('aria-describedby','profile-dialog-description');dialog.innerHTML='<div class="profile-modal-inner"><header class="profile-modal-head"><div><span class="profile-eyebrow">LE TUE IMPOSTAZIONI</span><h2 id="profile-dialog-title" tabindex="-1"></h2><p id="profile-dialog-description"></p></div><button type="button" class="profile-modal-close" data-profile-close aria-label="Chiudi la modifica">×</button></header><div class="profile-modal-body"></div><footer class="profile-modal-foot"><div id="profile-save-status" role="status" aria-live="polite" aria-atomic="true"></div><div class="profile-modal-actions"><button type="button" class="btn ghost fit" data-profile-discard>Annulla</button><button type="button" class="btn ghost fit" data-profile-prev hidden>Indietro</button><button type="button" class="btn fit" data-profile-commit>Salva</button></div></footer></div>';
   box.appendChild(dialog);dialog.addEventListener('cancel',function(e){e.preventDefault();profileClose();});dialog.addEventListener('click',function(e){if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)profileClose();}});
   dialog.addEventListener('keydown',function(e){if(e.key!=='Tab')return;var list=Array.prototype.filter.call(dialog.querySelectorAll('button,input,select,textarea,a[href],[tabindex="0"]'),function(x){return !x.disabled&&x.getClientRects().length;});if(!list.length)return;var first=list[0],last=list[list.length-1];if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('#profile-dialog-title'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}});
-  bindPlan(box);profileSetView('journey');
+  bindPlan(box);profileSetView('journey');try{renderNotices(false);}catch(e){}
   if(window.visualViewport){var fit=function(){dialog.style.setProperty('--profile-vh',window.visualViewport.height+'px');dialog.style.setProperty('--profile-vtop',window.visualViewport.offsetTop+'px');};window.visualViewport.addEventListener('resize',fit);window.visualViewport.addEventListener('scroll',fit);fit();}
 }
 
 function profileSetView(view,focus){
-  ProfileUX.view=view==='settings'?'settings':'journey';['journey','settings'].forEach(function(k){var b=$('#profile-tab-'+k),p=$('#profile-'+k+'-panel'),on=k===ProfileUX.view;if(p)p.hidden=!on;if(b){b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;if(focus&&on)b.focus();}});var nav=$('#tab-dati .profile-switch');if(nav)nav.dataset.view=ProfileUX.view;
+  ProfileUX.view=view==='settings'||view==='notices'?view:'journey';['journey','notices','settings'].forEach(function(k){var b=$('#profile-tab-'+k),p=$('#profile-'+k+'-panel'),on=k===ProfileUX.view;if(p)p.hidden=!on;if(b){b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;if(focus&&on)b.focus();}});var nav=$('#tab-dati .profile-switch');if(nav)nav.dataset.view=ProfileUX.view;
+  /* aprire gli avvisi li segna come visti: il numero sull'icona resta solo per le cose da fare */
+  if(ProfileUX.view==='notices'){try{renderNotices(true);}catch(e){}}
 }
 function profileReveal(el){var row=el&&el.closest('.profile-menu-row');if(row){profileSetView('settings');profileOpen(row.dataset.profileEditor||'tool:'+row.dataset.profileTool);return;}for(var p=el&&el.parentElement;p&&p.id!=='tab-dati';p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;}
 function profileRestoreRow(){var a=ProfileUX.active;if(!a)return;a.record.scroll=$('#profile-dialog .profile-modal-body').scrollTop;a.node.classList.remove('profile-modal-row');a.node.querySelectorAll('.profile-managed-save').forEach(function(b){b.classList.remove('profile-managed-save');});a.node.open=false;if(a.placeholder.parentNode)a.placeholder.parentNode.insertBefore(a.node,a.placeholder);a.placeholder.remove();ProfileUX.active=null;if(ProfileUX.observer){ProfileUX.observer.disconnect();ProfileUX.observer=null;}}
@@ -12449,7 +12584,7 @@ document.addEventListener('focusin',function(e){if(ProfileUX.active&&ProfileUX.a
 document.addEventListener('toggle',function(e){if(ProfileUX.active&&ProfileUX.active.node.contains(e.target)){profileChooseSupplement(e.target);profileSyncFooter();}},true);
 document.addEventListener('submit',function(e){if(ProfileUX.active&&e.target.id==='prof-form'){profileValidation();profilePaint();}});
 document.addEventListener('invalid',function(e){var a=ProfileUX.active;if(!a||!a.node.contains(e.target))return;a.record.state='error';a.record.error='Controlla i campi evidenziati prima di salvare.';profileFieldError(e.target,e.target.validationMessage||'Controlla il valore inserito.');profilePaint();},true);
-document.addEventListener('keydown',function(e){var b=e.target.closest('[data-profile-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();profileSetView(e.key==='Home'?'journey':e.key==='End'?'settings':b.dataset.profileView==='journey'?'settings':'journey',true);});
+document.addEventListener('keydown',function(e){var b=e.target.closest('[data-profile-view]');if(!b||['ArrowLeft','ArrowRight','Home','End'].indexOf(e.key)<0)return;e.preventDefault();var V=['journey','notices','settings'],i=V.indexOf(b.dataset.profileView);profileSetView(e.key==='Home'?V[0]:e.key==='End'?V[2]:V[(i+(e.key==='ArrowRight'?1:V.length-1))%V.length],true);});
 
 var energyViewCache = { E: null, value: null };
 function energyView() {
@@ -12619,7 +12754,7 @@ renderAll();
 
 
 /* usati dal codice di account, importazione e modulo del giorno */
-window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: function () { if (!document.getElementById('gj-welcome')) obOpen(); }, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) { profileReveal(h); h.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 300); }, state: state, saveDay: saveDay, addMeal: addMeal, setSel: setSel, todayStr: todayStr, addDays: addDays, fmt: fmt, show: show, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
+window.GJ = { DEF: DEF, readNum: readNum, saveDayForm: saveDayForm, welcome: function () { if (!document.getElementById('gj-welcome')) obOpen(); }, syncMaster: syncMaster, goHevy: function () { show('dati'); setTimeout(function () { var h = document.getElementById('hevy-panel'); if (h) { profileReveal(h); h.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 300); }, state: state, saveDay: saveDay, addMeal: addMeal, setSel: setSel, todayStr: todayStr, addDays: addDays, fmt: fmt, show: show, openNotices: openNotices, renderNotices: renderNotices, syncDoc: syncDoc, setMcp: function (m) { mcp = m; syncTried = false; } };
 /* Oggi tiene solo l'essenziale: gli altri riquadri passano nelle sezioni di Progressi */
 (function slimToday() {
   var oggi = document.getElementById('tab-oggi');
